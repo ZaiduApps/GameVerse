@@ -28,17 +28,20 @@ interface NewsArticle {
   tags?: string[];
 }
 
-const localMockNewsArticles: NewsArticle[] = MOCK_GAMES.map((g, index) => ({
-  id: `news-${g.id}`,
-  title: `${g.title} 最新动态与攻略分享`,
-  content: `这篇关于《${g.title}》的文章深入探讨了其最新更新、社区热点以及一些高级游戏技巧。\n\n${g.description}\n\n更多详细内容，包括最新的角色介绍、活动预告以及玩家社区的精彩讨论，都将在这里为您呈现。我们致力于提供最全面、最及时的游戏资讯，帮助您更好地享受《${g.title}》带来的乐趣。\n\n敬请期待后续的独家报道和深度评测！`,
-  imageUrl: g.imageUrl,
-  dataAiHint: g.dataAiHint ? `${g.dataAiHint} news` : "news article",
-  category: index % 2 === 0 ? '游戏攻略' : '行业新闻',
-  date: `2024年${Math.max(1, 7 - index)}月${Math.min(28, 15 + index)}日`,
-  author: '游戏宇宙编辑部',
-  tags: g.tags ? [...g.tags, (index % 3 === 0 ? '热门' : '深度分析')] : ['资讯'],
-}));
+const localMockNewsArticles: NewsArticle[] = MOCK_GAMES.flatMap((g, gameIndex) => 
+  Array.from({ length: Math.max(1, 3 - gameIndex) }, (_, newsIndex) => ({ // Game 0 gets 3 news, Game 1 gets 2, others 1
+    id: `news-${g.id}-${newsIndex + 1}`,
+    title: `${g.title} ${newsIndex === 0 ? '最新动态与攻略分享' : newsIndex === 1 ? '深度评测解析' : '社区精彩活动'} #${newsIndex + 1}`,
+    content: `这是关于《${g.title}》的第 ${newsIndex + 1} 篇资讯。深入探讨了其最新更新、社区热点以及一些高级游戏技巧。\n\n${g.description}\n\n更多详细内容，包括最新的角色介绍、活动预告以及玩家社区的精彩讨论，都将在这里为您呈现。我们致力于提供最全面、最及时的游戏资讯，帮助您更好地享受《${g.title}》带来的乐趣。\n\n敬请期待后续的独家报道和深度评测！`,
+    imageUrl: g.imageUrl, // Could vary this per news item too
+    dataAiHint: g.dataAiHint ? `${g.dataAiHint} news ${newsIndex + 1}` : `news article ${newsIndex + 1}`,
+    category: gameIndex % 2 === 0 ? '游戏攻略' : '行业新闻',
+    date: `2024年${Math.max(1, 7 - gameIndex)}月${Math.min(28, 15 + gameIndex + newsIndex)}日`,
+    author: '游戏宇宙编辑部',
+    tags: g.tags ? [...g.tags, (gameIndex % 3 === 0 ? '热门' : '深度分析'), `资讯${newsIndex+1}`] : [`资讯${newsIndex+1}`],
+  }))
+);
+
 
 interface MockComment {
   id: string;
@@ -61,6 +64,7 @@ interface GameDetailViewProps {
 }
 
 const DESCRIPTION_CHAR_LIMIT = 120;
+const MAX_NEWS_DISPLAY = 4;
 
 export default function GameDetailView({ game }: GameDetailViewProps) {
   const [showFab, setShowFab] = useState(false);
@@ -91,13 +95,11 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
   }, []);
 
   useEffect(() => {
-    // Prevent body scroll when modal is open
     if (selectedScreenshot) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'auto';
     }
-    // Cleanup function to restore scroll
     return () => {
       document.body.style.overflow = 'auto';
     };
@@ -113,9 +115,14 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     }, 350);
   };
 
-  const gameSpecificNews = localMockNewsArticles.filter(article =>
-    article.id === `news-${game.id}` || article.title.includes(game.title)
-  ).slice(0, 3);
+  // Filter news specifically for the current game title, or use IDs if more robustly linked
+  const allGameSpecificNews = localMockNewsArticles.filter(article => 
+    article.title.includes(game.title) || article.id.startsWith(`news-${game.id}`)
+  );
+  
+  const newsToShow = allGameSpecificNews.slice(0, MAX_NEWS_DISPLAY);
+  const hasMoreNews = allGameSpecificNews.length > MAX_NEWS_DISPLAY;
+
 
   const createExcerpt = (text: string, maxLength: number = 100): string => {
     const firstParagraph = text.split('\n\n')[0];
@@ -201,14 +208,14 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
             <Image
               src={game.imageUrl}
               alt={`${game.title} icon`}
-              width={88}
-              height={88}
-              className="rounded-xl object-cover flex-shrink-0 border shadow-md"
-              data-ai-hint={game.dataAiHint ? `${game.dataAiHint} icon` : "game icon"}
+              width={144}
+              height={144}
+              className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-xl object-cover flex-shrink-0 border-2 border-background shadow-lg"
+              data-ai-hint={game.dataAiHint ? `${game.dataAiHint} icon large` : "game icon large"}
             />
-            <div className="flex-grow">
+            <div className="flex-grow pt-1">
               <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{game.title}</h1>
-              <p className="text-sm text-muted-foreground mt-1">{game.developer}</p>
+              <p className="text-sm text-muted-foreground mt-1 sm:mt-2">{game.developer}</p>
             </div>
             <div className="w-full sm:w-auto flex-shrink-0 pt-2 sm:pt-0">
               <GameDownloadDialog />
@@ -340,16 +347,20 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
               <p className="text-muted-foreground">暂无游戏截图。</p>
             )}
           </div>
-
-          {gameSpecificNews.length > 0 && (
+          
+          {newsToShow.length > 0 && (
             <div className="pt-6 mt-6 border-t">
               <h2 className="text-xl font-semibold mb-4 flex items-center">
                 <NewsIcon className="w-5 h-5 text-primary mr-2" />
                 《{game.title}》相关资讯
               </h2>
-              <div className="space-y-4">
-                {gameSpecificNews.map(newsItem => (
-                  <Card key={newsItem.id} className="hover:shadow-lg transition-shadow duration-200 ease-in-out">
+              
+              <div className="flex space-x-4 overflow-x-auto md:block md:space-x-0 md:space-y-4 py-2 -mx-1 px-1 md:mx-0 md:px-0">
+                {newsToShow.map(newsItem => (
+                  <Card 
+                    key={newsItem.id} 
+                    className="w-[calc(100vw-5rem)] max-w-xs sm:w-80 flex-shrink-0 md:w-full hover:shadow-lg transition-shadow duration-200 ease-in-out"
+                  >
                     <CardContent className="p-4">
                       <div className="flex flex-col sm:flex-row gap-x-4 gap-y-3">
                         <Link href={`/news/${newsItem.id}`} className="block sm:w-32 flex-shrink-0">
@@ -382,8 +393,17 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                   </Card>
                 ))}
               </div>
+              {hasMoreNews && (
+                <div className="mt-6 text-center">
+                  <Button variant="outline" asChild className="btn-interactive">
+                    {/* This link should ideally go to a page showing all news for this game */}
+                    <Link href={`/news?tag=${encodeURIComponent(game.title)}`}>查看更多《{game.title}》资讯</Link>
+                  </Button>
+                </div>
+              )}
             </div>
           )}
+
 
           <div className="pt-6 mt-6 border-t">
             <h2 className="text-xl font-semibold mb-4 flex items-center">
@@ -505,13 +525,13 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
         >
           <div 
             className="relative max-w-full max-h-full"
-            onClick={(e) => e.stopPropagation()} // Prevent click on image from closing modal
+            onClick={(e) => e.stopPropagation()} 
           >
             <Image
               src={selectedScreenshot}
               alt="游戏截图预览"
-              width={1280} // Example large width
-              height={720} // Example large height
+              width={1280} 
+              height={720} 
               className="object-contain rounded-lg shadow-2xl"
               style={{ maxWidth: '90vw', maxHeight: '90vh' }}
             />
@@ -530,3 +550,4 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     </div>
   );
 }
+
