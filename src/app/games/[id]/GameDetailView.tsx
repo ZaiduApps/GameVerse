@@ -355,23 +355,23 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                 《{game.title}》相关资讯
               </h2>
               
-              <div className="flex space-x-4 overflow-x-auto md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-4 py-2 -mx-1 px-1 md:mx-0 md:px-0">
+              <div className="flex space-x-4 overflow-x-auto md:grid md:grid-cols-2 md:gap-x-6 md:gap-y-8 py-2 -mx-1 px-1 md:mx-0 md:px-0">
                 {newsToShow.map(newsItem => (
                   <Card 
                     key={newsItem.id} 
-                    className="w-[calc(100vw-5rem)] max-w-sm sm:w-80 md:w-auto flex-shrink-0 hover:shadow-lg transition-shadow duration-200 ease-in-out"
+                    className="w-[calc(100vw-4rem)] max-w-md sm:w-96 md:w-auto flex-shrink-0 hover:shadow-lg transition-shadow duration-200 ease-in-out"
                   >
                     <CardContent className="p-4">
                       <div className="flex flex-col sm:flex-row gap-x-4 gap-y-3">
-                        <Link href={`/news/${newsItem.id}`} className="block sm:w-36 flex-shrink-0">
-                          <div className="relative w-full aspect-video sm:aspect-square rounded-md overflow-hidden bg-muted group">
+                        <Link href={`/news/${newsItem.id}`} className="block w-full sm:w-40 md:w-56 flex-shrink-0">
+                          <div className="relative w-full aspect-video rounded-md overflow-hidden bg-muted group">
                             <Image
                               src={newsItem.imageUrl}
                               alt={newsItem.title}
                               fill
                               className="object-cover group-hover:scale-105 transition-transform duration-300"
                               data-ai-hint={newsItem.dataAiHint || 'news article image'}
-                              sizes="(max-width: 640px) 100vw, 144px"
+                              sizes="(max-width: 639px) 100vw, (max-width: 767px) 160px, 224px"
                             />
                           </div>
                         </Link>
@@ -550,4 +550,3 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     </div>
   );
 }
-
