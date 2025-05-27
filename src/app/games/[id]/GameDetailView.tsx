@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useState, useEffect, useRef } from 'react';
-import { MOCK_GAMES } from '@/lib/constants'; // For news articles, if not passed as prop
+import { MOCK_GAMES } from '@/lib/constants'; 
 import { cn } from '@/lib/utils';
 
 // Re-define NewsArticle interface and mock data generation locally for this page
@@ -30,11 +30,11 @@ interface NewsArticle {
 }
 
 const localMockNewsArticles: NewsArticle[] = MOCK_GAMES.flatMap((g, gameIndex) => 
-  Array.from({ length: Math.max(1, 3 - gameIndex) }, (_, newsIndex) => ({ // Game 0 gets 3 news, Game 1 gets 2, others 1
+  Array.from({ length: Math.max(1, 3 - gameIndex) }, (_, newsIndex) => ({ 
     id: `news-${g.id}-${newsIndex + 1}`,
     title: `${g.title} ${newsIndex === 0 ? '最新动态与攻略分享' : newsIndex === 1 ? '深度评测解析' : '社区精彩活动'} #${newsIndex + 1}`,
     content: `这是关于《${g.title}》的第 ${newsIndex + 1} 篇资讯。深入探讨了其最新更新、社区热点以及一些高级游戏技巧。\n\n${g.description}\n\n更多详细内容，包括最新的角色介绍、活动预告以及玩家社区的精彩讨论，都将在这里为您呈现。我们致力于提供最全面、最及时的游戏资讯，帮助您更好地享受《${g.title}》带来的乐趣。\n\n敬请期待后续的独家报道和深度评测！`,
-    imageUrl: g.imageUrl, // Could vary this per news item too
+    imageUrl: g.imageUrl, 
     dataAiHint: g.dataAiHint ? `${g.dataAiHint} news ${newsIndex + 1}` : `news article ${newsIndex + 1}`,
     category: gameIndex % 2 === 0 ? '游戏攻略' : '行业新闻',
     date: `2024年${Math.max(1, 7 - gameIndex)}月${Math.min(28, 15 + gameIndex + newsIndex)}日`,
@@ -116,7 +116,6 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     }, 350);
   };
 
-  // Filter news specifically for the current game title, or use IDs if more robustly linked
   const allGameSpecificNews = localMockNewsArticles.filter(article => 
     article.title.includes(game.title) || article.id.startsWith(`news-${game.id}`)
   );
@@ -265,15 +264,17 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                 <p className="text-muted-foreground text-xs">版本</p>
                 <div className="flex items-center gap-x-2 flex-wrap">
                     <p className="font-semibold">{game.version || 'N/A'}</p>
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-auto px-2 py-0.5 text-xs btn-interactive"
-                        onClick={() => alert('催更请求已发送 (模拟)')}
-                    >
-                        <BellRing className="w-3 h-3 mr-1" />
-                        催更
-                    </Button>
+                    {game.version && (
+                      <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-auto px-2 py-0.5 text-xs btn-interactive"
+                          onClick={() => alert('催更请求已发送 (模拟)')}
+                      >
+                          <BellRing className="w-3 h-3 mr-1" />
+                          催更
+                      </Button>
+                    )}
                 </div>
               </div>
             </div>
@@ -358,10 +359,10 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
               
               <div
                 className={cn(
-                  "py-2 -mx-1 px-1 md:mx-0 md:px-0", // Common padding/margin reset
-                  "flex space-x-4 overflow-x-auto",  // Base mobile: flex layout with horizontal scroll
-                  "md:grid md:gap-x-6 md:gap-y-8",    // Desktop base: grid with gaps
-                  newsToShow.length === 1 ? "md:grid-cols-1" : "md:grid-cols-2" // Conditional columns for desktop
+                  "py-2 -mx-1 px-1 md:mx-0 md:px-0", 
+                  "flex space-x-3 overflow-x-auto", 
+                  "md:grid md:gap-x-4 md:gap-y-6",    
+                  newsToShow.length === 1 ? "md:grid-cols-1" : "md:grid-cols-2" 
                 )}
               >
                 {newsToShow.map(newsItem => (
@@ -369,7 +370,7 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                     key={newsItem.id} 
                     className={cn(
                       "w-[calc(100vw-4rem)] max-w-md sm:w-96 flex-shrink-0 hover:shadow-lg transition-shadow duration-200 ease-in-out",
-                      newsToShow.length === 1 ? "md:w-full" : "md:w-auto" // Card width adjustment for desktop
+                      newsToShow.length === 1 ? "md:w-full" : "md:w-auto" 
                     )}
                   >
                     <CardContent className="p-4">
@@ -386,18 +387,22 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                             />
                           </div>
                         </Link>
-                        <div className="flex-grow">
-                          <Badge variant="outline" className="text-xs mb-1">{newsItem.category}</Badge>
-                          <h3 className="text-base md:text-xl font-semibold mb-1 text-foreground hover:text-primary transition-colors line-clamp-2">
-                            <Link href={`/news/${newsItem.id}`}>{newsItem.title}</Link>
-                          </h3>
-                          <p className="text-xs text-muted-foreground mb-2">{newsItem.date} - {newsItem.author}</p>
-                          <p className="text-sm text-foreground/80 mb-3 line-clamp-3">
+                        <div className="flex-grow flex flex-col">
+                           <div>
+                            <Badge variant="outline" className="text-xs mb-1">{newsItem.category}</Badge>
+                            <h3 className="text-base md:text-xl font-semibold mb-1 text-foreground hover:text-primary transition-colors line-clamp-2">
+                              <Link href={`/news/${newsItem.id}`}>{newsItem.title}</Link>
+                            </h3>
+                            <p className="text-xs text-muted-foreground mb-2">{newsItem.date} - {newsItem.author}</p>
+                          </div>
+                          <p className="text-sm text-foreground/80 mb-3 line-clamp-3 flex-grow">
                             {createExcerpt(newsItem.content, 100)}
                           </p>
-                          <Button asChild variant="link" size="sm" className="p-0 h-auto text-primary hover:underline font-medium">
-                            <Link href={`/news/${newsItem.id}`}>阅读全文 &rarr;</Link>
-                          </Button>
+                          <div className="mt-auto">
+                            <Button asChild variant="link" size="sm" className="p-0 h-auto text-primary hover:underline font-medium">
+                              <Link href={`/news/${newsItem.id}`}>阅读全文 &rarr;</Link>
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -407,7 +412,6 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
               {hasMoreNews && (
                 <div className="mt-6 text-center">
                   <Button variant="outline" asChild className="btn-interactive">
-                    {/* This link should ideally go to a page showing all news for this game */}
                     <Link href={`/news?tag=${encodeURIComponent(game.title)}`}>查看更多《{game.title}》资讯</Link>
                   </Button>
                 </div>
@@ -561,3 +565,5 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     </div>
   );
 }
+
+    
