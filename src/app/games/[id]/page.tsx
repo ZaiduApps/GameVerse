@@ -3,7 +3,7 @@ import { MOCK_GAMES } from '@/lib/constants';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon } from 'lucide-react';
+import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import GameDownloadDialog from '@/components/game-download-dialog';
 import Link from 'next/link';
@@ -263,6 +263,50 @@ export default function GameDetailPage({ params }: { params: { id: string } }) {
               </div>
             </div>
           )}
+
+          {/* More Resources Section */}
+          <div className="pt-6 mt-6 border-t">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <LinkIcon className="w-5 h-5 text-primary mr-2" />
+              更多资源与支持
+            </h2>
+            <div className="grid md:grid-cols-2 gap-x-6 gap-y-4">
+              {/* Community Section */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-medium flex items-center text-foreground/90">
+                  <Users className="w-5 h-5 mr-2 text-accent" />
+                  玩家交流群
+                </h3>
+                <Button variant="outline" className="w-full justify-start btn-interactive">
+                  <MessageSquare className="w-4 h-4 mr-2" /> 加入官方QQ群: 123456789 (模拟)
+                </Button>
+                <Button variant="outline" className="w-full justify-start btn-interactive">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21.025 4.005C21.025 4.005 22.275 12.135 18.705 18.435C18.705 18.435 16.665 22.455 11.905 22.455C11.905 22.455 7.415000000000001 22.515 4.475000000000001 17.985C4.475000000000001 17.985 0.78500000000000034 12.045 0.78500000000000034 4.005C0.78500000000000034 4.005 3.2050000000000003 1.5150000000000001 7.2350000000000003 1.5150000000000001C7.2350000000000003 1.5150000000000001 10.015 1.0500000000000003 11.915 1.0500000000000003C11.915 1.0500000000000003 17.065 0.6800000000000004 21.025 4.005Z"/><path d="M8.324999999999999 10.11C8.324999999999999 10.11 9.044999999999998 9.134999999999999 10.115 9.134999999999999C11.185 9.134999999999999 11.665 10.02 11.665 10.02L12.505 13.38C12.505 13.38 12.025 13.89 11.025 13.89C10.025 13.89 8.484999999999999 12.675 8.484999999999999 12.675L8.324999999999999 10.11Z"/><path d="M15.635 10.11C15.635 10.11 14.915 9.134999999999999 13.845 9.134999999999999C12.775 9.134999999999999 12.295 10.02 12.295 10.02L11.455 13.38C11.455 13.38 11.935 13.89 12.935 13.89C13.935 13.89 15.475 12.675 15.475 12.675L15.635 10.11Z"/></svg>
+                  加入Discord服务器 (模拟)
+                </Button>
+                <Button variant="outline" className="w-full justify-start btn-interactive">
+                  <Users className="w-4 h-4 mr-2" /> 官方论坛/社区 (模拟)
+                </Button>
+              </div>
+
+              {/* Cooperation/Support Section */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-medium flex items-center text-foreground/90">
+                  <Briefcase className="w-5 h-5 mr-2 text-accent" />
+                  合作与支持
+                </h3>
+                <Button variant="outline" className="w-full justify-start btn-interactive">
+                  <Briefcase className="w-4 h-4 mr-2" /> 商务合作洽谈 (模拟)
+                </Button>
+                <Button variant="outline" className="w-full justify-start btn-interactive">
+                  <Newspaper className="w-4 h-4 mr-2" /> 媒体与内容创作 (模拟)
+                </Button>
+                 <Button variant="outline" className="w-full justify-start btn-interactive">
+                  <AlertTriangle className="w-4 h-4 mr-2" /> Bug反馈与建议 (模拟)
+                </Button>
+              </div>
+            </div>
+          </div>
 
         </CardContent>
       </Card>
