@@ -4,8 +4,8 @@
 import type { Game } from '@/types';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, Newspaper, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera, X as CloseIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import GameDownloadDialog from '@/components/game-download-dialog';
 import Link from 'next/link';
@@ -28,8 +28,6 @@ interface NewsArticle {
   tags?: string[];
 }
 
-// Note: MOCK_GAMES is imported here for localMockNewsArticles.
-// In a real app, news might be fetched or passed differently.
 const localMockNewsArticles: NewsArticle[] = MOCK_GAMES.map((g, index) => ({
   id: `news-${g.id}`,
   title: `${g.title} 最新动态与攻略分享`,
@@ -62,13 +60,14 @@ interface GameDetailViewProps {
   game: Game;
 }
 
-const DESCRIPTION_CHAR_LIMIT = 120; // Increased character limit for better preview
+const DESCRIPTION_CHAR_LIMIT = 120;
 
 export default function GameDetailView({ game }: GameDetailViewProps) {
   const [showFab, setShowFab] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const commentsSectionRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
+  const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
 
   useEffect(() => {
     const commentsDiv = commentsSectionRef.current;
@@ -86,10 +85,24 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     };
 
     window.addEventListener('scroll', handleScroll);
-    handleScroll(); // Initial check
+    handleScroll(); 
 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    // Prevent body scroll when modal is open
+    if (selectedScreenshot) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    // Cleanup function to restore scroll
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [selectedScreenshot]);
+
 
   const handleFabClick = () => {
     if (commentsSectionRef.current) {
@@ -100,7 +113,6 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     }, 350);
   };
 
-  // Filter news specific to the game passed as a prop
   const gameSpecificNews = localMockNewsArticles.filter(article =>
     article.id === `news-${game.id}` || article.title.includes(game.title)
   ).slice(0, 3);
@@ -123,25 +135,30 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     if (text.length <= limit) {
       return text;
     }
-    // Try to find a natural break point (sentence end or space)
     let breakPoint = text.substring(0, limit).lastIndexOf('。');
     if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf('！');
     if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf('？');
     if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf(' ');
     
-    if (breakPoint > limit / 2) { // Ensure breakpoint is reasonably far
+    if (breakPoint > limit / 2) {
         return text.substring(0, breakPoint + 1) + '...';
     }
-    // If no good breakpoint, just cut
     return text.substring(0, limit) + '...';
   };
 
   const shortDescriptionText = truncateDescription(game.description, DESCRIPTION_CHAR_LIMIT);
   const needsExpansion = game.description.length > DESCRIPTION_CHAR_LIMIT;
 
+  const openScreenshotPreview = (url: string) => {
+    setSelectedScreenshot(url);
+  };
+
+  const closeScreenshotPreview = () => {
+    setSelectedScreenshot(null);
+  };
+
   return (
     <div className="space-y-8 fade-in">
-      {/* Site-wide Announcement */}
       <Card className="bg-primary/5 border-primary/20 shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-center">
@@ -156,7 +173,6 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
         </CardContent>
       </Card>
 
-      {/* Marquee Section (Static Placeholder) */}
       <Card className="shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-center">
@@ -181,7 +197,6 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
           />
         </CardHeader>
         <CardContent className="p-4 md:p-6 space-y-6">
-          {/* Top Info Block: Icon, Title/Dev, Download Button */}
           <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
             <Image
               src={game.imageUrl}
@@ -200,7 +215,6 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
             </div>
           </div>
 
-          {/* Detailed Stats Row */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm pt-2">
             <div className="flex items-center">
               <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-2" />
@@ -308,20 +322,17 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                   <div 
                     key={index} 
                     className="flex-shrink-0 w-60 md:w-72 aspect-video bg-muted rounded-lg overflow-hidden shadow hover:shadow-lg transition-shadow cursor-pointer group relative"
-                    onClick={() => alert(`预览截图 ${index + 1} (功能待实现)`)}
+                    onClick={() => openScreenshotPreview(screenshot.url)}
                   >
                     <Image
                       src={screenshot.url}
                       alt={`游戏截图 ${index + 1}`}
-                      width={288} // for md:w-72, roughly 16:9
+                      width={288} 
                       height={162}
                       className="w-full h-full object-cover transition-transform group-hover:scale-105"
                       data-ai-hint={screenshot.dataAiHint || "gameplay screenshot"}
                       sizes="(max-width: 767px) 240px, 288px"
                     />
-                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Search className="w-8 h-8 text-white" />
-                    </div>
                   </div>
                 ))}
               </div>
@@ -406,7 +417,7 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                   <Briefcase className="w-4 h-4 mr-2" /> 商务合作洽谈 (模拟)
                 </Button>
                 <Button variant="outline" className="w-full justify-start btn-interactive">
-                  <Newspaper className="w-4 h-4 mr-2" /> 媒体与内容创作 (模拟)
+                  <NewsIcon className="w-4 h-4 mr-2" /> 媒体与内容创作 (模拟)
                 </Button>
                  <Button variant="outline" className="w-full justify-start btn-interactive">
                   <AlertTriangle className="w-4 h-4 mr-2" /> Bug反馈与建议 (模拟)
@@ -415,14 +426,12 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
             </div>
           </div>
 
-          {/* Comments Section */}
           <div ref={commentsSectionRef} className="pt-8 mt-8 border-t">
             <h2 className="text-xl font-semibold mb-6 flex items-center">
               <CommentIcon className="w-6 h-6 text-primary mr-3" />
               玩家评论区
             </h2>
 
-            {/* Comment Input Area */}
             <Card className="mb-6 shadow-sm">
               <CardContent className="p-4">
                 <div className="flex items-start space-x-3">
@@ -445,7 +454,6 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
               </CardContent>
             </Card>
 
-            {/* Display Existing Comments */}
             <div className="space-y-6">
               {mockComments.map((comment) => (
                 <Card key={comment.id} className="shadow-sm">
@@ -475,7 +483,6 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
               )}
             </div>
           </div>
-
         </CardContent>
       </Card>
 
@@ -490,16 +497,36 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
           <MessageSquarePlus className="w-6 h-6" />
         </Button>
       )}
+
+      {selectedScreenshot && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in-50"
+          onClick={closeScreenshotPreview}
+        >
+          <div 
+            className="relative max-w-full max-h-full"
+            onClick={(e) => e.stopPropagation()} // Prevent click on image from closing modal
+          >
+            <Image
+              src={selectedScreenshot}
+              alt="游戏截图预览"
+              width={1280} // Example large width
+              height={720} // Example large height
+              className="object-contain rounded-lg shadow-2xl"
+              style={{ maxWidth: '90vw', maxHeight: '90vh' }}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute -top-3 -right-3 md:top-2 md:right-2 z-[110] rounded-full bg-background/80 hover:bg-background text-foreground hover:text-primary w-8 h-8 md:w-10 md:h-10"
+              onClick={closeScreenshotPreview}
+              aria-label="关闭预览"
+            >
+              <CloseIcon className="w-5 h-5 md:w-6 md:h-6" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-// Note: ChevronDown and ChevronUp were previously defined here.
-// They are now directly imported from lucide-react, so these local definitions are removed.
-// If not available in lucide-react, ensure they are defined or imported correctly.
-// For this example, assuming they are in lucide-react.
-// If not, they would need to be re-added or alternative icons used.
-// For this specific update, ChevronUp and ChevronDown from lucide-react are used.
-// Added Camera and Search icons to lucide-react imports.
-import { Search } from 'lucide-react'; // Added for screenshot preview hint
-
