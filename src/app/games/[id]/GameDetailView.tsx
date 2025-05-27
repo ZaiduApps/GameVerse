@@ -360,22 +360,23 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
               <div
                 className={cn(
                   "py-2 -mx-1 px-1 md:mx-0 md:px-0", 
-                  "flex space-x-3 overflow-x-auto", 
-                  "md:grid md:gap-x-4 md:gap-y-6",    
-                  newsToShow.length === 1 ? "md:grid-cols-1" : "md:grid-cols-2" 
+                  "flex space-x-3 overflow-x-auto", // Mobile: horizontal scroll
+                  "md:grid md:gap-x-4 md:gap-y-6",    // Desktop: grid
+                  newsToShow.length === 1 ? "md:grid-cols-1" :
+                  newsToShow.length === 2 ? "md:grid-cols-2" :
+                  "md:grid-cols-3" // Default for 3 or 4 items
                 )}
               >
                 {newsToShow.map(newsItem => (
                   <Card 
                     key={newsItem.id} 
                     className={cn(
-                      "w-[calc(100vw-4rem)] max-w-md sm:w-96 flex-shrink-0 hover:shadow-lg transition-shadow duration-200 ease-in-out",
-                      newsToShow.length === 1 ? "md:w-full" : "md:w-auto" 
+                      "w-[calc(100vw-4rem)] max-w-md sm:w-96 flex-shrink-0 hover:shadow-lg transition-shadow duration-200 ease-in-out md:w-auto"
                     )}
                   >
                     <CardContent className="p-4">
                       <div className="flex flex-col sm:flex-row gap-x-4 gap-y-3">
-                        <Link href={`/news/${newsItem.id}`} className="block w-full sm:w-40 md:w-56 flex-shrink-0">
+                        <Link href={`/news/${newsItem.id}`} className="block w-full sm:w-40 md:w-44 flex-shrink-0">
                           <div className="relative w-full aspect-video rounded-md overflow-hidden bg-muted group">
                             <Image
                               src={newsItem.imageUrl}
@@ -383,7 +384,7 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                               fill
                               className="object-cover group-hover:scale-105 transition-transform duration-300"
                               data-ai-hint={newsItem.dataAiHint || 'news article image'}
-                              sizes="(max-width: 639px) 100vw, (max-width: 767px) 160px, 224px"
+                              sizes="(max-width: 639px) 100vw, (max-width: 767px) 160px, 176px"
                             />
                           </div>
                         </Link>
@@ -565,5 +566,3 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     </div>
   );
 }
-
-    
