@@ -207,11 +207,22 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                 <p className="font-semibold">{game.releaseDate || '未知'}</p>
               </div>
             </div>
-            <div className="flex items-center">
-              <Info className="w-4 h-4 text-purple-500 mr-2" />
-              <div>
+            <div className="flex items-start"> {/* Changed to items-start for better alignment with button */}
+              <Info className="w-4 h-4 text-purple-500 mr-2 mt-0.5 flex-shrink-0" />
+              <div className="flex-grow">
                 <p className="text-muted-foreground text-xs">版本</p>
-                <p className="font-semibold">{game.version || 'N/A'}</p>
+                <div className="flex items-center gap-x-2 flex-wrap">
+                    <p className="font-semibold">{game.version || 'N/A'}</p>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-auto px-2 py-0.5 text-xs btn-interactive"
+                        onClick={() => alert('催更请求已发送 (模拟)')}
+                    >
+                        <BellRing className="w-3 h-3 mr-1" />
+                        催更
+                    </Button>
+                </div>
               </div>
             </div>
             <div className="flex items-center">
@@ -334,9 +345,6 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                   <Briefcase className="w-5 h-5 mr-2 text-accent" />
                   合作与支持
                 </h3>
-                <Button variant="outline" className="w-full justify-start btn-interactive">
-                  <BellRing className="w-4 h-4 mr-2" /> 催促版本更新 (模拟)
-                </Button>
                 <Button variant="outline" className="w-full justify-start btn-interactive">
                   <Briefcase className="w-4 h-4 mr-2" /> 商务合作洽谈 (模拟)
                 </Button>
