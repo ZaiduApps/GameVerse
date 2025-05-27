@@ -1,17 +1,21 @@
 
+'use client';
+
 import { MOCK_GAMES } from '@/lib/constants';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, Newspaper, BellRing, MessageCircle as CommentIcon } from 'lucide-react';
+import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, Newspaper, BellRing, MessageCircle as CommentIcon, MessageSquarePlus } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import GameDownloadDialog from '@/components/game-download-dialog';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import React, { useState, useEffect, useRef } from 'react';
 
 export async function generateStaticParams() {
+  // This function still works for pre-rendering paths even if the page component is 'use client'
   return MOCK_GAMES.map((game) => ({
     id: game.id,
   }));
@@ -30,16 +34,14 @@ interface NewsArticle {
   tags?: string[];
 }
 
-// This mock data generation mirrors the one in src/app/news/[id]/page.tsx
-// to ensure compatibility with news detail page links and structure.
 const localMockNewsArticles: NewsArticle[] = MOCK_GAMES.map((g, index) => ({
-  id: `news-${g.id}`, // This ID structure matches what the news detail page expects
+  id: `news-${g.id}`, 
   title: `${g.title} 最新动态与攻略分享`,
   content: `这篇关于《${g.title}》的文章深入探讨了其最新更新、社区热点以及一些高级游戏技巧。\n\n${g.description}\n\n更多详细内容，包括最新的角色介绍、活动预告以及玩家社区的精彩讨论，都将在这里为您呈现。我们致力于提供最全面、最及时的游戏资讯，帮助您更好地享受《${g.title}》带来的乐趣。\n\n敬请期待后续的独家报道和深度评测！`,
-  imageUrl: g.imageUrl, // Using game's image for related news consistency
+  imageUrl: g.imageUrl,
   dataAiHint: g.dataAiHint ? `${g.dataAiHint} news` : "news article",
   category: index % 2 === 0 ? '游戏攻略' : '行业新闻',
-  date: `2024年${Math.max(1, 7 - index)}月${Math.min(28, 15 + index)}日`, // Ensure valid dates
+  date: `2024年${Math.max(1, 7 - index)}月${Math.min(28, 15 + index)}日`,
   author: '游戏宇宙编辑部',
   tags: g.tags ? [...g.tags, (index % 3 === 0 ? '热门' : '深度分析')] : ['资讯'],
 }));
@@ -49,6 +51,7 @@ interface MockComment {
   username: string;
   avatarFallback: string;
   avatarUrl?: string;
+  dataAiHint?: string;
   timestamp: string;
   text: string;
 }
@@ -62,6 +65,43 @@ const mockComments: MockComment[] = [
 
 export default function GameDetailPage({ params }: { params: { id: string } }) {
   const game = MOCK_GAMES.find(g => g.id === params.id);
+
+  const [showFab, setShowFab] = useState(false);
+  const commentsSectionRef = useRef<HTMLDivElement>(null);
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const commentsDiv = commentsSectionRef.current;
+    if (!commentsDiv) return;
+
+    const handleScroll = () => {
+      const commentsDivTop = commentsDiv.getBoundingClientRect().top;
+      const windowHeight = window.innerHeight;
+
+      // Show FAB if the top of the comments section is below 70% of viewport height (mostly not visible yet)
+      // AND user has scrolled down at least 200px.
+      if (commentsDivTop > windowHeight * 0.7 && window.scrollY > 200) {
+        setShowFab(true);
+      } else {
+        setShowFab(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Initial check
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleFabClick = () => {
+    if (commentsSectionRef.current) {
+      commentsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    // Delay focus to allow scroll animation to complete
+    setTimeout(() => {
+      commentInputRef.current?.focus();
+    }, 350); 
+  };
 
   if (!game) {
     return <div className="text-center py-10">游戏未找到</div>;
@@ -320,7 +360,7 @@ export default function GameDetailPage({ params }: { params: { id: string } }) {
           </div>
 
           {/* Comments Section */}
-          <div className="pt-8 mt-8 border-t">
+          <div ref={commentsSectionRef} className="pt-8 mt-8 border-t">
             <h2 className="text-xl font-semibold mb-6 flex items-center">
               <CommentIcon className="w-6 h-6 text-primary mr-3" />
               玩家评论区
@@ -336,6 +376,7 @@ export default function GameDetailPage({ params }: { params: { id: string } }) {
                   </Avatar>
                   <div className="flex-grow space-y-2">
                     <Textarea 
+                      ref={commentInputRef}
                       placeholder="发表你的看法，分享游戏心得..." 
                       rows={3}
                       className="text-sm"
@@ -381,6 +422,18 @@ export default function GameDetailPage({ params }: { params: { id: string } }) {
 
         </CardContent>
       </Card>
+
+      {showFab && (
+        <Button
+          variant="default"
+          size="icon"
+          className="fixed bottom-8 right-8 z-50 rounded-full w-14 h-14 shadow-xl btn-interactive"
+          onClick={handleFabClick}
+          aria-label="快速评论"
+        >
+          <MessageSquarePlus className="w-6 h-6" />
+        </Button>
+      )}
     </div>
   );
 }
