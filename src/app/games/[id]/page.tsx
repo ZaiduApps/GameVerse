@@ -2,20 +2,10 @@
 import { MOCK_GAMES } from '@/lib/constants';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, Download, Users, Tag, CalendarDays, Info, Smartphone, Store, Globe, Gamepad2 } from 'lucide-react';
+import { Star, Download, Users, Tag, CalendarDays, Info } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
+import GameDownloadDialog from '@/components/game-download-dialog'; // Added import
 
 export async function generateStaticParams() {
   return MOCK_GAMES.map((game) => ({
@@ -23,12 +13,7 @@ export async function generateStaticParams() {
   }));
 }
 
-const MOCK_DOWNLOAD_CHANNELS = [
-  { id: 'appstore', name: 'App Store', icon: <Smartphone className="w-5 h-5 mr-3 text-muted-foreground" /> },
-  { id: 'googleplay', name: 'Google Play', icon: <Store className="w-5 h-5 mr-3 text-muted-foreground" /> },
-  { id: 'official', name: '官方网站', icon: <Globe className="w-5 h-5 mr-3 text-muted-foreground" /> },
-  { id: 'taptap', name: 'TapTap', icon: <Gamepad2 className="w-5 h-5 mr-3 text-muted-foreground" /> },
-];
+// MOCK_DOWNLOAD_CHANNELS definition removed from here, moved to GameDownloadDialog
 
 export default function GameDetailPage({ params }: { params: { id: string } }) {
   const game = MOCK_GAMES.find(g => g.id === params.id);
@@ -81,42 +66,7 @@ export default function GameDetailPage({ params }: { params: { id: string } }) {
                 <span className="text-sm text-muted-foreground ml-1">(下载)</span>
               </div>
             </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button size="lg" className="w-full md:w-auto btn-interactive">
-                  <Download className="mr-2 h-5 w-5" />
-                  获取游戏
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[480px]">
-                <DialogHeader>
-                  <DialogTitle>选择下载渠道</DialogTitle>
-                  <DialogDescription>
-                    请选择您偏好的下载方式。点击渠道名称即可跳转（模拟操作）。
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-3 py-4">
-                  {MOCK_DOWNLOAD_CHANNELS.map(channel => (
-                    <Button 
-                      key={channel.id} 
-                      variant="outline" 
-                      className="w-full justify-start text-left h-auto py-3 px-4"
-                      onClick={() => alert(`正在前往 ${channel.name} (模拟)`)}
-                    >
-                      {channel.icon}
-                      <span className="text-base font-medium">{channel.name}</span>
-                    </Button>
-                  ))}
-                </div>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button type="button" variant="secondary">
-                      关闭
-                    </Button>
-                  </DialogClose>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <GameDownloadDialog /> {/* Replaced Dialog block with the new Client Component */}
           </div>
           
           <Separator className="my-6" />
