@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_GAMES } from '@/lib/constants'; // For news articles, if not passed as prop
+import { cn } from '@/lib/utils';
 
 // Re-define NewsArticle interface and mock data generation locally for this page
 interface NewsArticle {
@@ -355,11 +356,21 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                 《{game.title}》相关资讯
               </h2>
               
-              <div className="flex space-x-4 overflow-x-auto md:grid md:grid-cols-2 md:gap-x-6 md:gap-y-8 py-2 -mx-1 px-1 md:mx-0 md:px-0">
+              <div
+                className={cn(
+                  "py-2 -mx-1 px-1 md:mx-0 md:px-0", // Common padding/margin reset
+                  "flex space-x-4 overflow-x-auto",  // Base mobile: flex layout with horizontal scroll
+                  "md:grid md:gap-x-6 md:gap-y-8",    // Desktop base: grid with gaps
+                  newsToShow.length === 1 ? "md:grid-cols-1" : "md:grid-cols-2" // Conditional columns for desktop
+                )}
+              >
                 {newsToShow.map(newsItem => (
                   <Card 
                     key={newsItem.id} 
-                    className="w-[calc(100vw-4rem)] max-w-md sm:w-96 md:w-auto flex-shrink-0 hover:shadow-lg transition-shadow duration-200 ease-in-out"
+                    className={cn(
+                      "w-[calc(100vw-4rem)] max-w-md sm:w-96 flex-shrink-0 hover:shadow-lg transition-shadow duration-200 ease-in-out",
+                      newsToShow.length === 1 ? "md:w-full" : "md:w-auto" // Card width adjustment for desktop
+                    )}
                   >
                     <CardContent className="p-4">
                       <div className="flex flex-col sm:flex-row gap-x-4 gap-y-3">
