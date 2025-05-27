@@ -5,7 +5,7 @@ import type { Game } from '@/types';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, Newspaper, BellRing, MessageCircle as CommentIcon, MessageSquarePlus } from 'lucide-react';
+import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, Newspaper, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import GameDownloadDialog from '@/components/game-download-dialog';
 import Link from 'next/link';
@@ -62,8 +62,11 @@ interface GameDetailViewProps {
   game: Game;
 }
 
+const DESCRIPTION_CHAR_LIMIT = 120; // Increased character limit for better preview
+
 export default function GameDetailView({ game }: GameDetailViewProps) {
   const [showFab, setShowFab] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const commentsSectionRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -115,6 +118,26 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     }
     return firstParagraph.substring(0, cutPoint + 1) + '...';
   };
+
+  const truncateDescription = (text: string, limit: number): string => {
+    if (text.length <= limit) {
+      return text;
+    }
+    // Try to find a natural break point (sentence end or space)
+    let breakPoint = text.substring(0, limit).lastIndexOf('。');
+    if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf('！');
+    if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf('？');
+    if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf(' ');
+    
+    if (breakPoint > limit / 2) { // Ensure breakpoint is reasonably far
+        return text.substring(0, breakPoint + 1) + '...';
+    }
+    // If no good breakpoint, just cut
+    return text.substring(0, limit) + '...';
+  };
+
+  const shortDescriptionText = truncateDescription(game.description, DESCRIPTION_CHAR_LIMIT);
+  const needsExpansion = game.description.length > DESCRIPTION_CHAR_LIMIT;
 
   return (
     <div className="space-y-8 fade-in">
@@ -207,7 +230,14 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                 <p className="font-semibold">{game.releaseDate || '未知'}</p>
               </div>
             </div>
-            <div className="flex items-start"> {/* Changed to items-start for better alignment with button */}
+             <div className="flex items-center">
+              <History className="w-4 h-4 text-purple-500 mr-2" />
+              <div>
+                <p className="text-muted-foreground text-xs">更新日期</p>
+                <p className="font-semibold">{game.updateDate || '未知'}</p>
+              </div>
+            </div>
+            <div className="flex items-start"> 
               <Info className="w-4 h-4 text-purple-500 mr-2 mt-0.5 flex-shrink-0" />
               <div className="flex-grow">
                 <p className="text-muted-foreground text-xs">版本</p>
@@ -252,7 +282,19 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
 
           <div>
             <h2 className="text-xl font-semibold mb-3">游戏介绍</h2>
-            <p className="text-foreground/80 leading-relaxed whitespace-pre-line">{game.description}</p>
+            <p className="text-foreground/80 leading-relaxed whitespace-pre-line">
+              {needsExpansion && !isDescriptionExpanded ? shortDescriptionText : game.description}
+            </p>
+            {needsExpansion && (
+              <Button
+                variant="link"
+                className="p-0 h-auto text-primary hover:underline mt-2 text-sm"
+                onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+              >
+                {isDescriptionExpanded ? '收起' : '展开全文'}
+                {isDescriptionExpanded ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
+              </Button>
+            )}
           </div>
 
           <div>
@@ -437,3 +479,42 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
   );
 }
 
+// Helper for ChevronDown icon
+function ChevronDown(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+// Helper for ChevronUp icon
+function ChevronUp(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="m18 15-6-6-6 6" />
+    </svg>
+  );
+}

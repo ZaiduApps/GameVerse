@@ -13,5 +13,6 @@ export interface Game {
   tags?: string[]; // 标签 (Simplified Chinese)
   developer?: string; // 开发商 (Simplified Chinese)
   releaseDate?: string; // 发布日期
+  updateDate?: string; // 更新日期 (optional)
   dataAiHint?: string; // For placeholder image generation
 }
