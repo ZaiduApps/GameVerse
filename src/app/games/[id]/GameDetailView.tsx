@@ -360,11 +360,11 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
               <div
                 className={cn(
                   "py-2 -mx-1 px-1 md:mx-0 md:px-0", 
-                  "flex space-x-3 overflow-x-auto", // Mobile: horizontal scroll
-                  "md:grid md:gap-x-4 md:gap-y-6",    // Desktop: grid
+                  "flex space-x-3 overflow-x-auto", 
+                  "md:grid md:gap-x-4 md:gap-y-6",    
                   newsToShow.length === 1 ? "md:grid-cols-1" :
                   newsToShow.length === 2 ? "md:grid-cols-2" :
-                  "md:grid-cols-3" // Default for 3 or 4 items
+                  "md:grid-cols-3" 
                 )}
               >
                 {newsToShow.map(newsItem => (
@@ -374,8 +374,8 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                       "w-[calc(100vw-4rem)] max-w-md sm:w-96 flex-shrink-0 hover:shadow-lg transition-shadow duration-200 ease-in-out md:w-auto"
                     )}
                   >
-                    <CardContent className="p-4">
-                      <div className="flex flex-col sm:flex-row gap-x-4 gap-y-3">
+                    <CardContent className="p-3">
+                      <div className="flex flex-col sm:flex-row gap-x-3 gap-y-3">
                         <Link href={`/news/${newsItem.id}`} className="block w-full sm:w-40 md:w-44 flex-shrink-0">
                           <div className="relative w-full aspect-video rounded-md overflow-hidden bg-muted group">
                             <Image
@@ -389,18 +389,18 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                           </div>
                         </Link>
                         <div className="flex-grow flex flex-col">
-                           <div>
+                           <div className='pb-1'>
                             <Badge variant="outline" className="text-xs mb-1">{newsItem.category}</Badge>
-                            <h3 className="text-base md:text-xl font-semibold mb-1 text-foreground hover:text-primary transition-colors line-clamp-2">
+                            <h3 className="text-base font-semibold mb-1 text-foreground hover:text-primary transition-colors line-clamp-2">
                               <Link href={`/news/${newsItem.id}`}>{newsItem.title}</Link>
                             </h3>
-                            <p className="text-xs text-muted-foreground mb-2">{newsItem.date} - {newsItem.author}</p>
+                            <p className="text-xs text-muted-foreground mb-1.5">{newsItem.date} - {newsItem.author}</p>
                           </div>
-                          <p className="text-sm text-foreground/80 mb-3 line-clamp-3 flex-grow">
+                          <p className="text-xs text-foreground/80 mb-2 line-clamp-3 flex-grow">
                             {createExcerpt(newsItem.content, 100)}
                           </p>
                           <div className="mt-auto">
-                            <Button asChild variant="link" size="sm" className="p-0 h-auto text-primary hover:underline font-medium">
+                            <Button asChild variant="link" size="sm" className="p-0 h-auto text-primary hover:underline font-medium text-xs">
                               <Link href={`/news/${newsItem.id}`}>阅读全文 &rarr;</Link>
                             </Button>
                           </div>
@@ -566,3 +566,4 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     </div>
   );
 }
+
