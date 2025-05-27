@@ -355,11 +355,11 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                 《{game.title}》相关资讯
               </h2>
               
-              <div className="flex space-x-4 overflow-x-auto md:block md:space-x-0 md:space-y-4 py-2 -mx-1 px-1 md:mx-0 md:px-0">
+              <div className="flex space-x-4 overflow-x-auto md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-4 py-2 -mx-1 px-1 md:mx-0 md:px-0">
                 {newsToShow.map(newsItem => (
                   <Card 
                     key={newsItem.id} 
-                    className="w-[calc(100vw-5rem)] max-w-xs sm:w-80 flex-shrink-0 md:w-full hover:shadow-lg transition-shadow duration-200 ease-in-out"
+                    className="w-[calc(100vw-5rem)] max-w-xs sm:w-80 flex-shrink-0 md:w-auto hover:shadow-lg transition-shadow duration-200 ease-in-out"
                   >
                     <CardContent className="p-4">
                       <div className="flex flex-col sm:flex-row gap-x-4 gap-y-3">
@@ -550,4 +550,3 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     </div>
   );
 }
-
