@@ -1,6 +1,13 @@
 
 import type { Game } from '@/types';
 
+const generateMockScreenshots = (gameTitleHint: string, count: number = 5): Game['screenshots'] => {
+  return Array.from({ length: count }, (_, i) => ({
+    url: `https://placehold.co/400x225.png`, // 16:9 aspect ratio
+    dataAiHint: `${gameTitleHint} gameplay ${i + 1}`,
+  }));
+};
+
 export const MOCK_GAMES: Game[] = [
   {
     id: '1',
@@ -16,6 +23,7 @@ export const MOCK_GAMES: Game[] = [
     developer: '腾讯天美',
     releaseDate: '2015年11月26日',
     updateDate: '2024年07月15日',
+    screenshots: generateMockScreenshots('fantasy battle'),
   },
   {
     id: '2',
@@ -31,6 +39,7 @@ export const MOCK_GAMES: Game[] = [
     developer: '腾讯光子',
     releaseDate: '2019年05月08日',
     updateDate: '2024年07月10日',
+    screenshots: generateMockScreenshots('battle royale shooting'),
   },
   {
     id: '3',
@@ -46,6 +55,7 @@ export const MOCK_GAMES: Game[] = [
     developer: '米哈游',
     releaseDate: '2020年09月28日',
     updateDate: '2024年07月18日',
+    screenshots: generateMockScreenshots('anime world exploration'),
   },
   {
     id: '4',
@@ -61,6 +71,7 @@ export const MOCK_GAMES: Game[] = [
     developer: '米哈游',
     releaseDate: '2023年04月26日',
     updateDate: '2024年07月12日',
+    screenshots: generateMockScreenshots('sci-fi space train'),
   },
   {
     id: '5',
@@ -76,6 +87,7 @@ export const MOCK_GAMES: Game[] = [
     developer: 'SYBO Games',
     releaseDate: '2012年05月24日',
     // updateDate: '2024年06月20日', // Example of missing update date
+    screenshots: generateMockScreenshots('urban subway runner'),
   },
   {
     id: '6',
@@ -91,5 +103,6 @@ export const MOCK_GAMES: Game[] = [
     developer: '网易游戏',
     releaseDate: '2022年05月27日',
     updateDate: '2024年07月05日',
+    screenshots: generateMockScreenshots('party game obstacle'),
   },
 ];

@@ -5,7 +5,7 @@ import type { Game } from '@/types';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, Newspaper, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History } from 'lucide-react';
+import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, Newspaper, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import GameDownloadDialog from '@/components/game-download-dialog';
 import Link from 'next/link';
@@ -298,21 +298,36 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
           </div>
 
           <div>
-            <h2 className="text-xl font-semibold mt-6 mb-3">游戏截图</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4">
-              {[1,2,3,4].map(i => (
-                <div key={i} className="aspect-video bg-muted rounded-lg overflow-hidden shadow hover:shadow-lg transition-shadow">
-                  <Image
-                    src={'https://placehold.co/300x169.png'}
-                    alt={`游戏截图 ${i}`}
-                    width={300}
-                    height={169}
-                    className="w-full h-full object-cover"
-                    data-ai-hint="gameplay screenshot"
-                  />
-                </div>
-              ))}
-            </div>
+            <h2 className="text-xl font-semibold mt-6 mb-3 flex items-center">
+              <Camera className="w-5 h-5 text-primary mr-2" />
+              游戏截图
+            </h2>
+            {game.screenshots && game.screenshots.length > 0 ? (
+              <div className="flex overflow-x-auto space-x-3 md:space-x-4 py-2 -mx-1 px-1">
+                {game.screenshots.map((screenshot, index) => (
+                  <div 
+                    key={index} 
+                    className="flex-shrink-0 w-60 md:w-72 aspect-video bg-muted rounded-lg overflow-hidden shadow hover:shadow-lg transition-shadow cursor-pointer group relative"
+                    onClick={() => alert(`预览截图 ${index + 1} (功能待实现)`)}
+                  >
+                    <Image
+                      src={screenshot.url}
+                      alt={`游戏截图 ${index + 1}`}
+                      width={288} // for md:w-72, roughly 16:9
+                      height={162}
+                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                      data-ai-hint={screenshot.dataAiHint || "gameplay screenshot"}
+                      sizes="(max-width: 767px) 240px, 288px"
+                    />
+                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Search className="w-8 h-8 text-white" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">暂无游戏截图。</p>
+            )}
           </div>
 
           {gameSpecificNews.length > 0 && (
@@ -327,7 +342,7 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                     <CardContent className="p-4">
                       <div className="flex flex-col sm:flex-row gap-x-4 gap-y-3">
                         <Link href={`/news/${newsItem.id}`} className="block sm:w-32 flex-shrink-0">
-                          <div className="relative w-full aspect-video sm:aspect-square rounded-md overflow-hidden bg-muted">
+                          <div className="relative w-full aspect-video sm:aspect-square rounded-md overflow-hidden bg-muted group">
                             <Image
                               src={newsItem.imageUrl}
                               alt={newsItem.title}
@@ -479,42 +494,12 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
   );
 }
 
-// Helper for ChevronDown icon
-function ChevronDown(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  );
-}
+// Note: ChevronDown and ChevronUp were previously defined here.
+// They are now directly imported from lucide-react, so these local definitions are removed.
+// If not available in lucide-react, ensure they are defined or imported correctly.
+// For this example, assuming they are in lucide-react.
+// If not, they would need to be re-added or alternative icons used.
+// For this specific update, ChevronUp and ChevronDown from lucide-react are used.
+// Added Camera and Search icons to lucide-react imports.
+import { Search } from 'lucide-react'; // Added for screenshot preview hint
 
-// Helper for ChevronUp icon
-function ChevronUp(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="m18 15-6-6-6 6" />
-    </svg>
-  );
-}

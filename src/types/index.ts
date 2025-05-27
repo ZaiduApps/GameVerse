@@ -1,4 +1,9 @@
 
+export interface GameScreenshot {
+  url: string;
+  dataAiHint?: string;
+}
+
 export interface Game {
   id: string;
   title: string; // 标题 (Simplified Chinese)
@@ -15,4 +20,6 @@ export interface Game {
   releaseDate?: string; // 发布日期
   updateDate?: string; // 更新日期 (optional)
   dataAiHint?: string; // For placeholder image generation
+  screenshots?: GameScreenshot[]; // Array of game screenshots
 }
+
