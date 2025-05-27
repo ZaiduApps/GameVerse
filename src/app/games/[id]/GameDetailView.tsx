@@ -359,11 +359,11 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                 {newsToShow.map(newsItem => (
                   <Card 
                     key={newsItem.id} 
-                    className="w-[calc(100vw-5rem)] max-w-xs sm:w-80 flex-shrink-0 md:w-auto hover:shadow-lg transition-shadow duration-200 ease-in-out"
+                    className="w-[calc(100vw-5rem)] max-w-sm sm:w-80 md:w-auto flex-shrink-0 hover:shadow-lg transition-shadow duration-200 ease-in-out"
                   >
                     <CardContent className="p-4">
                       <div className="flex flex-col sm:flex-row gap-x-4 gap-y-3">
-                        <Link href={`/news/${newsItem.id}`} className="block sm:w-32 flex-shrink-0">
+                        <Link href={`/news/${newsItem.id}`} className="block sm:w-36 flex-shrink-0">
                           <div className="relative w-full aspect-video sm:aspect-square rounded-md overflow-hidden bg-muted group">
                             <Image
                               src={newsItem.imageUrl}
@@ -371,18 +371,18 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                               fill
                               className="object-cover group-hover:scale-105 transition-transform duration-300"
                               data-ai-hint={newsItem.dataAiHint || 'news article image'}
-                              sizes="(max-width: 640px) 100vw, 128px"
+                              sizes="(max-width: 640px) 100vw, 144px"
                             />
                           </div>
                         </Link>
                         <div className="flex-grow">
                           <Badge variant="outline" className="text-xs mb-1">{newsItem.category}</Badge>
-                          <h3 className="text-base md:text-lg font-semibold mb-1 text-foreground hover:text-primary transition-colors">
+                          <h3 className="text-base md:text-xl font-semibold mb-1 text-foreground hover:text-primary transition-colors line-clamp-2">
                             <Link href={`/news/${newsItem.id}`}>{newsItem.title}</Link>
                           </h3>
                           <p className="text-xs text-muted-foreground mb-2">{newsItem.date} - {newsItem.author}</p>
-                          <p className="text-sm text-foreground/80 mb-3 line-clamp-2">
-                            {createExcerpt(newsItem.content, 80)}
+                          <p className="text-sm text-foreground/80 mb-3 line-clamp-3">
+                            {createExcerpt(newsItem.content, 100)}
                           </p>
                           <Button asChild variant="link" size="sm" className="p-0 h-auto text-primary hover:underline font-medium">
                             <Link href={`/news/${newsItem.id}`}>阅读全文 &rarr;</Link>
@@ -550,3 +550,4 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     </div>
   );
 }
+
