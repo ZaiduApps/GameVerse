@@ -3,11 +3,13 @@ import { MOCK_GAMES } from '@/lib/constants';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, Newspaper } from 'lucide-react';
+import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, Newspaper, BellRing, MessageCircle as CommentIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import GameDownloadDialog from '@/components/game-download-dialog';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export async function generateStaticParams() {
   return MOCK_GAMES.map((game) => ({
@@ -16,7 +18,6 @@ export async function generateStaticParams() {
 }
 
 // Re-define NewsArticle interface and mock data generation locally for this page
-// (Ideally, this would be centralized if used in more places or becomes complex)
 interface NewsArticle {
   id: string;
   title: string;
@@ -43,6 +44,21 @@ const localMockNewsArticles: NewsArticle[] = MOCK_GAMES.map((g, index) => ({
   tags: g.tags ? [...g.tags, (index % 3 === 0 ? '热门' : '深度分析')] : ['资讯'],
 }));
 
+interface MockComment {
+  id: string;
+  username: string;
+  avatarFallback: string;
+  avatarUrl?: string;
+  timestamp: string;
+  text: string;
+}
+
+const mockComments: MockComment[] = [
+  { id: 'c1', username: '游戏达人小明', avatarFallback: 'XM', timestamp: '2 小时前', text: '这款游戏太棒了，画面精美，玩法新颖！希望开发组能多出点活动。' },
+  { id: 'c2', username: '萌新小白', avatarFallback: 'XB', avatarUrl: 'https://placehold.co/40x40.png?text=MB', dataAiHint: "avatar user", timestamp: '5 小时前', text: '刚开始玩，感觉有点难上手，不过剧情很吸引人。有没有大佬带带我？' },
+  { id: 'c3', username: '氪金大佬', avatarFallback: 'DL', timestamp: '1 天前', text: '服务器再稳定一点就好了，其他都挺满意的。' },
+];
+
 
 export default function GameDetailPage({ params }: { params: { id: string } }) {
   const game = MOCK_GAMES.find(g => g.id === params.id);
@@ -51,22 +67,19 @@ export default function GameDetailPage({ params }: { params: { id: string } }) {
     return <div className="text-center py-10">游戏未找到</div>;
   }
 
-  // Filter relevant news for the current game
   const gameSpecificNews = localMockNewsArticles.filter(article => 
     article.id === `news-${game.id}` || article.title.includes(game.title) 
-  ).slice(0, 3); // Show up to 3 related news items
+  ).slice(0, 3); 
 
-  // Function to generate excerpt from content
   const createExcerpt = (text: string, maxLength: number = 100): string => {
     const firstParagraph = text.split('\n\n')[0];
     if (firstParagraph.length <= maxLength) return firstParagraph;
-    // Try to cut at a sentence ending if possible, otherwise at a word
     let cutPoint = firstParagraph.lastIndexOf('。', maxLength);
     if (cutPoint === -1) cutPoint = firstParagraph.lastIndexOf('！', maxLength);
     if (cutPoint === -1) cutPoint = firstParagraph.lastIndexOf('？', maxLength);
     if (cutPoint === -1) cutPoint = firstParagraph.lastIndexOf(' ', maxLength);
     
-    if (cutPoint === -1 || cutPoint < maxLength / 2) { // if no good cut point or too short
+    if (cutPoint === -1 || cutPoint < maxLength / 2) { 
         return firstParagraph.substring(0, maxLength) + '...';
     }
     return firstParagraph.substring(0, cutPoint + 1) + '...';
@@ -117,7 +130,7 @@ export default function GameDetailPage({ params }: { params: { id: string } }) {
           {/* Top Info Block: Icon, Title/Dev, Download Button */}
           <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
             <Image
-              src={game.imageUrl} // Using main image as icon source
+              src={game.imageUrl} 
               alt={`${game.title} icon`}
               width={88} 
               height={88}
@@ -179,7 +192,6 @@ export default function GameDetailPage({ params }: { params: { id: string } }) {
             </div>
           </div>
           
-          {/* Tags Section */}
           {game.tags && game.tags.length > 0 && (
             <div className="pt-2">
               <h3 className="text-base font-semibold text-muted-foreground mb-2 flex items-center">
@@ -219,7 +231,6 @@ export default function GameDetailPage({ params }: { params: { id: string } }) {
             </div>
           </div>
 
-          {/* Game-specific News Section */}
           {gameSpecificNews.length > 0 && (
             <div className="pt-6 mt-6 border-t">
               <h2 className="text-xl font-semibold mb-4 flex items-center">
@@ -264,14 +275,12 @@ export default function GameDetailPage({ params }: { params: { id: string } }) {
             </div>
           )}
 
-          {/* More Resources Section */}
           <div className="pt-6 mt-6 border-t">
             <h2 className="text-xl font-semibold mb-4 flex items-center">
               <LinkIcon className="w-5 h-5 text-primary mr-2" />
               更多资源与支持
             </h2>
             <div className="grid md:grid-cols-2 gap-x-6 gap-y-4">
-              {/* Community Section */}
               <div className="space-y-3">
                 <h3 className="text-lg font-medium flex items-center text-foreground/90">
                   <Users className="w-5 h-5 mr-2 text-accent" />
@@ -289,12 +298,14 @@ export default function GameDetailPage({ params }: { params: { id: string } }) {
                 </Button>
               </div>
 
-              {/* Cooperation/Support Section */}
               <div className="space-y-3">
                 <h3 className="text-lg font-medium flex items-center text-foreground/90">
                   <Briefcase className="w-5 h-5 mr-2 text-accent" />
                   合作与支持
                 </h3>
+                <Button variant="outline" className="w-full justify-start btn-interactive">
+                  <BellRing className="w-4 h-4 mr-2" /> 催促版本更新 (模拟)
+                </Button>
                 <Button variant="outline" className="w-full justify-start btn-interactive">
                   <Briefcase className="w-4 h-4 mr-2" /> 商务合作洽谈 (模拟)
                 </Button>
@@ -308,9 +319,68 @@ export default function GameDetailPage({ params }: { params: { id: string } }) {
             </div>
           </div>
 
+          {/* Comments Section */}
+          <div className="pt-8 mt-8 border-t">
+            <h2 className="text-xl font-semibold mb-6 flex items-center">
+              <CommentIcon className="w-6 h-6 text-primary mr-3" />
+              玩家评论区
+            </h2>
+            
+            {/* Comment Input Area */}
+            <Card className="mb-6 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-3">
+                  <Avatar className="mt-1">
+                    <AvatarImage src="https://placehold.co/40x40.png?text=ME" alt="当前用户" data-ai-hint="avatar user" />
+                    <AvatarFallback>我</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-grow space-y-2">
+                    <Textarea 
+                      placeholder="发表你的看法，分享游戏心得..." 
+                      rows={3}
+                      className="text-sm"
+                    />
+                    <div className="flex justify-end">
+                      <Button className="btn-interactive">发表评论</Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Display Existing Comments */}
+            <div className="space-y-6">
+              {mockComments.map((comment) => (
+                <Card key={comment.id} className="shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-start space-x-3">
+                      <Avatar>
+                        {comment.avatarUrl ? (
+                           <AvatarImage src={comment.avatarUrl} alt={comment.username} data-ai-hint={comment.dataAiHint || "avatar user"} />
+                        ) : (
+                           <AvatarImage src={`https://placehold.co/40x40.png?text=${comment.avatarFallback}`} alt={comment.username} data-ai-hint="avatar user" />
+                        )}
+                        <AvatarFallback>{comment.avatarFallback}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-grow">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-semibold text-sm text-foreground">{comment.username}</span>
+                          <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
+                        </div>
+                        <p className="text-sm text-foreground/90 whitespace-pre-line">{comment.text}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {mockComments.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">暂无评论，快来抢沙发吧！</p>
+              )}
+            </div>
+          </div>
+
         </CardContent>
       </Card>
     </div>
   );
 }
-
