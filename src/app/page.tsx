@@ -6,9 +6,9 @@ import { Separator } from '@/components/ui/separator';
 import { Flame, Sparkles, Newspaper } from 'lucide-react';
 
 export default function HomePage() {
-  const featuredGames = MOCK_GAMES.slice(0, 4); // First 4 games for carousel
-  const popularGames = MOCK_GAMES.slice(0, 6); // Some popular games
-  const newGames = MOCK_GAMES.slice(3, 9).reverse(); // Some "new" games
+  const featuredGames = MOCK_GAMES.slice(0, 4); 
+  const popularGames = MOCK_GAMES.slice(0, 10); // Show more popular games
+  const newGames = MOCK_GAMES.slice(3, 13).reverse(); // Show more new games
 
   return (
     <div className="space-y-12">
@@ -21,13 +21,13 @@ export default function HomePage() {
           <Flame className="w-7 h-7 text-primary mr-3" />
           <h2 className="text-2xl font-bold">热门推荐</h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5"> {/* Adjusted gap and columns */}
           {popularGames.map((game, index) => (
             <GameCard 
               key={game.id} 
               game={game} 
               className="fade-in" 
-              style={{ animationDelay: `${0.4 + index * 0.1}s` }}
+              style={{ animationDelay: `${0.4 + index * 0.05}s` }}
             />
           ))}
         </div>
@@ -40,13 +40,13 @@ export default function HomePage() {
           <Sparkles className="w-7 h-7 text-accent mr-3" />
           <h2 className="text-2xl font-bold">最新上架</h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5"> {/* Adjusted gap and columns */}
           {newGames.map((game, index) => (
             <GameCard 
               key={game.id} 
               game={game} 
               className="fade-in" 
-              style={{ animationDelay: `${0.7 + index * 0.1}s` }}
+              style={{ animationDelay: `${0.7 + index * 0.05}s` }}
             />
           ))}
         </div>
@@ -60,15 +60,15 @@ export default function HomePage() {
           <h2 className="text-2xl font-bold">游戏资讯</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((item, index) => (
+          {MOCK_GAMES.slice(0,3).map((item, index) => ( // Use some mock games for news items consistency
             <div 
-              key={item} 
+              key={item.id} 
               className="bg-card p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 fade-in"
               style={{ animationDelay: `${1.0 + index * 0.1}s` }}
             >
-              <h3 className="text-lg font-semibold mb-2 text-card-foreground">游戏新闻标题 {item}</h3>
-              <p className="text-sm text-muted-foreground mb-3">这是一段示例游戏新闻摘要，介绍最新动态或攻略技巧等内容...</p>
-              <a href="#" className="text-xs text-primary hover:underline">阅读更多 &rarr;</a>
+              <h3 className="text-lg font-semibold mb-2 text-card-foreground">{item.title} 最新资讯</h3>
+              <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{item.shortDescription}</p>
+              <a href={`/news/news-${item.id}`} className="text-xs text-primary hover:underline">阅读更多 &rarr;</a>
             </div>
           ))}
         </div>
