@@ -3,15 +3,46 @@ import { MOCK_GAMES } from '@/lib/constants';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon } from 'lucide-react';
+import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import GameDownloadDialog from '@/components/game-download-dialog';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export async function generateStaticParams() {
   return MOCK_GAMES.map((game) => ({
     id: game.id,
   }));
 }
+
+// Re-define NewsArticle interface and mock data generation locally for this page
+// (Ideally, this would be centralized if used in more places or becomes complex)
+interface NewsArticle {
+  id: string;
+  title: string;
+  content: string; 
+  imageUrl: string;
+  dataAiHint?: string;
+  category: string;
+  date: string;
+  author: string;
+  tags?: string[];
+}
+
+// This mock data generation mirrors the one in src/app/news/[id]/page.tsx
+// to ensure compatibility with news detail page links and structure.
+const localMockNewsArticles: NewsArticle[] = MOCK_GAMES.map((g, index) => ({
+  id: `news-${g.id}`, // This ID structure matches what the news detail page expects
+  title: `${g.title} 最新动态与攻略分享`,
+  content: `这篇关于《${g.title}》的文章深入探讨了其最新更新、社区热点以及一些高级游戏技巧。\n\n${g.description}\n\n更多详细内容，包括最新的角色介绍、活动预告以及玩家社区的精彩讨论，都将在这里为您呈现。我们致力于提供最全面、最及时的游戏资讯，帮助您更好地享受《${g.title}》带来的乐趣。\n\n敬请期待后续的独家报道和深度评测！`,
+  imageUrl: g.imageUrl, // Using game's image for related news consistency
+  dataAiHint: g.dataAiHint ? `${g.dataAiHint} news` : "news article",
+  category: index % 2 === 0 ? '游戏攻略' : '行业新闻',
+  date: `2024年${Math.max(1, 7 - index)}月${Math.min(28, 15 + index)}日`, // Ensure valid dates
+  author: '游戏宇宙编辑部',
+  tags: g.tags ? [...g.tags, (index % 3 === 0 ? '热门' : '深度分析')] : ['资讯'],
+}));
+
 
 export default function GameDetailPage({ params }: { params: { id: string } }) {
   const game = MOCK_GAMES.find(g => g.id === params.id);
@@ -20,8 +51,56 @@ export default function GameDetailPage({ params }: { params: { id: string } }) {
     return <div className="text-center py-10">游戏未找到</div>;
   }
 
+  // Filter relevant news for the current game
+  const gameSpecificNews = localMockNewsArticles.filter(article => 
+    article.id === `news-${game.id}` || article.title.includes(game.title) 
+  ).slice(0, 3); // Show up to 3 related news items
+
+  // Function to generate excerpt from content
+  const createExcerpt = (text: string, maxLength: number = 100): string => {
+    const firstParagraph = text.split('\n\n')[0];
+    if (firstParagraph.length <= maxLength) return firstParagraph;
+    // Try to cut at a sentence ending if possible, otherwise at a word
+    let cutPoint = firstParagraph.lastIndexOf('。', maxLength);
+    if (cutPoint === -1) cutPoint = firstParagraph.lastIndexOf('！', maxLength);
+    if (cutPoint === -1) cutPoint = firstParagraph.lastIndexOf('？', maxLength);
+    if (cutPoint === -1) cutPoint = firstParagraph.lastIndexOf(' ', maxLength);
+    
+    if (cutPoint === -1 || cutPoint < maxLength / 2) { // if no good cut point or too short
+        return firstParagraph.substring(0, maxLength) + '...';
+    }
+    return firstParagraph.substring(0, cutPoint + 1) + '...';
+  };
+
   return (
     <div className="space-y-8 fade-in">
+      {/* Site-wide Announcement */}
+      <Card className="bg-primary/5 border-primary/20 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex items-center">
+            <AlertTriangle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
+            <div>
+              <h3 className="font-semibold text-primary text-sm md:text-base">全站重要公告</h3>
+              <p className="text-xs md:text-sm text-primary/80">
+                游戏宇宙系统维护通知：预计今晚10点进行服务器升级，期间部分服务可能短暂中断，敬请谅解。
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Marquee Section (Static Placeholder) */}
+      <Card className="shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex items-center">
+            <Megaphone className="w-5 h-5 text-accent mr-3 flex-shrink-0" />
+            <p className="text-xs md:text-sm text-foreground/80">
+              <span className="font-semibold text-accent">跑马灯位置：</span> 热门活动《夏季嘉年华》火热进行中！ | 《${game.title}》新版本 V${game.version || '1.0.0'} 现已上线，快来体验！
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+      
       <Card className="overflow-hidden shadow-xl">
         <CardHeader className="p-0 relative aspect-[16/7] sm:aspect-[2/1] md:aspect-[16/6]">
           <Image
@@ -40,7 +119,7 @@ export default function GameDetailPage({ params }: { params: { id: string } }) {
             <Image
               src={game.imageUrl} // Using main image as icon source
               alt={`${game.title} icon`}
-              width={88} // Larger icon: 88px
+              width={88} 
               height={88}
               className="rounded-xl object-cover flex-shrink-0 border shadow-md"
               data-ai-hint={game.dataAiHint ? `${game.dataAiHint} icon` : "game icon"}
@@ -140,8 +219,54 @@ export default function GameDetailPage({ params }: { params: { id: string } }) {
             </div>
           </div>
 
+          {/* Game-specific News Section */}
+          {gameSpecificNews.length > 0 && (
+            <div className="pt-6 mt-6 border-t">
+              <h2 className="text-xl font-semibold mb-4 flex items-center">
+                <NewsIcon className="w-5 h-5 text-primary mr-2" />
+                《{game.title}》相关资讯
+              </h2>
+              <div className="space-y-4">
+                {gameSpecificNews.map(newsItem => (
+                  <Card key={newsItem.id} className="hover:shadow-lg transition-shadow duration-200 ease-in-out">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col sm:flex-row gap-x-4 gap-y-3">
+                        <Link href={`/news/${newsItem.id}`} className="block sm:w-32 flex-shrink-0">
+                          <div className="relative w-full aspect-video sm:aspect-square rounded-md overflow-hidden bg-muted">
+                            <Image 
+                              src={newsItem.imageUrl} 
+                              alt={newsItem.title} 
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                              data-ai-hint={newsItem.dataAiHint || 'news article image'}
+                              sizes="(max-width: 640px) 100vw, 128px"
+                            />
+                          </div>
+                        </Link>
+                        <div className="flex-grow">
+                          <Badge variant="outline" className="text-xs mb-1">{newsItem.category}</Badge>
+                          <h3 className="text-base md:text-lg font-semibold mb-1 text-foreground hover:text-primary transition-colors">
+                            <Link href={`/news/${newsItem.id}`}>{newsItem.title}</Link>
+                          </h3>
+                          <p className="text-xs text-muted-foreground mb-2">{newsItem.date} - {newsItem.author}</p>
+                          <p className="text-sm text-foreground/80 mb-3 line-clamp-2">
+                            {createExcerpt(newsItem.content, 80)}
+                          </p>
+                          <Button asChild variant="link" size="sm" className="p-0 h-auto text-primary hover:underline font-medium">
+                            <Link href={`/news/${newsItem.id}`}>阅读全文 &rarr;</Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
         </CardContent>
       </Card>
     </div>
   );
 }
+
