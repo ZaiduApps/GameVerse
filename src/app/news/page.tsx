@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
 const newsCategories = ['全部', '游戏攻略', '行业新闻', '最新动态', '深度评测', '活动预告'];
-const ITEMS_PER_PAGE = 10; // Adjusted to 10 as per example, but first page layout handles specific numbers
+const ITEMS_PER_PAGE = 10; 
 
 export default function NewsPage() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -21,14 +21,9 @@ export default function NewsPage() {
 
   const totalArticles = MOCK_NEWS_ARTICLES.length;
   const totalPages = Math.ceil(totalArticles / ITEMS_PER_PAGE);
-
-  // For the special first-page layout, we need to handle articles differently.
-  // This logic assumes articlesToDisplay is effectively MOCK_NEWS_ARTICLES for the first page's special layout,
-  // and then paginates for gridArticles.
   
-  let articlesToDisplay = MOCK_NEWS_ARTICLES; // Start with all for potential filtering later
+  let articlesToDisplay = MOCK_NEWS_ARTICLES; 
   
-  // Pagination logic, applied AFTER special first page layout considerations
   const paginatedArticles = articlesToDisplay.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
@@ -41,14 +36,12 @@ export default function NewsPage() {
   if (currentPage === 1 && paginatedArticles.length > 0) {
     prominentArticle = paginatedArticles[0];
     if (paginatedArticles.length >= 2) {
-        rightStackedArticles = paginatedArticles.slice(1, 3); // Takes up to 2 articles for stacking
-        gridArticles = paginatedArticles.slice(1 + rightStackedArticles.length); // Remaining for the grid
+        rightStackedArticles = paginatedArticles.slice(1, 3); 
+        gridArticles = paginatedArticles.slice(1 + rightStackedArticles.length); 
     } else {
-        // If only 1 article on the first page, it's prominent, no stacked, no initial grid.
-        gridArticles = []; // Handled by prominentArticle alone
+        gridArticles = []; 
     }
   } else {
-    // For pages other than the first, or if no articles, all go to grid
     gridArticles = paginatedArticles;
   }
 
@@ -62,7 +55,7 @@ export default function NewsPage() {
         key={article.id}
         className={cn(
           "flex flex-col overflow-hidden hover:shadow-xl transition-shadow duration-300",
-          isProminent ? "h-full" : "" // Prominent card defines its height; stacked/grid cards size to content
+          isProminent ? "h-full" : "" 
         )}
       >
         <CardHeader className="p-0">
@@ -99,7 +92,7 @@ export default function NewsPage() {
           </Link>
           <CardDescription className={cn(
             "text-muted-foreground flex-grow",
-            isProminent ? "text-sm md:text-base line-clamp-3 sm:line-clamp-4" : (isStacked ? "text-xs line-clamp-2" : "text-sm line-clamp-3")
+            isProminent ? "text-sm md:text-base line-clamp-3 sm:line-clamp-4" : (isStacked ? "text-xs line-clamp-3" : "text-sm line-clamp-3")
           )}>{article.excerpt || '暂无摘要'}</CardDescription>
         </CardContent>
         <CardFooter className={cn("border-t mt-auto", isStacked ? "p-3 text-xs" : "p-4")}>
@@ -150,29 +143,25 @@ export default function NewsPage() {
 
       {currentPage === 1 && prominentArticle && (
         <section className="mb-6 md:mb-8">
-          <div className="hidden md:flex md:gap-4 md:items-start"> {/* Added md:items-start */}
+          <div className="hidden md:flex md:gap-4"> {/* Reverted: Removed md:items-start */}
             <div className="md:w-2/3 lg:w-[60%]"> 
               {renderArticleCard(prominentArticle, 'prominent', true)}
             </div>
             {rightStackedArticles.length > 0 && (
-              <div className="md:w-1/3 lg:w-[40%] flex flex-col gap-2">
+              <div className="md:w-1/3 lg:w-[40%] flex flex-col gap-4"> {/* Reverted: gap-2 to gap-4 */}
                 {rightStackedArticles.map(article => renderArticleCard(article, 'stacked'))}
               </div>
             )}
           </div>
-          {/* Mobile: Prominent article first, then the rest of the first page items in grid. */}
           <div className="md:hidden">
             {renderArticleCard(prominentArticle, 'prominent', true)}
           </div>
         </section>
       )}
       
-      {/* Grid for remaining articles on first page (mobile), or all articles on subsequent pages, or if no prominent layout */}
       {gridArticles.length > 0 && (
          <div className={cn(
           "grid grid-cols-1 gap-6",
-          // If it's the first page AND we had a prominent article, apply specific grid for remaining.
-          // Otherwise, it's a standard multi-page grid.
           (currentPage === 1 && prominentArticle) ? "sm:grid-cols-2 lg:grid-cols-3 mt-6 md:mt-0" : "sm:grid-cols-2 md:grid-cols-3"
         )}>
           {gridArticles.map((article, index) => 
@@ -181,7 +170,6 @@ export default function NewsPage() {
         </div>
       )}
 
-      {/* Fallback if no articles at all on the current page (after pagination and layout logic) */}
       {paginatedArticles.length === 0 && !prominentArticle && (
         <p className="text-center text-muted-foreground py-8">暂无资讯。</p>
       )}
