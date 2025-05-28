@@ -1,5 +1,5 @@
 
-import type { Game } from '@/types';
+import type { Game, NewsArticle } from '@/types';
 
 const generateMockScreenshots = (gameTitleHint: string, count: number = 5): Game['screenshots'] => {
   return Array.from({ length: count }, (_, i) => ({
@@ -23,7 +23,9 @@ export const MOCK_GAMES: Game[] = [
     developer: '腾讯天美',
     releaseDate: '2015年11月26日',
     updateDate: '2024年07月15日',
-    screenshots: generateMockScreenshots('fantasy battle'),
+    screenshots: generateMockScreenshots('fantasy battle king'),
+    version: '3.2.1',
+    size: '1.8GB'
   },
   {
     id: '2',
@@ -39,7 +41,9 @@ export const MOCK_GAMES: Game[] = [
     developer: '腾讯光子',
     releaseDate: '2019年05月08日',
     updateDate: '2024年07月10日',
-    screenshots: generateMockScreenshots('battle royale shooting'),
+    screenshots: generateMockScreenshots('battle royale shooting pubg'),
+    version: '2.5.0',
+    size: '2.1GB'
   },
   {
     id: '3',
@@ -55,7 +59,9 @@ export const MOCK_GAMES: Game[] = [
     developer: '米哈游',
     releaseDate: '2020年09月28日',
     updateDate: '2024年07月18日',
-    screenshots: generateMockScreenshots('anime world exploration'),
+    screenshots: generateMockScreenshots('anime world exploration genshin'),
+    version: '4.7',
+    size: '15GB'
   },
   {
     id: '4',
@@ -71,7 +77,9 @@ export const MOCK_GAMES: Game[] = [
     developer: '米哈游',
     releaseDate: '2023年04月26日',
     updateDate: '2024年07月12日',
-    screenshots: generateMockScreenshots('sci-fi space train'),
+    screenshots: generateMockScreenshots('sci-fi space train star rail'),
+    version: '2.3',
+    size: '12GB'
   },
   {
     id: '5',
@@ -86,8 +94,10 @@ export const MOCK_GAMES: Game[] = [
     tags: ['休闲', '动作', '跑酷'],
     developer: 'SYBO Games',
     releaseDate: '2012年05月24日',
-    // updateDate: '2024年06月20日', // Example of missing update date
-    screenshots: generateMockScreenshots('urban subway runner'),
+    updateDate: '2024年06月20日',
+    screenshots: generateMockScreenshots('urban subway runner game'),
+    version: '3.18.0',
+    size: '150MB'
   },
   {
     id: '6',
@@ -103,6 +113,67 @@ export const MOCK_GAMES: Game[] = [
     developer: '网易游戏',
     releaseDate: '2022年05月27日',
     updateDate: '2024年07月05日',
-    screenshots: generateMockScreenshots('party game obstacle'),
+    screenshots: generateMockScreenshots('party game obstacle course'),
+    version: '1.0.111',
+    size: '1.2GB'
   },
 ];
+
+const createGlobalExcerpt = (text: string, maxLength: number = 120): string => {
+  if (!text) return '';
+  const firstParagraph = text.split('\n\n')[0];
+  if (firstParagraph.length <= maxLength) return firstParagraph;
+  
+  let cutPoint = -1;
+  const punctuation = ['。', '！', '？', '.', '!', '?'];
+  for (const p of punctuation) {
+    const point = firstParagraph.lastIndexOf(p, maxLength);
+    if (point > cutPoint) {
+      cutPoint = point;
+    }
+  }
+
+  if (cutPoint === -1 || cutPoint < maxLength / 3) { // Prefer space if no good punctuation found early
+    cutPoint = firstParagraph.lastIndexOf(' ', maxLength);
+  }
+
+  if (cutPoint === -1 || cutPoint < maxLength / 3) { // Fallback to hard cut
+    return firstParagraph.substring(0, maxLength) + '...';
+  }
+  return firstParagraph.substring(0, cutPoint + 1) + '...';
+};
+
+
+export const MOCK_NEWS_ARTICLES: NewsArticle[] = MOCK_GAMES.flatMap((game, gameIndex) =>
+  Array.from({ length: Math.max(1, (MOCK_GAMES.length - gameIndex) * 2) }, (_, newsIndex) => { // More news overall
+    const newsId = `news-${game.id}-${newsIndex + 1}`;
+    const baseTitle = newsIndex === 0 ? '最新动态与攻略分享' : 
+                      newsIndex === 1 ? '深度评测解析' : 
+                      newsIndex === 2 ? '社区精彩活动' : 
+                      `版本前瞻 ${newsIndex}`;
+    const title = `${game.title} ${baseTitle} #${newsIndex + 1}`;
+    
+    const content = `这是关于《${game.title}》的第 ${newsIndex + 1} 篇资讯。主题：${baseTitle}。
+深入探讨了其最新更新、社区热点以及一些高级游戏技巧。例如，在《${game.title}》中，玩家可以体验到${game.shortDescription}
+本文还会讨论关于《${game.title}》的${game.tags?.join('、')}等特色。
+${game.description}
+更多详细内容，包括最新的角色介绍、活动预告以及玩家社区的精彩讨论，都将在这里为您呈现。我们致力于提供最全面、最及时的游戏资讯，帮助您更好地享受《${game.title}》带来的乐趣。
+敬请期待后续的独家报道和深度评测！别忘了关注我们的${game.developer}团队。
+`;
+
+    return {
+      id: newsId,
+      gameId: game.id,
+      title: title,
+      content: content,
+      excerpt: createGlobalExcerpt(content, 150),
+      imageUrl: game.imageUrl, // Ideally, news has its own images
+      dataAiHint: game.dataAiHint ? `${game.dataAiHint} news ${newsIndex + 1}` : `news article ${newsIndex + 1}`,
+      category: newsIndex % 4 === 0 ? '游戏攻略' : newsIndex % 4 === 1 ? '行业新闻' : newsIndex % 4 === 2 ? '深度评测' : '最新动态',
+      date: `2024年${Math.max(1, 7 - (gameIndex % 6))}月${Math.min(28, 5 + newsIndex + gameIndex)}日`,
+      author: '游戏宇宙编辑部',
+      tags: game.tags ? [...game.tags, (newsIndex % 3 === 0 ? '热门' : '深度分析'), `资讯系列${newsIndex+1}`] : [`资讯系列${newsIndex+1}`],
+    };
+  })
+)//.slice(0, 20); // Control total number of news items globally if needed
+;

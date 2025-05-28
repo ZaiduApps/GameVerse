@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { Game } from '@/types';
+import type { Game, NewsArticle } from '@/types';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,36 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MOCK_GAMES } from '@/lib/constants';
+import { MOCK_GAMES, MOCK_NEWS_ARTICLES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-
-// Re-define NewsArticle interface and mock data generation locally for this page
-interface NewsArticle {
-  id: string;
-  title: string;
-  content: string;
-  imageUrl: string;
-  dataAiHint?: string;
-  category: string;
-  date: string;
-  author: string;
-  tags?: string[];
-}
-
-const localMockNewsArticles: NewsArticle[] = MOCK_GAMES.flatMap((g, gameIndex) =>
-  Array.from({ length: Math.max(1, 4 - gameIndex) }, (_, newsIndex) => ({
-    id: `news-${g.id}-${newsIndex + 1}`,
-    title: `${g.title} ${newsIndex === 0 ? '最新动态与攻略分享' : newsIndex === 1 ? '深度评测解析' : newsIndex === 2 ? '社区精彩活动' : `版本前瞻 ${newsIndex}`} #${newsIndex + 1}`,
-    content: `这是关于《${g.title}》的第 ${newsIndex + 1} 篇资讯。深入探讨了其最新更新、社区热点以及一些高级游戏技巧。\n\n${g.description}\n\n更多详细内容，包括最新的角色介绍、活动预告以及玩家社区的精彩讨论，都将在这里为您呈现。我们致力于提供最全面、最及时的游戏资讯，帮助您更好地享受《${g.title}》带来的乐趣。\n\n敬请期待后续的独家报道和深度评测！`,
-    imageUrl: g.imageUrl,
-    dataAiHint: g.dataAiHint ? `${g.dataAiHint} news ${newsIndex + 1}` : `news article ${newsIndex + 1}`,
-    category: gameIndex % 2 === 0 ? '游戏攻略' : '行业新闻',
-    date: `2024年${Math.max(1, 7 - gameIndex)}月${Math.min(28, 10 + gameIndex + newsIndex)}日`,
-    author: '游戏宇宙编辑部',
-    tags: g.tags ? [...g.tags, (gameIndex % 3 === 0 ? '热门' : '深度分析'), `资讯${newsIndex+1}`] : [`资讯${newsIndex+1}`],
-  }))
-).slice(0, 10);
-
 
 interface MockComment {
   id: string;
@@ -66,7 +38,7 @@ interface GameDetailViewProps {
 
 const DESCRIPTION_CHAR_LIMIT = 120;
 const MAX_NEWS_DISPLAY = 4;
-const MAX_RECOMMENDED_GAMES = 5; // Changed from 4 to 5
+const MAX_RECOMMENDED_GAMES = 5;
 
 export default function GameDetailView({ game }: GameDetailViewProps) {
   const [showFab, setShowFab] = useState(false);
@@ -94,7 +66,7 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     const handleScroll = () => {
       const commentsDivTop = commentsDiv.getBoundingClientRect().top;
       const windowHeight = window.innerHeight;
-
+      // Show FAB if comments section is below 70% of viewport AND user has scrolled at least 200px
       if (commentsDivTop > windowHeight * 0.7 && window.scrollY > 200) {
         setShowFab(true);
       } else {
@@ -103,7 +75,7 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     };
 
     window.addEventListener('scroll', handleScroll);
-    handleScroll();
+    handleScroll(); // Initial check
 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -124,27 +96,44 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     if (commentsSectionRef.current) {
       commentsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+    // Delay focus to allow for scroll animation
     setTimeout(() => {
       commentInputRef.current?.focus();
-    }, 350);
+    }, 350); // Adjust delay as needed
   };
 
-  const allGameSpecificNews = localMockNewsArticles.filter(article =>
-    article.title.includes(game.title) || article.id.startsWith(`news-${game.id}`)
-  );
+  // Logic for related news:
+  const gameSpecificNews = MOCK_NEWS_ARTICLES.filter(article => article.gameId === game.id);
+  const generalNews = MOCK_NEWS_ARTICLES.filter(article => article.gameId !== game.id && !article.gameId); // Assuming general news might not have gameId
+  
+  let combinedNews = [...gameSpecificNews];
+  if (combinedNews.length < MAX_NEWS_DISPLAY) {
+    combinedNews = [...combinedNews, ...generalNews.slice(0, MAX_NEWS_DISPLAY - combinedNews.length)];
+  }
+  const newsToShow = combinedNews.slice(0, MAX_NEWS_DISPLAY);
+  // Check if there are more game-specific news articles than what's shown
+  const hasMoreGameSpecificNews = gameSpecificNews.length > newsToShow.filter(n => n.gameId === game.id).length || gameSpecificNews.length > MAX_NEWS_DISPLAY;
 
-  const newsToShow = allGameSpecificNews.slice(0, MAX_NEWS_DISPLAY);
-  const hasMoreNews = allGameSpecificNews.length > MAX_NEWS_DISPLAY;
 
-  const createExcerpt = (text: string, maxLength: number = 100): string => {
+  const createLocalExcerpt = (text: string, maxLength: number = 100): string => {
+    if (!text) return '';
     const firstParagraph = text.split('\n\n')[0];
     if (firstParagraph.length <= maxLength) return firstParagraph;
-    let cutPoint = firstParagraph.lastIndexOf('。', maxLength);
-    if (cutPoint === -1) cutPoint = firstParagraph.lastIndexOf('！', maxLength);
-    if (cutPoint === -1) cutPoint = firstParagraph.lastIndexOf('？', maxLength);
-    if (cutPoint === -1) cutPoint = firstParagraph.lastIndexOf(' ', maxLength);
+    
+    let cutPoint = -1;
+    const punctuation = ['。', '！', '？', '.', '!', '?']; // Prioritize sentence-ending punctuation
+    for (const p of punctuation) {
+      const point = firstParagraph.lastIndexOf(p, maxLength);
+      if (point > cutPoint) { // Find the latest valid punctuation mark
+        cutPoint = point;
+      }
+    }
+  
+    if (cutPoint === -1 || cutPoint < maxLength / 3) { // If no good punctuation, try space
+      cutPoint = firstParagraph.lastIndexOf(' ', maxLength);
+    }
 
-    if (cutPoint === -1 || cutPoint < maxLength / 2) {
+    if (cutPoint === -1 || cutPoint < maxLength / 3) { // Fallback to hard cut if no suitable break point
         return firstParagraph.substring(0, maxLength) + '...';
     }
     return firstParagraph.substring(0, cutPoint + 1) + '...';
@@ -159,7 +148,7 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf('？');
     if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf(' ');
 
-    if (breakPoint > limit / 2) {
+    if (breakPoint > limit / 2) { // Ensure the break point is not too early
         return text.substring(0, breakPoint + 1) + '...';
     }
     return text.substring(0, limit) + '...';
@@ -225,8 +214,8 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                 <Image
                   src={game.imageUrl}
                   alt={`${game.title} icon`}
-                  width={144}
-                  height={144}
+                  width={144} // Increased size
+                  height={144} // Increased size
                   className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-xl object-cover flex-shrink-0 border-2 border-background shadow-lg"
                   data-ai-hint={game.dataAiHint ? `${game.dataAiHint} icon large` : "game icon large"}
                 />
@@ -421,19 +410,20 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
           </h2>
           <div
             className={cn(
-              "py-2 -mx-1 px-1 md:mx-0 md:px-0",
-              "flex space-x-3 overflow-x-auto",
-              "md:grid md:gap-x-4 md:gap-y-6",
+              "py-2 -mx-1 px-1 md:mx-0 md:px-0", // Ensure padding is handled for scrollbar visibility if needed
+              "flex space-x-3 overflow-x-auto", // Mobile: horizontal scroll
+              "md:grid md:gap-x-4 md:gap-y-6", // Desktop: grid
               newsToShow.length === 1 && "md:grid-cols-1",
               newsToShow.length === 2 && "md:grid-cols-2",
-              newsToShow.length >= 3 && "md:grid-cols-2 lg:grid-cols-3"
+              newsToShow.length >= 3 && "md:grid-cols-2 lg:grid-cols-3" // 2 cols on md, 3 on lg for 3+ items
             )}
           >
             {newsToShow.map(newsItem => (
               <Card
                 key={newsItem.id}
                 className={cn(
-                  "w-[calc(100vw-4rem)] max-w-md sm:w-96 flex-shrink-0 hover:shadow-lg transition-shadow duration-200 ease-in-out md:w-auto"
+                  "w-[calc(100vw-4rem)] max-w-md sm:w-96 flex-shrink-0 hover:shadow-lg transition-shadow duration-200 ease-in-out", // Base mobile card width
+                  "md:w-auto" // Desktop grid will control width
                 )}
               >
                 <CardContent className="p-3">
@@ -446,7 +436,7 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                           fill
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
                           data-ai-hint={newsItem.dataAiHint || 'news article image'}
-                          sizes="(max-width: 639px) 100vw, (max-width: 767px) 160px, (max-width: 1023px) 176px, (max-width: 1279px) 176px, 176px"
+                           sizes="(max-width: 639px) 100vw, (max-width: 767px) 160px, (max-width: 1023px) 176px, (max-width: 1279px) 176px, 176px"
                         />
                       </div>
                     </Link>
@@ -455,11 +445,10 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                         <Link href={`/news/${newsItem.id}`}>{newsItem.title}</Link>
                       </h3>
                       <p className="text-xs text-foreground/80 line-clamp-3 flex-grow mb-2">
-                        {createExcerpt(newsItem.content, 100)}
+                        {newsItem.excerpt || createLocalExcerpt(newsItem.content, 100)}
                       </p>
                       <div className="flex items-center justify-between mt-auto pt-1">
                          <p className="text-xs text-muted-foreground">{newsItem.date}</p>
-                         {/* Removed "Read More" button and category */}
                       </div>
                     </div>
                   </div>
@@ -467,7 +456,7 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
               </Card>
             ))}
           </div>
-          {hasMoreNews && (
+          {hasMoreGameSpecificNews && (
             <div className="mt-6 text-center">
               <Button variant="outline" asChild className="btn-interactive">
                 <Link href={`/news?tag=${encodeURIComponent(game.title)}`}>查看更多《{game.title}》资讯</Link>
@@ -620,5 +609,3 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     </div>
   );
 }
-
-    

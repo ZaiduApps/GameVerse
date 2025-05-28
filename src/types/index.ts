@@ -23,3 +23,16 @@ export interface Game {
   screenshots?: GameScreenshot[]; // Array of game screenshots
 }
 
+export interface NewsArticle {
+  id: string;
+  gameId?: string; // To associate news with a game, optional
+  title: string;
+  content: string;
+  excerpt?: string; // Short summary, optional
+  imageUrl: string;
+  dataAiHint?: string;
+  category: string;
+  date: string;
+  author: string;
+  tags?: string[];
+}
