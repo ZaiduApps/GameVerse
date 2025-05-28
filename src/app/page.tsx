@@ -13,8 +13,9 @@ import Link from 'next/link';
 export default function HomePage() {
   const featuredGames = MOCK_GAMES.slice(0, 5); 
   const popularGames = MOCK_GAMES.filter(g => g.status === 'released').sort((a,b) => (b.rating || 0) - (a.rating || 0)).slice(0, 5);
-  const newReleaseGames = MOCK_GAMES.filter(g => g.status === 'released').sort((a, b) => new Date(b.releaseDate || 0).getTime() - new Date(a.releaseDate || 0).getTime()).slice(0, 7);
-  const preregistrationGames = MOCK_GAMES.filter(g => g.status === 'pre-registration').slice(0, 7);
+  // Slice to get more items if available, e.g., 10 for scrolling demo
+  const newReleaseGames = MOCK_GAMES.filter(g => g.status === 'released').sort((a, b) => new Date(b.releaseDate || 0).getTime() - new Date(a.releaseDate || 0).getTime()).slice(0, 10);
+  const preregistrationGames = MOCK_GAMES.filter(g => g.status === 'pre-registration').slice(0, 10);
 
   const newsItemsForHomepage = MOCK_GAMES.slice(0, 3).map(game => {
     const firstArticleForGame = MOCK_NEWS_ARTICLES.find(article => article.gameId === game.id);
@@ -48,7 +49,7 @@ export default function HomePage() {
 
       <section className="fade-in" style={{ animationDelay: '0.6s' }}>
         <SectionHeader title="新游戏速递" icon={Zap} iconClassName="text-accent" moreHref="/games?sort=new" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-x-4 gap-y-6 md:gap-x-5 md:gap-y-8">
+        <div className="flex overflow-x-auto space-x-3 sm:space-x-4 py-2 -mx-1 px-1"> {/* Adjusted space for sm screens */}
           {newReleaseGames.map((game, index) => (
             <NewReleaseGameCard 
               key={game.id} 
@@ -57,6 +58,9 @@ export default function HomePage() {
               style={{ animationDelay: `${0.7 + index * 0.05}s` }}
             />
           ))}
+          {newReleaseGames.length === 0 && (
+             <p className="w-full text-center text-muted-foreground py-4">暂无新游戏。</p>
+          )}
         </div>
       </section>
 
@@ -64,7 +68,7 @@ export default function HomePage() {
 
       <section className="fade-in" style={{ animationDelay: '0.9s' }}>
         <SectionHeader title="事前登录" icon={Gift} iconClassName="text-green-500" moreHref="/games?status=preregistration" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-x-4 gap-y-6 md:gap-x-5 md:gap-y-8">
+        <div className="flex overflow-x-auto space-x-3 sm:space-x-4 py-2 -mx-1 px-1"> {/* Adjusted space for sm screens */}
           {preregistrationGames.map((game, index) => (
             <PreregistrationGameCard 
               key={game.id} 
@@ -74,7 +78,7 @@ export default function HomePage() {
             />
           ))}
           {preregistrationGames.length === 0 && (
-            <p className="col-span-full text-center text-muted-foreground py-4">暂无事前登录游戏。</p>
+            <p className="w-full text-center text-muted-foreground py-4">暂无事前登录游戏。</p>
           )}
         </div>
       </section>

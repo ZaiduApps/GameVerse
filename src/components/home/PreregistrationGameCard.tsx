@@ -10,21 +10,21 @@ interface PreregistrationGameCardProps {
 
 export default function PreregistrationGameCard({ game, className }: PreregistrationGameCardProps) {
   return (
-    <Link href={`/games/${game.id}`} className={`flex flex-col items-center text-center group ${className}`}>
-      <div className="relative w-24 h-24 md:w-28 md:h-28 mb-2">
+    <Link href={`/games/${game.id}`} className={`flex flex-col items-center text-center group flex-shrink-0 w-28 md:w-32 ${className}`}>
+      <div className="relative w-20 h-20 md:w-24 md:h-24 mb-2">
         <Image
           src={game.imageUrl}
           alt={game.title}
           fill
-          sizes="(max-width: 768px) 96px, 112px"
+          sizes="(max-width: 768px) 80px, 96px"
           className="rounded-lg object-cover group-hover:shadow-lg transition-shadow"
           data-ai-hint={game.dataAiHint || "game icon square prereg"}
         />
       </div>
-      <h3 className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate w-full px-1" title={game.title}>
+      <h3 className="text-xs font-medium text-foreground group-hover:text-primary transition-colors truncate w-full px-1" title={game.title}>
         {game.title}
       </h3>
-      <p className="text-xs text-primary font-semibold mt-1 group-hover:underline">
+      <p className="text-xs text-primary font-semibold mt-0.5 group-hover:underline"> {/* Reduced mt-1 to mt-0.5 */}
         立即预约
       </p>
     </Link>
