@@ -23,25 +23,25 @@ interface NewsArticle {
   content: string;
   imageUrl: string;
   dataAiHint?: string;
-  category: string;
+  category: string; // Keep for data structure, but may not display
   date: string;
-  author: string;
+  author: string; // Keep for data structure, but may not display
   tags?: string[];
 }
 
 const localMockNewsArticles: NewsArticle[] = MOCK_GAMES.flatMap((g, gameIndex) => 
-  Array.from({ length: Math.max(1, 3 - gameIndex) }, (_, newsIndex) => ({ 
+  Array.from({ length: Math.max(1, 4 - gameIndex) }, (_, newsIndex) => ({ // Ensure enough articles for demo
     id: `news-${g.id}-${newsIndex + 1}`,
-    title: `${g.title} ${newsIndex === 0 ? '最新动态与攻略分享' : newsIndex === 1 ? '深度评测解析' : '社区精彩活动'} #${newsIndex + 1}`,
+    title: `${g.title} ${newsIndex === 0 ? '最新动态与攻略分享' : newsIndex === 1 ? '深度评测解析' : newsIndex === 2 ? '社区精彩活动' : `版本前瞻 ${newsIndex}`} #${newsIndex + 1}`,
     content: `这是关于《${g.title}》的第 ${newsIndex + 1} 篇资讯。深入探讨了其最新更新、社区热点以及一些高级游戏技巧。\n\n${g.description}\n\n更多详细内容，包括最新的角色介绍、活动预告以及玩家社区的精彩讨论，都将在这里为您呈现。我们致力于提供最全面、最及时的游戏资讯，帮助您更好地享受《${g.title}》带来的乐趣。\n\n敬请期待后续的独家报道和深度评测！`,
     imageUrl: g.imageUrl, 
     dataAiHint: g.dataAiHint ? `${g.dataAiHint} news ${newsIndex + 1}` : `news article ${newsIndex + 1}`,
     category: gameIndex % 2 === 0 ? '游戏攻略' : '行业新闻',
-    date: `2024年${Math.max(1, 7 - gameIndex)}月${Math.min(28, 15 + gameIndex + newsIndex)}日`,
+    date: `2024年${Math.max(1, 7 - gameIndex)}月${Math.min(28, 10 + gameIndex + newsIndex)}日`,
     author: '游戏宇宙编辑部',
     tags: g.tags ? [...g.tags, (gameIndex % 3 === 0 ? '热门' : '深度分析'), `资讯${newsIndex+1}`] : [`资讯${newsIndex+1}`],
   }))
-);
+).slice(0, 10); // Cap total mock articles for performance if many games
 
 
 interface MockComment {
@@ -360,12 +360,11 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
               <div
                 className={cn(
                   "py-2 -mx-1 px-1 md:mx-0 md:px-0", 
-                  "flex space-x-3 overflow-x-auto", // Default mobile: flex scroll
-                  "md:grid md:gap-x-4 md:gap-y-6",    // From md: grid with gaps
-                  // Grid column logic:
-                  newsToShow.length === 1 && "md:grid-cols-1", // 1 item: full width on md+
-                  newsToShow.length === 2 && "md:grid-cols-2", // 2 items: 2 cols on md+
-                  newsToShow.length >= 3 && "md:grid-cols-2 lg:grid-cols-3" // 3+ items: 2 cols on md, 3 cols on lg
+                  "flex space-x-3 overflow-x-auto", 
+                  "md:grid md:gap-x-4 md:gap-y-6",    
+                  newsToShow.length === 1 && "md:grid-cols-1",
+                  newsToShow.length === 2 && "md:grid-cols-2",
+                  newsToShow.length >= 3 && "md:grid-cols-2 lg:grid-cols-3"
                 )}
               >
                 {newsToShow.map(newsItem => (
@@ -385,26 +384,18 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                               fill
                               className="object-cover group-hover:scale-105 transition-transform duration-300"
                               data-ai-hint={newsItem.dataAiHint || 'news article image'}
-                              sizes="(max-width: 639px) 100vw, (max-width: 767px) 160px, 176px"
+                              sizes="(max-width: 639px) 100vw, (max-width: 767px) 160px, (max-width: 1023px) 176px, (max-width: 1279px) 176px, 176px" // Adjusted sizes
                             />
                           </div>
                         </Link>
                         <div className="flex-grow flex flex-col">
-                           <div className='pb-1'>
-                            <Badge variant="outline" className="text-xs mb-1">{newsItem.category}</Badge>
-                            <h3 className="text-base font-semibold mb-1 text-foreground hover:text-primary transition-colors line-clamp-2">
-                              <Link href={`/news/${newsItem.id}`}>{newsItem.title}</Link>
-                            </h3>
-                            <p className="text-xs text-muted-foreground mb-1.5">{newsItem.date} - {newsItem.author}</p>
-                          </div>
-                          <p className="text-xs text-foreground/80 mb-2 line-clamp-3 flex-grow">
+                          <h3 className="text-base font-semibold text-foreground hover:text-primary transition-colors line-clamp-2 mb-1">
+                            <Link href={`/news/${newsItem.id}`}>{newsItem.title}</Link>
+                          </h3>
+                          <p className="text-xs text-foreground/80 line-clamp-3 flex-grow mb-2">
                             {createExcerpt(newsItem.content, 100)}
                           </p>
-                          <div className="mt-auto">
-                            <Button asChild variant="link" size="sm" className="p-0 h-auto text-primary hover:underline font-medium text-xs">
-                              <Link href={`/news/${newsItem.id}`}>阅读全文 &rarr;</Link>
-                            </Button>
-                          </div>
+                          <p className="text-xs text-muted-foreground mt-auto pt-1">{newsItem.date}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -567,4 +558,3 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     </div>
   );
 }
-
