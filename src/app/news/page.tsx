@@ -1,4 +1,6 @@
 
+'use client'; // Add this directive
+
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { MOCK_GAMES } from '@/lib/constants'; // Using for variety, replace with actual news
 import Image from 'next/image';
@@ -52,9 +54,9 @@ export default function NewsPage() {
         </h2>
         <div className="flex flex-wrap gap-2 mb-8">
           {newsCategories.map((category, index) => (
-            <Button 
-              key={category} 
-              variant={index === 0 ? "default" : "outline"} 
+            <Button
+              key={category}
+              variant={index === 0 ? "default" : "outline"}
               className="btn-interactive"
               onClick={() => alert(`切换到 ${category} 分类 (模拟)`)}
             >
@@ -68,8 +70,8 @@ export default function NewsPage() {
         {mockNews.map((article, index) => {
           const isFirstArticle = index === 0;
           return (
-            <Card 
-              key={article.id} 
+            <Card
+              key={article.id}
               className={cn(
                 "flex flex-col overflow-hidden hover:shadow-xl transition-shadow duration-300 fade-in",
                 isFirstArticle && "md:col-span-2 lg:col-span-2" // First article spans 2 columns on md and lg
@@ -81,9 +83,9 @@ export default function NewsPage() {
                   "block relative",
                   isFirstArticle ? "aspect-[16/8] sm:aspect-[16/7] md:aspect-[16/7.5]" : "aspect-video" // Taller aspect ratio for first image
                 )}>
-                  <Image 
-                    src={article.imageUrl} 
-                    alt={article.title} 
+                  <Image
+                    src={article.imageUrl}
+                    alt={article.title}
                     fill
                     className="object-cover"
                     data-ai-hint={article.dataAiHint}
@@ -121,7 +123,7 @@ export default function NewsPage() {
           );
         })}
       </div>
-      
+
       {mockNews.length > 6 && ( // Show load more if there are more than initially loaded
          <div className="text-center mt-10 fade-in" style={{ animationDelay: '1s' }}>
            <Button variant="outline" size="lg" className="btn-interactive">加载更多资讯</Button>
