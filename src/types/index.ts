@@ -36,3 +36,34 @@ export interface NewsArticle {
   author: string;
   tags?: string[];
 }
+
+export interface ForumSection {
+  id: string;
+  name: string;
+  icon?: React.ElementType; // Lucide icon component
+  imageUrl?: string; // For game-specific icons
+  dataAiHint?: string;
+  href: string;
+  type: 'link' | 'game' | 'action';
+}
+
+export interface CommunityPost {
+  id: string;
+  user: {
+    name: string;
+    avatarUrl: string;
+    dataAiHint?: string;
+    level?: number;
+    location?: string;
+  };
+  timestamp: string;
+  source?: string; // e.g., "来自web", "来自Android"
+  title?: string;
+  content: string;
+  imageUrl?: string; // Optional image in the post
+  imageAiHint?: string;
+  tags?: string[];
+  category?: string; // e.g., "游戏综合区"
+  commentsCount: number;
+  likesCount: number;
+}

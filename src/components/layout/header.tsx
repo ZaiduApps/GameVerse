@@ -2,7 +2,7 @@
 "use client"
 
 import Link from 'next/link'
-import { Menu, Gamepad2, Search } from 'lucide-react'
+import { Menu, Gamepad2, Search, Users as CommunityIcon } from 'lucide-react' // Added CommunityIcon
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet'
@@ -10,10 +10,11 @@ import { Input } from '@/components/ui/input'
 import { useState } from 'react';
 
 const navItems = [
-  { href: '/', label: '首页' },
-  { href: '/games', label: '游戏库' },
-  { href: '/rankings', label: '排行榜' },
-  { href: '/news', label: '资讯' },
+  { href: '/', label: '首页', icon: null },
+  { href: '/games', label: '游戏库', icon: null },
+  { href: '/rankings', label: '排行榜', icon: null },
+  { href: '/news', label: '资讯', icon: null },
+  { href: '/community', label: '社区', icon: CommunityIcon }, // Added Community
 ];
 
 export default function Header() {
@@ -31,7 +32,8 @@ export default function Header() {
         <div className="hidden md:flex items-center flex-1 justify-end lg:justify-center"> {/* Adjusted for better centering/right align on medium screens */}
           <nav className="hidden lg:flex items-center space-x-6">
             {navItems.map((item) => (
-              <Link key={item.label} href={item.href} className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors">
+              <Link key={item.label} href={item.href} className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5">
+                {item.icon && <item.icon size={16} />}
                 {item.label}
               </Link>
             ))}
@@ -78,8 +80,9 @@ export default function Header() {
                     <SheetClose asChild key={item.label}>
                       <Link 
                         href={item.href} 
-                        className="text-base font-medium text-foreground/80 hover:text-primary transition-colors px-2 py-3 rounded-md hover:bg-muted/50"
+                        className="text-base font-medium text-foreground/80 hover:text-primary transition-colors px-2 py-3 rounded-md hover:bg-muted/50 flex items-center gap-2"
                       >
+                        {item.icon && <item.icon size={18} />}
                         {item.label}
                       </Link>
                     </SheetClose>
