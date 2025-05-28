@@ -18,8 +18,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'GameVerse - 游戏宇宙',
-  description: '发现最新最热的手机游戏 | Discover the latest and hottest mobile games',
+  metadataBase: new URL('https://apks.cc'),
+  title: 'ApksCC-免费好用的资源网站，为爱发电。',
+  description: '专注于海外游戏下载和全球资源分享，提供最新热门游戏下载和游戏社区互动。',
 };
 
 export default function RootLayout({
