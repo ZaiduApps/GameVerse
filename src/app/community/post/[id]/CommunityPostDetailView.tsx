@@ -48,6 +48,16 @@ export default function CommunityPostDetailView({ post }: CommunityPostDetailVie
   const [newComment, setNewComment] = useState('');
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likesCount);
+  
+  const [viewCount, setViewCount] = useState<number | null>(null); // Initialize to null
+
+  useEffect(() => {
+    // Calculate and set the viewCount only on the client-side after hydration
+    // This ensures Math.random() doesn't cause a mismatch between server and client initial render
+    const clientSideInitialViewCount = Math.floor(Math.random() * 200) + post.commentsCount + post.likesCount + 50 + 1; // +1 for the current "view"
+    setViewCount(clientSideInitialViewCount);
+  }, [post.commentsCount, post.likesCount]); // Rerun if these specific post attributes change, or use [] to run only once on mount.
+
 
   const handleLike = () => {
     setIsLiked(!isLiked);
@@ -67,13 +77,6 @@ export default function CommunityPostDetailView({ post }: CommunityPostDetailVie
     setNewComment('');
     // In a real app, this would also trigger an API call
   };
-  
-  // Simulate view count increment
-  const [viewCount, setViewCount] = useState(Math.floor(Math.random() * 200) + post.commentsCount + post.likesCount + 50);
-  useEffect(() => {
-    setViewCount(v => v + 1);
-  }, []);
-
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 py-8 fade-in">
@@ -134,7 +137,9 @@ export default function CommunityPostDetailView({ post }: CommunityPostDetailVie
         <CardFooter className="p-4 pt-3 flex flex-col items-start space-y-3">
             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                 <div className="flex items-center">
-                    <Eye size={16} className="mr-1.5" /> {viewCount} 次浏览
+                    <Eye size={16} className="mr-1.5" /> 
+                    {/* Display fallback during SSR / initial client render, then actual viewCount */}
+                    {viewCount !== null ? viewCount : (post.commentsCount + post.likesCount + 50) /* Fallback for SSR/initial client render */} 次浏览
                 </div>
             </div>
           <div className="w-full flex items-center justify-start gap-2 sm:gap-3 border-t pt-3">
