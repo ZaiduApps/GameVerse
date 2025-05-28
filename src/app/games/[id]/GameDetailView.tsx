@@ -360,11 +360,12 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
               <div
                 className={cn(
                   "py-2 -mx-1 px-1 md:mx-0 md:px-0", 
-                  "flex space-x-3 overflow-x-auto", 
-                  "md:grid md:gap-x-4 md:gap-y-6",    
-                  newsToShow.length === 1 ? "md:grid-cols-1" :
-                  newsToShow.length === 2 ? "md:grid-cols-2" :
-                  "md:grid-cols-3" 
+                  "flex space-x-3 overflow-x-auto", // Default mobile: flex scroll
+                  "md:grid md:gap-x-4 md:gap-y-6",    // From md: grid with gaps
+                  // Grid column logic:
+                  newsToShow.length === 1 && "md:grid-cols-1", // 1 item: full width on md+
+                  newsToShow.length === 2 && "md:grid-cols-2", // 2 items: 2 cols on md+
+                  newsToShow.length >= 3 && "md:grid-cols-2 lg:grid-cols-3" // 3+ items: 2 cols on md, 3 cols on lg
                 )}
               >
                 {newsToShow.map(newsItem => (
