@@ -2,7 +2,7 @@
 "use client"
 
 import Link from 'next/link'
-import { Menu, Gamepad2, Search, Users as CommunityIcon, LogIn, UploadCloud } from 'lucide-react'
+import { Menu, Gamepad2, Search, Users as CommunityIcon, LogIn, UploadCloud, Home, Library, BarChart3, Newspaper } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet'
@@ -12,10 +12,10 @@ import { Label } from '@/components/ui/label'
 import { useState } from 'react';
 
 const navItems = [
-  { href: '/', label: '首页', icon: null },
-  { href: '/games', label: '游戏库', icon: null },
-  { href: '/rankings', label: '排行榜', icon: null },
-  { href: '/news', label: '资讯', icon: null },
+  { href: '/', label: '首页', icon: Home },
+  { href: '/games', label: '游戏库', icon: Library },
+  { href: '/rankings', label: '排行榜', icon: BarChart3 },
+  { href: '/news', label: '资讯', icon: Newspaper },
   { href: '/community', label: '社区', icon: CommunityIcon },
   { href: '/submit-resource', label: '资源投稿', icon: UploadCloud },
 ];
