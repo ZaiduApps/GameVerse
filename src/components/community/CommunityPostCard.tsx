@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { MessageSquare, ThumbsUp, MoreHorizontal, Bookmark, Share2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link'; // Added Link
 
 interface CommunityPostCardProps {
   post: CommunityPost;
@@ -45,21 +46,27 @@ export default function CommunityPostCard({ post }: CommunityPostCardProps) {
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-2 space-y-3">
-        {post.title && <h3 className="text-lg font-semibold text-foreground leading-tight">{post.title}</h3>}
-        <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed">
-          {post.content}
-        </p>
+        {post.title && (
+          <Link href={`/community/post/${post.id}`} className="block hover:text-primary transition-colors">
+            <h3 className="text-lg font-semibold text-foreground leading-tight group-hover:text-primary">{post.title}</h3>
+          </Link>
+        )}
+        <Link href={`/community/post/${post.id}`} className="block">
+          <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed line-clamp-5 hover:text-foreground"> {/* Increased line-clamp */}
+            {post.content}
+          </p>
+        </Link>
         {post.tags && post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-1"> {/* Adjusted pt-1 for spacing */}
+          <div className="flex flex-wrap gap-2 pt-1">
             {post.tags.map(tag => (
               <Badge key={tag} variant="outline" className="text-xs font-normal">{tag}</Badge>
             ))}
           </div>
         )}
         {post.imageUrl && (
-          <div className="rounded-lg overflow-hidden aspect-video relative bg-muted mt-3">
+          <Link href={`/community/post/${post.id}`} className="block mt-3 rounded-lg overflow-hidden aspect-video relative bg-muted">
             <Image src={post.imageUrl} alt={post.title || "Post image"} fill className="object-cover" data-ai-hint={post.imageAiHint || "community post image"} />
-          </div>
+          </Link>
         )}
       </CardContent>
       <CardFooter className="p-4 pt-2 flex items-center justify-start gap-2 sm:gap-4 border-t">

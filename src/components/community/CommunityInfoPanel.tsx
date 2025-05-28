@@ -25,7 +25,7 @@ export default function CommunityInfoPanel() {
             {hotPosts.map((post, index) => (
               <li key={post.id}>
                 <Link 
-                  href={`#`} // Placeholder link, replace with actual post detail page later
+                  href={`/community/post/${post.id}`} // Updated link
                   className="block text-foreground hover:text-primary hover:underline truncate"
                   title={post.title || post.content.substring(0, 50)}
                 >
