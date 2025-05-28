@@ -4,8 +4,8 @@
 import type { Game } from '@/types';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera, X as CloseIcon } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera, X as CloseIcon, ThumbsUp, ExternalLink } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import GameDownloadDialog from '@/components/game-download-dialog';
 import Link from 'next/link';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useState, useEffect, useRef } from 'react';
-import { MOCK_GAMES } from '@/lib/constants'; 
+import { MOCK_GAMES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 // Re-define NewsArticle interface and mock data generation locally for this page
@@ -23,25 +23,25 @@ interface NewsArticle {
   content: string;
   imageUrl: string;
   dataAiHint?: string;
-  category: string; // Keep for data structure, but may not display
+  category: string;
   date: string;
-  author: string; // Keep for data structure, but may not display
+  author: string;
   tags?: string[];
 }
 
-const localMockNewsArticles: NewsArticle[] = MOCK_GAMES.flatMap((g, gameIndex) => 
-  Array.from({ length: Math.max(1, 4 - gameIndex) }, (_, newsIndex) => ({ // Ensure enough articles for demo
+const localMockNewsArticles: NewsArticle[] = MOCK_GAMES.flatMap((g, gameIndex) =>
+  Array.from({ length: Math.max(1, 4 - gameIndex) }, (_, newsIndex) => ({
     id: `news-${g.id}-${newsIndex + 1}`,
     title: `${g.title} ${newsIndex === 0 ? '最新动态与攻略分享' : newsIndex === 1 ? '深度评测解析' : newsIndex === 2 ? '社区精彩活动' : `版本前瞻 ${newsIndex}`} #${newsIndex + 1}`,
     content: `这是关于《${g.title}》的第 ${newsIndex + 1} 篇资讯。深入探讨了其最新更新、社区热点以及一些高级游戏技巧。\n\n${g.description}\n\n更多详细内容，包括最新的角色介绍、活动预告以及玩家社区的精彩讨论，都将在这里为您呈现。我们致力于提供最全面、最及时的游戏资讯，帮助您更好地享受《${g.title}》带来的乐趣。\n\n敬请期待后续的独家报道和深度评测！`,
-    imageUrl: g.imageUrl, 
+    imageUrl: g.imageUrl,
     dataAiHint: g.dataAiHint ? `${g.dataAiHint} news ${newsIndex + 1}` : `news article ${newsIndex + 1}`,
     category: gameIndex % 2 === 0 ? '游戏攻略' : '行业新闻',
     date: `2024年${Math.max(1, 7 - gameIndex)}月${Math.min(28, 10 + gameIndex + newsIndex)}日`,
     author: '游戏宇宙编辑部',
     tags: g.tags ? [...g.tags, (gameIndex % 3 === 0 ? '热门' : '深度分析'), `资讯${newsIndex+1}`] : [`资讯${newsIndex+1}`],
   }))
-).slice(0, 10); // Cap total mock articles for performance if many games
+).slice(0, 10);
 
 
 interface MockComment {
@@ -66,6 +66,7 @@ interface GameDetailViewProps {
 
 const DESCRIPTION_CHAR_LIMIT = 120;
 const MAX_NEWS_DISPLAY = 4;
+const MAX_RECOMMENDED_GAMES = 4;
 
 export default function GameDetailView({ game }: GameDetailViewProps) {
   const [showFab, setShowFab] = useState(false);
@@ -90,7 +91,7 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     };
 
     window.addEventListener('scroll', handleScroll);
-    handleScroll(); 
+    handleScroll();
 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -116,12 +117,14 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     }, 350);
   };
 
-  const allGameSpecificNews = localMockNewsArticles.filter(article => 
+  const allGameSpecificNews = localMockNewsArticles.filter(article =>
     article.title.includes(game.title) || article.id.startsWith(`news-${game.id}`)
   );
-  
+
   const newsToShow = allGameSpecificNews.slice(0, MAX_NEWS_DISPLAY);
   const hasMoreNews = allGameSpecificNews.length > MAX_NEWS_DISPLAY;
+
+  const recommendedGames = MOCK_GAMES.filter(g => g.id !== game.id).slice(0, MAX_RECOMMENDED_GAMES);
 
 
   const createExcerpt = (text: string, maxLength: number = 100): string => {
@@ -146,7 +149,7 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf('！');
     if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf('？');
     if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf(' ');
-    
+
     if (breakPoint > limit / 2) {
         return text.substring(0, breakPoint + 1) + '...';
     }
@@ -166,6 +169,7 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
 
   return (
     <div className="space-y-8 fade-in">
+      {/* Announcements and Marquee */}
       <Card className="bg-primary/5 border-primary/20 shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-center">
@@ -191,6 +195,7 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
         </CardContent>
       </Card>
 
+      {/* Main Game Info Card */}
       <Card className="overflow-hidden shadow-xl">
         <CardHeader className="p-0 relative aspect-[16/7] sm:aspect-[2/1] md:aspect-[16/6]">
           <Image
@@ -204,315 +209,356 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
           />
         </CardHeader>
         <CardContent className="p-4 md:p-6 space-y-6">
-          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
-            <Image
-              src={game.imageUrl}
-              alt={`${game.title} icon`}
-              width={144}
-              height={144}
-              className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-xl object-cover flex-shrink-0 border-2 border-background shadow-lg"
-              data-ai-hint={game.dataAiHint ? `${game.dataAiHint} icon large` : "game icon large"}
-            />
-            <div className="flex-grow pt-1">
-              <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{game.title}</h1>
-              <p className="text-sm text-muted-foreground mt-1 sm:mt-2">{game.developer}</p>
-            </div>
-            <div className="w-full sm:w-auto flex-shrink-0 pt-2 sm:pt-0">
-              <GameDownloadDialog />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm pt-2">
-            <div className="flex items-center">
-              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-2" />
-              <div>
-                <p className="text-muted-foreground text-xs">评分</p>
-                <p className="font-semibold">{game.rating || 'N/A'}</p>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <Download className="w-4 h-4 text-primary mr-2" />
-               <div>
-                <p className="text-muted-foreground text-xs">下载量</p>
-                <p className="font-semibold">{game.downloads || 'N/A'}</p>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <Tag className="w-4 h-4 text-blue-500 mr-2" />
-              <div>
-                <p className="text-muted-foreground text-xs">类型</p>
-                <p className="font-semibold">{game.category}</p>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <CalendarDays className="w-4 h-4 text-green-500 mr-2" />
-              <div>
-                <p className="text-muted-foreground text-xs">发布日期</p>
-                <p className="font-semibold">{game.releaseDate || '未知'}</p>
-              </div>
-            </div>
-             <div className="flex items-center">
-              <History className="w-4 h-4 text-purple-500 mr-2" />
-              <div>
-                <p className="text-muted-foreground text-xs">更新日期</p>
-                <p className="font-semibold">{game.updateDate || '未知'}</p>
-              </div>
-            </div>
-            <div className="flex items-start"> 
-              <Info className="w-4 h-4 text-purple-500 mr-2 mt-0.5 flex-shrink-0" />
-              <div className="flex-grow">
-                <p className="text-muted-foreground text-xs">版本</p>
-                <div className="flex items-center gap-x-2 flex-wrap">
-                    <p className="font-semibold">{game.version || 'N/A'}</p>
-                    {game.version && (
-                      <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-auto px-2 py-0.5 text-xs btn-interactive"
-                          onClick={() => alert('催更请求已发送 (模拟)')}
-                      >
-                          <BellRing className="w-3 h-3 mr-1" />
-                          催更
-                      </Button>
-                    )}
+          <div className="md:grid md:grid-cols-12 md:gap-x-8">
+            {/* Left Column: Game Details */}
+            <div className="md:col-span-8 space-y-6">
+              <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+                <Image
+                  src={game.imageUrl}
+                  alt={`${game.title} icon`}
+                  width={144}
+                  height={144}
+                  className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-xl object-cover flex-shrink-0 border-2 border-background shadow-lg"
+                  data-ai-hint={game.dataAiHint ? `${game.dataAiHint} icon large` : "game icon large"}
+                />
+                <div className="flex-grow pt-1">
+                  <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{game.title}</h1>
+                  <p className="text-sm text-muted-foreground mt-1 sm:mt-2">{game.developer}</p>
+                </div>
+                <div className="w-full sm:w-auto flex-shrink-0 pt-2 sm:pt-0">
+                  <GameDownloadDialog />
                 </div>
               </div>
-            </div>
-            <div className="flex items-center">
-              <HardDrive className="w-4 h-4 text-orange-500 mr-2" />
-              <div>
-                <p className="text-muted-foreground text-xs">大小</p>
-                <p className="font-semibold">{game.size || 'N/A'}</p>
-              </div>
-            </div>
-          </div>
 
-          {game.tags && game.tags.length > 0 && (
-            <div className="pt-2">
-              <h3 className="text-base font-semibold text-muted-foreground mb-2 flex items-center">
-                <TagsIcon className="w-4 h-4 mr-2" />
-                标签
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {game.tags.map(tag => (
-                  <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <Separator className="my-4 md:my-6" />
-
-          <div>
-            <h2 className="text-xl font-semibold mb-3">游戏介绍</h2>
-            <p className="text-foreground/80 leading-relaxed whitespace-pre-line">
-              {needsExpansion && !isDescriptionExpanded ? shortDescriptionText : game.description}
-            </p>
-            {needsExpansion && (
-              <Button
-                variant="link"
-                className="p-0 h-auto text-primary hover:underline mt-2 text-sm"
-                onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-              >
-                {isDescriptionExpanded ? '收起' : '展开全文'}
-                {isDescriptionExpanded ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
-              </Button>
-            )}
-          </div>
-
-          <div>
-            <h2 className="text-xl font-semibold mt-6 mb-3 flex items-center">
-              <Camera className="w-5 h-5 text-primary mr-2" />
-              游戏截图
-            </h2>
-            {game.screenshots && game.screenshots.length > 0 ? (
-              <div className="flex overflow-x-auto space-x-3 md:space-x-4 py-2 -mx-1 px-1">
-                {game.screenshots.map((screenshot, index) => (
-                  <div 
-                    key={index} 
-                    className="flex-shrink-0 w-60 md:w-72 aspect-video bg-muted rounded-lg overflow-hidden shadow hover:shadow-lg transition-shadow cursor-pointer group relative"
-                    onClick={() => openScreenshotPreview(screenshot.url)}
-                  >
-                    <Image
-                      src={screenshot.url}
-                      alt={`游戏截图 ${index + 1}`}
-                      width={288} 
-                      height={162}
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                      data-ai-hint={screenshot.dataAiHint || "gameplay screenshot"}
-                      sizes="(max-width: 767px) 240px, 288px"
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground">暂无游戏截图。</p>
-            )}
-          </div>
-          
-          {newsToShow.length > 0 && (
-            <div className="pt-6 mt-6 border-t">
-              <h2 className="text-xl font-semibold mb-4 flex items-center">
-                <NewsIcon className="w-5 h-5 text-primary mr-2" />
-                《{game.title}》相关资讯
-              </h2>
-              
-              <div
-                className={cn(
-                  "py-2 -mx-1 px-1 md:mx-0 md:px-0", 
-                  "flex space-x-3 overflow-x-auto", 
-                  "md:grid md:gap-x-4 md:gap-y-6",    
-                  newsToShow.length === 1 && "md:grid-cols-1",
-                  newsToShow.length === 2 && "md:grid-cols-2",
-                  newsToShow.length >= 3 && "md:grid-cols-2 lg:grid-cols-3"
-                )}
-              >
-                {newsToShow.map(newsItem => (
-                  <Card 
-                    key={newsItem.id} 
-                    className={cn(
-                      "w-[calc(100vw-4rem)] max-w-md sm:w-96 flex-shrink-0 hover:shadow-lg transition-shadow duration-200 ease-in-out md:w-auto"
-                    )}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex flex-col sm:flex-row gap-x-3 gap-y-3">
-                        <Link href={`/news/${newsItem.id}`} className="block w-full sm:w-40 md:w-44 flex-shrink-0">
-                          <div className="relative w-full aspect-video rounded-md overflow-hidden bg-muted group">
-                            <Image
-                              src={newsItem.imageUrl}
-                              alt={newsItem.title}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-300"
-                              data-ai-hint={newsItem.dataAiHint || 'news article image'}
-                              sizes="(max-width: 639px) 100vw, (max-width: 767px) 160px, (max-width: 1023px) 176px, (max-width: 1279px) 176px, 176px" // Adjusted sizes
-                            />
-                          </div>
-                        </Link>
-                        <div className="flex-grow flex flex-col">
-                          <h3 className="text-base font-semibold text-foreground hover:text-primary transition-colors line-clamp-2 mb-1">
-                            <Link href={`/news/${newsItem.id}`}>{newsItem.title}</Link>
-                          </h3>
-                          <p className="text-xs text-foreground/80 line-clamp-3 flex-grow mb-2">
-                            {createExcerpt(newsItem.content, 100)}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-auto pt-1">{newsItem.date}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-              {hasMoreNews && (
-                <div className="mt-6 text-center">
-                  <Button variant="outline" asChild className="btn-interactive">
-                    <Link href={`/news?tag=${encodeURIComponent(game.title)}`}>查看更多《{game.title}》资讯</Link>
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-
-
-          <div className="pt-6 mt-6 border-t">
-            <h2 className="text-xl font-semibold mb-4 flex items-center">
-              <LinkIcon className="w-5 h-5 text-primary mr-2" />
-              更多资源与支持
-            </h2>
-            <div className="grid md:grid-cols-2 gap-x-6 gap-y-4">
-              <div className="space-y-3">
-                <h3 className="text-lg font-medium flex items-center text-foreground/90">
-                  <Users className="w-5 h-5 mr-2 text-accent" />
-                  玩家交流群
-                </h3>
-                <Button variant="outline" className="w-full justify-start btn-interactive">
-                  <MessageSquare className="w-4 h-4 mr-2" /> 加入官方QQ群: 123456789 (模拟)
-                </Button>
-                <Button variant="outline" className="w-full justify-start btn-interactive">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21.025 4.005C21.025 4.005 22.275 12.135 18.705 18.435C18.705 18.435 16.665 22.455 11.905 22.455C11.905 22.455 7.415000000000001 22.515 4.475000000000001 17.985C4.475000000000001 17.985 0.78500000000000034 12.045 0.78500000000000034 4.005C0.78500000000000034 4.005 3.2050000000000003 1.5150000000000001 7.2350000000000003 1.5150000000000001C7.2350000000000003 1.5150000000000001 10.015 1.0500000000000003 11.915 1.0500000000000003C11.915 1.0500000000000003 17.065 0.6800000000000004 21.025 4.005Z"/><path d="M8.324999999999999 10.11C8.324999999999999 10.11 9.044999999999998 9.134999999999999 10.115 9.134999999999999C11.185 9.134999999999999 11.665 10.02 11.665 10.02L12.505 13.38C12.505 13.38 12.025 13.89 11.025 13.89C10.025 13.89 8.484999999999999 12.675 8.484999999999999 12.675L8.324999999999999 10.11Z"/><path d="M15.635 10.11C15.635 10.11 14.915 9.134999999999999 13.845 9.134999999999999C12.775 9.134999999999999 12.295 10.02 12.295 10.02L11.455 13.38C11.455 13.38 11.935 13.89 12.935 13.89C13.935 13.89 15.475 12.675 15.475 12.675L15.635 10.11Z"/></svg>
-                  加入Discord服务器 (模拟)
-                </Button>
-                <Button variant="outline" className="w-full justify-start btn-interactive">
-                  <Users className="w-4 h-4 mr-2" /> 官方论坛/社区 (模拟)
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                <h3 className="text-lg font-medium flex items-center text-foreground/90">
-                  <Briefcase className="w-5 h-5 mr-2 text-accent" />
-                  合作与支持
-                </h3>
-                <Button variant="outline" className="w-full justify-start btn-interactive">
-                  <Briefcase className="w-4 h-4 mr-2" /> 商务合作洽谈 (模拟)
-                </Button>
-                <Button variant="outline" className="w-full justify-start btn-interactive">
-                  <NewsIcon className="w-4 h-4 mr-2" /> 媒体与内容创作 (模拟)
-                </Button>
-                 <Button variant="outline" className="w-full justify-start btn-interactive">
-                  <AlertTriangle className="w-4 h-4 mr-2" /> Bug反馈与建议 (模拟)
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div ref={commentsSectionRef} className="pt-8 mt-8 border-t">
-            <h2 className="text-xl font-semibold mb-6 flex items-center">
-              <CommentIcon className="w-6 h-6 text-primary mr-3" />
-              玩家评论区
-            </h2>
-
-            <Card className="mb-6 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-start space-x-3">
-                  <Avatar className="mt-1">
-                    <AvatarImage src="https://placehold.co/40x40.png?text=ME" alt="当前用户" data-ai-hint="avatar user" />
-                    <AvatarFallback>我</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-grow space-y-2">
-                    <Textarea
-                      ref={commentInputRef}
-                      placeholder="发表你的看法，分享游戏心得..."
-                      rows={3}
-                      className="text-sm"
-                    />
-                    <div className="flex justify-end">
-                      <Button className="btn-interactive">发表评论</Button>
-                    </div>
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3 text-sm pt-2">
+                <div className="flex items-center">
+                  <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-2" />
+                  <div>
+                    <p className="text-muted-foreground text-xs">评分</p>
+                    <p className="font-semibold">{game.rating || 'N/A'}</p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            <div className="space-y-6">
-              {mockComments.map((comment) => (
-                <Card key={comment.id} className="shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="flex items-start space-x-3">
-                      <Avatar>
-                        {comment.avatarUrl ? (
-                           <AvatarImage src={comment.avatarUrl} alt={comment.username} data-ai-hint={comment.dataAiHint || "avatar user"} />
-                        ) : (
-                           <AvatarImage src={`https://placehold.co/40x40.png?text=${comment.avatarFallback}`} alt={comment.username} data-ai-hint="avatar user" />
+                <div className="flex items-center">
+                  <Download className="w-4 h-4 text-primary mr-2" />
+                  <div>
+                    <p className="text-muted-foreground text-xs">下载量</p>
+                    <p className="font-semibold">{game.downloads || 'N/A'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <Tag className="w-4 h-4 text-blue-500 mr-2" />
+                  <div>
+                    <p className="text-muted-foreground text-xs">类型</p>
+                    <p className="font-semibold">{game.category}</p>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <CalendarDays className="w-4 h-4 text-green-500 mr-2" />
+                  <div>
+                    <p className="text-muted-foreground text-xs">发布日期</p>
+                    <p className="font-semibold">{game.releaseDate || '未知'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <History className="w-4 h-4 text-purple-500 mr-2" />
+                  <div>
+                    <p className="text-muted-foreground text-xs">更新日期</p>
+                    <p className="font-semibold">{game.updateDate || '未知'}</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <Info className="w-4 h-4 text-purple-500 mr-2 mt-0.5 flex-shrink-0" />
+                  <div className="flex-grow">
+                    <p className="text-muted-foreground text-xs">版本</p>
+                    <div className="flex items-center gap-x-2 flex-wrap">
+                        <p className="font-semibold">{game.version || 'N/A'}</p>
+                        {game.version && (
+                          <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-auto px-2 py-0.5 text-xs btn-interactive"
+                              onClick={() => alert('催更请求已发送 (模拟)')}
+                          >
+                              <BellRing className="w-3 h-3 mr-1" />
+                              催更
+                          </Button>
                         )}
-                        <AvatarFallback>{comment.avatarFallback}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-grow">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-semibold text-sm text-foreground">{comment.username}</span>
-                          <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
-                        </div>
-                        <p className="text-sm text-foreground/90 whitespace-pre-line">{comment.text}</p>
-                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {mockComments.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">暂无评论，快来抢沙发吧！</p>
+                  </div>
+                </div>
+                <div className="flex items-center col-span-2 sm:col-span-1"> {/* Ensure size fits well */}
+                  <HardDrive className="w-4 h-4 text-orange-500 mr-2" />
+                  <div>
+                    <p className="text-muted-foreground text-xs">大小</p>
+                    <p className="font-semibold">{game.size || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {game.tags && game.tags.length > 0 && (
+                <div className="pt-2">
+                  <h3 className="text-base font-semibold text-muted-foreground mb-2 flex items-center">
+                    <TagsIcon className="w-4 h-4 mr-2" />
+                    标签
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {game.tags.map(tag => (
+                      <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                    ))}
+                  </div>
+                </div>
               )}
+
+              <Separator className="my-4 md:my-6" />
+
+              <div>
+                <h2 className="text-xl font-semibold mb-3">游戏介绍</h2>
+                <p className="text-foreground/80 leading-relaxed whitespace-pre-line">
+                  {needsExpansion && !isDescriptionExpanded ? shortDescriptionText : game.description}
+                </p>
+                {needsExpansion && (
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto text-primary hover:underline mt-2 text-sm"
+                    onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                  >
+                    {isDescriptionExpanded ? '收起' : '展开全文'}
+                    {isDescriptionExpanded ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column: Recommended Games */}
+            <div className="md:col-span-4 mt-8 md:mt-0">
+              <Card className="shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center">
+                    <ThumbsUp className="w-5 h-5 mr-2 text-primary" />
+                    为你推荐
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-2">
+                  {recommendedGames.length > 0 ? recommendedGames.map(recGame => (
+                    <Link key={recGame.id} href={`/games/${recGame.id}`} className="block hover:bg-muted/50 p-2.5 rounded-lg transition-colors border border-transparent hover:border-primary/20">
+                      <div className="flex items-start gap-3">
+                        <Image
+                          src={recGame.imageUrl}
+                          alt={recGame.title}
+                          width={64}
+                          height={64}
+                          className="w-16 h-16 rounded-md object-cover flex-shrink-0"
+                          data-ai-hint={recGame.dataAiHint || "game icon small"}
+                        />
+                        <div className="flex-grow">
+                          <h4 className="font-semibold text-sm text-foreground group-hover:text-primary line-clamp-2">{recGame.title}</h4>
+                          <p className="text-xs text-muted-foreground mt-0.5">{recGame.category}</p>
+                           <Button variant="link" size="sm" className="text-xs p-0 h-auto mt-1 text-primary/80 hover:text-primary">
+                            查看详情 <ExternalLink className="w-3 h-3 ml-1" />
+                           </Button>
+                        </div>
+                      </div>
+                    </Link>
+                  )) : (
+                    <p className="text-sm text-muted-foreground">暂无更多推荐。</p>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Sections below the two-column layout */}
+      <div>
+        <h2 className="text-xl font-semibold mt-6 mb-3 flex items-center">
+          <Camera className="w-5 h-5 text-primary mr-2" />
+          游戏截图
+        </h2>
+        {game.screenshots && game.screenshots.length > 0 ? (
+          <div className="flex overflow-x-auto space-x-3 md:space-x-4 py-2 -mx-1 px-1">
+            {game.screenshots.map((screenshot, index) => (
+              <div
+                key={index}
+                className="flex-shrink-0 w-60 md:w-72 aspect-video bg-muted rounded-lg overflow-hidden shadow hover:shadow-lg transition-shadow cursor-pointer group relative"
+                onClick={() => openScreenshotPreview(screenshot.url)}
+              >
+                <Image
+                  src={screenshot.url}
+                  alt={`游戏截图 ${index + 1}`}
+                  width={288}
+                  height={162}
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                  data-ai-hint={screenshot.dataAiHint || "gameplay screenshot"}
+                  sizes="(max-width: 767px) 240px, 288px"
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground">暂无游戏截图。</p>
+        )}
+      </div>
+
+      {newsToShow.length > 0 && (
+        <div className="pt-6 mt-6 border-t">
+          <h2 className="text-xl font-semibold mb-4 flex items-center">
+            <NewsIcon className="w-5 h-5 text-primary mr-2" />
+            《{game.title}》相关资讯
+          </h2>
+          <div
+            className={cn(
+              "py-2 -mx-1 px-1 md:mx-0 md:px-0",
+              "flex space-x-3 overflow-x-auto",
+              "md:grid md:gap-x-4 md:gap-y-6",
+              newsToShow.length === 1 && "md:grid-cols-1",
+              newsToShow.length === 2 && "md:grid-cols-2",
+              newsToShow.length >= 3 && "md:grid-cols-2 lg:grid-cols-3"
+            )}
+          >
+            {newsToShow.map(newsItem => (
+              <Card
+                key={newsItem.id}
+                className={cn(
+                  "w-[calc(100vw-4rem)] max-w-md sm:w-96 flex-shrink-0 hover:shadow-lg transition-shadow duration-200 ease-in-out md:w-auto"
+                )}
+              >
+                <CardContent className="p-3">
+                  <div className="flex flex-col sm:flex-row gap-x-3 gap-y-3">
+                    <Link href={`/news/${newsItem.id}`} className="block w-full sm:w-40 md:w-44 flex-shrink-0">
+                      <div className="relative w-full aspect-video rounded-md overflow-hidden bg-muted group">
+                        <Image
+                          src={newsItem.imageUrl}
+                          alt={newsItem.title}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          data-ai-hint={newsItem.dataAiHint || 'news article image'}
+                          sizes="(max-width: 639px) 100vw, (max-width: 767px) 160px, (max-width: 1023px) 176px, (max-width: 1279px) 176px, 176px"
+                        />
+                      </div>
+                    </Link>
+                    <div className="flex-grow flex flex-col">
+                      <h3 className="text-base font-semibold text-foreground hover:text-primary transition-colors line-clamp-2 mb-1">
+                        <Link href={`/news/${newsItem.id}`}>{newsItem.title}</Link>
+                      </h3>
+                      <p className="text-xs text-foreground/80 line-clamp-3 flex-grow mb-2">
+                        {createExcerpt(newsItem.content, 100)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-auto pt-1">{newsItem.date}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          {hasMoreNews && (
+            <div className="mt-6 text-center">
+              <Button variant="outline" asChild className="btn-interactive">
+                <Link href={`/news?tag=${encodeURIComponent(game.title)}`}>查看更多《{game.title}》资讯</Link>
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="pt-6 mt-6 border-t">
+        <h2 className="text-xl font-semibold mb-4 flex items-center">
+          <LinkIcon className="w-5 h-5 text-primary mr-2" />
+          更多资源与支持
+        </h2>
+        <div className="grid md:grid-cols-2 gap-x-6 gap-y-4">
+          <div className="space-y-3">
+            <h3 className="text-lg font-medium flex items-center text-foreground/90">
+              <Users className="w-5 h-5 mr-2 text-accent" />
+              玩家交流群
+            </h3>
+            <Button variant="outline" className="w-full justify-start btn-interactive">
+              <MessageSquare className="w-4 h-4 mr-2" /> 加入官方QQ群: 123456789 (模拟)
+            </Button>
+            <Button variant="outline" className="w-full justify-start btn-interactive">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21.025 4.005C21.025 4.005 22.275 12.135 18.705 18.435C18.705 18.435 16.665 22.455 11.905 22.455C11.905 22.455 7.415000000000001 22.515 4.475000000000001 17.985C4.475000000000001 17.985 0.78500000000000034 12.045 0.78500000000000034 4.005C0.78500000000000034 4.005 3.2050000000000003 1.5150000000000001 7.2350000000000003 1.5150000000000001C7.2350000000000003 1.5150000000000001 10.015 1.0500000000000003 11.915 1.0500000000000003C11.915 1.0500000000000003 17.065 0.6800000000000004 21.025 4.005Z"/><path d="M8.324999999999999 10.11C8.324999999999999 10.11 9.044999999999998 9.134999999999999 10.115 9.134999999999999C11.185 9.134999999999999 11.665 10.02 11.665 10.02L12.505 13.38C12.505 13.38 12.025 13.89 11.025 13.89C10.025 13.89 8.484999999999999 12.675 8.484999999999999 12.675L8.324999999999999 10.11Z"/><path d="M15.635 10.11C15.635 10.11 14.915 9.134999999999999 13.845 9.134999999999999C12.775 9.134999999999999 12.295 10.02 12.295 10.02L11.455 13.38C11.455 13.38 11.935 13.89 12.935 13.89C13.935 13.89 15.475 12.675 15.475 12.675L15.635 10.11Z"/></svg>
+              加入Discord服务器 (模拟)
+            </Button>
+            <Button variant="outline" className="w-full justify-start btn-interactive">
+              <Users className="w-4 h-4 mr-2" /> 官方论坛/社区 (模拟)
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-lg font-medium flex items-center text-foreground/90">
+              <Briefcase className="w-5 h-5 mr-2 text-accent" />
+              合作与支持
+            </h3>
+            <Button variant="outline" className="w-full justify-start btn-interactive">
+              <Briefcase className="w-4 h-4 mr-2" /> 商务合作洽谈 (模拟)
+            </Button>
+            <Button variant="outline" className="w-full justify-start btn-interactive">
+              <NewsIcon className="w-4 h-4 mr-2" /> 媒体与内容创作 (模拟)
+            </Button>
+             <Button variant="outline" className="w-full justify-start btn-interactive">
+              <AlertTriangle className="w-4 h-4 mr-2" /> Bug反馈与建议 (模拟)
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div ref={commentsSectionRef} className="pt-8 mt-8 border-t">
+        <h2 className="text-xl font-semibold mb-6 flex items-center">
+          <CommentIcon className="w-6 h-6 text-primary mr-3" />
+          玩家评论区
+        </h2>
+
+        <Card className="mb-6 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-start space-x-3">
+              <Avatar className="mt-1">
+                <AvatarImage src="https://placehold.co/40x40.png?text=ME" alt="当前用户" data-ai-hint="avatar user" />
+                <AvatarFallback>我</AvatarFallback>
+              </Avatar>
+              <div className="flex-grow space-y-2">
+                <Textarea
+                  ref={commentInputRef}
+                  placeholder="发表你的看法，分享游戏心得..."
+                  rows={3}
+                  className="text-sm"
+                />
+                <div className="flex justify-end">
+                  <Button className="btn-interactive">发表评论</Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-6">
+          {mockComments.map((comment) => (
+            <Card key={comment.id} className="shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-3">
+                  <Avatar>
+                    {comment.avatarUrl ? (
+                       <AvatarImage src={comment.avatarUrl} alt={comment.username} data-ai-hint={comment.dataAiHint || "avatar user"} />
+                    ) : (
+                       <AvatarImage src={`https://placehold.co/40x40.png?text=${comment.avatarFallback}`} alt={comment.username} data-ai-hint="avatar user" />
+                    )}
+                    <AvatarFallback>{comment.avatarFallback}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-grow">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-sm text-foreground">{comment.username}</span>
+                      <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
+                    </div>
+                    <p className="text-sm text-foreground/90 whitespace-pre-line">{comment.text}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          {mockComments.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">暂无评论，快来抢沙发吧！</p>
+          )}
+        </div>
+      </div>
 
       {showFab && (
         <Button
@@ -527,19 +573,19 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
       )}
 
       {selectedScreenshot && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in-50"
           onClick={closeScreenshotPreview}
         >
-          <div 
+          <div
             className="relative max-w-full max-h-full"
-            onClick={(e) => e.stopPropagation()} 
+            onClick={(e) => e.stopPropagation()}
           >
             <Image
               src={selectedScreenshot}
               alt="游戏截图预览"
-              width={1280} 
-              height={720} 
+              width={1280}
+              height={720}
               className="object-contain rounded-lg shadow-2xl"
               style={{ maxWidth: '90vw', maxHeight: '90vh' }}
             />
