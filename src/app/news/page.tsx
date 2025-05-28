@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
 const newsCategories = ['全部', '游戏攻略', '行业新闻', '最新动态', '深度评测', '活动预告'];
-const ITEMS_PER_PAGE = 10; // Adjusted to 10 to have more items for layout demo
+const ITEMS_PER_PAGE = 10;
 
 export default function NewsPage() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -34,10 +34,10 @@ export default function NewsPage() {
 
   if (isFirstPage && articlesToDisplay.length > 0) {
     prominentArticle = articlesToDisplay[0];
-    if (articlesToDisplay.length >= 2) { // Need at least 2 for the right column to potentially have something
-        rightStackedArticles = articlesToDisplay.slice(1, 3).filter(Boolean); // Take up to 2 articles for the right, ensure they exist
+    if (articlesToDisplay.length >= 2) {
+        rightStackedArticles = articlesToDisplay.slice(1, 3);
         gridArticles = articlesToDisplay.slice(1 + rightStackedArticles.length);
-    } else { // Only 1 article on the first page
+    } else { 
         gridArticles = [];
     }
   }
@@ -52,14 +52,14 @@ export default function NewsPage() {
         key={article.id}
         className={cn(
           "flex flex-col overflow-hidden hover:shadow-xl transition-shadow duration-300",
-          isProminent ? "h-full" : (isStacked ? "flex-1" : "") // flex-1 for stacked, h-full for prominent
+          isProminent ? "h-full" : (isStacked ? "flex-1" : "") 
         )}
       >
         <CardHeader className="p-0">
           <Link 
             href={`/news/${article.id}`} 
             className={cn(
-              "block relative",
+              "block relative group", // Added group for image hover effect
               isProminent ? "aspect-[16/8] sm:aspect-[16/7.5]" : "aspect-video"
             )}
           >
@@ -67,30 +67,30 @@ export default function NewsPage() {
               src={article.imageUrl}
               alt={article.title}
               fill
-              className="object-cover"
+              className="object-cover group-hover:scale-105 transition-transform duration-300" // Image hover effect
               data-ai-hint={article.dataAiHint || 'news image'}
               sizes={
                 isProminent 
-                  ? "(max-width: 767px) 100vw, (max-width: 1023px) 66vw, 800px" 
+                  ? "(max-width: 767px) 100vw, (max-width: 1023px) 60vw, 700px" // Adjusted for prominent
                   : isStacked
-                  ? "(max-width: 767px) 100vw, (max-width: 1023px) 33vw, 300px"
+                  ? "(max-width: 767px) 100vw, (max-width: 1023px) 40vw, 400px" // Adjusted for stacked
                   : "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               }
               priority={priorityImage}
             />
           </Link>
         </CardHeader>
-        <CardContent className={cn("flex-grow", isStacked ? "p-3" : "p-4")}>
-          <Badge variant="secondary" className="mb-2">{article.category}</Badge>
-          <Link href={`/news/${article.id}`}>
+        <CardContent className={cn("flex-grow flex flex-col", isStacked ? "p-3" : "p-4")}> {/* flex-col for content */}
+          <Badge variant="secondary" className="mb-2 self-start">{article.category}</Badge>
+          <Link href={`/news/${article.id}`} className="block">
             <CardTitle className={cn(
-              "font-semibold mb-2 hover:text-primary transition-colors",
+              "font-semibold mb-1.5 hover:text-primary transition-colors",
               isProminent ? "text-xl md:text-2xl line-clamp-3" : (isStacked ? "text-base line-clamp-2" : "text-lg md:text-xl line-clamp-2")
             )}>{article.title}</CardTitle>
           </Link>
           <CardDescription className={cn(
-            "text-muted-foreground",
-            isProminent ? "text-sm md:text-base line-clamp-3 sm:line-clamp-4" : (isStacked ? "text-xs line-clamp-3" : "text-sm line-clamp-3")
+            "text-muted-foreground flex-grow", // flex-grow for description
+            isProminent ? "text-sm md:text-base line-clamp-3 sm:line-clamp-4" : (isStacked ? "text-xs line-clamp-2" : "text-sm line-clamp-3") // Stacked excerpt to line-clamp-2
           )}>{article.excerpt || '暂无摘要'}</CardDescription>
         </CardContent>
         <CardFooter className={cn("border-t mt-auto", isStacked ? "p-3 text-xs" : "p-4")}>
@@ -129,7 +129,7 @@ export default function NewsPage() {
           {newsCategories.map((category, index) => (
             <Button
               key={category}
-              variant={index === 0 ? "default" : "outline"} // Example active state for "全部"
+              variant={index === 0 ? "default" : "outline"} 
               className="btn-interactive"
               onClick={() => alert(`切换到 ${category} 分类 (模拟)`)}
             >
@@ -139,33 +139,30 @@ export default function NewsPage() {
         </div>
       </section>
 
-      {/* Special layout for the first page, prominent article and right stacked articles */}
       {isFirstPage && prominentArticle && (
         <section className="mb-6 md:mb-8">
-          {/* Desktop layout */}
           <div className="hidden md:flex md:gap-4">
-            <div className="md:w-2/3 lg:w-[60%]"> {/* Prominent article takes more space */}
+            <div className="md:w-2/3 lg:w-[60%]"> 
               {renderArticleCard(prominentArticle, 'prominent', true)}
             </div>
             {rightStackedArticles.length > 0 && (
-              <div className="md:w-1/3 lg:w-[40%] flex flex-col gap-4"> {/* Reduced gap between stacked cards */}
+              <div className="md:w-1/3 lg:w-[40%] flex flex-col gap-2"> {/* Reduced gap from gap-4 to gap-2 */}
                 {rightStackedArticles.map(article => renderArticleCard(article, 'stacked'))}
               </div>
             )}
           </div>
-          {/* Mobile layout: Prominent article first, then others will be handled by the gridArticles section */}
           <div className="md:hidden">
             {renderArticleCard(prominentArticle, 'prominent', true)}
+            {/* On mobile, rightStackedArticles are rendered by gridArticles section */}
           </div>
         </section>
       )}
       
-      {/* Regular grid for remaining articles */}
       {gridArticles.length > 0 && (
         <div className={cn(
           "grid grid-cols-1 gap-6",
+           // For first page with prominent, grid starts after, otherwise it's the main grid.
           (isFirstPage && prominentArticle) ? "sm:grid-cols-2 lg:grid-cols-3 mt-6 md:mt-0" : "sm:grid-cols-2 md:grid-cols-3" 
-          // Adjust grid if special layout was rendered
         )}>
           {gridArticles.map((article, index) => 
             renderArticleCard(article, 'grid', isFirstPage && !prominentArticle && index === 0)
@@ -176,7 +173,6 @@ export default function NewsPage() {
       {articlesToDisplay.length === 0 && !prominentArticle && (
         <p className="text-center text-muted-foreground py-8">暂无资讯。</p>
       )}
-
 
       {totalPages > 1 && (
          <div className="flex justify-center items-center space-x-2 mt-10 fade-in" style={{ animationDelay: '1s' }}>
