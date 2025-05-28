@@ -5,9 +5,8 @@ import type { Game } from '@/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Card } from '@/components/ui/card'; // Removed CardContent as it's not used directly
+import { Star, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface GameCarouselProps {
   games: Game[];
@@ -21,7 +20,7 @@ export default function GameCarousel({ games, autoPlayInterval = 5000 }: GameCar
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [translateX, setTranslateX] = useState(0);
-  const [isInteracting, setIsInteracting] = useState(false); // Track user interaction (touch or button click)
+  const [isInteracting, setIsInteracting] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -56,27 +55,25 @@ export default function GameCarousel({ games, autoPlayInterval = 5000 }: GameCar
   useEffect(() => {
     startAutoPlay();
     return () => stopAutoPlay();
-  }, [startAutoPlay, stopAutoPlay]);
+  }, [startAutoPlay, stopAutoPlay, currentIndex]); // Added currentIndex to restart timer if changed by right panel
   
-  // Reset interaction flag and restart autoplay after a delay
   useEffect(() => {
     if (isInteracting) {
       stopAutoPlay();
       const interactionTimer = setTimeout(() => {
         setIsInteracting(false);
         startAutoPlay(); 
-      }, autoPlayInterval * 2); // Restart after 2x interval of no interaction
+      }, autoPlayInterval * 1.5); 
       return () => clearTimeout(interactionTimer);
     }
   }, [isInteracting, autoPlayInterval, startAutoPlay, stopAutoPlay]);
-
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (games.length <= 1) return;
     stopAutoPlay();
     setIsDragging(true);
     setStartX(e.touches[0].clientX);
-    setTranslateX(0); // Reset translateX for the current slide
+    setTranslateX(0);
     setIsInteracting(true);
   };
 
@@ -90,16 +87,9 @@ export default function GameCarousel({ games, autoPlayInterval = 5000 }: GameCar
   const handleTouchEnd = () => {
     if (!isDragging || games.length <= 1) return;
     setIsDragging(false);
-
-    if (translateX > SWIPE_THRESHOLD) {
-      goToPrevious();
-    } else if (translateX < -SWIPE_THRESHOLD) {
-      goToNext();
-    } else {
-      // Snap back if not enough swipe
-      setTranslateX(0);
-    }
-    // Restart autoplay logic is handled by isInteracting effect
+    if (translateX > SWIPE_THRESHOLD) goToPrevious();
+    else if (translateX < -SWIPE_THRESHOLD) goToNext();
+    else setTranslateX(0);
   };
   
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -123,105 +113,105 @@ export default function GameCarousel({ games, autoPlayInterval = 5000 }: GameCar
     if (!isDragging || games.length <= 1) return;
     setIsDragging(false);
     if (carouselRef.current) carouselRef.current.style.cursor = 'grab';
-
-    if (translateX > SWIPE_THRESHOLD) {
-      goToPrevious();
-    } else if (translateX < -SWIPE_THRESHOLD) {
-      goToNext();
-    } else {
-      setTranslateX(0);
-    }
+    if (translateX > SWIPE_THRESHOLD) goToPrevious();
+    else if (translateX < -SWIPE_THRESHOLD) goToNext();
+    else setTranslateX(0);
   };
 
-
   if (!games || games.length === 0) {
-    return <div className="text-center p-4">暂无推荐游戏</div>;
+    return <div className="text-center p-4 bg-muted rounded-lg shadow">暂无推荐游戏</div>;
   }
 
-  const currentGame = games[currentIndex];
-
   return (
-    <Card 
-      className="relative w-full overflow-hidden shadow-lg rounded-lg select-none" // Added select-none
-      ref={carouselRef}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onMouseDown={handleMouseDown} // Added mouse events for desktop dragging
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUpOrLeave}
-      onMouseLeave={handleMouseUpOrLeave} // Reset if mouse leaves while dragging
-      style={{ cursor: games.length > 1 ? 'grab' : 'default' }}
-    >
+    <div className="md:flex md:gap-4 lg:gap-6 rounded-lg overflow-hidden bg-card shadow-lg p-0 md:p-1"> {/* Adjusted padding for desktop */}
+      {/* Left Side: Main Carousel Display */}
       <div 
-        className="flex transition-transform duration-300 ease-out"
-        style={{ transform: `translateX(${-(currentIndex * 100)}%) translateX(${translateX}px)` }}
+        className="w-full md:w-3/4 lg:w-[70%] relative overflow-hidden select-none rounded-l-lg"
+        ref={carouselRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUpOrLeave}
+        onMouseLeave={handleMouseUpOrLeave}
+        style={{ cursor: games.length > 1 ? 'grab' : 'default' }}
       >
+        <div 
+          className="flex transition-transform duration-300 ease-out h-full"
+          style={{ transform: `translateX(${-(currentIndex * 100)}%) translateX(${translateX}px)` }}
+        >
+          {games.map((game, index) => (
+            <div key={game.id || index} className="w-full flex-shrink-0 relative aspect-[16/9] md:aspect-auto md:h-[450px] lg:h-[500px]"> {/* Adjusted aspect ratio & height */}
+               <Link href={`/games/${game.id}`} draggable="false" className="block h-full">
+                <Image
+                  src={game.imageUrl}
+                  alt={game.title}
+                  fill
+                  priority={index === 0}
+                  className="object-cover"
+                  data-ai-hint={game.dataAiHint}
+                  sizes="(max-width: 767px) 100vw, (max-width: 1023px) 75vw, 70vw"
+                  draggable="false"
+                  onDragStart={(e) => e.preventDefault()}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+              </Link>
+              <div className="absolute bottom-0 left-0 p-4 md:p-6 text-white pointer-events-none">
+                <h2 className="text-xl md:text-3xl font-bold mb-1 drop-shadow-lg">{game.title}</h2>
+                <p className="text-xs md:text-base text-gray-200 hidden sm:block max-w-lg truncate drop-shadow-md">{game.shortDescription || game.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right Side: Preview List (Desktop Only) */}
+      <div className="hidden md:block md:w-1/4 lg:w-[30%] space-y-1.5 py-2 pr-2 max-h-[450px] lg:max-h-[500px] overflow-y-auto">
         {games.map((game, index) => (
-          <div key={game.id || index} className="w-full flex-shrink-0 relative aspect-[16/7] md:aspect-[16/6]">
-             <Link href={`/games/${game.id}`} draggable="false">
+          <Link
+            key={game.id}
+            href={`/games/${game.id}`}
+            className={cn(
+              "flex items-center p-2.5 rounded-md cursor-pointer transition-all duration-200 ease-in-out group",
+              currentIndex === index 
+                ? "bg-primary/15 border border-primary/50 shadow-sm" 
+                : "hover:bg-muted/60 hover:shadow-sm"
+            )}
+            onMouseEnter={() => { 
+              setCurrentIndex(index); 
+              setIsInteracting(true); 
+              setTranslateX(0); // Reset any drag translation on main image
+            }}
+          >
+            <div className="relative w-20 h-12 lg:w-24 lg:h-14 flex-shrink-0">
               <Image
                 src={game.imageUrl}
                 alt={game.title}
                 fill
-                priority={index === 0}
-                className="object-cover"
-                data-ai-hint={game.dataAiHint}
-                sizes="(max-width: 768px) 100vw, 100vw"
-                draggable="false" // Prevent image default drag
-                onDragStart={(e) => e.preventDefault()} // Further prevent image drag
+                className="object-cover rounded-sm"
+                data-ai-hint={`${game.dataAiHint || 'game'} thumbnail`}
+                sizes="100px"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-            </Link>
-            <div className="absolute bottom-0 left-0 p-4 md:p-8 text-white pointer-events-none">
-              <h2 className="text-2xl md:text-4xl font-bold mb-1 md:mb-2 drop-shadow-lg">{game.title}</h2>
-              <p className="text-sm md:text-lg text-gray-200 hidden sm:block max-w-xl truncate drop-shadow-md">{game.shortDescription || game.description}</p>
             </div>
-          </div>
+            <div className="ml-2.5 flex-1 min-w-0">
+              <h4 className="text-xs lg:text-sm font-semibold truncate text-foreground group-hover:text-primary transition-colors">
+                {game.title}
+              </h4>
+              {game.rating && (
+                <div className="flex items-center text-xs text-muted-foreground mt-0.5">
+                  <Star size={12} className="mr-1 text-yellow-400 fill-yellow-400" />
+                  {game.rating.toFixed(1)}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground truncate mt-0.5">{game.category}</p>
+            </div>
+            {currentIndex === index && (
+              <ChevronRightIcon size={18} className="ml-auto text-primary opacity-70 flex-shrink-0" />
+            )}
+          </Link>
         ))}
       </div>
-      
-      {/* This div below is for the item currently being interacted with, but needs to be part of the map for proper rendering with translateX */}
-      {/* The actual logic is now applying translateX to the container of all slides */}
-
-      {games.length > 1 && (
-        <>
-          <Button
-            variant="outline"
-            size="icon"
-            className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/30 hover:bg-black/50 text-white border-none btn-interactive z-10"
-            onClick={(e) => { e.stopPropagation(); goToPrevious();}}
-            aria-label="上一张"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/30 hover:bg-black/50 text-white border-none btn-interactive z-10"
-            onClick={(e) => { e.stopPropagation(); goToNext(); }}
-            aria-label="下一张"
-          >
-            <ChevronRight className="h-6 w-6" />
-          </Button>
-        </>
-      )}
-      
-      {games.length > 1 && (
-         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
-            {games.map((_, index) => (
-              <button
-                key={index}
-                onClick={(e) => { e.stopPropagation(); setCurrentIndex(index); setTranslateX(0); setIsInteracting(true); }}
-                aria-label={`幻灯片 ${index + 1}`}
-                className={`w-2.5 h-2.5 rounded-full transition-colors ${
-                  currentIndex === index ? 'bg-primary' : 'bg-white/50 hover:bg-white/80'
-                }`}
-              />
-            ))}
-          </div>
-      )}
-    </Card>
+    </div>
   );
 }
-
