@@ -13,18 +13,18 @@ interface GameCardProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export default function GameCard({ game, className, ...props }: GameCardProps) {
   return (
-    <Card 
+    <Card
       className={`overflow-hidden transition-all duration-300 ease-in-out hover:shadow-xl hover:border-primary/50 flex flex-col ${className}`}
       {...props}
     >
       <Link href={`/games/${game.id}`} className="block flex flex-col flex-grow">
         <CardHeader className="p-0">
-          <div className="relative w-full h-36"> {/* Reduced height */}
+          <div className="relative w-full max-w-[233px] h-36 mx-auto"> {/* Adjusted: max width 233px, centered */}
             <Image
               src={game.imageUrl}
               alt={game.title}
               fill
-              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
+              sizes="(max-width: 767px) 100vw, 233px" // Adjusted sizes
               className="object-cover"
               data-ai-hint={game.dataAiHint}
             />
