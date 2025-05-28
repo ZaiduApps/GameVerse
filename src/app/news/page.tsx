@@ -92,7 +92,7 @@ export default function NewsPage() {
           </Link>
           <CardDescription className={cn(
             "text-muted-foreground flex-grow",
-            isProminent ? "text-sm md:text-base line-clamp-3 sm:line-clamp-4" : (isStacked ? "text-xs line-clamp-3" : "text-sm line-clamp-3")
+            isProminent ? "text-sm md:text-base line-clamp-3 sm:line-clamp-4" : (isStacked ? "text-xs line-clamp-2" : "text-sm line-clamp-3")
           )}>{article.excerpt || '暂无摘要'}</CardDescription>
         </CardContent>
         <CardFooter className={cn("border-t mt-auto", isStacked ? "p-3 text-xs" : "p-4")}>
@@ -143,12 +143,12 @@ export default function NewsPage() {
 
       {currentPage === 1 && prominentArticle && (
         <section className="mb-6 md:mb-8">
-          <div className="hidden md:flex md:gap-4"> {/* Reverted: Removed md:items-start */}
+          <div className="hidden md:flex md:gap-4 md:items-start">
             <div className="md:w-2/3 lg:w-[60%]"> 
               {renderArticleCard(prominentArticle, 'prominent', true)}
             </div>
             {rightStackedArticles.length > 0 && (
-              <div className="md:w-1/3 lg:w-[40%] flex flex-col gap-4"> {/* Reverted: gap-2 to gap-4 */}
+              <div className="md:w-1/3 lg:w-[40%] flex flex-col gap-2">
                 {rightStackedArticles.map(article => renderArticleCard(article, 'stacked'))}
               </div>
             )}
@@ -202,3 +202,4 @@ export default function NewsPage() {
     </div>
   );
 }
+
