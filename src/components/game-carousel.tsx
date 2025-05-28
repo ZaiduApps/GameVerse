@@ -55,7 +55,7 @@ export default function GameCarousel({ games, autoPlayInterval = 5000 }: GameCar
   useEffect(() => {
     startAutoPlay();
     return () => stopAutoPlay();
-  }, [startAutoPlay, stopAutoPlay, currentIndex]); // Added currentIndex to restart timer if changed by right panel
+  }, [startAutoPlay, stopAutoPlay, currentIndex]); 
   
   useEffect(() => {
     if (isInteracting) {
@@ -138,11 +138,11 @@ export default function GameCarousel({ games, autoPlayInterval = 5000 }: GameCar
         style={{ cursor: games.length > 1 ? 'grab' : 'default' }}
       >
         <div 
-          className="flex transition-transform duration-300 ease-out h-full"
+          className="flex transition-transform duration-300 ease-out h-full" // h-full helps contain the fixed height image
           style={{ transform: `translateX(${-(currentIndex * 100)}%) translateX(${translateX}px)` }}
         >
           {games.map((game, index) => (
-            <div key={game.id || index} className="w-full flex-shrink-0 relative aspect-[16/9] md:aspect-auto md:h-[450px] lg:h-[500px]"> {/* Adjusted aspect ratio & height */}
+            <div key={game.id || index} className="w-full flex-shrink-0 relative aspect-[16/9] md:aspect-auto md:h-[450px] lg:h-[500px]"> {/* Fixed height for images */}
                <Link href={`/games/${game.id}`} draggable="false" className="block h-full">
                 <Image
                   src={game.imageUrl}
@@ -167,7 +167,7 @@ export default function GameCarousel({ games, autoPlayInterval = 5000 }: GameCar
       </div>
 
       {/* Right Side: Preview List (Desktop Only) */}
-      <div className="hidden md:block md:w-1/4 lg:w-[30%] space-y-1.5 py-2 pr-2 max-h-[450px] lg:max-h-[500px] overflow-y-auto">
+      <div className="hidden md:block md:w-1/4 lg:w-[30%] space-y-1.5 py-2 pr-2 md:max-h-[450px] lg:max-h-[500px] overflow-y-auto"> {/* Added max-h and overflow-y-auto */}
         {games.map((game, index) => (
           <Link
             key={game.id}
