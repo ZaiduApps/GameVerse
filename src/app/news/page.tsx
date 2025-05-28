@@ -29,33 +29,31 @@ export default function NewsPage() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  let prominentArticle: NewsArticle | null = null;
-  let rightStackedArticles: NewsArticle[] = [];
+  let topFeaturedArticles: NewsArticle[] = [];
   let gridArticles: NewsArticle[] = [];
 
   if (currentPage === 1 && paginatedArticles.length > 0) {
-    prominentArticle = paginatedArticles[0];
-    if (paginatedArticles.length >= 2) {
-        rightStackedArticles = paginatedArticles.slice(1, 3); 
-        gridArticles = paginatedArticles.slice(1 + rightStackedArticles.length); 
-    } else {
-        gridArticles = []; 
+    if (paginatedArticles.length >= 2) { // If 2 or more, take first 2 for top row
+      topFeaturedArticles = paginatedArticles.slice(0, 2);
+      gridArticles = paginatedArticles.slice(2);
+    } else { // If only 1, it's a top featured article
+      topFeaturedArticles = [paginatedArticles[0]];
+      // gridArticles remains empty
     }
-  } else {
+  } else { // For pages other than the first, all are grid articles
     gridArticles = paginatedArticles;
   }
 
 
-  const renderArticleCard = (article: NewsArticle, type: 'prominent' | 'stacked' | 'grid', priorityImage: boolean = false) => {
-    const isProminent = type === 'prominent';
-    const isStacked = type === 'stacked';
+  const renderArticleCard = (article: NewsArticle, layoutType: 'top-featured' | 'grid', priorityImage: boolean = false) => {
+    const isTopFeatured = layoutType === 'top-featured';
 
     return (
       <Card
         key={article.id}
         className={cn(
           "flex flex-col overflow-hidden hover:shadow-xl transition-shadow duration-300",
-          isProminent ? "h-full" : "" 
+          isTopFeatured ? "h-full" : "" 
         )}
       >
         <CardHeader className="p-0">
@@ -63,7 +61,7 @@ export default function NewsPage() {
             href={`/news/${article.id}`} 
             className={cn(
               "block relative group",
-              isProminent ? "aspect-[16/8] sm:aspect-[16/7.5]" : "aspect-video"
+              isTopFeatured ? "aspect-[16/9]" : "aspect-video"
             )}
           >
             <Image
@@ -73,29 +71,27 @@ export default function NewsPage() {
               className="object-cover group-hover:scale-105 transition-transform duration-300"
               data-ai-hint={article.dataAiHint || 'news image'}
               sizes={
-                isProminent 
-                  ? "(max-width: 767px) 100vw, (max-width: 1023px) 60vw, 700px"
-                  : isStacked
-                  ? "(max-width: 767px) 100vw, (max-width: 1023px) 40vw, 400px"
+                isTopFeatured 
+                  ? "(max-width: 767px) 100vw, 50vw" // Assuming it might take up to 50% on desktop
                   : "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               }
               priority={priorityImage}
             />
           </Link>
         </CardHeader>
-        <CardContent className={cn("flex-grow flex flex-col", isStacked ? "p-3" : "p-4")}>
+        <CardContent className={cn("flex-grow flex flex-col p-4")}>
           <Link href={`/news/${article.id}`} className="block">
             <CardTitle className={cn(
               "font-semibold mb-1.5 hover:text-primary transition-colors",
-              isProminent ? "text-xl md:text-2xl line-clamp-3" : (isStacked ? "text-base line-clamp-2" : "text-lg md:text-xl line-clamp-2")
+              isTopFeatured ? "text-xl md:text-2xl line-clamp-2" : "text-lg md:text-xl line-clamp-2"
             )}>{article.title}</CardTitle>
           </Link>
           <CardDescription className={cn(
             "text-muted-foreground flex-grow",
-            isProminent ? "text-sm md:text-base line-clamp-3 sm:line-clamp-4" : (isStacked ? "text-xs line-clamp-2" : "text-sm line-clamp-3")
+            isTopFeatured ? "text-sm md:text-base line-clamp-3" : "text-sm line-clamp-3"
           )}>{article.excerpt || '暂无摘要'}</CardDescription>
         </CardContent>
-        <CardFooter className={cn("border-t mt-auto", isStacked ? "p-3 text-xs" : "p-4")}>
+        <CardFooter className={cn("border-t mt-auto p-4")}>
           <div className="flex justify-between items-center w-full text-xs text-muted-foreground">
             <div className="flex items-center">
               <CalendarDays size={14} className="mr-1.5" />
@@ -141,20 +137,15 @@ export default function NewsPage() {
         </div>
       </section>
 
-      {currentPage === 1 && prominentArticle && (
+      {topFeaturedArticles.length > 0 && (
         <section className="mb-6 md:mb-8">
-          <div className="hidden md:flex md:gap-4 md:items-start">
-            <div className="md:w-2/3 lg:w-[60%]"> 
-              {renderArticleCard(prominentArticle, 'prominent', true)}
-            </div>
-            {rightStackedArticles.length > 0 && (
-              <div className="md:w-1/3 lg:w-[40%] flex flex-col gap-2">
-                {rightStackedArticles.map(article => renderArticleCard(article, 'stacked'))}
-              </div>
+          <div className={cn(
+            "grid md:gap-6",
+            topFeaturedArticles.length === 1 ? "md:grid-cols-1" : "md:grid-cols-2"
+          )}>
+            {topFeaturedArticles.map((article, index) =>
+              renderArticleCard(article, 'top-featured', currentPage === 1 && index === 0)
             )}
-          </div>
-          <div className="md:hidden">
-            {renderArticleCard(prominentArticle, 'prominent', true)}
           </div>
         </section>
       )}
@@ -162,15 +153,15 @@ export default function NewsPage() {
       {gridArticles.length > 0 && (
          <div className={cn(
           "grid grid-cols-1 gap-6",
-          (currentPage === 1 && prominentArticle) ? "sm:grid-cols-2 lg:grid-cols-3 mt-6 md:mt-0" : "sm:grid-cols-2 md:grid-cols-3"
+           "sm:grid-cols-2 md:grid-cols-3" // Standard grid for the rest
         )}>
           {gridArticles.map((article, index) => 
-            renderArticleCard(article, 'grid', currentPage === 1 && !prominentArticle && index === 0)
+            renderArticleCard(article, 'grid', currentPage === 1 && topFeaturedArticles.length === 0 && index === 0)
           )}
         </div>
       )}
 
-      {paginatedArticles.length === 0 && !prominentArticle && (
+      {paginatedArticles.length === 0 && (
         <p className="text-center text-muted-foreground py-8">暂无资讯。</p>
       )}
 
@@ -202,4 +193,3 @@ export default function NewsPage() {
     </div>
   );
 }
-
