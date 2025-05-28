@@ -34,7 +34,7 @@ export default function GamesPage() {
         (game.shortDescription || game.description).toLowerCase().includes(searchTerm.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [MOCK_GAMES, selectedCategory, searchTerm]);
+  }, [selectedCategory, searchTerm]); // MOCK_GAMES removed as it's constant
 
   if (!isMounted) {
     // Optional: Render a loading state or null to prevent hydration mismatches
@@ -48,7 +48,13 @@ export default function GamesPage() {
           <p className="text-muted-foreground mb-6">探索我们庞大的游戏收藏，找到你的下一个最爱。</p>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-grow">
-              <Input type="search" placeholder="搜索游戏..." className="pl-10 text-base h-11" disabled />
+              <Input 
+                type="search" 
+                placeholder="搜索游戏..." 
+                className="pl-10 text-base h-11" 
+                disabled 
+                value="" // Make the disabled input controlled
+              />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             </div>
           </div>
