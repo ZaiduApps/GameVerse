@@ -142,7 +142,7 @@ export default function GameCarousel({ games, autoPlayInterval = 5000 }: GameCar
           style={{ transform: `translateX(${-(currentIndex * 100)}%) translateX(${translateX}px)` }}
         >
           {games.map((game, index) => (
-            <div key={game.id || index} className="w-full flex-shrink-0 relative aspect-[16/9] md:aspect-auto md:h-[400px] lg:h-[450px]"> {/* Fixed height for images */}
+            <div key={game.id || index} className="w-full flex-shrink-0 relative aspect-[16/9] md:aspect-auto md:h-[320px] lg:h-[360px]"> {/* Reduced height */}
                <Link href={`/games/${game.id}`} draggable="false" className="block h-full">
                 <Image
                   src={game.imageUrl}
@@ -157,9 +157,11 @@ export default function GameCarousel({ games, autoPlayInterval = 5000 }: GameCar
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
               </Link>
-              <div className="absolute bottom-0 left-0 p-4 md:p-6 text-white pointer-events-none">
-                <h2 className="text-xl md:text-3xl font-bold mb-1 drop-shadow-lg">{game.title}</h2>
-                <p className="text-xs md:text-base text-gray-200 hidden sm:block max-w-lg truncate drop-shadow-md">{game.shortDescription || game.description}</p>
+              <div className="absolute bottom-0 left-0 p-3 sm:p-4 md:p-6 text-white pointer-events-none">
+                <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1 drop-shadow-lg">{game.title}</h2>
+                <p className="text-xs text-gray-200 max-w-[calc(100%-2rem)] sm:max-w-sm md:max-w-md lg:max-w-lg truncate drop-shadow-md">
+                  {game.shortDescription || game.description}
+                </p>
               </div>
             </div>
           ))}
@@ -167,7 +169,7 @@ export default function GameCarousel({ games, autoPlayInterval = 5000 }: GameCar
       </div>
 
       {/* Right Side: Preview List (Desktop Only) */}
-      <div className="hidden md:block md:w-1/4 lg:w-[30%] space-y-1.5 py-2 pr-2 md:max-h-[400px] lg:max-h-[450px] overflow-y-auto"> {/* Added max-h and overflow-y-auto */}
+      <div className="hidden md:block md:w-1/4 lg:w-[30%] space-y-1.5 py-2 pr-2 md:max-h-[320px] lg:max-h-[360px] overflow-y-auto"> {/* Reduced max-h */}
         {games.map((game, index) => (
           <Link
             key={game.id}
