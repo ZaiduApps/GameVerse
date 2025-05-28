@@ -49,22 +49,22 @@ export default function CommunityPostCard({ post }: CommunityPostCardProps) {
         <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed">
           {post.content}
         </p>
-        {post.imageUrl && (
-          <div className="rounded-lg overflow-hidden aspect-video relative bg-muted mt-3">
-            <Image src={post.imageUrl} alt={post.title || "Post image"} fill className="object-cover" data-ai-hint={post.imageAiHint || "community post image"} />
-          </div>
-        )}
         {post.tags && post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-2">
+          <div className="flex flex-wrap gap-2 pt-1"> {/* Adjusted pt-1 for spacing */}
             {post.tags.map(tag => (
               <Badge key={tag} variant="outline" className="text-xs font-normal">{tag}</Badge>
             ))}
           </div>
         )}
+        {post.imageUrl && (
+          <div className="rounded-lg overflow-hidden aspect-video relative bg-muted mt-3">
+            <Image src={post.imageUrl} alt={post.title || "Post image"} fill className="object-cover" data-ai-hint={post.imageAiHint || "community post image"} />
+          </div>
+        )}
       </CardContent>
       <CardFooter className="p-4 pt-2 flex items-center justify-start gap-2 sm:gap-4 border-t">
         <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary px-2">
-          <Share2 size={18} className="mr-1.5" /> 分享
+          <Bookmark size={18} className="mr-1.5" /> 收藏
         </Button>
         <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary px-2">
           <MessageSquare size={18} className="mr-1.5" /> {post.commentsCount}
@@ -73,7 +73,7 @@ export default function CommunityPostCard({ post }: CommunityPostCardProps) {
           <ThumbsUp size={18} className="mr-1.5" /> {post.likesCount}
         </Button>
         <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary px-2 ml-auto">
-          <Bookmark size={18} className="mr-1.5" /> 收藏
+          <Share2 size={18} className="mr-1.5" /> 分享
         </Button>
       </CardFooter>
     </Card>

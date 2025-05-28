@@ -21,11 +21,11 @@ export default function CommunityPage() {
           <CreatePostForm />
           <Separator className="my-6" />
           
-          <Tabs defaultValue="hot" className="w-full">
+          <Tabs defaultValue="recommended" className="w-full">
             <TabsList className="mb-4 bg-card border">
               <TabsTrigger value="hot" className="text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">热门</TabsTrigger>
               <TabsTrigger value="latest" className="text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">最新</TabsTrigger>
-              <TabsTrigger value="news" className="text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">资讯</TabsTrigger>
+              <TabsTrigger value="recommended" className="text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">推荐</TabsTrigger>
             </TabsList>
             <TabsContent value="hot" className="space-y-4">
               {MOCK_COMMUNITY_POSTS.filter((_,i) => i % 2 === 0).map((post) => ( // Show some posts for "Hot"
@@ -37,13 +37,13 @@ export default function CommunityPage() {
                 <CommunityPostCard key={post.id} post={post} />
               ))}
             </TabsContent>
-            <TabsContent value="news" className="space-y-4">
-               {/* Filter for posts that might be categorized as "news" or link to actual news if applicable */}
+            <TabsContent value="recommended" className="space-y-4">
+               {/* Filter for posts that might be categorized as "recommended" (using old "news" logic) */}
               {MOCK_COMMUNITY_POSTS.filter(p => p.tags?.includes("攻略") || p.tags?.includes("新活动")).map((post) => (
                 <CommunityPostCard key={post.id} post={post} />
               ))}
               {MOCK_COMMUNITY_POSTS.filter(p => p.tags?.includes("攻略") || p.tags?.includes("新活动")).length === 0 && (
-                <p className="text-muted-foreground text-center py-4">暂无资讯类帖子</p>
+                <p className="text-muted-foreground text-center py-4">暂无推荐内容</p>
               )}
             </TabsContent>
           </Tabs>
