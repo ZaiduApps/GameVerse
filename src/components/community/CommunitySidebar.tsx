@@ -13,7 +13,7 @@ import { ChevronRight } from 'lucide-react';
 
 
 export default function CommunitySidebar() {
-  const [activeSection, setActiveSection] = useState<string>('general'); // Default to general
+  const [activeSection, setActiveSection] = useState<string>('recommended'); // Default to recommended
 
   return (
     <Card className="sticky top-20 shadow-sm"> {/* top-20 to account for header height */}
@@ -73,3 +73,4 @@ export default function CommunitySidebar() {
     </Card>
   );
 }
+

@@ -180,8 +180,8 @@ ${game.description}
 
 
 export const MOCK_FORUM_SECTIONS: ForumSection[] = [
-  { id: 'followed', name: '关注', icon: Heart, href: '/community/followed', type: 'link' },
   { id: 'recommended', name: '推荐', icon: ThumbsUp, href: '/community/recommended', type: 'link' },
+  { id: 'followed', name: '关注', icon: Heart, href: '/community/followed', type: 'link' },
   { 
     id: 'general', 
     name: '游戏综合区', 
@@ -296,3 +296,4 @@ export const MOCK_COMMUNITY_POSTS: CommunityPost[] = [
     likesCount: 2,
   },
 ];
+
