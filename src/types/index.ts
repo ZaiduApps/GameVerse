@@ -21,6 +21,7 @@ export interface Game {
   updateDate?: string; // 更新日期 (optional)
   dataAiHint?: string; // For placeholder image generation
   screenshots?: GameScreenshot[]; // Array of game screenshots
+  status?: 'released' | 'pre-registration' | 'coming_soon'; // New status field
 }
 
 export interface NewsArticle {
