@@ -21,30 +21,20 @@ export default function CommunityPage() {
           <CreatePostForm />
           <Separator className="my-6" />
           
-          <Tabs defaultValue="recommended" className="w-full">
+          <Tabs defaultValue="latest" className="w-full">
             <TabsList className="mb-4 bg-card border">
-              <TabsTrigger value="hot" className="text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">热门</TabsTrigger>
               <TabsTrigger value="latest" className="text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">最新</TabsTrigger>
-              <TabsTrigger value="recommended" className="text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">推荐</TabsTrigger>
+              <TabsTrigger value="hot" className="text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">热门</TabsTrigger>
             </TabsList>
-            <TabsContent value="hot" className="space-y-4">
-              {MOCK_COMMUNITY_POSTS.filter((_,i) => i % 2 === 0).map((post) => ( // Show some posts for "Hot"
-                <CommunityPostCard key={post.id} post={post} />
-              ))}
-            </TabsContent>
             <TabsContent value="latest" className="space-y-4">
               {MOCK_COMMUNITY_POSTS.map((post) => ( // Show all posts for "Latest"
                 <CommunityPostCard key={post.id} post={post} />
               ))}
             </TabsContent>
-            <TabsContent value="recommended" className="space-y-4">
-               {/* Filter for posts that might be categorized as "recommended" (using old "news" logic) */}
-              {MOCK_COMMUNITY_POSTS.filter(p => p.tags?.includes("攻略") || p.tags?.includes("新活动")).map((post) => (
+            <TabsContent value="hot" className="space-y-4">
+              {MOCK_COMMUNITY_POSTS.filter((_,i) => i % 2 === 0).map((post) => ( // Show some posts for "Hot"
                 <CommunityPostCard key={post.id} post={post} />
               ))}
-              {MOCK_COMMUNITY_POSTS.filter(p => p.tags?.includes("攻略") || p.tags?.includes("新活动")).length === 0 && (
-                <p className="text-muted-foreground text-center py-4">暂无推荐内容</p>
-              )}
             </TabsContent>
           </Tabs>
         </div>
@@ -57,4 +47,3 @@ export default function CommunityPage() {
     </div>
   );
 }
-
