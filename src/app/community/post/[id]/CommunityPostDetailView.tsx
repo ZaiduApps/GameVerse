@@ -8,8 +8,9 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { ThumbsUp, MessageSquare, Share2, Bookmark, Send, Eye, CalendarDays, UserCircle } from 'lucide-react';
+import { ThumbsUp, MessageSquare, Share2, Bookmark, Send, Eye, ArrowLeft } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface PostComment {
   id: string;
@@ -42,6 +43,7 @@ interface CommunityPostDetailViewProps {
 }
 
 export default function CommunityPostDetailView({ post }: CommunityPostDetailViewProps) {
+  const router = useRouter();
   const [comments, setComments] = useState<PostComment[]>(initialMockComments);
   const [newComment, setNewComment] = useState('');
   const [isLiked, setIsLiked] = useState(false);
@@ -75,6 +77,11 @@ export default function CommunityPostDetailView({ post }: CommunityPostDetailVie
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 py-8 fade-in">
+      <Button variant="outline" size="sm" onClick={() => router.back()} className="mb-4 self-start btn-interactive">
+        <ArrowLeft size={16} className="mr-2" />
+        返回社区
+      </Button>
+
       {/* Main Post Content */}
       <Card className="shadow-lg">
         <CardHeader className="p-4 pb-3">
