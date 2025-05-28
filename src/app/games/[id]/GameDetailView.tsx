@@ -5,14 +5,14 @@ import type { Game } from '@/types';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera, X as CloseIcon, ThumbsUp, ExternalLink } from 'lucide-react';
+import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera, X as CloseIcon, ThumbsUp, ExternalLink, RefreshCw } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import GameDownloadDialog from '@/components/game-download-dialog';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MOCK_GAMES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
@@ -66,7 +66,7 @@ interface GameDetailViewProps {
 
 const DESCRIPTION_CHAR_LIMIT = 120;
 const MAX_NEWS_DISPLAY = 4;
-const MAX_RECOMMENDED_GAMES = 4;
+const MAX_RECOMMENDED_GAMES = 5; // Changed from 4 to 5
 
 export default function GameDetailView({ game }: GameDetailViewProps) {
   const [showFab, setShowFab] = useState(false);
@@ -74,6 +74,18 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
   const commentsSectionRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
+  const [displayedRecommendedGames, setDisplayedRecommendedGames] = useState<Game[]>([]);
+
+  const shuffleRecommendedGames = useCallback(() => {
+    const availableGames = MOCK_GAMES.filter(g => g.id !== game.id);
+    const shuffled = [...availableGames].sort(() => 0.5 - Math.random());
+    setDisplayedRecommendedGames(shuffled.slice(0, MAX_RECOMMENDED_GAMES));
+  }, [game.id]);
+
+  useEffect(() => {
+    shuffleRecommendedGames();
+  }, [shuffleRecommendedGames]);
+
 
   useEffect(() => {
     const commentsDiv = commentsSectionRef.current;
@@ -123,9 +135,6 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
 
   const newsToShow = allGameSpecificNews.slice(0, MAX_NEWS_DISPLAY);
   const hasMoreNews = allGameSpecificNews.length > MAX_NEWS_DISPLAY;
-
-  const recommendedGames = MOCK_GAMES.filter(g => g.id !== game.id).slice(0, MAX_RECOMMENDED_GAMES);
-
 
   const createExcerpt = (text: string, maxLength: number = 100): string => {
     const firstParagraph = text.split('\n\n')[0];
@@ -332,14 +341,18 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
             {/* Right Column: Recommended Games */}
             <div className="md:col-span-4 mt-8 md:mt-0">
               <Card className="shadow-sm">
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-lg flex items-center">
                     <ThumbsUp className="w-5 h-5 mr-2 text-primary" />
                     为你推荐
                   </CardTitle>
+                  <Button variant="ghost" size="sm" onClick={shuffleRecommendedGames} className="text-xs text-muted-foreground hover:text-primary btn-interactive">
+                     <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                     换一换
+                  </Button>
                 </CardHeader>
                 <CardContent className="space-y-3 pt-2">
-                  {recommendedGames.length > 0 ? recommendedGames.map(recGame => (
+                  {displayedRecommendedGames.length > 0 ? displayedRecommendedGames.map(recGame => (
                     <Link key={recGame.id} href={`/games/${recGame.id}`} className="block hover:bg-muted/50 p-2.5 rounded-lg transition-colors border border-transparent hover:border-primary/20">
                       <div className="flex items-start gap-3">
                         <Image
@@ -444,7 +457,10 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                       <p className="text-xs text-foreground/80 line-clamp-3 flex-grow mb-2">
                         {createExcerpt(newsItem.content, 100)}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-auto pt-1">{newsItem.date}</p>
+                      <div className="flex items-center justify-between mt-auto pt-1">
+                         <p className="text-xs text-muted-foreground">{newsItem.date}</p>
+                         {/* Removed "Read More" button and category */}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -604,3 +620,5 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     </div>
   );
 }
+
+    
