@@ -2,7 +2,7 @@
 "use client"
 
 import Link from 'next/link'
-import { Menu, Gamepad2, Search, Users as CommunityIcon, LogIn } from 'lucide-react' 
+import { Menu, Gamepad2, Search, Users as CommunityIcon, LogIn, UploadCloud } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet'
@@ -17,6 +17,7 @@ const navItems = [
   { href: '/rankings', label: '排行榜', icon: null },
   { href: '/news', label: '资讯', icon: null },
   { href: '/community', label: '社区', icon: CommunityIcon },
+  { href: '/submit-resource', label: '资源投稿', icon: UploadCloud },
 ];
 
 export default function Header() {
@@ -173,6 +174,5 @@ export default function Header() {
     </header>
   )
 }
-
 
     
