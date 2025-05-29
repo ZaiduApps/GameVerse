@@ -19,12 +19,12 @@ export default function GameCard({ game, className, ...props }: GameCardProps) {
     >
       <Link href={`/games/${game.id}`} className="block flex flex-col flex-grow">
         <CardHeader className="p-0">
-          <div className="relative w-full max-w-[233px] h-36 mx-auto"> {/* Adjusted: max width 233px, centered */}
+          <div className="relative w-full h-36"> {/* Removed max-w-[233px] and mx-auto */}
             <Image
               src={game.imageUrl}
               alt={game.title}
               fill
-              sizes="(max-width: 767px) 100vw, 233px" // Adjusted sizes
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" // Updated sizes
               className="object-cover"
               data-ai-hint={game.dataAiHint}
             />
