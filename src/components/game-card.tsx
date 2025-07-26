@@ -14,23 +14,23 @@ interface GameCardProps extends React.HTMLAttributes<HTMLDivElement> {
 export default function GameCard({ game, className, ...props }: GameCardProps) {
   return (
     <Card
-      className={`overflow-hidden transition-all duration-300 ease-in-out hover:shadow-xl hover:border-primary/50 flex flex-col ${className}`}
+      className={`overflow-hidden transition-all duration-300 ease-in-out hover:shadow-xl hover:border-primary/50 flex flex-col min-w-[140px] ${className}`}
       {...props}
     >
       <Link href={`/games/${game.id}`} className="block flex flex-col flex-grow">
         <CardHeader className="p-0">
-          <div className="relative w-full h-36"> {/* Removed max-w-[233px] and mx-auto */}
+          <div className="relative w-full h-36">
             <Image
               src={game.imageUrl}
               alt={game.title}
               fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" // Updated sizes
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className="object-cover"
               data-ai-hint={game.dataAiHint}
             />
           </div>
         </CardHeader>
-        <CardContent className="p-3 space-y-1.5 flex-grow"> {/* Reduced padding, smaller space */}
+        <CardContent className="p-3 space-y-1.5 flex-grow">
           <div className="flex items-start space-x-2.5">
             <Image
               src={game.imageUrl} // Using main image as icon source
@@ -58,10 +58,10 @@ export default function GameCard({ game, className, ...props }: GameCardProps) {
           </div>
         </CardContent>
       </Link>
-      <CardFooter className="p-3 pt-0 mt-auto"> {/* Reduced padding, ensure footer is at bottom */}
-        <Button asChild size="sm" className="w-full btn-interactive">
-          <Link href={`/games/${game.id}/download`}> {/* Assuming a download page/action exists */}
-            <Download size={16} className="mr-2" />
+      <CardFooter className="p-3 pt-0 mt-auto">
+        <Button asChild size="sm" className="w-full btn-interactive text-[10px] sm:text-xs px-1 sm:px-3">
+          <Link href={`/games/${game.id}/download`}>
+            <Download size={16} className="mr-1 sm:mr-2" />
             获取游戏
           </Link>
         </Button>
