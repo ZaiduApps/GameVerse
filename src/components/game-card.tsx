@@ -19,7 +19,7 @@ export default function GameCard({ game, className, ...props }: GameCardProps) {
     >
       <Link href={`/games/${game.id}`} className="block flex flex-col flex-grow">
         <CardHeader className="p-0">
-          <div className="relative w-full h-36">
+          <div className="relative w-full aspect-video">
             <Image
               src={game.imageUrl}
               alt={game.title}
