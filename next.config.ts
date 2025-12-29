@@ -13,9 +13,19 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'uum.fp.ps.netease.com',
+      },
+       {
+        protocol: 'https',
+        hostname: 'cdn.apks.cc',
+      },
+       {
+        protocol: 'https',
+        hostname: 'cdn.z.wiki',
+      }
     ],
   },
 };

@@ -5,37 +5,39 @@ export interface GameScreenshot {
 }
 
 export interface Game {
-  id: string;
-  title: string; // 标题 (Simplified Chinese)
-  description: string; // 描述 (Simplified Chinese)
-  shortDescription?: string; // 短描述 (Simplified Chinese)
-  imageUrl: string; // 图片URL
-  category: string; // 类别 (Simplified Chinese)
-  rating?: number; // 评分 (optional)
-  downloads?: string; // 下载量 (e.g., "500万+")
-  version?: string; // 版本
-  size?: string; // 大小
-  tags?: string[]; // 标签 (Simplified Chinese)
-  developer?: string; // 开发商 (Simplified Chinese)
-  releaseDate?: string; // 发布日期
-  updateDate?: string; // 更新日期 (optional)
-  dataAiHint?: string; // For placeholder image generation
-  screenshots?: GameScreenshot[]; // Array of game screenshots
-  status?: 'released' | 'pre-registration' | 'coming_soon'; // New status field
+  id: string; // was _id from api
+  title: string; // was name from api
+  description: string; // was summary from api
+  shortDescription?: string; // was summary from api
+  imageUrl: string; // was icon from api
+  bannerUrl?: string; // was header_image from api
+  category: string; // was tags[0] from api
+  rating?: number; // was star from api
+  downloads?: string; // not in api for now
+  version?: string; // not in api for now
+  size?: string; // not in api for now
+  tags?: string[]; // was tags from api
+  developer?: string; // not in api for now
+  releaseDate?: string; // not in api for now
+  updateDate?: string; // not in api for now
+  dataAiHint?: string;
+  screenshots?: GameScreenshot[];
+  status?: 'released' | 'pre-registration' | 'coming_soon';
+  pkg?: string; // package name
 }
 
 export interface NewsArticle {
-  id: string;
+  id: string; // was _id from api
   gameId?: string; // To associate news with a game, optional
-  title: string;
-  content: string;
-  excerpt?: string; // Short summary, optional
-  imageUrl: string;
+  title: string; // was name from api
+  content: string; // was content from api
+  excerpt?: string; // was summary from api
+  imageUrl: string; // was image_cover from api
   dataAiHint?: string;
-  category: string;
-  date: string;
-  author: string;
-  tags?: string[];
+  category: string; // was tags[0] from api
+  date: string; // was release_at from api
+  author: string; // was author from api
+  tags?: string[]; // was tags from api
 }
 
 export interface ForumSection {
@@ -49,7 +51,7 @@ export interface ForumSection {
 }
 
 export interface CommunityPost {
-  id: string;
+  id:string;
   user: {
     name: string;
     avatarUrl: string;
@@ -67,4 +69,61 @@ export interface CommunityPost {
   category?: string; // e.g., "游戏综合区"
   commentsCount: number;
   likesCount: number;
+}
+
+// API Types
+export interface ApiBanner {
+  _id: string;
+  app_id: string;
+  name: string;
+  description: string;
+  url_image: string;
+  url_link: string;
+  goto_type: string;
+}
+
+export interface ApiGame {
+  _id: string;
+  pkg: string;
+  name: string;
+  summary: string;
+  star: number;
+  icon: string;
+  header_image: string;
+  tags: string[];
+  metadata: {
+    en: string;
+    chs: string;
+    cht: string;
+    regEn: string;
+    region: string;
+    deviceList: string[];
+    android_url: string;
+  }
+}
+
+export interface ApiAlbum {
+  _id: string;
+  title: string;
+  subtitle: string;
+  style: 'Grid' | 'Box' | 'Pre' | string; // Grid: NewRelease, Box: Popular, Pre: Prereg
+  games: ApiGame[];
+}
+
+export interface ApiArticle {
+  _id: string;
+  name: string;
+  summary: string;
+  image_cover: string;
+  release_at: string;
+  source: string;
+  author: string;
+  tags: string[];
+  content: string;
+}
+
+export interface HomeData {
+  banner: ApiBanner[];
+  albums: ApiAlbum[];
+  articles: ApiArticle[];
 }

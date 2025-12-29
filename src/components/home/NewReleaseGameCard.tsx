@@ -1,19 +1,19 @@
 
+'use client';
 import type { Game } from '@/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Star } from 'lucide-react';
 
-interface NewReleaseGameCardProps {
+interface NewReleaseGameCardProps extends React.HTMLAttributes<HTMLDivElement> {
   game: Game;
-  className?: string;
 }
 
-export default function NewReleaseGameCard({ game, className }: NewReleaseGameCardProps) {
+export default function NewReleaseGameCard({ game, className, ...props }: NewReleaseGameCardProps) {
   const roundedRating = Math.round(game.rating || 0);
 
   return (
-    <Link href={`/games/${game.id}`} className={`flex flex-col items-center text-center group flex-shrink-0 w-28 md:w-32 ${className}`}>
+    <Link href={`/games/${game.pkg || game.id}`} className={`flex flex-col items-center text-center group flex-shrink-0 w-28 md:w-32 ${className}`} {...props}>
       <div className="relative w-20 h-20 md:w-24 md:h-24 mb-2">
         <Image
           src={game.imageUrl}
@@ -27,7 +27,7 @@ export default function NewReleaseGameCard({ game, className }: NewReleaseGameCa
       <h3 className="text-xs font-medium text-foreground group-hover:text-primary transition-colors truncate w-full px-1" title={game.title}>
         {game.title}
       </h3>
-      {typeof game.rating === 'number' && (
+      {typeof game.rating === 'number' && game.rating > 0 && (
         <div className="flex items-center mt-0.5"> {/* Reduced mt-1 to mt-0.5 */}
           {Array.from({ length: 5 }).map((_, i) => (
             <Star

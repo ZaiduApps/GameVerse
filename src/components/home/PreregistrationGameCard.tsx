@@ -1,16 +1,17 @@
 
+'use client';
 import type { Game } from '@/types';
 import Image from 'next/image';
 import Link from 'next/link';
 
-interface PreregistrationGameCardProps {
+interface PreregistrationGameCardProps extends React.HTMLAttributes<HTMLDivElement> {
   game: Game;
   className?: string;
 }
 
-export default function PreregistrationGameCard({ game, className }: PreregistrationGameCardProps) {
+export default function PreregistrationGameCard({ game, className, ...props }: PreregistrationGameCardProps) {
   return (
-    <Link href={`/games/${game.id}`} className={`flex flex-col items-center text-center group flex-shrink-0 w-28 md:w-32 ${className}`}>
+    <Link href={`/games/${game.pkg || game.id}`} className={`flex flex-col items-center text-center group flex-shrink-0 w-28 md:w-32 ${className}`} {...props}>
       <div className="relative w-20 h-20 md:w-24 md:h-24 mb-2">
         <Image
           src={game.imageUrl}

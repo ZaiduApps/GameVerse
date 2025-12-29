@@ -17,11 +17,11 @@ export default function GameCard({ game, className, ...props }: GameCardProps) {
       className={`overflow-hidden transition-all duration-300 ease-in-out hover:shadow-xl hover:border-primary/50 flex flex-col min-w-[140px] ${className}`}
       {...props}
     >
-      <Link href={`/games/${game.id}`} className="block flex flex-col flex-grow">
+      <Link href={`/games/${game.pkg || game.id}`} className="block flex flex-col flex-grow">
         <CardHeader className="p-0">
           <div className="relative w-full aspect-video">
             <Image
-              src={game.imageUrl}
+              src={game.bannerUrl || game.imageUrl}
               alt={game.title}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
@@ -50,17 +50,19 @@ export default function GameCard({ game, className, ...props }: GameCardProps) {
             </div>
           </div>
           <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-            <div className="flex items-center gap-1">
-              <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-              <span>{game.rating || 'N/A'}</span>
-            </div>
+             {game.rating && game.rating > 0 ? (
+                <div className="flex items-center gap-1">
+                    <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                    <span>{game.rating.toFixed(1)}</span>
+                </div>
+            ) : <div />}
             <Badge variant="outline" className="text-xs">{game.category}</Badge>
           </div>
         </CardContent>
       </Link>
       <CardFooter className="p-3 pt-0 mt-auto">
-        <Button asChild size="sm" className="w-full btn-interactive text-[10px] sm:text-xs px-1 sm:px-3">
-          <Link href={`/games/${game.id}/download`}>
+        <Button asChild size="sm" className="w-full btn-interactive text-[10px] sm:px-3 sm:text-xs">
+          <Link href={`/games/${game.pkg || game.id}/download`}>
             <Download size={16} className="mr-1 sm:mr-2" />
             获取游戏
           </Link>
