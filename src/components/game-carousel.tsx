@@ -173,11 +173,26 @@ export default function GameCarousel({ bannerItems, autoPlayInterval = 5000 }: G
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
               </Link>
-              <div className="absolute bottom-0 left-0 p-3 sm:p-4 md:p-6 text-white pointer-events-none">
-                <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1 drop-shadow-lg">{item.name}</h2>
-                <p className="text-xs text-gray-200 max-w-[calc(100%-2rem)] sm:max-w-sm md:max-w-md lg:max-w-lg truncate drop-shadow-md">
-                  {item.description}
-                </p>
+              <div className="absolute bottom-0 left-0 p-3 sm:p-4 md:p-6 text-white pointer-events-none w-full">
+                <div className="flex items-end gap-4">
+                  {item.goto_type === 'game' && item.game && (
+                    <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0">
+                      <Image
+                        src={item.game.icon}
+                        alt={`${item.game.name} icon`}
+                        fill
+                        className="object-cover rounded-lg"
+                        sizes="80px"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-grow min-w-0">
+                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1 drop-shadow-lg">{item.name}</h2>
+                    <p className="text-xs text-gray-200 line-clamp-2 drop-shadow-md">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           ))}
