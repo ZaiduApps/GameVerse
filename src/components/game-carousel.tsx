@@ -124,6 +124,7 @@ export default function GameCarousel({ bannerItems, autoPlayInterval = 5000 }: G
       case 'game':
         return `/games/${item.url_link}`;
       case 'article':
+        return `/article/${item.url_link}`;
       case 'news':
         return `/news/${item.url_link}`;
       case 'url':

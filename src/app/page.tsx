@@ -29,7 +29,7 @@ function transformApiGameToGame(apiGame: ApiGame): Game {
 
 async function getHomeData(): Promise<HomeData | null> {
   try {
-    const res = await fetch('https://api.us.apks.cc/home', { next: { revalidate: 3600 } }); // Revalidate every hour
+    const res = await fetch('https://api.us.apks.cc/home', { cache: 'no-store' }); // Fetch fresh data on every request
     if (!res.ok) {
       throw new Error('Failed to fetch home data');
     }
