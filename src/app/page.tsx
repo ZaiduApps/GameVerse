@@ -7,7 +7,7 @@ import PreregistrationGameCard from '@/components/home/PreregistrationGameCard';
 import { Separator } from '@/components/ui/separator';
 import { Flame, Zap, Gift, Newspaper } from 'lucide-react';
 import Link from 'next/link';
-import type { Game, NewsArticle, HomeData, ApiGame } from '@/types';
+import type { Game, NewsArticle, HomeData, ApiGame, ApiBanner } from '@/types';
 
 // Helper function to transform API game data to our Game type
 function transformApiGameToGame(apiGame: ApiGame): Game {
@@ -48,15 +48,6 @@ export default async function HomePage() {
     return <div className="text-center py-10">无法加载主页数据，请稍后重试。</div>;
   }
 
-  const bannerGames = homeData.banner.map(b => ({
-    id: b._id, // Use unique _id instead of app_id
-    title: b.name,
-    description: b.description,
-    imageUrl: b.url_image,
-    category: b.goto_type,
-    dataAiHint: `banner ${b.name}`
-  }));
-
   const popularAlbum = homeData.albums.find(a => a.style === 'Box');
   const newReleaseAlbum = homeData.albums.find(a => a.style === 'Grid');
   const preregistrationAlbum = homeData.albums.find(a => a.style === 'Pre');
@@ -81,7 +72,7 @@ export default async function HomePage() {
   return (
     <div className="space-y-12">
       <section className="fade-in" style={{ animationDelay: '0.1s' }}>
-        <GameCarousel games={bannerGames as Game[]} />
+        <GameCarousel bannerItems={homeData.banner} />
       </section>
 
       {popularGames.length > 0 && (

@@ -74,12 +74,12 @@ export interface CommunityPost {
 // API Types
 export interface ApiBanner {
   _id: string;
-  app_id: string;
   name: string;
   description: string;
   url_image: string;
   url_link: string;
-  goto_type: string;
+  goto_type: 'game' | 'url' | 'article' | 'news';
+  game?: ApiGame; // Optional game details
 }
 
 export interface ApiGame {
@@ -95,7 +95,7 @@ export interface ApiGame {
     en: string;
     chs: string;
     cht: string;
-    regEn: string;
+t: string;
     region: string;
     deviceList: string[];
     android_url: string;
