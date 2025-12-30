@@ -49,7 +49,7 @@ export default async function HomePage() {
   }
 
   const bannerGames = homeData.banner.map(b => ({
-    id: b.app_id,
+    id: b._id, // Use unique _id instead of app_id
     title: b.name,
     description: b.description,
     imageUrl: b.url_image,
