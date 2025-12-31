@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 
 async function getGameDetails(id: string): Promise<GameDetailData | null> {
     try {
-        const res = await fetch(`https://api.us.apks.cc/game/details?param=${id}`, { cache: 'no-store' });
+        const res = await fetch(`http://localhost:9002/api/game/details?param=${id}`, { cache: 'no-store' });
         if (!res.ok) {
             throw new Error(`Failed to fetch game details: ${res.statusText}`);
         }

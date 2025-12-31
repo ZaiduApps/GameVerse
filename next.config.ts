@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'https://api.us.apks.cc/:path*',
+      },
+    ]
+  },
   images: {
     remotePatterns: [
       {
@@ -17,13 +25,17 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'uum.fp.ps.netease.com',
+        hostname: 'uu.fp.ps.netease.com',
       },
        {
         protocol: 'https',
         hostname: 'cdn.apks.cc',
       },
        {
+        protocol: 'https',
+        hostname: '123pan.cn',
+      },
+      {
         protocol: 'https',
         hostname: 'cdn.z.wiki',
       }

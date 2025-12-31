@@ -40,7 +40,7 @@ export default function GameDownloadDialog({ resources, pkg }: GameDownloadDialo
     setLoadingChannelId(channelId);
     setError(null);
     try {
-      const response = await fetch('https://api.us.apks.cc/game/getAppDownload', {
+      const response = await fetch('/api/game/getAppDownload', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
