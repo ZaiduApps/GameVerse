@@ -5,7 +5,7 @@ import type { Game, NewsArticle, GameDetailData } from '@/types';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera, X as CloseIcon, ThumbsUp, ExternalLink, RefreshCw } from 'lucide-react';
+import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera, X as CloseIcon, ThumbsUp, ExternalLink, RefreshCw, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import GameDownloadDialog from '@/components/game-download-dialog';
 import Link from 'next/link';
@@ -58,6 +58,7 @@ export default function GameDetailView({ gameData }: GameDetailViewProps) {
   const commentsSectionRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const [displayedRecommendedGames, setDisplayedRecommendedGames] = useState<Game[]>([]);
 
   const shuffleRecommendedGames = useCallback(() => {
@@ -171,6 +172,7 @@ export default function GameDetailView({ gameData }: GameDetailViewProps) {
 
   const openScreenshotPreview = (url: string) => {
     setSelectedScreenshot(url);
+    setZoomLevel(1);
   };
 
   const closeScreenshotPreview = () => {
@@ -591,25 +593,44 @@ export default function GameDetailView({ gameData }: GameDetailViewProps) {
           onClick={closeScreenshotPreview}
         >
           <div
-            className="relative max-w-full max-h-full"
+            className="relative w-full h-full flex items-center justify-center"
             onClick={(e) => e.stopPropagation()}
           >
-            <Image
-              src={selectedScreenshot}
-              alt="游戏截图预览"
-              width={1280}
-              height={720}
-              className="object-contain rounded-lg shadow-2xl"
-              style={{ maxWidth: '90vw', maxHeight: '90vh' }}
-            />
+            <div className="relative">
+                <Image
+                src={selectedScreenshot}
+                alt="游戏截图预览"
+                width={1280}
+                height={720}
+                className="object-contain rounded-lg shadow-2xl transition-transform duration-300"
+                style={{
+                    transform: `scale(${zoomLevel})`,
+                    maxWidth: '90vw',
+                    maxHeight: '80vh'
+                }}
+                />
+            </div>
+            
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-background/80 p-2 rounded-full flex items-center gap-2 shadow-lg">
+                <Button variant="ghost" size="icon" onClick={() => setZoomLevel(z => Math.max(0.2, z - 0.2))} aria-label="缩小">
+                    <ZoomOut className="w-5 h-5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setZoomLevel(1)} aria-label="重置大小">
+                    <RotateCcw className="w-5 h-5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setZoomLevel(z => Math.min(3, z + 0.2))} aria-label="放大">
+                    <ZoomIn className="w-5 h-5" />
+                </Button>
+            </div>
+
             <Button
               variant="ghost"
               size="icon"
-              className="absolute -top-3 -right-3 md:top-2 md:right-2 z-[110] rounded-full bg-background/80 hover:bg-background text-foreground hover:text-primary w-8 h-8 md:w-10 md:h-10"
+              className="absolute top-4 right-4 z-[110] rounded-full bg-background/80 hover:bg-background text-foreground hover:text-primary w-10 h-10"
               onClick={closeScreenshotPreview}
               aria-label="关闭预览"
             >
-              <CloseIcon className="w-5 h-5 md:w-6 md:h-6" />
+              <CloseIcon className="w-6 h-6" />
             </Button>
           </div>
         </div>
@@ -617,3 +638,5 @@ export default function GameDetailView({ gameData }: GameDetailViewProps) {
     </div>
   );
 }
+
+    
