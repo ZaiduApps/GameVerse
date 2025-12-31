@@ -62,7 +62,7 @@ export default function GameCard({ game, className, ...props }: GameCardProps) {
       </Link>
       <CardFooter className="p-3 pt-0 mt-auto">
         <Button asChild size="sm" className="w-full btn-interactive text-[10px] sm:px-3 sm:text-xs">
-          <Link href={`/app/${game.pkg || game.id}/download`}>
+          <Link href={`/app/${game.pkg || game.id}`}>
             <Download size={16} className="mr-1 sm:mr-2" />
             获取游戏
           </Link>

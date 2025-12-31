@@ -37,7 +37,7 @@ export default function RankingsPage() {
           <TableRow key={game.id} className="hover:bg-muted/50 transition-colors">
             <TableCell className="font-medium">{index + 1}</TableCell>
             <TableCell>
-              <Link href={`/app/${game.id}`} className="flex items-center gap-3 group">
+              <Link href={`/app/${game.pkg || game.id}`} className="flex items-center gap-3 group">
                 <Image 
                   src={game.imageUrl} 
                   alt={game.title} 
