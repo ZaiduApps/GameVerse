@@ -17,7 +17,7 @@ export default function GameCard({ game, className, ...props }: GameCardProps) {
       className={`overflow-hidden transition-all duration-300 ease-in-out hover:shadow-xl hover:border-primary/50 flex flex-col min-w-[140px] ${className}`}
       {...props}
     >
-      <Link href={`/games/${game.pkg || game.id}`} className="block flex flex-col flex-grow">
+      <Link href={`/app/${game.pkg || game.id}`} className="block flex flex-col flex-grow">
         <CardHeader className="p-0">
           <div className="relative w-full aspect-video">
             <Image
@@ -62,7 +62,7 @@ export default function GameCard({ game, className, ...props }: GameCardProps) {
       </Link>
       <CardFooter className="p-3 pt-0 mt-auto">
         <Button asChild size="sm" className="w-full btn-interactive text-[10px] sm:px-3 sm:text-xs">
-          <Link href={`/games/${game.pkg || game.id}/download`}>
+          <Link href={`/app/${game.pkg || game.id}/download`}>
             <Download size={16} className="mr-1 sm:mr-2" />
             获取游戏
           </Link>

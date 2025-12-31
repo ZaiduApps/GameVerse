@@ -14,15 +14,24 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Download, Smartphone, Store, Globe, Gamepad2 } from 'lucide-react';
+import type { ApiDownloadResource } from '@/types';
+import Image from 'next/image';
 
-const MOCK_DOWNLOAD_CHANNELS: { id: string; name: string; icon: React.ReactNode }[] = [
-  { id: 'appstore', name: 'App Store', icon: <Smartphone className="w-5 h-5 mr-3 text-muted-foreground" /> },
-  { id: 'googleplay', name: 'Google Play', icon: <Store className="w-5 h-5 mr-3 text-muted-foreground" /> },
-  { id: 'official', name: '官方网站', icon: <Globe className="w-5 h-5 mr-3 text-muted-foreground" /> },
-  { id: 'taptap', name: 'TapTap', icon: <Gamepad2 className="w-5 h-5 mr-3 text-muted-foreground" /> },
-];
+interface GameDownloadDialogProps {
+  resources: ApiDownloadResource[];
+}
 
-export default function GameDownloadDialog() {
+// Fallback icons map
+const iconMap: { [key: string]: React.ReactNode } = {
+  app_store: <Smartphone className="w-5 h-5 mr-3 text-muted-foreground" />,
+  google_play: <Store className="w-5 h-5 mr-3 text-muted-foreground" />,
+  official_site: <Globe className="w-5 h-5 mr-3 text-muted-foreground" />,
+  taptap: <Gamepad2 className="w-5 h-5 mr-3 text-muted-foreground" />,
+  third_party: <Gamepad2 className="w-5 h-5 mr-3 text-muted-foreground" />,
+};
+
+
+export default function GameDownloadDialog({ resources }: GameDownloadDialogProps) {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -39,17 +48,25 @@ export default function GameDownloadDialog() {
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 py-4">
-          {MOCK_DOWNLOAD_CHANNELS.map(channel => (
-            <Button
-              key={channel.id}
-              variant="outline"
-              className="w-full justify-start text-left h-auto py-3 px-4"
-              onClick={() => alert(`正在前往 ${channel.name} (模拟)`)}
-            >
-              {channel.icon}
-              <span className="text-base font-medium">{channel.name}</span>
-            </Button>
-          ))}
+          {resources && resources.length > 0 ? (
+            resources.map(resource => (
+              <Button
+                key={resource._id}
+                variant="outline"
+                className="w-full justify-start text-left h-auto py-3 px-4"
+                onClick={() => alert(`正在前往 ${resource.channel.name} (模拟)`)}
+              >
+                {resource.channel.icon ? (
+                   <Image src={resource.channel.icon} alt={resource.channel.name} width={20} height={20} className="w-5 h-5 mr-3" />
+                ) : (
+                  iconMap[resource.channel.code] || <Download className="w-5 h-5 mr-3 text-muted-foreground" />
+                )}
+                <span className="text-base font-medium">{resource.channel.name}</span>
+              </Button>
+            ))
+          ) : (
+            <p className='text-sm text-muted-foreground text-center py-4'>暂无可用下载渠道。</p>
+          )}
         </div>
         <DialogFooter>
           <DialogClose asChild>

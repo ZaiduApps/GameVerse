@@ -1,23 +1,33 @@
 
-import { MOCK_GAMES } from '@/lib/constants';
-import GameDetailView from './GameDetailView'; // GameDetailView is a Client Component
-import type { Game } from '@/types';
+import GameDetailView from './GameDetailView';
+import type { GameDetailData } from '@/types';
+import { notFound } from 'next/navigation';
 
-// generateStaticParams is a server-side function
-export async function generateStaticParams() {
-  return MOCK_GAMES.map((game) => ({
-    id: game.id,
-  }));
+async function getGameDetails(id: string): Promise<GameDetailData | null> {
+    try {
+        const res = await fetch(`https://api.us.apks.cc/game/details?param=${id}`, { cache: 'no-store' });
+        if (!res.ok) {
+            throw new Error(`Failed to fetch game details: ${res.statusText}`);
+        }
+        const jsonResponse = await res.json();
+        if (jsonResponse.code !== 0 || !jsonResponse.data) {
+            console.error("API error or no data:", jsonResponse.message);
+            return null;
+        }
+        return jsonResponse.data;
+    } catch (error) {
+        console.error("Error fetching game details:", error);
+        return null;
+    }
 }
 
-// This default export is for a Server Component page
-export default function GameDetailPage({ params }: { params: { id: string } }) {
-  const game = MOCK_GAMES.find(g => g.id === params.id);
 
-  if (!game) {
-    return <div className="text-center py-10">游戏未找到</div>;
+export default async function GameDetailPage({ params }: { params: { id: string } }) {
+  const gameData = await getGameDetails(params.id);
+
+  if (!gameData) {
+    return notFound();
   }
 
-  // Pass the server-fetched game data to the Client Component
-  return <GameDetailView game={game as Game} />;
+  return <GameDetailView gameData={gameData} />;
 }

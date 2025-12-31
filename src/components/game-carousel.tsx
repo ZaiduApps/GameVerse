@@ -122,7 +122,7 @@ export default function GameCarousel({ bannerItems, autoPlayInterval = 5000 }: G
   const getLinkHref = (item: ApiBanner): string => {
     switch (item.goto_type) {
       case 'game':
-        return `/games/${item.url_link}`;
+        return `/app/${item.url_link}`;
       case 'article':
         return `/article/${item.url_link}`;
       case 'news':

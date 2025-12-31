@@ -95,7 +95,6 @@ export interface ApiGame {
     en: string;
     chs: string;
     cht: string;
-t: string;
     region: string;
     deviceList: string[];
     android_url: string;
@@ -126,4 +125,43 @@ export interface HomeData {
   banner: ApiBanner[];
   albums: ApiAlbum[];
   articles: ApiArticle[];
+}
+
+// Detail Page API Types
+export interface ApiGameDetail {
+  _id: string;
+  name: string;
+  pkg: string;
+  type: string;
+  description: string;
+  summary: string;
+  download_count_show: string;
+  star: number;
+  icon: string;
+  detail_images: string[];
+  header_image: string;
+  developer: string;
+  latest_at: string;
+  release_at: string | null;
+  tags: string[];
+  version: string;
+  file_size: number | null;
+  metadata: {
+    region: string;
+  };
+}
+
+export interface ApiDownloadResource {
+  _id: string;
+  channel: {
+    _id: string;
+    name: string;
+    icon: string;
+    code: string;
+  };
+}
+
+export interface GameDetailData {
+  app: ApiGameDetail;
+  resources: ApiDownloadResource[];
 }

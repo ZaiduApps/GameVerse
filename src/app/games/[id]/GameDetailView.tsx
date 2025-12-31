@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { Game, NewsArticle } from '@/types';
+import type { Game, NewsArticle, GameDetailData } from '@/types';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,14 +33,26 @@ const mockComments: MockComment[] = [
 ];
 
 interface GameDetailViewProps {
-  game: Game;
+  gameData: GameDetailData;
 }
 
 const DESCRIPTION_CHAR_LIMIT = 120;
 const MAX_NEWS_DISPLAY = 4;
 const MAX_RECOMMENDED_GAMES = 5;
 
-export default function GameDetailView({ game }: GameDetailViewProps) {
+// Helper to format bytes into a human-readable string
+const formatBytes = (bytes: number | null, decimals = 2) => {
+    if (bytes === null || bytes === 0) return 'N/A';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+
+export default function GameDetailView({ gameData }: GameDetailViewProps) {
+  const { app: game, resources } = gameData;
   const [showFab, setShowFab] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const commentsSectionRef = useRef<HTMLDivElement>(null);
@@ -49,10 +61,11 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
   const [displayedRecommendedGames, setDisplayedRecommendedGames] = useState<Game[]>([]);
 
   const shuffleRecommendedGames = useCallback(() => {
-    const availableGames = MOCK_GAMES.filter(g => g.id !== game.id);
+    if (!game) return;
+    const availableGames = MOCK_GAMES.filter(g => g.id !== game._id);
     const shuffled = [...availableGames].sort(() => 0.5 - Math.random());
     setDisplayedRecommendedGames(shuffled.slice(0, MAX_RECOMMENDED_GAMES));
-  }, [game.id]);
+  }, [game]);
 
   useEffect(() => {
     shuffleRecommendedGames();
@@ -66,7 +79,6 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     const handleScroll = () => {
       const commentsDivTop = commentsDiv.getBoundingClientRect().top;
       const windowHeight = window.innerHeight;
-      // Show FAB if comments section is below 70% of viewport AND user has scrolled at least 200px
       if (commentsDivTop > windowHeight * 0.7 && window.scrollY > 200) {
         setShowFab(true);
       } else {
@@ -75,7 +87,7 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     };
 
     window.addEventListener('scroll', handleScroll);
-    handleScroll(); // Initial check
+    handleScroll(); 
 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -96,23 +108,20 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     if (commentsSectionRef.current) {
       commentsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    // Delay focus to allow for scroll animation
     setTimeout(() => {
       commentInputRef.current?.focus();
-    }, 350); // Adjust delay as needed
+    }, 350); 
   };
 
-  // Logic for related news:
-  const gameSpecificNews = MOCK_NEWS_ARTICLES.filter(article => article.gameId === game.id);
-  const generalNews = MOCK_NEWS_ARTICLES.filter(article => article.gameId !== game.id && !article.gameId); // Assuming general news might not have gameId
+  const gameSpecificNews = MOCK_NEWS_ARTICLES.filter(article => article.gameId === game._id);
+  const generalNews = MOCK_NEWS_ARTICLES.filter(article => article.gameId !== game._id && !article.gameId);
   
   let combinedNews = [...gameSpecificNews];
   if (combinedNews.length < MAX_NEWS_DISPLAY) {
     combinedNews = [...combinedNews, ...generalNews.slice(0, MAX_NEWS_DISPLAY - combinedNews.length)];
   }
   const newsToShow = combinedNews.slice(0, MAX_NEWS_DISPLAY);
-  // Check if there are more game-specific news articles than what's shown
-  const hasMoreGameSpecificNews = gameSpecificNews.length > newsToShow.filter(n => n.gameId === game.id).length || gameSpecificNews.length > MAX_NEWS_DISPLAY;
+  const hasMoreGameSpecificNews = gameSpecificNews.length > newsToShow.filter(n => n.gameId === game._id).length || gameSpecificNews.length > MAX_NEWS_DISPLAY;
 
 
   const createLocalExcerpt = (text: string, maxLength: number = 100): string => {
@@ -121,23 +130,26 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     if (firstParagraph.length <= maxLength) return firstParagraph;
     
     let cutPoint = -1;
-    const punctuation = ['。', '！', '？', '.', '!', '?']; // Prioritize sentence-ending punctuation
+    const punctuation = ['。', '！', '？', '.', '!', '?'];
     for (const p of punctuation) {
       const point = firstParagraph.lastIndexOf(p, maxLength);
-      if (point > cutPoint) { // Find the latest valid punctuation mark
+      if (point > cutPoint) {
         cutPoint = point;
       }
     }
   
-    if (cutPoint === -1 || cutPoint < maxLength / 3) { // If no good punctuation, try space
+    if (cutPoint === -1 || cutPoint < maxLength / 3) {
       cutPoint = firstParagraph.lastIndexOf(' ', maxLength);
     }
 
-    if (cutPoint === -1 || cutPoint < maxLength / 3) { // Fallback to hard cut if no suitable break point
+    if (cutPoint === -1 || cutPoint < maxLength / 3) {
         return firstParagraph.substring(0, maxLength) + '...';
     }
     return firstParagraph.substring(0, cutPoint + 1) + '...';
   };
+  
+  const cleanDescription = game.description.replace(/<br\s*\/?>/gi, '\n');
+  const needsExpansion = cleanDescription.length > DESCRIPTION_CHAR_LIMIT;
 
   const truncateDescription = (text: string, limit: number): string => {
     if (text.length <= limit) {
@@ -148,14 +160,14 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
     if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf('？');
     if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf(' ');
 
-    if (breakPoint > limit / 2) { // Ensure the break point is not too early
+    if (breakPoint > limit / 2) {
         return text.substring(0, breakPoint + 1) + '...';
     }
     return text.substring(0, limit) + '...';
   };
-
-  const shortDescriptionText = truncateDescription(game.description, DESCRIPTION_CHAR_LIMIT);
-  const needsExpansion = game.description.length > DESCRIPTION_CHAR_LIMIT;
+  
+  const shortDescriptionText = truncateDescription(cleanDescription, DESCRIPTION_CHAR_LIMIT);
+ 
 
   const openScreenshotPreview = (url: string) => {
     setSelectedScreenshot(url);
@@ -167,7 +179,6 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
 
   return (
     <div className="space-y-8 fade-in">
-      {/* Announcements and Marquee */}
       <Card className="bg-primary/5 border-primary/20 shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-center">
@@ -187,44 +198,42 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
           <div className="flex items-center">
             <Megaphone className="w-5 h-5 text-accent mr-3 flex-shrink-0" />
             <p className="text-xs md:text-sm text-foreground/80">
-              <span className="font-semibold text-accent">跑马灯位置：</span> 热门活动《夏季嘉年华》火热进行中！ | 《${game.title}》新版本 V${game.version || '1.0.0'} 现已上线，快来体验！
+              <span className="font-semibold text-accent">跑马灯位置：</span> 热门活动《夏季嘉年华》火热进行中！ | 《${game.name}》新版本 V${game.version || '1.0.0'} 现已上线，快来体验！
             </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Main Game Info Card */}
       <Card className="overflow-hidden shadow-xl">
         <CardHeader className="p-0 relative aspect-[16/7] sm:aspect-[2/1] md:aspect-[16/6]">
           <Image
-            src={game.imageUrl}
-            alt={`${game.title} banner`}
+            src={game.header_image}
+            alt={`${game.name} banner`}
             fill
             priority
             className="object-cover"
-            data-ai-hint={game.dataAiHint}
+            data-ai-hint={`game banner ${game.name}`}
             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw, 1200px"
           />
         </CardHeader>
         <CardContent className="p-4 md:p-6 space-y-6">
           <div className="md:grid md:grid-cols-12 md:gap-x-8">
-            {/* Left Column: Game Details */}
             <div className="md:col-span-8 space-y-6">
               <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
                 <Image
-                  src={game.imageUrl}
-                  alt={`${game.title} icon`}
-                  width={144} // Increased size
-                  height={144} // Increased size
+                  src={game.icon}
+                  alt={`${game.name} icon`}
+                  width={144}
+                  height={144}
                   className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-xl object-cover flex-shrink-0 border-2 border-background shadow-lg"
-                  data-ai-hint={game.dataAiHint ? `${game.dataAiHint} icon large` : "game icon large"}
+                  data-ai-hint={`game icon large ${game.name}`}
                 />
                 <div className="flex-grow pt-1">
-                  <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{game.title}</h1>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{game.name}</h1>
                   <p className="text-sm text-muted-foreground mt-1 sm:mt-2">{game.developer}</p>
                 </div>
                 <div className="w-full sm:w-auto flex-shrink-0 pt-2 sm:pt-0">
-                  <GameDownloadDialog />
+                  <GameDownloadDialog resources={resources} />
                 </div>
               </div>
 
@@ -233,35 +242,35 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                   <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-2" />
                   <div>
                     <p className="text-muted-foreground text-xs">评分</p>
-                    <p className="font-semibold">{game.rating || 'N/A'}</p>
+                    <p className="font-semibold">{game.star || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="flex items-center">
                   <Download className="w-4 h-4 text-primary mr-2" />
                   <div>
                     <p className="text-muted-foreground text-xs">下载量</p>
-                    <p className="font-semibold">{game.downloads || 'N/A'}</p>
+                    <p className="font-semibold">{game.download_count_show || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="flex items-center">
                   <Tag className="w-4 h-4 text-blue-500 mr-2" />
                   <div>
                     <p className="text-muted-foreground text-xs">类型</p>
-                    <p className="font-semibold">{game.category}</p>
+                    <p className="font-semibold">{game.tags?.[0] || '未知'}</p>
                   </div>
                 </div>
                 <div className="flex items-center">
                   <CalendarDays className="w-4 h-4 text-green-500 mr-2" />
                   <div>
                     <p className="text-muted-foreground text-xs">发布日期</p>
-                    <p className="font-semibold">{game.releaseDate || '未知'}</p>
+                    <p className="font-semibold">{game.release_at ? new Date(game.release_at).toLocaleDateString('zh-CN') : '未知'}</p>
                   </div>
                 </div>
                 <div className="flex items-center">
                   <History className="w-4 h-4 text-purple-500 mr-2" />
                   <div>
                     <p className="text-muted-foreground text-xs">更新日期</p>
-                    <p className="font-semibold">{game.updateDate || '未知'}</p>
+                    <p className="font-semibold">{game.latest_at ? new Date(game.latest_at).toLocaleDateString('zh-CN') : '未知'}</p>
                   </div>
                 </div>
                 <div className="flex items-start">
@@ -284,11 +293,11 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center col-span-2 sm:col-span-1"> {/* Ensure size fits well */}
+                <div className="flex items-center col-span-2 sm:col-span-1">
                   <HardDrive className="w-4 h-4 text-orange-500 mr-2" />
                   <div>
                     <p className="text-muted-foreground text-xs">大小</p>
-                    <p className="font-semibold">{game.size || 'N/A'}</p>
+                    <p className="font-semibold">{formatBytes(game.file_size)}</p>
                   </div>
                 </div>
               </div>
@@ -311,9 +320,10 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
 
               <div>
                 <h2 className="text-xl font-semibold mb-3">游戏介绍</h2>
-                <p className="text-foreground/80 leading-relaxed whitespace-pre-line">
-                  {needsExpansion && !isDescriptionExpanded ? shortDescriptionText : game.description}
-                </p>
+                <div 
+                  className="text-foreground/80 leading-relaxed whitespace-pre-line prose prose-sm sm:prose-base dark:prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: isDescriptionExpanded ? game.description : truncateDescription(cleanDescription, DESCRIPTION_CHAR_LIMIT) }}
+                />
                 {needsExpansion && (
                   <Button
                     variant="link"
@@ -327,7 +337,6 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
               </div>
             </div>
 
-            {/* Right Column: Recommended Games */}
             <div className="md:col-span-4 mt-8 md:mt-0">
               <Card className="shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -342,7 +351,7 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
                 </CardHeader>
                 <CardContent className="space-y-3 pt-2">
                   {displayedRecommendedGames.length > 0 ? displayedRecommendedGames.map(recGame => (
-                    <Link key={recGame.id} href={`/games/${recGame.id}`} className="block hover:bg-muted/50 p-2.5 rounded-lg transition-colors border border-transparent hover:border-primary/20">
+                    <Link key={recGame.id} href={`/app/${recGame.pkg || recGame.id}`} className="block hover:bg-muted/50 p-2.5 rounded-lg transition-colors border border-transparent hover:border-primary/20">
                       <div className="flex items-start gap-3">
                         <Image
                           src={recGame.imageUrl}
@@ -371,27 +380,26 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
         </CardContent>
       </Card>
 
-      {/* Sections below the two-column layout */}
       <div>
         <h2 className="text-xl font-semibold mt-6 mb-3 flex items-center">
           <Camera className="w-5 h-5 text-primary mr-2" />
           游戏截图
         </h2>
-        {game.screenshots && game.screenshots.length > 0 ? (
+        {game.detail_images && game.detail_images.length > 0 ? (
           <div className="flex overflow-x-auto space-x-3 md:space-x-4 py-2 -mx-1 px-1">
-            {game.screenshots.map((screenshot, index) => (
+            {game.detail_images.map((screenshotUrl, index) => (
               <div
                 key={index}
                 className="flex-shrink-0 w-60 md:w-72 aspect-video bg-muted rounded-lg overflow-hidden shadow hover:shadow-lg transition-shadow cursor-pointer group relative"
-                onClick={() => openScreenshotPreview(screenshot.url)}
+                onClick={() => openScreenshotPreview(screenshotUrl)}
               >
                 <Image
-                  src={screenshot.url}
+                  src={screenshotUrl}
                   alt={`游戏截图 ${index + 1}`}
                   width={288}
                   height={162}
                   className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                  data-ai-hint={screenshot.dataAiHint || "gameplay screenshot"}
+                  data-ai-hint={`gameplay screenshot ${game.name}`}
                   sizes="(max-width: 767px) 240px, 288px"
                 />
               </div>
@@ -406,24 +414,24 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
         <div className="pt-6 mt-6 border-t">
           <h2 className="text-xl font-semibold mb-4 flex items-center">
             <NewsIcon className="w-5 h-5 text-primary mr-2" />
-            《{game.title}》相关资讯
+            《{game.name}》相关资讯
           </h2>
           <div
             className={cn(
-              "py-2 -mx-1 px-1 md:mx-0 md:px-0", // Ensure padding is handled for scrollbar visibility if needed
-              "flex space-x-3 overflow-x-auto", // Mobile: horizontal scroll
-              "md:grid md:gap-x-4 md:gap-y-6", // Desktop: grid
+              "py-2 -mx-1 px-1 md:mx-0 md:px-0", 
+              "flex space-x-3 overflow-x-auto", 
+              "md:grid md:gap-x-4 md:gap-y-6", 
               newsToShow.length === 1 && "md:grid-cols-1",
               newsToShow.length === 2 && "md:grid-cols-2",
-              newsToShow.length >= 3 && "md:grid-cols-2 lg:grid-cols-3" // 2 cols on md, 3 on lg for 3+ items
+              newsToShow.length >= 3 && "md:grid-cols-2 lg:grid-cols-3"
             )}
           >
             {newsToShow.map(newsItem => (
               <Card
                 key={newsItem.id}
                 className={cn(
-                  "w-[calc(100vw-4rem)] max-w-md sm:w-96 flex-shrink-0 hover:shadow-lg transition-shadow duration-200 ease-in-out", // Base mobile card width
-                  "md:w-auto" // Desktop grid will control width
+                  "w-[calc(100vw-4rem)] max-w-md sm:w-96 flex-shrink-0 hover:shadow-lg transition-shadow duration-200 ease-in-out", 
+                  "md:w-auto"
                 )}
               >
                 <CardContent className="p-3">
@@ -459,7 +467,7 @@ export default function GameDetailView({ game }: GameDetailViewProps) {
           {hasMoreGameSpecificNews && (
             <div className="mt-6 text-center">
               <Button variant="outline" asChild className="btn-interactive">
-                <Link href={`/news?tag=${encodeURIComponent(game.title)}`}>查看更多《{game.title}》资讯</Link>
+                <Link href={`/news?tag=${encodeURIComponent(game.name)}`}>查看更多《{game.name}》资讯</Link>
               </Button>
             </div>
           )}

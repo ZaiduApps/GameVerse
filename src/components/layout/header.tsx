@@ -13,7 +13,7 @@ import { useState } from 'react';
 
 const navItems = [
   { href: '/', label: '首页', icon: Home },
-  { href: '/games', label: '游戏库', icon: Library },
+  { href: '/app', label: '游戏库', icon: Library },
   { href: '/rankings', label: '排行榜', icon: BarChart3 },
   { href: '/news', label: '资讯', icon: Newspaper },
   { href: '/community', label: '社区', icon: CommunityIcon },

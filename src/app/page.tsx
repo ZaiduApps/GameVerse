@@ -77,7 +77,7 @@ export default async function HomePage() {
 
       {popularGames.length > 0 && (
         <section className="fade-in" style={{ animationDelay: '0.3s' }}>
-          <SectionHeader title={popularAlbum?.title || "热门推荐"} icon={Flame} iconClassName="text-primary" moreHref="/games?sort=popular" />
+          <SectionHeader title={popularAlbum?.title || "热门推荐"} icon={Flame} iconClassName="text-primary" moreHref="/app?sort=popular" />
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
             {popularGames.map((game, index) => (
               <GameCard
@@ -95,7 +95,7 @@ export default async function HomePage() {
 
       {newReleaseGames.length > 0 && (
          <section className="fade-in" style={{ animationDelay: '0.6s' }}>
-          <SectionHeader title={newReleaseAlbum?.title || "新游戏速递"} icon={Zap} iconClassName="text-accent" moreHref="/games?sort=new" />
+          <SectionHeader title={newReleaseAlbum?.title || "新游戏速递"} icon={Zap} iconClassName="text-accent" moreHref="/app?sort=new" />
           <div
             className="flex overflow-x-auto space-x-3 sm:space-x-4 py-2 -mx-1 px-1 cursor-grab select-none"
           >
@@ -116,7 +116,7 @@ export default async function HomePage() {
 
       {preregistrationGames.length > 0 && (
         <section className="fade-in" style={{ animationDelay: '0.9s' }}>
-          <SectionHeader title={preregistrationAlbum?.title || "事前登录"} icon={Gift} iconClassName="text-green-500" moreHref="/games?status=preregistration" />
+          <SectionHeader title={preregistrationAlbum?.title || "事前登录"} icon={Gift} iconClassName="text-green-500" moreHref="/app?status=preregistration" />
           <div
             className="flex overflow-x-auto space-x-3 sm:space-x-4 py-2 -mx-1 px-1 cursor-grab select-none"
           >
