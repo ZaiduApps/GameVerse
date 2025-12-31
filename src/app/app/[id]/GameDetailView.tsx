@@ -233,7 +233,7 @@ export default function GameDetailView({ gameData }: GameDetailViewProps) {
                   <p className="text-sm text-muted-foreground mt-1 sm:mt-2">{game.developer}</p>
                 </div>
                 <div className="w-full sm:w-auto flex-shrink-0 pt-2 sm:pt-0">
-                  <GameDownloadDialog resources={resources} />
+                  <GameDownloadDialog pkg={game.pkg} resources={resources} />
                 </div>
               </div>
 

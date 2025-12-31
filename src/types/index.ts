@@ -1,4 +1,5 @@
 
+
 export interface GameScreenshot {
   url: string;
   dataAiHint?: string;
