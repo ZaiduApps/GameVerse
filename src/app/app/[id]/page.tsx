@@ -31,3 +31,5 @@ export default async function GameDetailPage({ params }: { params: { id: string 
 
   return <GameDetailView gameData={gameData} />;
 }
+
+    
