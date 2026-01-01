@@ -10,9 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import React, { useState, useEffect } from 'react';
-// Note: MOCK_NEWS_ARTICLES is not directly used here anymore for the main article,
-// but kept for potential related articles or if needed later.
-// For comments, we use a local mock.
 
 interface MockComment {
   id: string;
@@ -35,18 +32,16 @@ interface NewsArticleViewProps {
 
 export default function NewsArticleView({ article }: NewsArticleViewProps) {
   const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(Math.floor(Math.random() * 100) + 5); // Random initial likes
-  const [viewCount, setViewCount] = useState(Math.floor(Math.random() * 1000) + 50); // Random initial views
+  const [likeCount, setLikeCount] = useState(0); 
+  const [viewCount, setViewCount] = useState(0); 
   const [mockComments, setMockComments] = useState<MockComment[]>(initialMockComments);
   const [newComment, setNewComment] = useState('');
 
   useEffect(() => {
-    // Simulate fetching initial like state or view count if needed
-    // For now, random numbers are generated on each load for demo purposes.
-    // If these were real, they'd likely come from the article prop or an API call.
+    // This now runs only on the client, avoiding hydration mismatch.
     setLikeCount(Math.floor(Math.random() * 100) + 5);
     setViewCount(Math.floor(Math.random() * 1000) + 50);
-  }, [article.id]); // Rerun if article ID changes, to reset mock counts for demo
+  }, [article.id]);
 
   const handleLike = () => {
     setIsLiked(!isLiked);
@@ -93,11 +88,11 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
           <div className="flex items-center space-x-6 py-3 my-4 border-y">
             <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center text-muted-foreground hover:text-primary btn-interactive">
               <ThumbsUp size={18} className={`mr-2 ${isLiked ? 'fill-primary text-primary' : ''}`} />
-              {likeCount}
+              {likeCount > 0 ? likeCount : ''}
             </Button>
             <div className="flex items-center text-muted-foreground">
               <Eye size={18} className="mr-2" />
-              {viewCount} 次浏览
+              {viewCount > 0 ? `${viewCount} 次浏览` : ''}
             </div>
             <Button variant="ghost" size="sm" onClick={handleShare} className="flex items-center text-muted-foreground hover:text-primary btn-interactive">
               <Share2 size={18} className="mr-2" />
@@ -193,3 +188,4 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
   );
 }
 
+    

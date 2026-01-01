@@ -49,14 +49,12 @@ export default function CommunityPostDetailView({ post }: CommunityPostDetailVie
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likesCount);
   
-  const [viewCount, setViewCount] = useState<number | null>(null); // Initialize to null
+  const [viewCount, setViewCount] = useState<number | null>(null);
 
   useEffect(() => {
-    // Calculate and set the viewCount only on the client-side after hydration
-    // This ensures Math.random() doesn't cause a mismatch between server and client initial render
-    const clientSideInitialViewCount = Math.floor(Math.random() * 200) + post.commentsCount + post.likesCount + 50 + 1; // +1 for the current "view"
-    setViewCount(clientSideInitialViewCount);
-  }, [post.commentsCount, post.likesCount]); // Rerun if these specific post attributes change, or use [] to run only once on mount.
+    // This now runs only on the client, avoiding hydration mismatch.
+    setViewCount(Math.floor(Math.random() * 200) + post.commentsCount + post.likesCount + 50 + 1);
+  }, [post.commentsCount, post.likesCount]);
 
 
   const handleLike = () => {
@@ -138,8 +136,7 @@ export default function CommunityPostDetailView({ post }: CommunityPostDetailVie
             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                 <div className="flex items-center">
                     <Eye size={16} className="mr-1.5" /> 
-                    {/* Display fallback during SSR / initial client render, then actual viewCount */}
-                    {viewCount !== null ? viewCount : (post.commentsCount + post.likesCount + 50) /* Fallback for SSR/initial client render */} 次浏览
+                    {viewCount !== null ? viewCount : (post.commentsCount + post.likesCount + 50)} 次浏览
                 </div>
             </div>
           <div className="w-full flex items-center justify-start gap-2 sm:gap-3 border-t pt-3">
@@ -216,3 +213,5 @@ export default function CommunityPostDetailView({ post }: CommunityPostDetailVie
     </div>
   );
 }
+
+    
