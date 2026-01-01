@@ -594,20 +594,20 @@ export default function GameDetailView({ gameData }: GameDetailViewProps) {
           onClick={closeScreenshotPreview}
         >
           <div
-            className="relative w-full h-full flex flex-col items-center justify-center"
+            className="relative flex flex-col items-center justify-center"
             onClick={(e) => e.stopPropagation()}
           >
              <Button
               variant="ghost"
               size="icon"
-              className="absolute top-4 right-4 z-[110] rounded-full bg-background/50 hover:bg-background/80 text-white hover:text-primary w-10 h-10"
+              className="absolute top-2 right-2 z-[110] rounded-full bg-background/50 hover:bg-background/80 text-white hover:text-primary w-10 h-10"
               onClick={closeScreenshotPreview}
               aria-label="关闭预览"
             >
               <CloseIcon className="w-6 h-6" />
             </Button>
             
-            <div className="relative w-full h-full flex items-center justify-center">
+            <div className="relative flex items-center justify-center w-full h-full">
                 <Image
                     src={selectedScreenshot}
                     alt="游戏截图预览"
@@ -616,13 +616,13 @@ export default function GameDetailView({ gameData }: GameDetailViewProps) {
                     className="object-contain rounded-lg shadow-2xl transition-transform duration-300"
                     style={{
                         transform: `scale(${zoomLevel})`,
-                        maxWidth: '90vw',
-                        maxHeight: '80vh'
+                        maxWidth: 'calc(100vw - 2rem)',
+                        maxHeight: 'calc(100vh - 8rem)'
                     }}
                 />
             </div>
             
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-background/80 p-2 rounded-full flex items-center gap-2 shadow-lg">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/80 p-2 rounded-full flex items-center gap-2 shadow-lg">
                 <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setZoomLevel(z => Math.max(0.2, z - 0.2))}} aria-label="缩小">
                     <ZoomOut className="w-5 h-5" />
                 </Button>
@@ -639,3 +639,5 @@ export default function GameDetailView({ gameData }: GameDetailViewProps) {
     </div>
   );
 }
+
+    
