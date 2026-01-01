@@ -593,32 +593,32 @@ export default function GameDetailView({ gameData }: GameDetailViewProps) {
           onClick={closeScreenshotPreview}
         >
           <div
-            className="relative w-full h-full flex items-center justify-center"
+            className="relative w-full h-full flex flex-col items-center justify-center"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative">
+            <div className="relative w-full h-full flex items-center justify-center">
                 <Image
-                src={selectedScreenshot}
-                alt="游戏截图预览"
-                width={1280}
-                height={720}
-                className="object-contain rounded-lg shadow-2xl transition-transform duration-300"
-                style={{
-                    transform: `scale(${zoomLevel})`,
-                    maxWidth: '90vw',
-                    maxHeight: '80vh'
-                }}
+                    src={selectedScreenshot}
+                    alt="游戏截图预览"
+                    width={1280}
+                    height={720}
+                    className="object-contain rounded-lg shadow-2xl transition-transform duration-300"
+                    style={{
+                        transform: `scale(${zoomLevel})`,
+                        maxWidth: '90vw',
+                        maxHeight: '80vh'
+                    }}
                 />
             </div>
             
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-background/80 p-2 rounded-full flex items-center gap-2 shadow-lg">
-                <Button variant="ghost" size="icon" onClick={() => setZoomLevel(z => Math.max(0.2, z - 0.2))} aria-label="缩小">
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setZoomLevel(z => Math.max(0.2, z - 0.2))}} aria-label="缩小">
                     <ZoomOut className="w-5 h-5" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => setZoomLevel(1)} aria-label="重置大小">
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setZoomLevel(1)}} aria-label="重置大小">
                     <RotateCcw className="w-5 h-5" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => setZoomLevel(z => Math.min(3, z + 0.2))} aria-label="放大">
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setZoomLevel(z => Math.min(3, z + 0.2))}} aria-label="放大">
                     <ZoomIn className="w-5 h-5" />
                 </Button>
             </div>
