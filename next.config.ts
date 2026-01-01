@@ -27,6 +27,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'uu.fp.ps.netease.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'uum.fp.ps.netease.com',
+      },
        {
         protocol: 'https',
         hostname: 'cdn.apks.cc',
