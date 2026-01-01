@@ -89,7 +89,7 @@ export default function GameDownloadDialog({ resources, pkg }: GameDownloadDialo
           {resources && resources.length > 0 ? (
             resources.map(resource => (
               <Button
-                key={resource.channel._id}
+                key={resource._id}
                 variant="outline"
                 className="w-full justify-start text-left h-auto py-3 px-4 relative"
                 disabled={loadingChannelId !== null}
