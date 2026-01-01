@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { Game, NewsArticle, GameDetailData } from '@/types';
+import type { Game, NewsArticle, GameDetailData, ApiRecommendedGame } from '@/types';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,8 +12,8 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MOCK_GAMES, MOCK_NEWS_ARTICLES } from '@/lib/constants';
+import React, { useState, useEffect, useRef } from 'react';
+import { MOCK_NEWS_ARTICLES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 interface MockComment {
@@ -34,6 +34,7 @@ const mockComments: MockComment[] = [
 
 interface GameDetailViewProps {
   gameData: GameDetailData;
+  initialRecommendedGames: ApiRecommendedGame[];
 }
 
 const DESCRIPTION_CHAR_LIMIT = 120;
@@ -51,7 +52,7 @@ const formatBytes = (bytes: number | null, decimals = 2) => {
 }
 
 
-export default function GameDetailView({ gameData }: GameDetailViewProps) {
+export default function GameDetailView({ gameData, initialRecommendedGames }: GameDetailViewProps) {
   const { app: game, resources } = gameData;
   const [showFab, setShowFab] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -59,20 +60,32 @@ export default function GameDetailView({ gameData }: GameDetailViewProps) {
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [displayedRecommendedGames, setDisplayedRecommendedGames] = useState<Game[]>([]);
-
-  const shuffleRecommendedGames = useCallback(() => {
-    if (!game) return;
-    const availableGames = MOCK_GAMES.filter(g => g.id !== game._id);
-    const shuffled = [...availableGames].sort(() => 0.5 - Math.random());
-    setDisplayedRecommendedGames(shuffled.slice(0, MAX_RECOMMENDED_GAMES));
-  }, [game]);
+  const [recommendedGames, setRecommendedGames] = useState<ApiRecommendedGame[]>([]);
+  const [isFetchingRecommended, setIsFetchingRecommended] = useState(false);
 
   useEffect(() => {
-    // This now runs only on the client, avoiding hydration mismatch.
-    shuffleRecommendedGames();
-  }, [shuffleRecommendedGames]);
+    setRecommendedGames(initialRecommendedGames.slice(0, MAX_RECOMMENDED_GAMES));
+  }, [initialRecommendedGames]);
 
+  const fetchRecommendedGames = async () => {
+    if (!game.pkg || isFetchingRecommended) return;
+    setIsFetchingRecommended(true);
+    try {
+      const res = await fetch(`/api/game/recommendedApp?param=${game.pkg}`, { cache: 'no-store' });
+      if (res.ok) {
+        const jsonResponse = await res.json();
+        if (jsonResponse.code === 0 && jsonResponse.data) {
+          // Shuffle the new list before setting it
+          const shuffled = [...jsonResponse.data].sort(() => 0.5 - Math.random());
+          setRecommendedGames(shuffled.slice(0, MAX_RECOMMENDED_GAMES));
+        }
+      }
+    } catch (error) {
+      console.error("Error refreshing recommended games:", error);
+    } finally {
+      setIsFetchingRecommended(false);
+    }
+  };
 
   useEffect(() => {
     const commentsDiv = commentsSectionRef.current;
@@ -347,26 +360,26 @@ export default function GameDetailView({ gameData }: GameDetailViewProps) {
                     <ThumbsUp className="w-5 h-5 mr-2 text-primary" />
                     为你推荐
                   </CardTitle>
-                  <Button variant="ghost" size="sm" onClick={shuffleRecommendedGames} className="text-xs text-muted-foreground hover:text-primary btn-interactive">
-                     <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                  <Button variant="ghost" size="sm" onClick={fetchRecommendedGames} className="text-xs text-muted-foreground hover:text-primary btn-interactive" disabled={isFetchingRecommended}>
+                     <RefreshCw className={cn("w-3.5 h-3.5 mr-1.5", isFetchingRecommended && "animate-spin")} />
                      换一换
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-3 pt-2">
-                  {displayedRecommendedGames.length > 0 ? displayedRecommendedGames.map(recGame => (
-                    <Link key={recGame.id} href={`/app/${recGame.pkg || recGame.id}`} className="block hover:bg-muted/50 p-2.5 rounded-lg transition-colors border border-transparent hover:border-primary/20">
+                  {recommendedGames.length > 0 ? recommendedGames.map(recGame => (
+                    <Link key={recGame._id} href={`/app/${recGame.pkg}`} className="block hover:bg-muted/50 p-2.5 rounded-lg transition-colors border border-transparent hover:border-primary/20">
                       <div className="flex items-start gap-3">
                         <Image
-                          src={recGame.imageUrl}
-                          alt={recGame.title}
+                          src={recGame.icon}
+                          alt={recGame.name}
                           width={64}
                           height={64}
                           className="w-16 h-16 rounded-md object-cover flex-shrink-0"
-                          data-ai-hint={recGame.dataAiHint || "game icon small"}
+                          data-ai-hint={`game icon small ${recGame.name}`}
                         />
                         <div className="flex-grow">
-                          <h4 className="font-semibold text-sm text-foreground group-hover:text-primary line-clamp-2">{recGame.title}</h4>
-                          <p className="text-xs text-muted-foreground mt-0.5">{recGame.category}</p>
+                          <h4 className="font-semibold text-sm text-foreground group-hover:text-primary line-clamp-2">{recGame.name}</h4>
+                          <p className="text-xs text-muted-foreground mt-0.5">{recGame.tags?.[0]?.name || '游戏'}</p>
                            <Button variant="link" size="sm" className="text-xs p-0 h-auto mt-1 text-primary/80 hover:text-primary">
                             查看详情 <ExternalLink className="w-3 h-3 ml-1" />
                            </Button>
@@ -639,5 +652,3 @@ export default function GameDetailView({ gameData }: GameDetailViewProps) {
     </div>
   );
 }
-
-    

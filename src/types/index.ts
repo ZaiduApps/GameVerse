@@ -166,3 +166,17 @@ export interface GameDetailData {
   app: ApiGameDetail;
   resources: ApiDownloadResource[];
 }
+
+export interface ApiRecommendedGame {
+  _id: string;
+  name: string;
+  pkg: string;
+  summary: string;
+  star: number;
+  icon: string;
+  match_score: number;
+  tags: {
+    id: string;
+    name: string;
+  }[];
+}
