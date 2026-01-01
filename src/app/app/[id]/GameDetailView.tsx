@@ -638,3 +638,5 @@ export default function GameDetailView({ gameData }: GameDetailViewProps) {
     </div>
   );
 }
+
+    
