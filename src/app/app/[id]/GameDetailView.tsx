@@ -235,23 +235,23 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
         <CardContent className="p-4 md:p-6 space-y-6">
           <div className="md:grid md:grid-cols-12 md:gap-x-8">
             <div className="md:col-span-8 space-y-6">
-              <div className="flex flex-row items-start gap-4 sm:gap-6">
-                <Image
-                  src={game.icon}
-                  alt={`${game.name} icon`}
-                  width={144}
-                  height={144}
-                  className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-xl object-cover flex-shrink-0 border-2 border-background shadow-lg"
-                  data-ai-hint={`game icon large ${game.name}`}
-                />
-                <div className="flex-1 flex flex-col items-start h-24 sm:h-32 md:h-36">
-                  <div className="flex-grow">
+              <div className="flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-6">
+                <div className="flex items-start gap-4 sm:gap-6">
+                  <Image
+                    src={game.icon}
+                    alt={`${game.name} icon`}
+                    width={144}
+                    height={144}
+                    className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-xl object-cover flex-shrink-0 border-2 border-background shadow-lg"
+                    data-ai-hint={`game icon large ${game.name}`}
+                  />
+                  <div className="pt-1 sm:pt-2">
                     <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{game.name}</h1>
                     <p className="text-sm text-muted-foreground mt-1 sm:mt-2">{game.developer}</p>
                   </div>
-                   <div className="w-full sm:w-auto flex-shrink-0">
-                    <GameDownloadDialog pkg={game.pkg} resources={resources} />
-                  </div>
+                </div>
+                <div className="w-full sm:w-auto flex-shrink-0 pt-2 sm:pt-0">
+                  <GameDownloadDialog pkg={game.pkg} resources={resources} />
                 </div>
               </div>
 
@@ -615,11 +615,11 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
              <Button
               variant="ghost"
               size="icon"
-              className="absolute top-2 right-2 z-[110] rounded-full bg-background/50 hover:bg-background/80 text-white hover:text-primary w-10 h-10"
+              className="absolute -top-2 -right-3 md:top-2 md:right-2 z-[110] rounded-full bg-background/50 hover:bg-background/80 text-foreground hover:text-primary w-8 h-8 md:w-10 md:h-10"
               onClick={closeScreenshotPreview}
               aria-label="关闭预览"
             >
-              <CloseIcon className="w-6 h-6" />
+              <CloseIcon className="w-5 h-5 md:w-6 md:h-6" />
             </Button>
             
             <div className="relative flex items-center justify-center w-full h-full">
