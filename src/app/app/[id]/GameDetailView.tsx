@@ -69,6 +69,7 @@ export default function GameDetailView({ gameData }: GameDetailViewProps) {
   }, [game]);
 
   useEffect(() => {
+    // This now runs only on the client, avoiding hydration mismatch.
     shuffleRecommendedGames();
   }, [shuffleRecommendedGames]);
 
@@ -596,6 +597,16 @@ export default function GameDetailView({ gameData }: GameDetailViewProps) {
             className="relative w-full h-full flex flex-col items-center justify-center"
             onClick={(e) => e.stopPropagation()}
           >
+             <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4 z-[110] rounded-full bg-background/50 hover:bg-background/80 text-white hover:text-primary w-10 h-10"
+              onClick={closeScreenshotPreview}
+              aria-label="关闭预览"
+            >
+              <CloseIcon className="w-6 h-6" />
+            </Button>
+            
             <div className="relative w-full h-full flex items-center justify-center">
                 <Image
                     src={selectedScreenshot}
@@ -622,22 +633,9 @@ export default function GameDetailView({ gameData }: GameDetailViewProps) {
                     <ZoomIn className="w-5 h-5" />
                 </Button>
             </div>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-4 right-4 z-[110] rounded-full bg-background/80 hover:bg-background text-foreground hover:text-primary w-10 h-10"
-              onClick={closeScreenshotPreview}
-              aria-label="关闭预览"
-            >
-              <CloseIcon className="w-6 h-6" />
-            </Button>
           </div>
         </div>
       )}
     </div>
   );
 }
-
-    
-    
