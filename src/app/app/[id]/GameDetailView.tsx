@@ -58,8 +58,16 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const commentsSectionRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Screenshot Preview State
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [isDragging, setIsDragging] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const imageRef = useRef<HTMLImageElement>(null);
+
+
   const [recommendedGames, setRecommendedGames] = useState<ApiRecommendedGame[]>([]);
   const [isFetchingRecommended, setIsFetchingRecommended] = useState(false);
 
@@ -183,14 +191,53 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
   
   const shortDescriptionText = truncateDescription(cleanDescription, DESCRIPTION_CHAR_LIMIT);
  
-
+  // Screenshot Preview Handlers
   const openScreenshotPreview = (url: string) => {
     setSelectedScreenshot(url);
     setZoomLevel(1);
+    setPosition({ x: 0, y: 0 });
   };
 
   const closeScreenshotPreview = () => {
     setSelectedScreenshot(null);
+  };
+  
+  const handleZoom = (newZoomLevel: number) => {
+    const clampedZoom = Math.max(0.2, Math.min(newZoomLevel, 3));
+    setZoomLevel(clampedZoom);
+    if (clampedZoom <= 1) {
+      setPosition({ x: 0, y: 0 }); // Reset position when zoomed out
+    }
+  }
+
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if (zoomLevel <= 1) return;
+    e.preventDefault();
+    setIsDragging(true);
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    setStartPos({
+      x: clientX - position.x,
+      y: clientY - position.y,
+    });
+    if (imageRef.current) imageRef.current.style.cursor = 'grabbing';
+  };
+
+  const handleDragMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDragging || zoomLevel <= 1) return;
+    e.preventDefault();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    setPosition({
+      x: clientX - startPos.x,
+      y: clientY - startPos.y,
+    });
+  };
+
+  const handleDragEnd = () => {
+    if (zoomLevel <= 1) return;
+    setIsDragging(false);
+    if (imageRef.current) imageRef.current.style.cursor = 'grab';
   };
 
   return (
@@ -611,6 +658,11 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
           <div
             className="relative flex flex-col items-center justify-center"
             onClick={(e) => e.stopPropagation()}
+            onMouseMove={handleDragMove}
+            onMouseUp={handleDragEnd}
+            onMouseLeave={handleDragEnd}
+            onTouchMove={handleDragMove}
+            onTouchEnd={handleDragEnd}
           >
              <Button
               variant="ghost"
@@ -622,29 +674,33 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
               <CloseIcon className="w-5 h-5 md:w-6 md:h-6" />
             </Button>
             
-            <div className="relative flex items-center justify-center w-full h-full">
+            <div className="relative flex items-center justify-center w-full h-full overflow-hidden">
                 <Image
+                    ref={imageRef}
                     src={selectedScreenshot}
                     alt="游戏截图预览"
                     width={1280}
                     height={720}
-                    className="object-contain rounded-lg shadow-2xl transition-transform duration-300"
+                    className="object-contain rounded-lg shadow-2xl transition-transform duration-300 select-none"
                     style={{
-                        transform: `scale(${zoomLevel})`,
+                        transform: `scale(${zoomLevel}) translate(${position.x}px, ${position.y}px)`,
                         maxWidth: 'calc(100vw - 2rem)',
-                        maxHeight: 'calc(100vh - 8rem)'
+                        maxHeight: 'calc(100vh - 8rem)',
+                        cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
                     }}
+                    onMouseDown={handleDragStart}
+                    onTouchStart={handleDragStart}
                 />
             </div>
             
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/80 p-2 rounded-full flex items-center gap-2 shadow-lg">
-                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setZoomLevel(z => Math.max(0.2, z - 0.2))}} aria-label="缩小">
+                <Button variant="ghost" size="icon" onClick={() => handleZoom(zoomLevel - 0.2)} aria-label="缩小">
                     <ZoomOut className="w-5 h-5" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setZoomLevel(1)}} aria-label="重置大小">
+                <Button variant="ghost" size="icon" onClick={() => { handleZoom(1); setPosition({x:0, y:0}) }} aria-label="重置大小">
                     <RotateCcw className="w-5 h-5" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setZoomLevel(z => Math.min(3, z + 0.2))}} aria-label="放大">
+                <Button variant="ghost" size="icon" onClick={() => handleZoom(zoomLevel + 0.2)} aria-label="放大">
                     <ZoomIn className="w-5 h-5" />
                 </Button>
             </div>
