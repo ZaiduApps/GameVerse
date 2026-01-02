@@ -348,11 +348,11 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
             alt={`${game.name} banner`}
             fill
             priority
-            className="object-cover rounded-t-lg"
+            className="object-cover object-center rounded-t-lg"
             data-ai-hint={`game banner ${game.name}`}
             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw, 1200px"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/70 to-transparent backdrop-blur-sm"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/80 to-transparent backdrop-blur-sm"></div>
         </CardHeader>
         <CardContent className="p-4 md:p-6 space-y-6 relative -mt-20 z-10">
           <div className="md:grid md:grid-cols-12 md:gap-x-8">
