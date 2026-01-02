@@ -5,7 +5,7 @@ import type { Game, NewsArticle, GameDetailData, ApiRecommendedGame } from '@/ty
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera, X as CloseIcon, ThumbsUp, ExternalLink, RefreshCw, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera, X as CloseIcon, ThumbsUp, ExternalLink, RefreshCw, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import GameDownloadDialog from '@/components/game-download-dialog';
 import Link from 'next/link';
@@ -60,7 +60,7 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
   
   // Screenshot Preview State
-  const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
+  const [selectedScreenshotIndex, setSelectedScreenshotIndex] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -116,7 +116,7 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
   }, []);
 
   useEffect(() => {
-    if (selectedScreenshot) {
+    if (selectedScreenshotIndex !== null) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'auto';
@@ -124,7 +124,7 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
     return () => {
       document.body.style.overflow = 'auto';
     };
-  }, [selectedScreenshot]);
+  }, [selectedScreenshotIndex]);
 
 
   const handleFabClick = () => {
@@ -192,14 +192,14 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
   const shortDescriptionText = truncateDescription(cleanDescription, DESCRIPTION_CHAR_LIMIT);
  
   // Screenshot Preview Handlers
-  const openScreenshotPreview = (url: string) => {
-    setSelectedScreenshot(url);
+  const openScreenshotPreview = (index: number) => {
+    setSelectedScreenshotIndex(index);
     setZoomLevel(1);
     setPosition({ x: 0, y: 0 });
   };
 
   const closeScreenshotPreview = () => {
-    setSelectedScreenshot(null);
+    setSelectedScreenshotIndex(null);
   };
   
   const handleZoom = (newZoomLevel: number) => {
@@ -239,6 +239,20 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
     setIsDragging(false);
     if (imageRef.current) imageRef.current.style.cursor = 'grab';
   };
+  
+  const handleNextScreenshot = () => {
+    if (selectedScreenshotIndex === null || !game.detail_images) return;
+    const nextIndex = (selectedScreenshotIndex + 1) % game.detail_images.length;
+    openScreenshotPreview(nextIndex);
+  };
+  
+  const handlePrevScreenshot = () => {
+    if (selectedScreenshotIndex === null || !game.detail_images) return;
+    const prevIndex = (selectedScreenshotIndex - 1 + game.detail_images.length) % game.detail_images.length;
+    openScreenshotPreview(prevIndex);
+  };
+
+  const selectedScreenshotUrl = selectedScreenshotIndex !== null ? game.detail_images?.[selectedScreenshotIndex] : null;
 
   return (
     <div className="space-y-8 fade-in">
@@ -456,7 +470,7 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
               <div
                 key={index}
                 className="flex-shrink-0 w-60 md:w-72 aspect-video bg-muted rounded-lg overflow-hidden shadow hover:shadow-lg transition-shadow cursor-pointer group relative"
-                onClick={() => openScreenshotPreview(screenshotUrl)}
+                onClick={() => openScreenshotPreview(index)}
               >
                 <Image
                   src={screenshotUrl}
@@ -650,11 +664,22 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
         </Button>
       )}
 
-      {selectedScreenshot && (
+      {selectedScreenshotUrl && (
         <div
           className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in-50"
           onClick={closeScreenshotPreview}
         >
+          {game.detail_images && game.detail_images.length > 1 && (
+            <>
+              <Button variant="ghost" size="icon" className="fixed left-2 sm:left-4 z-[110] rounded-full bg-background/30 hover:bg-background/70 text-white hover:text-primary w-10 h-10 sm:w-12 sm:h-12" onClick={(e) => { e.stopPropagation(); handlePrevScreenshot(); }} aria-label="上一张">
+                  <ChevronLeft className="w-6 h-6"/>
+              </Button>
+              <Button variant="ghost" size="icon" className="fixed right-2 sm:right-4 z-[110] rounded-full bg-background/30 hover:bg-background/70 text-white hover:text-primary w-10 h-10 sm:w-12 sm:h-12" onClick={(e) => { e.stopPropagation(); handleNextScreenshot(); }} aria-label="下一张">
+                  <ChevronRight className="w-6 h-6"/>
+              </Button>
+            </>
+          )}
+
           <div
             className="relative flex flex-col items-center justify-center"
             onClick={(e) => e.stopPropagation()}
@@ -677,14 +702,14 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
             <div className="relative flex items-center justify-center w-full h-full overflow-hidden">
                 <Image
                     ref={imageRef}
-                    src={selectedScreenshot}
+                    src={selectedScreenshotUrl}
                     alt="游戏截图预览"
                     width={1280}
                     height={720}
                     className="object-contain rounded-lg shadow-2xl transition-transform duration-300 select-none"
                     style={{
                         transform: `scale(${zoomLevel}) translate(${position.x}px, ${position.y}px)`,
-                        maxWidth: 'calc(100vw - 2rem)',
+                        maxWidth: 'calc(100vw - 4rem)',
                         maxHeight: 'calc(100vh - 8rem)',
                         cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
                     }}
@@ -711,4 +736,5 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
   );
 }
 
+    
     
