@@ -5,7 +5,7 @@ import type { Game, NewsArticle, GameDetailData, ApiRecommendedGame } from '@/ty
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera, X as CloseIcon, ThumbsUp, ExternalLink, RefreshCw, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera, X as CloseIcon, ThumbsUp, ExternalLink, RefreshCw, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import GameDownloadDialog from '@/components/game-download-dialog';
 import Link from 'next/link';
@@ -15,6 +15,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_NEWS_ARTICLES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { notFound } from 'next/navigation';
+import Loading from './loading';
 
 interface MockComment {
   id: string;
@@ -33,8 +35,7 @@ const mockComments: MockComment[] = [
 ];
 
 interface GameDetailViewProps {
-  gameData: GameDetailData;
-  initialRecommendedGames: ApiRecommendedGame[];
+  id: string;
 }
 
 const DESCRIPTION_CHAR_LIMIT = 120;
@@ -52,8 +53,44 @@ const formatBytes = (bytes: number | null, decimals = 2) => {
 }
 
 
-export default function GameDetailView({ gameData, initialRecommendedGames }: GameDetailViewProps) {
-  const { app: game, resources } = gameData;
+export default function GameDetailView({ id }: GameDetailViewProps) {
+  const [gameData, setGameData] = useState<GameDetailData | null>(null);
+  const [initialRecommendedGames, setInitialRecommendedGames] = useState<ApiRecommendedGame[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true);
+      try {
+        const gameDetailsRes = await fetch(`http://localhost:9002/api/game/details?param=${id}`);
+        if (!gameDetailsRes.ok) throw new Error('Failed to fetch game details');
+        const gameDetailsJson = await gameDetailsRes.json();
+        if (gameDetailsJson.code !== 0 || !gameDetailsJson.data) {
+          throw new Error('Game not found');
+        }
+        setGameData(gameDetailsJson.data);
+
+        const pkg = gameDetailsJson.data.app.pkg;
+        if (pkg) {
+            const recommendedGamesRes = await fetch(`http://localhost:9002/api/game/recommendedApp?param=${pkg}`);
+            if (recommendedGamesRes.ok) {
+                const recommendedGamesJson = await recommendedGamesRes.json();
+                 if (recommendedGamesJson.code === 0 && recommendedGamesJson.data) {
+                    setInitialRecommendedGames(recommendedGamesJson.data);
+                }
+            }
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        notFound();
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchData();
+  }, [id]);
+
+  const { app: game, resources } = gameData || {};
   const [showFab, setShowFab] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const commentsSectionRef = useRef<HTMLDivElement>(null);
@@ -76,7 +113,7 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
   }, [initialRecommendedGames]);
 
   const fetchRecommendedGames = async () => {
-    if (!game.pkg || isFetchingRecommended) return;
+    if (!game?.pkg || isFetchingRecommended) return;
     setIsFetchingRecommended(true);
     try {
       const res = await fetch(`/api/game/recommendedApp?param=${game.pkg}`, { cache: 'no-store' });
@@ -113,7 +150,7 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
     handleScroll(); 
 
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [gameData]); // Depend on gameData to re-attach after loading
 
   useEffect(() => {
     if (selectedScreenshotIndex !== null) {
@@ -135,17 +172,6 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
       commentInputRef.current?.focus();
     }, 350); 
   };
-
-  const gameSpecificNews = MOCK_NEWS_ARTICLES.filter(article => article.gameId === game._id);
-  const generalNews = MOCK_NEWS_ARTICLES.filter(article => article.gameId !== game._id && !article.gameId);
-  
-  let combinedNews = [...gameSpecificNews];
-  if (combinedNews.length < MAX_NEWS_DISPLAY) {
-    combinedNews = [...combinedNews, ...generalNews.slice(0, MAX_NEWS_DISPLAY - combinedNews.length)];
-  }
-  const newsToShow = combinedNews.slice(0, MAX_NEWS_DISPLAY);
-  const hasMoreGameSpecificNews = gameSpecificNews.length > newsToShow.filter(n => n.gameId === game._id).length || gameSpecificNews.length > MAX_NEWS_DISPLAY;
-
 
   const createLocalExcerpt = (text: string, maxLength: number = 100): string => {
     if (!text) return '';
@@ -170,9 +196,6 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
     }
     return firstParagraph.substring(0, cutPoint + 1) + '...';
   };
-  
-  const cleanDescription = game.description.replace(/<br\s*\/?>/gi, '\n');
-  const needsExpansion = cleanDescription.length > DESCRIPTION_CHAR_LIMIT;
 
   const truncateDescription = (text: string, limit: number): string => {
     if (text.length <= limit) {
@@ -188,8 +211,6 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
     }
     return text.substring(0, limit) + '...';
   };
-  
-  const shortDescriptionText = truncateDescription(cleanDescription, DESCRIPTION_CHAR_LIMIT);
  
   // Screenshot Preview Handlers
   const openScreenshotPreview = (index: number) => {
@@ -241,17 +262,34 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
   };
   
   const handleNextScreenshot = () => {
-    if (selectedScreenshotIndex === null || !game.detail_images) return;
+    if (selectedScreenshotIndex === null || !game?.detail_images) return;
     const nextIndex = (selectedScreenshotIndex + 1) % game.detail_images.length;
     openScreenshotPreview(nextIndex);
   };
   
   const handlePrevScreenshot = () => {
-    if (selectedScreenshotIndex === null || !game.detail_images) return;
+    if (selectedScreenshotIndex === null || !game?.detail_images) return;
     const prevIndex = (selectedScreenshotIndex - 1 + game.detail_images.length) % game.detail_images.length;
     openScreenshotPreview(prevIndex);
   };
 
+  if (isLoading || !game) {
+      return <Loading />;
+  }
+  
+  const gameSpecificNews = MOCK_NEWS_ARTICLES.filter(article => article.gameId === game._id);
+  const generalNews = MOCK_NEWS_ARTICLES.filter(article => article.gameId !== game._id && !article.gameId);
+  
+  let combinedNews = [...gameSpecificNews];
+  if (combinedNews.length < MAX_NEWS_DISPLAY) {
+    combinedNews = [...combinedNews, ...generalNews.slice(0, MAX_NEWS_DISPLAY - combinedNews.length)];
+  }
+  const newsToShow = combinedNews.slice(0, MAX_NEWS_DISPLAY);
+  const hasMoreGameSpecificNews = gameSpecificNews.length > newsToShow.filter(n => n.gameId === game._id).length || gameSpecificNews.length > MAX_NEWS_DISPLAY;
+  
+  const cleanDescription = game.description.replace(/<br\s*\/?>/gi, '\n');
+  const needsExpansion = cleanDescription.length > DESCRIPTION_CHAR_LIMIT;
+  const shortDescriptionText = truncateDescription(cleanDescription, DESCRIPTION_CHAR_LIMIT);
   const selectedScreenshotUrl = selectedScreenshotIndex !== null ? game.detail_images?.[selectedScreenshotIndex] : null;
 
   return (
@@ -740,6 +778,3 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
     </div>
   );
 }
-
-    
-    
