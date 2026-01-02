@@ -43,7 +43,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
       // Fetch recommended games only if they haven't been fetched yet
       if (recommendedGames.length === 0) {
         setIsLoading(true);
-        fetch('https://api.us.apks.cc/albums/album-details/6957c97f4ca3f95323fc6e44')
+        fetch('/api/albums/album-details/6957c97f4ca3f95323fc6e44')
           .then(res => res.json())
           .then(data => {
             if (data.code === 0 && data.data?.games) {
