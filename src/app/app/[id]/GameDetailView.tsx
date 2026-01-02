@@ -341,19 +341,20 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden shadow-xl">
-        <CardHeader className="p-0 relative aspect-[16/7] sm:aspect-[2/1] md:aspect-[16/6]">
+      <Card className="overflow-visible shadow-xl">
+        <CardHeader className="p-0 relative h-[200px]">
           <Image
             src={game.header_image}
             alt={`${game.name} banner`}
             fill
             priority
-            className="object-cover"
+            className="object-cover rounded-t-lg"
             data-ai-hint={`game banner ${game.name}`}
             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw, 1200px"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/70 to-transparent backdrop-blur-sm"></div>
         </CardHeader>
-        <CardContent className="p-4 md:p-6 space-y-6">
+        <CardContent className="p-4 md:p-6 space-y-6 relative -mt-20 z-10">
           <div className="md:grid md:grid-cols-12 md:gap-x-8">
             <div className="md:col-span-8 space-y-6">
               <div className="flex items-start justify-between gap-4 sm:gap-6">
@@ -363,7 +364,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                     alt={`${game.name} icon`}
                     width={144}
                     height={144}
-                    className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-xl object-cover flex-shrink-0 border-2 border-background shadow-lg"
+                    className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-xl object-cover flex-shrink-0 border-4 border-background shadow-lg"
                     data-ai-hint={`game icon large ${game.name}`}
                   />
                   <div className="pt-1 sm:pt-2">
@@ -800,7 +801,3 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     </div>
   );
 }
-
-    
-    
-    
