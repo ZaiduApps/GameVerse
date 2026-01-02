@@ -88,11 +88,11 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
           <div className="flex items-center space-x-6 py-3 my-4 border-y">
             <Button variant="ghost" size="sm" onClick={handleLike} className="flex items-center text-muted-foreground hover:text-primary btn-interactive">
               <ThumbsUp size={18} className={`mr-2 ${isLiked ? 'fill-primary text-primary' : ''}`} />
-              {likeCount > 0 ? likeCount : ''}
+              {likeCount > 0 ? likeCount : '点赞'}
             </Button>
             <div className="flex items-center text-muted-foreground">
               <Eye size={18} className="mr-2" />
-              {viewCount > 0 ? `${viewCount} 次浏览` : ''}
+              {viewCount > 0 ? `${viewCount} 次浏览` : '正在获取...'}
             </div>
             <Button variant="ghost" size="sm" onClick={handleShare} className="flex items-center text-muted-foreground hover:text-primary btn-interactive">
               <Share2 size={18} className="mr-2" />
@@ -187,5 +187,4 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
     </div>
   );
 }
-
     

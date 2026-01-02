@@ -136,7 +136,7 @@ export default function CommunityPostDetailView({ post }: CommunityPostDetailVie
             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                 <div className="flex items-center">
                     <Eye size={16} className="mr-1.5" /> 
-                    {viewCount !== null ? viewCount : (post.commentsCount + post.likesCount + 50)} 次浏览
+                    {viewCount !== null ? viewCount : '...'} 次浏览
                 </div>
             </div>
           <div className="w-full flex items-center justify-start gap-2 sm:gap-3 border-t pt-3">
