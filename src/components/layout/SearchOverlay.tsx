@@ -36,6 +36,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [recommendedGames, setRecommendedGames] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
 
   // Load search history from localStorage on component mount
@@ -53,6 +54,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
   }, [isOpen]);
 
   const updateSearchHistory = (term: string) => {
+    if(!term.trim()) return;
     const newHistory = [term, ...searchHistory.filter(item => item !== term)].slice(0, MAX_HISTORY_LENGTH);
     setSearchHistory(newHistory);
     try {
@@ -63,9 +65,10 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
   };
   
   const handleSearchSubmit = (term: string) => {
-    if (term.trim()) {
-      setSearchTerm(term);
-      updateSearchHistory(term);
+    const trimmedTerm = term.trim();
+    if (trimmedTerm) {
+      setSearchTerm(trimmedTerm);
+      updateSearchHistory(trimmedTerm);
     }
   }
 
@@ -110,23 +113,14 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
       return;
     }
     
-    updateSearchHistory(searchTerm.trim());
-
     const debounceTimer = setTimeout(() => {
-        setIsLoading(true);
-        fetch(`/api/search/main?keyword=${encodeURIComponent(searchTerm)}`)
+        setIsSearching(true);
+        // Corrected API endpoint and parameter
+        fetch(`/api/game/q?q=${encodeURIComponent(searchTerm)}`)
           .then(res => res.json())
           .then(data => {
             if (data.code === 0 && data.data?.games) {
-              const results = data.data.games.map((game: ApiGame) => ({
-                id: game._id,
-                title: game.name,
-                category: game.tags?.[0] || '游戏',
-                imageUrl: game.icon,
-                pkg: game.pkg,
-                rating: game.star,
-                type: 'game',
-              }));
+              const results = data.data.games.map(transformApiGameToSearchResult);
               setSearchResults(results);
             } else {
               setSearchResults([]);
@@ -137,16 +131,12 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
               setSearchResults([]);
           })
           .finally(() => {
-            setIsLoading(false);
+            setIsSearching(false);
           });
     }, 300);
 
     return () => clearTimeout(debounceTimer);
   }, [searchTerm]);
-
-  if (!isOpen) {
-    return null;
-  }
 
   const handleClearHistory = () => {
     setSearchHistory([]);
@@ -159,6 +149,10 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
 
   const hasSearchResults = searchTerm.trim().length > 0;
 
+  if (!isOpen) {
+    return null;
+  }
+
   return (
     <div 
       className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm animate-in fade-in-50"
@@ -170,7 +164,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
       >
         {/* Search Bar */}
         <div className="relative p-4">
-          <form onSubmit={(e) => { e.preventDefault(); handleSearchSubmit(e.currentTarget.search.value)}}>
+          <form onSubmit={(e) => { e.preventDefault(); handleSearchSubmit((e.currentTarget.elements.namedItem('search') as HTMLInputElement).value)}}>
             <Input
               id="search-overlay-input"
               name="search"
@@ -203,13 +197,13 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                         搜索结果
                     </h3>
                     <div className="max-h-[60vh] overflow-y-auto space-y-2 pr-2">
-                        {isLoading ? (
+                        {isSearching ? (
                             <div className="flex justify-center items-center py-8">
                                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
                             </div>
                         ) : searchResults.length > 0 ? (
                             searchResults.map(item => (
-                                <Link href={`/app/${item.pkg || item.id}`} key={item.id} onClick={() => setIsOpen(false)} className="block">
+                                <Link href={`/app/${item.pkg || item.id}`} key={item.id} onClick={() => {setIsOpen(false); updateSearchHistory(searchTerm);}} className="block">
                                     <div className="flex items-center p-3 rounded-lg hover:bg-muted">
                                         <Image src={item.imageUrl} alt={item.title} width={48} height={48} className="w-12 h-12 rounded-md object-cover mr-4" />
                                         <div className="flex-grow">
