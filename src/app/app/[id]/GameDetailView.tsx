@@ -296,7 +296,7 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
         <CardContent className="p-4 md:p-6 space-y-6">
           <div className="md:grid md:grid-cols-12 md:gap-x-8">
             <div className="md:col-span-8 space-y-6">
-              <div className="flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-6">
+              <div className="flex items-start justify-between gap-4 sm:gap-6">
                 <div className="flex items-start gap-4 sm:gap-6">
                   <Image
                     src={game.icon}
@@ -311,10 +311,15 @@ export default function GameDetailView({ gameData, initialRecommendedGames }: Ga
                     <p className="text-sm text-muted-foreground mt-1 sm:mt-2">{game.developer}</p>
                   </div>
                 </div>
-                <div className="w-full sm:w-auto flex-shrink-0 pt-2 sm:pt-0">
+                <div className="hidden sm:block flex-shrink-0 pt-2">
                   <GameDownloadDialog pkg={game.pkg} resources={resources} />
                 </div>
               </div>
+
+               <div className="sm:hidden w-full">
+                  <GameDownloadDialog pkg={game.pkg} resources={resources} />
+                </div>
+
 
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3 text-sm pt-2">
                 <div className="flex items-center">

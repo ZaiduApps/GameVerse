@@ -80,6 +80,7 @@ export interface SearchResult {
     imageUrl: string;
     rating?: number;
     pkg?: string;
+    region?: string;
 }
 
 // API Types

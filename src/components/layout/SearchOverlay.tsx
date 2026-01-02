@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import type { SearchResult, ApiGame } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Badge } from '@/components/ui/badge';
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ function transformApiGameToSearchResult(apiGame: ApiGame): SearchResult {
     category: apiGame.tags?.[0] || '游戏',
     imageUrl: apiGame.icon,
     rating: apiGame.star,
+    region: apiGame.metadata?.region,
     type: 'game',
   };
 }
@@ -115,12 +117,11 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
     
     const debounceTimer = setTimeout(() => {
         setIsSearching(true);
-        // Corrected API endpoint and parameter
         fetch(`/api/game/q?q=${encodeURIComponent(searchTerm)}`)
           .then(res => res.json())
           .then(data => {
-            if (data.code === 0 && data.data?.games) {
-              const results = data.data.games.map(transformApiGameToSearchResult);
+            if (data.code === 0 && data.data?.list) {
+              const results = data.data.list.map(transformApiGameToSearchResult);
               setSearchResults(results);
             } else {
               setSearchResults([]);
@@ -207,7 +208,10 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                                     <div className="flex items-center p-3 rounded-lg hover:bg-muted">
                                         <Image src={item.imageUrl} alt={item.title} width={48} height={48} className="w-12 h-12 rounded-md object-cover mr-4" />
                                         <div className="flex-grow">
-                                            <p className="font-semibold">{item.title}</p>
+                                            <div className="flex items-center gap-2">
+                                              <p className="font-semibold">{item.title}</p>
+                                              {item.region && <Badge variant="outline">{item.region}</Badge>}
+                                            </div>
                                             <p className="text-sm text-muted-foreground">{item.category}</p>
                                         </div>
                                         {item.rating && <div className="flex items-center text-sm"><Star className="w-4 h-4 mr-1 text-yellow-400 fill-yellow-400" /> {item.rating}</div>}
@@ -250,7 +254,10 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                                     <div className="flex items-center p-2 rounded-lg hover:bg-muted">
                                         <Image src={item.imageUrl} alt={item.title} width={40} height={40} className="w-10 h-10 rounded-md object-cover mr-3" />
                                         <div className="flex-grow">
-                                            <p className="font-semibold text-sm">{item.title}</p>
+                                            <div className="flex items-center gap-2">
+                                              <p className="font-semibold text-sm">{item.title}</p>
+                                               {item.region && <Badge variant="outline" className="text-xs">{item.region}</Badge>}
+                                            </div>
                                             <p className="text-xs text-muted-foreground">{item.category}</p>
                                         </div>
                                         <Button variant="ghost" size="sm" className="text-primary opacity-0 group-hover:opacity-100 transition-opacity">
