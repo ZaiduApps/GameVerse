@@ -109,10 +109,12 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
       setSearchResults([]);
       return;
     }
+    
+    updateSearchHistory(searchTerm.trim());
 
     const debounceTimer = setTimeout(() => {
         setIsLoading(true);
-        fetch(`https://api.us.apks.cc/search/main?keyword=${searchTerm}`)
+        fetch(`/api/search/main?keyword=${encodeURIComponent(searchTerm)}`)
           .then(res => res.json())
           .then(data => {
             if (data.code === 0 && data.data?.games) {
