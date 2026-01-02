@@ -459,12 +459,3 @@ export const MOCK_COMMUNITY_POSTS: CommunityPost[] = [
 
 // Mock Data for Search Overlay
 export const MOCK_SEARCH_HISTORY: string[] = ['原神', '和平精英', '新版本', '攻略'];
-
-export const MOCK_SEARCH_RECOMMENDATIONS: SearchResult[] = [
-    MOCK_GAMES[0],
-    MOCK_GAMES[1],
-    MOCK_GAMES[2],
-    MOCK_GAMES[3],
-    MOCK_GAMES[4],
-    MOCK_GAMES[5],
-].map(g => ({ id: g.id, pkg: g.pkg, title: g.title, category: g.category, imageUrl: g.imageUrl, type: 'game' }));
