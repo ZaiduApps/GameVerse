@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { Game, NewsArticle, GameDetailData, ApiRecommendedGame } from '@/types';
+import type { Game, NewsArticle, GameDetailData, ApiRecommendedGame, ApiGameDetail } from '@/types';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +36,8 @@ const mockComments: MockComment[] = [
 
 interface GameDetailViewProps {
   id: string;
+  initialGameData?: GameDetailData | null;
+  initialRecommendedGames?: ApiRecommendedGame[] | null;
 }
 
 const DESCRIPTION_CHAR_LIMIT = 120;
@@ -53,12 +55,23 @@ const formatBytes = (bytes: number | null, decimals = 2) => {
 }
 
 
-export default function GameDetailView({ id }: GameDetailViewProps) {
-  const [gameData, setGameData] = useState<GameDetailData | null>(null);
-  const [initialRecommendedGames, setInitialRecommendedGames] = useState<ApiRecommendedGame[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export default function GameDetailView({ id, initialGameData, initialRecommendedGames }: GameDetailViewProps) {
+  const [gameData, setGameData] = useState<GameDetailData | null>(initialGameData || null);
+  const [recommendedGames, setRecommendedGames] = useState<ApiRecommendedGame[]>(
+    (initialRecommendedGames || []).slice(0, MAX_RECOMMENDED_GAMES)
+  );
+  const [isLoading, setIsLoading] = useState(!initialGameData);
 
   useEffect(() => {
+    // If we have initial data for the current id, don't re-fetch
+    if (initialGameData && gameData?.app.pkg === id) {
+        setGameData(initialGameData);
+        setRecommendedGames((initialRecommendedGames || []).slice(0, MAX_RECOMMENDED_GAMES));
+        setIsLoading(false);
+        return;
+    }
+
+    // This will run for client-side navigation
     async function fetchData() {
       setIsLoading(true);
       try {
@@ -68,27 +81,37 @@ export default function GameDetailView({ id }: GameDetailViewProps) {
         if (gameDetailsJson.code !== 0 || !gameDetailsJson.data) {
           throw new Error('Game not found');
         }
-        setGameData(gameDetailsJson.data);
+        const fetchedGameData = gameDetailsJson.data;
+        setGameData(fetchedGameData);
 
-        const pkg = gameDetailsJson.data.app.pkg;
+        const pkg = fetchedGameData.app.pkg;
         if (pkg) {
             const recommendedGamesRes = await fetch(`/api/game/recommendedApp?param=${pkg}`);
             if (recommendedGamesRes.ok) {
                 const recommendedGamesJson = await recommendedGamesRes.json();
                  if (recommendedGamesJson.code === 0 && recommendedGamesJson.data) {
-                    setInitialRecommendedGames(recommendedGamesJson.data);
+                    setRecommendedGames(recommendedGamesJson.data.slice(0, MAX_RECOMMENDED_GAMES));
                 }
+            } else {
+               setRecommendedGames([]);
             }
+        } else {
+            setRecommendedGames([]);
         }
+
       } catch (error) {
         console.error("Error fetching data:", error);
-        notFound();
+        // Using notFound() in a client component can be tricky, 
+        // a better approach might be to set an error state and show an error message.
+        setGameData(null); // Clear previous data
       } finally {
         setIsLoading(false);
       }
     }
+
     fetchData();
-  }, [id]);
+  }, [id, initialGameData, initialRecommendedGames, gameData?.app.pkg]);
+
 
   const { app: game, resources } = gameData || {};
   const [showFab, setShowFab] = useState(false);
@@ -105,12 +128,7 @@ export default function GameDetailView({ id }: GameDetailViewProps) {
   const imageRef = useRef<HTMLImageElement>(null);
 
 
-  const [recommendedGames, setRecommendedGames] = useState<ApiRecommendedGame[]>([]);
   const [isFetchingRecommended, setIsFetchingRecommended] = useState(false);
-
-  useEffect(() => {
-    setRecommendedGames(initialRecommendedGames.slice(0, MAX_RECOMMENDED_GAMES));
-  }, [initialRecommendedGames]);
 
   const fetchRecommendedGames = async () => {
     if (!game?.pkg || isFetchingRecommended) return;
@@ -273,8 +291,12 @@ export default function GameDetailView({ id }: GameDetailViewProps) {
     openScreenshotPreview(prevIndex);
   };
 
-  if (isLoading || !game) {
+  if (isLoading) {
       return <Loading />;
+  }
+
+  if (!game) {
+    return <div className="text-center py-10">无法加载游戏数据，请稍后重试。</div>;
   }
   
   const gameSpecificNews = MOCK_NEWS_ARTICLES.filter(article => article.gameId === game._id);
@@ -779,5 +801,6 @@ export default function GameDetailView({ id }: GameDetailViewProps) {
   );
 }
 
+    
     
     
