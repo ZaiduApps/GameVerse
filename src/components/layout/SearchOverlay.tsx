@@ -210,7 +210,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                                         <div className="flex-grow">
                                             <div className="flex items-center gap-2">
                                               <p className="font-semibold">{item.title}</p>
-                                              {item.region && <Badge variant="outline">{item.region}</Badge>}
+                                              {item.region && <Badge variant="outline" className="text-xs whitespace-nowrap min-w-[3rem] text-center justify-center">{item.region}</Badge>}
                                             </div>
                                             <p className="text-sm text-muted-foreground">{item.category}</p>
                                         </div>
@@ -256,7 +256,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                                         <div className="flex-grow">
                                             <div className="flex items-center gap-2">
                                               <p className="font-semibold text-sm">{item.title}</p>
-                                               {item.region && <Badge variant="outline" className="text-xs">{item.region}</Badge>}
+                                               {item.region && <Badge variant="outline" className="text-xs whitespace-nowrap min-w-[3rem] text-center justify-center">{item.region}</Badge>}
                                             </div>
                                             <p className="text-xs text-muted-foreground">{item.category}</p>
                                         </div>
