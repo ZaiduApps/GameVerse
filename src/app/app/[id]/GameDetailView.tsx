@@ -16,7 +16,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_NEWS_ARTICLES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { notFound } from 'next/navigation';
-import Loading from './loading';
+import Loading from '../loading';
 
 interface MockComment {
   id: string;
@@ -778,3 +778,5 @@ export default function GameDetailView({ id }: GameDetailViewProps) {
     </div>
   );
 }
+
+    

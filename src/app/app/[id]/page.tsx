@@ -3,7 +3,7 @@
 
 import GameDetailView from './GameDetailView';
 import { useParams } from 'next/navigation';
-import Loading from './loading';
+import Loading from '../loading';
 
 export default function GameDetailPage() {
   const params = useParams();
