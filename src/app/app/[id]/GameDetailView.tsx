@@ -62,7 +62,7 @@ export default function GameDetailView({ id }: GameDetailViewProps) {
     async function fetchData() {
       setIsLoading(true);
       try {
-        const gameDetailsRes = await fetch(`http://localhost:9002/api/game/details?param=${id}`);
+        const gameDetailsRes = await fetch(`/api/game/details?param=${id}`);
         if (!gameDetailsRes.ok) throw new Error('Failed to fetch game details');
         const gameDetailsJson = await gameDetailsRes.json();
         if (gameDetailsJson.code !== 0 || !gameDetailsJson.data) {
@@ -72,7 +72,7 @@ export default function GameDetailView({ id }: GameDetailViewProps) {
 
         const pkg = gameDetailsJson.data.app.pkg;
         if (pkg) {
-            const recommendedGamesRes = await fetch(`http://localhost:9002/api/game/recommendedApp?param=${pkg}`);
+            const recommendedGamesRes = await fetch(`/api/game/recommendedApp?param=${pkg}`);
             if (recommendedGamesRes.ok) {
                 const recommendedGamesJson = await recommendedGamesRes.json();
                  if (recommendedGamesJson.code === 0 && recommendedGamesJson.data) {
@@ -779,4 +779,5 @@ export default function GameDetailView({ id }: GameDetailViewProps) {
   );
 }
 
+    
     
