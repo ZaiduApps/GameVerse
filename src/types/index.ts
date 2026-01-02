@@ -72,6 +72,16 @@ export interface CommunityPost {
   likesCount: number;
 }
 
+export interface SearchResult {
+    id: string;
+    title: string;
+    type: 'game' | 'article' | 'post';
+    category: string;
+    imageUrl: string;
+    rating?: number;
+    pkg?: string;
+}
+
 // API Types
 export interface ApiBanner {
   _id: string;

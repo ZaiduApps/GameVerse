@@ -1,5 +1,5 @@
 
-import type { Game, NewsArticle, ForumSection, CommunityPost } from '@/types';
+import type { Game, NewsArticle, ForumSection, CommunityPost, SearchResult } from '@/types';
 import { Heart, ThumbsUp, Gamepad2 as GameIcon, ChevronRight, MessageCircle, Users, Image as ImageIcon, Video, Smile, AtSign, Hash } from 'lucide-react';
 
 const generateMockScreenshots = (gameTitleHint: string, count: number = 5): Game['screenshots'] => {
@@ -12,6 +12,7 @@ const generateMockScreenshots = (gameTitleHint: string, count: number = 5): Game
 export const MOCK_GAMES: Game[] = [
   {
     id: '1',
+    pkg: 'com.tencent.tmgp.sgame',
     title: '王者荣耀',
     shortDescription: '腾讯天美工作室群开发的MOBA手游大作。',
     description: '《王者荣耀》是腾讯天美工作室群开发并运行的一款运营在Android、IOS、NS平台上的MOBA类手机游戏，于2015年11月26日在Android、IOS平台上正式公测。游戏以竞技对战为主，玩家之间进行1V1、3V3、5V5等多种方式的PVP对战，还可以参加游戏的冒险模式，进行PVE的闯关模式，在满足条件后可以参加游戏的排位赛等，是属于推塔类型的游戏。',
@@ -31,6 +32,7 @@ export const MOCK_GAMES: Game[] = [
   },
   {
     id: '2',
+    pkg: 'com.tencent.ig',
     title: '和平精英',
     shortDescription: '光子工作室群自研打造的军事竞赛体验手游。',
     description: '《和平精英》是由腾讯光子工作室群自研打造的反恐军事竞赛体验类型的国产手游，该作于2019年5月8日正式公测。游戏采用虚幻4引擎研发，致力于从画面、地图、射击手感等多个层面，为玩家全方位打造出极具真实感的军事竞赛体验。',
@@ -50,6 +52,7 @@ export const MOCK_GAMES: Game[] = [
   },
   {
     id: '3',
+    pkg: 'com.mihoyo.genshinimpact',
     title: '原神',
     shortDescription: '米哈游研发的开放世界冒险RPG。',
     description: '《原神》是由上海米哈游制作发行的一款开放世界冒险游戏，于2020年9月28日开启公测。游戏发生在一个被称作「提瓦特」的幻想世界，在这里，被神选中的人将被授予「神之眼」，导引元素之力。玩家将扮演一位名为「旅行者」的神秘角色，在自由的旅行中邂逅性格各异、能力独特的同伴们，和他们一起击败强敌，找回失散的亲人——同时，逐步发掘「原神」的真相。',
@@ -69,6 +72,7 @@ export const MOCK_GAMES: Game[] = [
   },
   {
     id: '4',
+    pkg: 'com.mihoyo.honkaistarrail',
     title: '崩坏：星穹铁道',
     shortDescription: '米哈游最新银河冒险策略游戏。',
     description: '《崩坏：星穹铁道》是米哈游自研的全新银河冒险策略游戏。你将由此探索新的文明，结识新的伙伴，在无数光怪陆离的「世界」与「世界」之间展开新的冒险。所有你想知道的，都将在群星中找到答案。那么，准备好开始这段「开拓」之旅了吗？',
@@ -88,6 +92,7 @@ export const MOCK_GAMES: Game[] = [
   },
   {
     id: '5',
+    pkg: 'com.kiloo.subwaysurf',
     title: '地铁跑酷',
     shortDescription: '经典的无尽跑酷游戏，躲避检查员和他的狗。',
     description: '《地铁跑酷》是一款由SYBO Games开发的跑酷游戏，背景设定在地铁铁轨上，玩家要帮助Jake和淘气的小伙伴们躲避警察的追捕，同时往来的地铁给游戏增加了挑战难度。游戏画面可爱精致，色彩繁多让人感觉很舒服，在操作上非常顺畅，并且干净利落。',
@@ -107,6 +112,7 @@ export const MOCK_GAMES: Game[] = [
   },
   {
     id: '6',
+    pkg: 'com.netease.party',
     title: '蛋仔派对',
     shortDescription: '网易研发的潮玩休闲竞技游戏。',
     description: '《蛋仔派对》是一款潮玩题材的休闲竞技游戏，在这里你将化身Q萌蛋仔，加入热闹非凡的闯关派对。海量丰富的关卡，险象环生的陷阱机关，争先恐后往前冲！奔跑、跳跃、翻滚，发生超真实的物理碰撞！百变外观任你搭配，潮流、酷炫、萌趣的盲盒等你收入囊中！更有零门槛地图编辑器，DIY你的专属关卡！',
@@ -126,6 +132,7 @@ export const MOCK_GAMES: Game[] = [
   },
   {
     id: 'prereg-1',
+    pkg: 'com.pocketpair.palworldmobile',
     title: '幻兽帕鲁 Mobile',
     shortDescription: '现象级大作移动版即将登场。',
     description: '期待已久的《幻兽帕鲁 Mobile》即将开启事前登录！捕捉、建造、战斗，与帕鲁们一起在广阔的世界中冒险！移动端专属优化，随时随地畅享帕鲁的奇妙乐趣。',
@@ -138,6 +145,7 @@ export const MOCK_GAMES: Game[] = [
   },
   {
     id: 'prereg-2',
+    pkg: 'com.netease.projectinfinite',
     title: '代号：无限大',
     shortDescription: '都市题材开放世界RPG。',
     description: '由网易Naked Rain工作室打造的都市题材开放世界RPG《代号：无限大》即将开启事前登录。探索充满未知的都市，揭开层层谜团。',
@@ -150,6 +158,7 @@ export const MOCK_GAMES: Game[] = [
   },
   {
     id: 'prereg-3',
+    pkg: 'com.thunderfire.projectmugen',
     title: 'Project Mugen',
     shortDescription: '都市超自然题材开放世界RPG。',
     description: '《Project Mugen》是一款都市超自然题材的开放世界角色扮演游戏。玩家将扮演代号为“无限扳机”的超自然现象调查员，在繁华都市中穿梭，应对各种异常事件。',
@@ -162,6 +171,7 @@ export const MOCK_GAMES: Game[] = [
   },
    {
     id: 'prereg-4',
+    pkg: 'com.netease.marvelrivals',
     title: 'MARVEL Rivals',
     shortDescription: '漫威英雄6v6团队射击游戏。',
     description: '《MARVEL Rivals》是一款由网易游戏与漫威游戏合作开发的超级英雄题材第三人称团队PVP射击游戏。集结全明星阵容的漫威超级英雄和超级反派，在动态的、可破坏的漫威宇宙多元宇宙世界中进行激烈的6v6战斗。',
@@ -174,6 +184,7 @@ export const MOCK_GAMES: Game[] = [
   },
   {
     id: '7',
+    pkg: 'com.hypergryph.arknights',
     title: '明日方舟',
     description: '探索泰拉世界的策略塔防游戏。',
     shortDescription: '策略塔防，末世方舟。',
@@ -187,6 +198,7 @@ export const MOCK_GAMES: Game[] = [
   },
   {
     id: '8',
+    pkg: 'com.riotgames.league.wildrift',
     title: '英雄联盟手游',
     description: '经典MOBA的移动版本。',
     shortDescription: '峡谷再现，指尖激战。',
@@ -200,6 +212,7 @@ export const MOCK_GAMES: Game[] = [
   },
   {
     id: '9',
+    pkg: 'com.tencent.tft',
     title: '金铲铲之战',
     description: '英雄联盟云顶之弈正版授权。',
     shortDescription: '策略自走棋，弈决高下。',
@@ -213,6 +226,7 @@ export const MOCK_GAMES: Game[] = [
   },
   {
     id: '10',
+    pkg: 'com.thatgamecompany.sky',
     title: '光·遇',
     description: '温暖的灵魂终将相遇。',
     shortDescription: '治愈系冒险社交游戏。',
@@ -226,6 +240,7 @@ export const MOCK_GAMES: Game[] = [
   },
   {
     id: 'prereg-5',
+    pkg: 'com.perfectworld.zhuxian',
     title: '诛仙世界',
     shortDescription: '经典IP开放世界MMORPG。',
     description: '《诛仙世界》是完美世界游戏开发的仙侠沙盒MMORPG。游戏基于UE5引擎，致力于打造一个广阔、真实的仙侠世界。事前登录即将开启！',
@@ -238,6 +253,7 @@ export const MOCK_GAMES: Game[] = [
   },
   {
     id: 'prereg-6',
+    pkg: 'com.everstone.yysls',
     title: '燕云十六声',
     shortDescription: '国产武侠开放世界动作游戏。',
     description: '《燕云十六声》是一款由EVERSTONE自研的国产武侠开放世界动作游戏。游戏设定在五代十国时期，玩家将扮演一名身怀绝技的侠客，在乱世中闯荡。',
@@ -250,6 +266,7 @@ export const MOCK_GAMES: Game[] = [
   },
   {
     id: 'prereg-7',
+    pkg: 'com.ldzy.taris',
     title: '塔瑞斯世界',
     shortDescription: '硬核开荒MMORPG。',
     description: '《塔瑞斯世界》是一款由乐动卓越开发的跨端硬核开荒MMORPG。游戏致力于打造一个纯粹、公平的MMORPG体验，回归经典副本开荒乐趣。',
@@ -438,3 +455,16 @@ export const MOCK_COMMUNITY_POSTS: CommunityPost[] = [
     likesCount: 2,
   },
 ];
+
+
+// Mock Data for Search Overlay
+export const MOCK_SEARCH_HISTORY: string[] = ['原神', '和平精英', '新版本', '攻略'];
+
+export const MOCK_SEARCH_RECOMMENDATIONS: SearchResult[] = [
+    MOCK_GAMES[0],
+    MOCK_GAMES[1],
+    MOCK_GAMES[2],
+    MOCK_GAMES[3],
+    MOCK_GAMES[4],
+    MOCK_GAMES[5],
+].map(g => ({ id: g.id, pkg: g.pkg, title: g.title, category: g.category, imageUrl: g.imageUrl, type: 'game' }));
