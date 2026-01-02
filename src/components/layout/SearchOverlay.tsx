@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, X, History, Flame, Star, Download, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { SearchResult, Game, ApiGame } from '@/types';
-import { MOCK_SEARCH_HISTORY } from '@/lib/constants';
+import type { SearchResult, ApiGame } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -14,6 +13,9 @@ interface SearchOverlayProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
 }
+
+const MAX_HISTORY_LENGTH = 6;
+const HISTORY_STORAGE_KEY = 'game-universe-search-history';
 
 // Helper to transform API game data to our SearchResult type
 function transformApiGameToSearchResult(apiGame: ApiGame): SearchResult {
@@ -34,6 +36,38 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [recommendedGames, setRecommendedGames] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+
+  // Load search history from localStorage on component mount
+  useEffect(() => {
+    if (isOpen) {
+      try {
+        const storedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+        if (storedHistory) {
+          setSearchHistory(JSON.parse(storedHistory));
+        }
+      } catch (error) {
+        console.error("Failed to parse search history from localStorage", error);
+      }
+    }
+  }, [isOpen]);
+
+  const updateSearchHistory = (term: string) => {
+    const newHistory = [term, ...searchHistory.filter(item => item !== term)].slice(0, MAX_HISTORY_LENGTH);
+    setSearchHistory(newHistory);
+    try {
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(newHistory));
+    } catch (error) {
+      console.error("Failed to save search history to localStorage", error);
+    }
+  };
+  
+  const handleSearchSubmit = (term: string) => {
+    if (term.trim()) {
+      setSearchTerm(term);
+      updateSearchHistory(term);
+    }
+  }
 
   useEffect(() => {
     if (isOpen) {
@@ -113,7 +147,12 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
   }
 
   const handleClearHistory = () => {
-    alert('模拟清除历史记录');
+    setSearchHistory([]);
+    try {
+        localStorage.removeItem(HISTORY_STORAGE_KEY);
+    } catch (error) {
+        console.error("Failed to clear search history from localStorage", error);
+    }
   }
 
   const hasSearchResults = searchTerm.trim().length > 0;
@@ -129,14 +168,18 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
       >
         {/* Search Bar */}
         <div className="relative p-4">
-          <Input
-            id="search-overlay-input"
-            type="search"
-            placeholder="搜索游戏、应用、资讯..."
-            className="w-full h-14 pl-14 pr-14 rounded-full text-lg bg-background/80 border-2"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <form onSubmit={(e) => { e.preventDefault(); handleSearchSubmit(e.currentTarget.search.value)}}>
+            <Input
+              id="search-overlay-input"
+              name="search"
+              type="search"
+              placeholder="搜索游戏、应用、资讯..."
+              className="w-full h-14 pl-14 pr-14 rounded-full text-lg bg-background/80 border-2"
+              defaultValue={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              autoComplete="off"
+            />
+          </form>
           <Search className="absolute left-8 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
           <Button 
             variant="ghost" 
@@ -184,17 +227,19 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                 // Initial State: History & Recommendations
                 <div className="space-y-6 animate-in fade-in-50">
                     {/* Search History */}
-                    <div>
-                        <div className="flex justify-between items-center px-4 mb-3">
-                            <h3 className="text-sm font-semibold text-muted-foreground flex items-center"><History className="w-4 h-4 mr-2" /> 搜索历史</h3>
-                            <Button variant="ghost" size="sm" className="text-xs h-auto py-1" onClick={handleClearHistory}>清除</Button>
-                        </div>
-                        <div className="flex flex-wrap gap-2 px-4">
-                            {MOCK_SEARCH_HISTORY.map((item, index) => (
-                                <Button key={index} variant="secondary" size="sm" className="font-normal" onClick={() => setSearchTerm(item)}>{item}</Button>
-                            ))}
-                        </div>
-                    </div>
+                    {searchHistory.length > 0 && (
+                      <div>
+                          <div className="flex justify-between items-center px-4 mb-3">
+                              <h3 className="text-sm font-semibold text-muted-foreground flex items-center"><History className="w-4 h-4 mr-2" /> 搜索历史</h3>
+                              <Button variant="ghost" size="sm" className="text-xs h-auto py-1" onClick={handleClearHistory}>清除</Button>
+                          </div>
+                          <div className="flex flex-wrap gap-2 px-4">
+                              {searchHistory.map((item, index) => (
+                                  <Button key={index} variant="secondary" size="sm" className="font-normal" onClick={() => handleSearchSubmit(item)}>{item}</Button>
+                              ))}
+                          </div>
+                      </div>
+                    )}
                     {/* Recommendations */}
                     <div>
                         <h3 className="text-sm font-semibold text-muted-foreground px-4 mb-3 flex items-center"><Flame className="w-4 h-4 mr-2 text-red-500" /> 热门推荐</h3>
