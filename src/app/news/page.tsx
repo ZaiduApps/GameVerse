@@ -2,105 +2,140 @@
 'use client'; 
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { MOCK_NEWS_ARTICLES } from '@/lib/constants';
-import type { NewsArticle } from '@/types';
+import type { NewsArticle, ApiArticle } from '@/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { CalendarDays, UserCircle, Newspaper, Search } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { CalendarDays, UserCircle, Newspaper, Search, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 
-const ITEMS_PER_PAGE = 10; 
+const ITEMS_PER_PAGE = 20;
+
+interface PaginationState {
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+function transformApiArticle(apiArticle: ApiArticle): NewsArticle {
+     return {
+        id: apiArticle.gid || apiArticle._id,
+        title: apiArticle.name,
+        content: apiArticle.content || '',
+        excerpt: apiArticle.summary,
+        imageUrl: apiArticle.image_cover,
+        category: apiArticle.tags?.[0] || '资讯',
+        date: apiArticle.release_at ? new Date(apiArticle.release_at).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : '未知日期',
+        author: apiArticle.author || '匿名',
+        tags: apiArticle.tags,
+        isTop: apiArticle.is_top,
+        isRecommended: apiArticle.is_recommended,
+        viewCount: apiArticle.view_counts,
+        likeCount: apiArticle.like_counts,
+        additionLinks: apiArticle.addition_links,
+        dataAiHint: `news article ${apiArticle.name}`,
+    };
+}
+
 
 export default function NewsPage() {
+  const [articles, setArticles] = useState<NewsArticle[]>([]);
+  const [pagination, setPagination] = useState<PaginationState | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [submittedSearchTerm, setSubmittedSearchTerm] = useState('');
 
-  const filteredArticles = MOCK_NEWS_ARTICLES.filter(article => 
-    article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    article.excerpt?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const fetchArticles = useCallback(async (page: number, query: string) => {
+    setIsLoading(true);
+    try {
+      const body: { page: number; pageSize: number; name?: string } = {
+        page: page,
+        pageSize: ITEMS_PER_PAGE,
+      };
+      if (query) {
+        body.name = query;
+      }
 
-  const totalArticles = filteredArticles.length;
-  const totalPages = Math.ceil(totalArticles / ITEMS_PER_PAGE);
-  
-  const paginatedArticles = filteredArticles.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
+      const res = await fetch('/api/news/list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
 
-  let topFeaturedArticles: NewsArticle[] = [];
-  let gridArticles: NewsArticle[] = [];
-
-  if (currentPage === 1 && paginatedArticles.length > 0) {
-    if (paginatedArticles.length >= 2) { 
-      topFeaturedArticles = paginatedArticles.slice(0, 2);
-      gridArticles = paginatedArticles.slice(2);
-    } else { 
-      topFeaturedArticles = [paginatedArticles[0]];
+      if (res.ok) {
+        const data = await res.json();
+        if (data.code === 0 && data.data) {
+          const transformedArticles = data.data.list.map(transformApiArticle);
+          setArticles(transformedArticles);
+          setPagination(data.data.pagination);
+        } else {
+          setArticles([]);
+          setPagination(null);
+        }
+      } else {
+        setArticles([]);
+        setPagination(null);
+      }
+    } catch (error) {
+      console.error("Failed to fetch articles:", error);
+      setArticles([]);
+      setPagination(null);
+    } finally {
+      setIsLoading(false);
     }
-  } else { 
-    gridArticles = paginatedArticles;
-  }
-  
+  }, []);
+
+  useEffect(() => {
+    fetchArticles(currentPage, submittedSearchTerm);
+  }, [currentPage, submittedSearchTerm, fetchArticles]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // The filtering is already happening based on searchTerm state,
-    // so we just need to reset to page 1 on a new search submission.
-    setCurrentPage(1);
+    setCurrentPage(1); // Reset to first page for new search
+    setSubmittedSearchTerm(searchTerm);
   }
+  
+  const handlePageChange = (newPage: number) => {
+    if (newPage > 0 && (!pagination || newPage <= pagination.totalPages)) {
+      setCurrentPage(newPage);
+      window.scrollTo(0, 0); // Scroll to top on page change
+    }
+  };
 
-
-  const renderArticleCard = (article: NewsArticle, layoutType: 'top-featured' | 'grid', priorityImage: boolean = false) => {
-    const isTopFeatured = layoutType === 'top-featured';
-
+  const renderArticleCard = (article: NewsArticle, priorityImage: boolean = false) => {
     return (
       <Card
         key={article.id}
-        className={cn(
-          "flex flex-col overflow-hidden hover:shadow-xl transition-shadow duration-300",
-          isTopFeatured ? "h-full" : "" 
-        )}
+        className="flex flex-col overflow-hidden hover:shadow-xl transition-shadow duration-300"
       >
         <CardHeader className="p-0">
           <Link 
             href={`/news/${article.id}`} 
-            className={cn(
-              "block relative group",
-              isTopFeatured ? "aspect-[16/9]" : "aspect-video"
-            )}
+            className="block relative group aspect-video"
           >
             <Image
-              src={article.imageUrl}
+              src={article.imageUrl || 'https://placehold.co/600x400.png'} // Fallback image
               alt={article.title}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
               data-ai-hint={article.dataAiHint || 'news image'}
-              sizes={
-                isTopFeatured 
-                  ? "(max-width: 767px) 100vw, 50vw"
-                  : "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              }
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               priority={priorityImage}
             />
           </Link>
         </CardHeader>
-        <CardContent className={cn("flex-grow flex flex-col p-4")}>
+        <CardContent className="flex-grow flex flex-col p-4">
           <Link href={`/news/${article.id}`} className="block">
-            <CardTitle className={cn(
-              "font-semibold mb-1.5 hover:text-primary transition-colors",
-              isTopFeatured ? "text-xl md:text-2xl line-clamp-2" : "text-lg md:text-xl line-clamp-2"
-            )}>{article.title}</CardTitle>
+            <CardTitle className="font-semibold mb-1.5 hover:text-primary transition-colors text-lg md:text-xl line-clamp-2">{article.title}</CardTitle>
           </Link>
-          <CardDescription className={cn(
-            "text-muted-foreground flex-grow",
-            isTopFeatured ? "text-sm md:text-base line-clamp-3" : "text-sm line-clamp-3"
-          )}>{article.excerpt || '暂无摘要'}</CardDescription>
+          <CardDescription className="text-muted-foreground flex-grow text-sm line-clamp-3">{article.excerpt || '暂无摘要'}</CardDescription>
         </CardContent>
-        <CardFooter className={cn("border-t mt-auto p-4")}>
+        <CardFooter className="border-t mt-auto p-4">
           <div className="flex justify-between items-center w-full text-xs text-muted-foreground">
             <div className="flex items-center">
               <CalendarDays size={14} className="mr-1.5" />
@@ -143,58 +178,46 @@ export default function NewsPage() {
         </form>
       </section>
 
-      {topFeaturedArticles.length > 0 && (
-        <section className="mb-6 md:mb-8">
-          <div className={cn(
-            "grid md:gap-6",
-            topFeaturedArticles.length === 1 ? "md:grid-cols-1" : "md:grid-cols-2"
-          )}>
-            {topFeaturedArticles.map((article, index) =>
-              renderArticleCard(article, 'top-featured', currentPage === 1 && index === 0)
+      {isLoading ? (
+        <div className="flex justify-center items-center py-20">
+          <Loader2 className="h-12 w-12 text-primary animate-spin" />
+        </div>
+      ) : articles.length > 0 ? (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {articles.map((article, index) => 
+              renderArticleCard(article, index < 4)
             )}
           </div>
-        </section>
-      )}
-      
-      {gridArticles.length > 0 && (
-         <div className={cn(
-          "grid grid-cols-1 gap-6",
-           "sm:grid-cols-2 md:grid-cols-3" // Standard grid for the rest
-        )}>
-          {gridArticles.map((article, index) => 
-            renderArticleCard(article, 'grid', currentPage === 1 && topFeaturedArticles.length === 0 && index === 0)
+
+          {pagination && pagination.totalPages > 1 && (
+             <div className="flex justify-center items-center space-x-2 mt-10">
+               <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="btn-interactive"
+               >
+                 上一页
+               </Button>
+               <span className="text-sm text-muted-foreground">
+                 第 {currentPage} 页 / 共 {pagination.totalPages} 页
+               </span>
+               <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === pagination.totalPages || !pagination.hasMore}
+                className="btn-interactive"
+               >
+                 下一页
+               </Button>
+             </div>
           )}
-        </div>
-      )}
-
-      {paginatedArticles.length === 0 && (
+        </>
+      ) : (
         <p className="text-center text-muted-foreground py-8">没有找到相关资讯。</p>
-      )}
-
-      {totalPages > 1 && (
-         <div className="flex justify-center items-center space-x-2 mt-10 fade-in" style={{ animationDelay: '1s' }}>
-           <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setCurrentPage(p => Math.max(1, p-1))}
-            disabled={currentPage === 1}
-            className="btn-interactive"
-           >
-             上一页
-           </Button>
-           <span className="text-sm text-muted-foreground">
-             第 {currentPage} 页 / 共 {totalPages} 页
-           </span>
-           <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))}
-            disabled={currentPage === totalPages}
-            className="btn-interactive"
-           >
-             下一页
-           </Button>
-         </div>
       )}
     </div>
   );
