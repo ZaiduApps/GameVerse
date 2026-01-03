@@ -2,10 +2,9 @@
 'use client';
 
 import GameCard from '@/components/game-card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, ListFilter, Loader2 } from 'lucide-react';
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { ListFilter, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { Game, ApiGame } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -43,10 +42,6 @@ function transformApiGameToGame(apiGame: ApiGame): Game {
 
 
 export default function GamesPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<Game[]>([]);
-
   const [isLoading, setIsLoading] = useState(true);
   const [tags, setTags] = useState<ApiTag[]>([]);
   const [selectedTag, setSelectedTag] = useState<ApiTag | null>(null);
@@ -122,39 +117,6 @@ export default function GamesPage() {
     fetchGames(selectedTag?._id || null, currentPage);
   }, [selectedTag, currentPage, fetchGames]);
   
-  // Handle search logic
-  useEffect(() => {
-    const handleSearch = async () => {
-      if (searchTerm.trim() === '') {
-        setSearchResults([]);
-        setIsSearching(false);
-        return;
-      }
-      setIsSearching(true);
-      try {
-        const res = await fetch(`/api/game/q?q=${encodeURIComponent(searchTerm)}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.code === 0 && data.data?.list) {
-            setSearchResults(data.data.list.map(transformApiGameToGame));
-          } else {
-            setSearchResults([]);
-          }
-        } else {
-          setSearchResults([]);
-        }
-      } catch (error) {
-        console.error('Search failed:', error);
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    };
-
-    const debounceTimer = setTimeout(handleSearch, 300);
-    return () => clearTimeout(debounceTimer);
-  }, [searchTerm]);
-  
   const handleTagClick = (tag: ApiTag | null) => {
     setSelectedTag(tag);
     setCurrentPage(1); // Reset to first page on new tag selection
@@ -167,25 +129,11 @@ export default function GamesPage() {
     }
   };
 
-  const displayedGames = searchTerm.trim().length > 0 ? searchResults : games;
-
   return (
     <div className="space-y-8">
       <section className="bg-card p-6 rounded-lg shadow fade-in">
         <h1 className="text-3xl font-bold mb-4 text-primary">游戏库</h1>
-        <p className="text-muted-foreground mb-6">探索我们庞大的游戏收藏，找到你的下一个最爱。</p>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-grow">
-            <Input
-              type="search"
-              placeholder="搜索游戏名称或描述..."
-              className="pl-10 text-base h-11"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          </div>
-        </div>
+        <p className="text-muted-foreground">探索我们庞大的游戏收藏，找到你的下一个最爱。</p>
       </section>
 
       <section className="fade-in" style={{ animationDelay: '0.2s' }}>
@@ -219,14 +167,14 @@ export default function GamesPage() {
           ))}
         </div>
         
-        {isLoading || isSearching ? (
+        {isLoading ? (
            <div className="flex justify-center items-center py-20">
              <Loader2 className="h-12 w-12 text-primary animate-spin" />
            </div>
-        ) : displayedGames.length > 0 ? (
+        ) : games.length > 0 ? (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-5">
-              {displayedGames.map((game, index) => (
+              {games.map((game, index) => (
                 <GameCard
                   key={game.id}
                   game={game}
@@ -236,7 +184,7 @@ export default function GamesPage() {
               ))}
             </div>
 
-            {pagination && pagination.totalPages > 1 && !searchTerm && (
+            {pagination && pagination.totalPages > 1 && (
               <div className="flex justify-center items-center space-x-2 mt-10">
                 <Button 
                   variant="outline" 
