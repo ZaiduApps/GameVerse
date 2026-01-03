@@ -18,78 +18,72 @@ const renderMarkdown = (text: string) => {
     if (!text) return { __html: '' };
 
     let html = text
-      // Images
-      .replace(/!\[([^\]]*)\]\(([^)]+)\)/gim, '<img alt="$1" src="$2" class="rounded-lg my-4" />')
-      // Headers
       .replace(/^### (.*$)/gim, '<h3 class="text-xl font-semibold my-3">$1</h3>')
       .replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold my-4 border-b pb-2">$1</h2>')
       .replace(/^# (.*$)/gim, '<h1 class="text-3xl font-bold my-5 border-b pb-3">$1</h1>')
-      // Bold
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/gim, '<img alt="$1" src="$2" class="rounded-lg my-4" />')
       .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
-      // Italic
       .replace(/\*(.*?)\*/gim, '<em>$1</em>')
-      // Links
       .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" class="text-primary hover:underline" target="_blank" rel="noopener noreferrer">$1</a>')
-      // Code blocks
       .replace(/```bash\n([\s\S]*?)```/gim, '<pre class="bg-muted p-3 rounded-md text-sm my-4 overflow-x-auto"><code class="language-bash">$1</code></pre>')
       .replace(/```([\s\S]*?)```/gim, '<pre class="bg-muted p-3 rounded-md text-sm my-4 overflow-x-auto"><code>$1</code></pre>')
-      // Inline code
       .replace(/`([^`]+)`/gim, '<code class="bg-muted px-1.5 py-1 rounded-sm text-sm">$1</code>')
-      // Blockquotes
       .replace(/^> (.*$)/gim, '<blockquote class="border-l-4 border-primary pl-4 my-4 italic text-muted-foreground">$1</blockquote>')
-      // Horizontal Rules
-      .replace(/---/gim, '<hr class="my-6" />');
+      .replace(/^---$/gim, '<hr class="my-6" />');
 
-    // Handle Tables
-    html = html.replace(/\|(.+)\|\n\|( *[-:]+ *\|)+/g, (match, header, separator) => {
+    // Process tables
+    html = html.replace(/\|(.+)\|\n\|( *[-:]+ *\|)+([\s\S]*?)(?=\n\n|^\s*$)/g, (match, header, _, rows) => {
         const headers = header.split('|').map(h => h.trim()).filter(Boolean);
-        const rows = match.split('\n').slice(2);
-        
         let tableHtml = '<div class="overflow-x-auto my-4"><table class="w-full text-left border-collapse"><thead><tr>';
         headers.forEach(h => {
             tableHtml += `<th class="border p-2 bg-muted">${h}</th>`;
         });
         tableHtml += '</tr></thead><tbody>';
-        
-        return tableHtml; // Return just the opening part, the rest will be handled line-by-line
+
+        const rowLines = rows.trim().split('\n');
+        rowLines.forEach(rowLine => {
+            const cells = rowLine.split('|').map(c => c.trim()).slice(1, -1);
+            if(cells.length === headers.length) {
+                tableHtml += '<tr>';
+                cells.forEach(cell => {
+                    tableHtml += `<td class="border p-2">${cell}</td>`;
+                });
+                tableHtml += '</tr>';
+            }
+        });
+
+        tableHtml += '</tbody></table></div>';
+        return tableHtml;
     });
 
-    const lines = html.split('\n');
-    let inTable = false;
+    const lines = html.split('\n').filter(line => line.trim() !== '');
     let finalHtml = '';
+    let inList = false;
 
-    for (const line of lines) {
-        if (line.startsWith('<div class="overflow-x-auto my-4"><table')) {
-            inTable = true;
-            finalHtml += line;
-        } else if (inTable && line.trim().startsWith('|')) {
-            const cells = line.split('|').map(c => c.trim()).slice(1, -1);
-            finalHtml += '<tr>';
-            cells.forEach(cell => {
-                finalHtml += `<td class="border p-2">${cell}</td>`;
-            });
-            finalHtml += '</tr>';
-        } else if (inTable && !line.trim().startsWith('|')) {
-            inTable = false;
-            finalHtml += '</tbody></table></div>';
-            if (line.trim()) finalHtml += `<p>${line}</p>`;
-        } else if (line.trim().startsWith('* ')) { // Basic lists
-            finalHtml += `<ul class="list-disc list-inside my-2"><li>${line.substring(2)}</li></ul>`;
-        } else if (line.trim()) {
+    lines.forEach(line => {
+        if (line.trim().startsWith('* ')) {
+            if (!inList) {
+                finalHtml += '<ul class="list-disc list-inside my-2">';
+                inList = true;
+            }
+            finalHtml += `<li>${line.substring(line.indexOf('* ') + 2)}</li>`;
+        } else {
+            if (inList) {
+                finalHtml += '</ul>';
+                inList = false;
+            }
+            // Avoid wrapping already converted HTML blocks in <p> tags
             if (!line.startsWith('<')) {
                 finalHtml += `<p>${line}</p>`;
             } else {
                 finalHtml += line;
             }
         }
-    }
-    
-    if (inTable) { // Close table if it's the last element
-      finalHtml += '</tbody></table></div>';
-    }
-    
-    finalHtml = finalHtml.replace(/<\/ul>\s*<ul/g, '');
+    });
 
+    if (inList) {
+        finalHtml += '</ul>';
+    }
 
     return { __html: finalHtml };
 };
