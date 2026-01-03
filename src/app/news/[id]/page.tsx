@@ -7,8 +7,8 @@ import { notFound } from 'next/navigation';
 
 async function getNewsArticle(id: string): Promise<NewsArticle | null> {
     try {
-        const res = await fetch(`https://api.us.apks.cc/news/details?param=${id}`, { 
-          method: 'POST', // The user specified POST, but details are usually GET. Using POST as requested for the details. Let's assume the API expects a POST for details.
+        const res = await fetch(`https://api.us.apks.cc/news/list`, { 
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: id }),
           cache: 'no-store' 
@@ -21,13 +21,7 @@ async function getNewsArticle(id: string): Promise<NewsArticle | null> {
         
         const json = await res.json();
         
-        // The user's example response has the article inside a `list` array
         if (json.code !== 0 || !json.data || !json.data.list || json.data.list.length === 0) {
-            // Let's try to see if the data is directly in `data` for a details endpoint
-            if (json.code === 0 && json.data) {
-                 const apiArticle: ApiArticle = json.data;
-                 return transformApiArticle(apiArticle);
-            }
             console.error('API response for news article is invalid:', json);
             return null;
         }
