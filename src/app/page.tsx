@@ -7,7 +7,7 @@ import PreregistrationGameCard from '@/components/home/PreregistrationGameCard';
 import { Separator } from '@/components/ui/separator';
 import { Flame, Zap, Gift, Newspaper } from 'lucide-react';
 import Link from 'next/link';
-import type { Game, NewsArticle, HomeData, ApiGame, ApiBanner } from '@/types';
+import type { Game, NewsArticle, HomeData, ApiGame, ApiBanner, ApiArticle } from '@/types';
 
 // Helper function to transform API game data to our Game type
 function transformApiGameToGame(apiGame: ApiGame): Game {
@@ -27,22 +27,45 @@ function transformApiGameToGame(apiGame: ApiGame): Game {
   };
 }
 
-async function getHomeData(): Promise<HomeData | null> {
+interface CombinedHomeData {
+    homeData: HomeData | null;
+    newsData: ApiArticle[] | null;
+}
+
+async function getHomeAndNewsData(): Promise<CombinedHomeData> {
   try {
-    const res = await fetch('https://api.us.apks.cc/home', { cache: 'no-store' }); // Fetch fresh data on every request
-    if (!res.ok) {
-      throw new Error('Failed to fetch home data');
+    const [homeRes, newsRes] = await Promise.all([
+      fetch('https://api.us.apks.cc/home', { cache: 'no-store' }),
+      fetch('https://api.us.apks.cc/news/list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ page: 1, pageSize: 3 }),
+        cache: 'no-store'
+      })
+    ]);
+    
+    if (!homeRes.ok) {
+      console.error('Failed to fetch home data');
     }
-    const jsonResponse = await res.json();
-    return jsonResponse.data;
+    const homeJson = homeRes.ok ? await homeRes.json() : null;
+    const homeData = homeJson?.data || null;
+
+    if (!newsRes.ok) {
+        console.error('Failed to fetch news data');
+    }
+    const newsJson = newsRes.ok ? await newsRes.json() : null;
+    const newsData = newsJson?.data?.list || null;
+
+    return { homeData, newsData };
+
   } catch (error) {
-    console.error("Error fetching home data:", error);
-    return null;
+    console.error("Error fetching data:", error);
+    return { homeData: null, newsData: null };
   }
 }
 
 export default async function HomePage() {
-  const homeData = await getHomeData();
+  const { homeData, newsData } = await getHomeAndNewsData();
 
   if (!homeData) {
     return <div className="text-center py-10">无法加载主页数据，请稍后重试。</div>;
@@ -55,17 +78,17 @@ export default async function HomePage() {
   const popularGames: Game[] = popularAlbum?.games.map(transformApiGameToGame) || [];
   const newReleaseGames: Game[] = newReleaseAlbum?.games.map(transformApiGameToGame) || [];
   const preregistrationGames: Game[] = preregistrationAlbum?.games.map(transformApiGameToGame) || [];
-
-  const newsItems: NewsArticle[] = homeData.articles.map(a => ({
-      id: a._id,
+  
+  const newsItems: NewsArticle[] = (newsData || []).map((a: ApiArticle) => ({
+      id: a.gid || a._id, // Use gid for linking, fallback to _id
       title: a.name,
-      content: a.content,
+      content: a.content || '',
       excerpt: a.summary,
       imageUrl: a.image_cover,
       category: a.tags?.[0] || '资讯',
       date: new Date(a.release_at).toLocaleDateString('zh-CN'),
-      author: a.author,
-      tags: a.tags,
+      author: a.author || '匿名',
+      tags: a.tags || [],
       dataAiHint: `news ${a.name}`
   }));
 
@@ -135,26 +158,28 @@ export default async function HomePage() {
 
       <Separator className="my-8 bg-border/50" />
 
-      <section className="fade-in" style={{ animationDelay: '1.2s' }}>
-         <SectionHeader title="游戏资讯" icon={Newspaper} iconClassName="text-primary/80" moreHref="/news" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {newsItems.slice(0, 3).map((article, index) => (
-            <div
-              key={article.id}
-              className="bg-card p-4 sm:p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 fade-in"
-              style={{ animationDelay: `${1.3 + index * 0.1}s` }}
-            >
-              <h3 className="text-base sm:text-lg font-semibold mb-2 text-card-foreground">{article.title}</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-3 line-clamp-2">
-                {article.excerpt}
-              </p>
-              <Link href={`/news/${article.id}`} className="text-xs text-primary hover:underline">
-                阅读更多 &rarr;
-              </Link>
-            </div>
-          ))}
-        </div>
-      </section>
+      {newsItems.length > 0 && (
+        <section className="fade-in" style={{ animationDelay: '1.2s' }}>
+           <SectionHeader title="游戏资讯" icon={Newspaper} iconClassName="text-primary/80" moreHref="/news" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {newsItems.map((article, index) => (
+              <div
+                key={article.id}
+                className="bg-card p-4 sm:p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 fade-in"
+                style={{ animationDelay: `${1.3 + index * 0.1}s` }}
+              >
+                <h3 className="text-base sm:text-lg font-semibold mb-2 text-card-foreground">{article.title}</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-3 line-clamp-2">
+                  {article.excerpt}
+                </p>
+                <Link href={`/news/${article.id}`} className="text-xs text-primary hover:underline">
+                  阅读更多 &rarr;
+                </Link>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

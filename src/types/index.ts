@@ -28,7 +28,7 @@ export interface Game {
 }
 
 export interface NewsArticle {
-  id: string; // was _id from api
+  id: string; // was _id or gid from api
   gameId?: string; // To associate news with a game, optional
   title: string; // was name from api
   content: string; // was content from api
@@ -123,6 +123,7 @@ export interface ApiAlbum {
 
 export interface ApiArticle {
   _id: string;
+  gid?: string; // new field for news linking
   name: string;
   summary: string;
   image_cover: string;
@@ -130,7 +131,7 @@ export interface ApiArticle {
   source: string;
   author: string;
   tags: string[];
-  content: string;
+  content?: string; // Make content optional as it's not always in list view
 }
 
 export interface HomeData {
