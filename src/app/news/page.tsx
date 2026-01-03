@@ -53,19 +53,22 @@ export default function NewsPage() {
   const fetchArticles = useCallback(async (page: number, query: string) => {
     setIsLoading(true);
     try {
-      const body: { page: number; pageSize: number; name?: string } = {
-        page: page,
-        pageSize: ITEMS_PER_PAGE,
-      };
+      let res;
       if (query) {
-        body.name = query;
+        // Use the search endpoint when a query is present
+        res = await fetch(`/api/news/search?q=${encodeURIComponent(query)}&page=${page}&pageSize=${ITEMS_PER_PAGE}`);
+      } else {
+        // Use the list endpoint for general browsing
+        const body = {
+          page: page,
+          pageSize: ITEMS_PER_PAGE,
+        };
+        res = await fetch('/api/news/list', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
       }
-
-      const res = await fetch('/api/news/list', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
 
       if (res.ok) {
         const data = await res.json();
@@ -108,6 +111,8 @@ export default function NewsPage() {
   };
 
   const renderArticleCard = (article: NewsArticle, priorityImage: boolean = false) => {
+    // Ensure gid is used for the link
+    const articleLink = `/news/${article.id}`;
     return (
       <Card
         key={article.id}
@@ -115,7 +120,7 @@ export default function NewsPage() {
       >
         <CardHeader className="p-0">
           <Link 
-            href={`/news/${article.id}`} 
+            href={articleLink}
             className="block relative group aspect-video"
           >
             <Image
@@ -130,7 +135,7 @@ export default function NewsPage() {
           </Link>
         </CardHeader>
         <CardContent className="flex-grow flex flex-col p-4">
-          <Link href={`/news/${article.id}`} className="block">
+          <Link href={articleLink} className="block">
             <CardTitle className="font-semibold mb-1.5 hover:text-primary transition-colors text-lg md:text-xl line-clamp-2">{article.title}</CardTitle>
           </Link>
           <CardDescription className="text-muted-foreground flex-grow text-sm line-clamp-3">{article.excerpt || '暂无摘要'}</CardDescription>

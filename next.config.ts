@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
+        source: '/api/news/search',
+        destination: 'https://api.us.apks.cc/news/search',
+      },
+      {
         source: '/api/:path*',
         destination: 'https://api.us.apks.cc/:path*',
       },
