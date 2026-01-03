@@ -7,24 +7,27 @@ import type { NewsArticle } from '@/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { CalendarDays, UserCircle, Newspaper, Tag } from 'lucide-react';
+import { CalendarDays, UserCircle, Newspaper, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { Input } from '@/components/ui/input';
 
-const newsCategories = ['全部', '游戏攻略', '行业新闻', '最新动态', '深度评测', '活动预告'];
 const ITEMS_PER_PAGE = 10; 
 
 export default function NewsPage() {
   const [currentPage, setCurrentPage] = useState(1);
-  // const [activeCategory, setActiveCategory] = useState(newsCategories[0]); // For future filtering
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const totalArticles = MOCK_NEWS_ARTICLES.length;
+  const filteredArticles = MOCK_NEWS_ARTICLES.filter(article => 
+    article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    article.excerpt?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalArticles = filteredArticles.length;
   const totalPages = Math.ceil(totalArticles / ITEMS_PER_PAGE);
   
-  let articlesToDisplay = MOCK_NEWS_ARTICLES; 
-  
-  const paginatedArticles = articlesToDisplay.slice(
+  const paginatedArticles = filteredArticles.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
@@ -33,15 +36,21 @@ export default function NewsPage() {
   let gridArticles: NewsArticle[] = [];
 
   if (currentPage === 1 && paginatedArticles.length > 0) {
-    if (paginatedArticles.length >= 2) { // If 2 or more, take first 2 for top row
+    if (paginatedArticles.length >= 2) { 
       topFeaturedArticles = paginatedArticles.slice(0, 2);
       gridArticles = paginatedArticles.slice(2);
-    } else { // If only 1, it's a top featured article
+    } else { 
       topFeaturedArticles = [paginatedArticles[0]];
-      // gridArticles remains empty
     }
-  } else { // For pages other than the first, all are grid articles
+  } else { 
     gridArticles = paginatedArticles;
+  }
+  
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    // The filtering is already happening based on searchTerm state,
+    // so we just need to reset to page 1 on a new search submission.
+    setCurrentPage(1);
   }
 
 
@@ -72,7 +81,7 @@ export default function NewsPage() {
               data-ai-hint={article.dataAiHint || 'news image'}
               sizes={
                 isTopFeatured 
-                  ? "(max-width: 767px) 100vw, 50vw" // Assuming it might take up to 50% on desktop
+                  ? "(max-width: 767px) 100vw, 50vw"
                   : "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               }
               priority={priorityImage}
@@ -119,22 +128,19 @@ export default function NewsPage() {
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold mb-4 flex items-center">
-          <Tag className="w-5 h-5 text-primary mr-2" />
-          资讯分类
-        </h2>
-        <div className="flex flex-wrap gap-2 mb-8">
-          {newsCategories.map((category, index) => (
-            <Button
-              key={category}
-              variant={index === 0 ? "default" : "outline"} 
-              className="btn-interactive"
-              onClick={() => alert(`切换到 ${category} 分类 (模拟)`)}
-            >
-              {category}
-            </Button>
-          ))}
-        </div>
+        <form onSubmit={handleSearch} className="flex items-center gap-2 mb-8">
+            <div className="relative flex-grow">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input 
+                    type="search" 
+                    placeholder="搜索文章标题或摘要..." 
+                    className="pl-10 h-11 text-base"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            <Button type="submit" size="lg" className="h-11 btn-interactive">搜索</Button>
+        </form>
       </section>
 
       {topFeaturedArticles.length > 0 && (
@@ -162,7 +168,7 @@ export default function NewsPage() {
       )}
 
       {paginatedArticles.length === 0 && (
-        <p className="text-center text-muted-foreground py-8">暂无资讯。</p>
+        <p className="text-center text-muted-foreground py-8">没有找到相关资讯。</p>
       )}
 
       {totalPages > 1 && (
