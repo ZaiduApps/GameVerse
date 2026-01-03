@@ -30,8 +30,8 @@ function transformApiGameToGame(apiGame: ApiGame): Game {
     title: apiGame.name,
     description: apiGame.summary,
     shortDescription: apiGame.summary,
-    imageUrl: apiGame.icon,
-    bannerUrl: apiGame.header_image,
+    imageUrl: apiGame.icon || 'https://placehold.co/300x300.png', // Fallback
+    bannerUrl: apiGame.header_image || apiGame.icon || 'https://placehold.co/600x338.png', // Fallback
     category: apiGame.tags?.[0] || '游戏',
     rating: apiGame.star,
     tags: apiGame.tags,
