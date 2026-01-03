@@ -342,18 +342,32 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
       </Card>
 
       <Card className="overflow-visible shadow-xl">
-        <CardHeader className="p-0 relative h-[200px]">
-          <Image
-            src={game.header_image}
-            alt={`${game.name} banner`}
-            fill
-            priority
-            className="object-cover object-center rounded-t-lg"
-            data-ai-hint={`game banner ${game.name}`}
-            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw, 1200px"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/80 to-transparent backdrop-blur-sm"></div>
-        </CardHeader>
+      <CardHeader className="p-0 relative h-[200px]">
+  <Image
+    src={game.header_image}
+    alt={`${game.name} banner`}
+    fill
+    priority
+    // 确保图片本身被正确裁剪
+    className="object-cover object-center rounded-t-lg" 
+    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw, 1200px"
+  />
+
+  {/* 核心修改：遮罩层 */}
+  <div 
+    className="absolute inset-0 backdrop-blur-sm pointer-events-none"
+    style={{
+       // 顶部20%模糊，底部20%模糊，中间60%清晰to bottom, black 0%, transparent 20%, transparent 80%, black 100%
+       maskImage: 'linear-gradient(to bottom, black 0, transparent 10%, transparent 45%, black 70%)',
+       WebkitMaskImage: 'linear-gradient(to bottom, black 0, transparent 10%, transparent 45%, black 70%)',
+       marginTop: 0,
+       backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 20%, transparent 50%)',
+    }}
+  >
+    {/* 为了增强底部的融合感（你原来的设计），我们可以在模糊层里加一点点颜色 */}
+    <div className="w-full h-full bg-gradient-to-t from-card/80 to-transparent opacity-50"></div>
+  </div>
+</CardHeader>
         <CardContent className="p-4 md:p-6 space-y-6 relative -mt-20 z-10">
           <div className="md:grid md:grid-cols-12 md:gap-x-8">
             <div className="md:col-span-8 space-y-6">
