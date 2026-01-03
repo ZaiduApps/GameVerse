@@ -4,12 +4,48 @@
 import type { NewsArticle } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CalendarDays, UserCircle, Tag, ThumbsUp, Eye, Share2, MessageCircle as CommentIcon } from 'lucide-react';
+import { CalendarDays, UserCircle, Tag, ThumbsUp, Eye, Share2, MessageCircle as CommentIcon, Link as LinkIcon, ArrowLeft, Star } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useToast } from "@/hooks/use-toast";
+import { Separator } from '@/components/ui/separator';
+
+// Since we don't have a markdown renderer library, we'll do some basic replacements.
+// This is a simplified approach. For full markdown, a library like `react-markdown` would be needed.
+const renderMarkdown = (text: string) => {
+    let html = text
+        // Headers
+        .replace(/^### (.*$)/gim, '<h3 class="text-xl font-semibold my-3">$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold my-4 border-b pb-2">$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1 class="text-3xl font-bold my-5 border-b pb-3">$1</h1>')
+        // Bold
+        .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+        // Italic
+        .replace(/\*(.*)\*/gim, '<em>$1</em>')
+        // Links
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" class="text-primary hover:underline" target="_blank" rel="noopener noreferrer">$1</a>')
+        // Code blocks
+        .replace(/```bash\n([\s\S]*?)```/gim, '<pre class="bg-muted p-3 rounded-md text-sm my-4 overflow-x-auto"><code class="language-bash">$1</code></pre>')
+        .replace(/```\n([\s\S]*?)```/gim, '<pre class="bg-muted p-3 rounded-md text-sm my-4 overflow-x-auto"><code>$1</code></pre>')
+        // Inline code
+        .replace(/`([^`]+)`/gim, '<code class="bg-muted px-1.5 py-1 rounded-sm text-sm">$1</code>')
+        // Blockquotes
+        .replace(/^> (.*$)/gim, '<blockquote class="border-l-4 border-primary pl-4 my-4 italic text-muted-foreground">$1</blockquote>')
+        // Lists
+        .replace(/^\* (.*$)/gim, '<ul class="list-disc list-inside my-2"><li>$1</li></ul>') // Basic list item
+        .replace(/(<\/ul>\n<ul>)/g, '') // Merge consecutive lists
+        // Horizontal Rules
+        .replace(/---/gim, '<hr class="my-6" />')
+        // Paragraphs
+        .split('\n\n').map(p => p.trim() && !p.startsWith('<') ? `<p>${p}</p>` : p).join('');
+
+    return { __html: html };
+};
+
 
 interface MockComment {
   id: string;
@@ -31,32 +67,45 @@ interface NewsArticleViewProps {
 }
 
 export default function NewsArticleView({ article }: NewsArticleViewProps) {
+  const router = useRouter();
+  const { toast } = useToast();
+
+  // Use optional chaining and nullish coalescing for counts
   const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0); 
-  const [viewCount, setViewCount] = useState(0); 
+  const [likeCount, setLikeCount] = useState(article.likeCount ?? 0); 
+  const [viewCount, setViewCount] = useState(article.viewCount ?? 0); 
+  
   const [mockComments, setMockComments] = useState<MockComment[]>(initialMockComments);
   const [newComment, setNewComment] = useState('');
-
+  
   useEffect(() => {
-    // This now runs only on the client, avoiding hydration mismatch.
-    setLikeCount(Math.floor(Math.random() * 100) + 5);
-    setViewCount(Math.floor(Math.random() * 1000) + 50);
+    // Increment view count on client side for immediate feedback, if desired
+    // This would typically be an API call
+    setViewCount(prev => prev + 1);
   }, [article.id]);
 
   const handleLike = () => {
     setIsLiked(!isLiked);
     setLikeCount(prevCount => isLiked ? prevCount - 1 : prevCount + 1);
+    toast({
+        title: isLiked ? "已取消点赞" : "点赞成功！",
+        description: isLiked ? "期待您下一次的点赞。" : "感谢您的支持！",
+    });
   };
 
   const handleShare = () => {
-    alert('分享功能模拟：链接已复制到剪贴板（假装的）。');
+    navigator.clipboard.writeText(window.location.href);
+    toast({
+      title: "链接已复制",
+      description: "快去分享给你的朋友吧！",
+    });
   };
 
   const handleCommentSubmit = () => {
     if (newComment.trim() === '') return;
     const newCommentObj: MockComment = {
       id: `c${mockComments.length + 1}`,
-      username: '当前用户', // Or a dynamic username if authentication existed
+      username: '当前用户',
       avatarFallback: '我',
       avatarUrl: 'https://placehold.co/40x40.png?text=ME',
       dataAiHint: "avatar user",
@@ -65,13 +114,24 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
     };
     setMockComments(prevComments => [newCommentObj, ...prevComments]);
     setNewComment('');
+    toast({ title: "评论成功", description: "您的评论已发布。" });
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 fade-in">
+    <div className="max-w-3xl mx-auto space-y-8 fade-in py-8">
+       <Button variant="outline" size="sm" onClick={() => router.back()} className="self-start btn-interactive">
+        <ArrowLeft size={16} className="mr-2" />
+        返回
+      </Button>
+
       <Card className="shadow-xl">
         <CardContent className="p-6 md:p-8">
-          <Badge variant="outline" className="mb-3">{article.category}</Badge>
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+              <Badge variant="outline">{article.category}</Badge>
+              {article.isTop && <Badge variant="destructive" className="animate-pulse">置顶</Badge>}
+              {article.isRecommended && <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-300/50"><Star size={12} className="mr-1.5" />推荐</Badge>}
+          </div>
+
           <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">{article.title}</h1>
           
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground mb-3">
@@ -94,17 +154,16 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
               <Eye size={18} className="mr-2" />
               {viewCount > 0 ? `${viewCount} 次浏览` : '正在获取...'}
             </div>
-            <Button variant="ghost" size="sm" onClick={handleShare} className="flex items-center text-muted-foreground hover:text-primary btn-interactive">
+            <Button variant="ghost" size="sm" onClick={handleShare} className="flex items-center text-muted-foreground hover:text-primary btn-interactive ml-auto">
               <Share2 size={18} className="mr-2" />
               分享
             </Button>
           </div>
 
-          <article className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none text-foreground/90 leading-relaxed whitespace-pre-line">
-            {article.content.split('\n\n').map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
-            ))}
-          </article>
+          <article 
+             className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none text-foreground/90 leading-relaxed"
+             dangerouslySetInnerHTML={renderMarkdown(article.content)}
+          />
           
           {article.tags && article.tags.length > 0 && (
             <div className="mt-8 pt-6 border-t">
@@ -123,6 +182,27 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
           )}
         </CardContent>
       </Card>
+      
+      {article.additionLinks && article.additionLinks.length > 0 && (
+        <Card className="shadow-lg">
+           <CardHeader>
+             <CardTitle className="flex items-center text-lg">
+               <LinkIcon size={20} className="mr-2 text-primary" />
+                快捷入口
+             </CardTitle>
+           </CardHeader>
+           <CardContent className="space-y-2">
+             {article.additionLinks.map((link, index) => (
+               <Button key={index} variant="outline" asChild className="w-full justify-start btn-interactive">
+                 <a href={link} target="_blank" rel="noopener noreferrer">
+                   <LinkIcon size={16} className="mr-2 text-muted-foreground" /> {link}
+                 </a>
+               </Button>
+             ))}
+           </CardContent>
+        </Card>
+      )}
+
 
       {/* Comments Section */}
       <Card className="shadow-xl">
@@ -153,10 +233,12 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
             </div>
           </div>
 
+          <Separator />
+
           {/* Display Existing Comments */}
           <div className="space-y-4">
             {mockComments.map((comment) => (
-              <Card key={comment.id} className="shadow-sm bg-muted/30">
+              <Card key={comment.id} className="shadow-sm bg-muted/30 border-0">
                 <CardContent className="p-4">
                   <div className="flex items-start space-x-3">
                     <Avatar>
@@ -187,4 +269,3 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
     </div>
   );
 }
-    

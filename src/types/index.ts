@@ -39,6 +39,11 @@ export interface NewsArticle {
   date: string; // was release_at from api
   author: string; // was author from api
   tags?: string[]; // was tags from api
+  isTop?: boolean;
+  isRecommended?: boolean;
+  viewCount?: number;
+  likeCount?: number;
+  additionLinks?: string[];
 }
 
 export interface ForumSection {
@@ -131,7 +136,12 @@ export interface ApiArticle {
   source: string;
   author: string;
   tags: string[];
-  content?: string; // Make content optional as it's not always in list view
+  content?: string;
+  is_top?: boolean;
+  is_recommended?: boolean;
+  view_counts?: number;
+  like_counts?: number;
+  addition_links?: string[];
 }
 
 export interface HomeData {
