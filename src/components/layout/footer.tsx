@@ -28,7 +28,7 @@ export default function Footer() {
         </div>
         <Separator className="my-4 bg-border/50" />
         <p className="text-xs">
-          &copy; {currentYear} GameVerse (游戏宇宙). 保留所有权利.
+          &copy; {currentYear} GameVerse (Apks.cc). 保留所有权利.
         </p>
         <p className="text-xs mt-1">
           本网站内容仅供娱乐参考.

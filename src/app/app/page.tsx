@@ -7,6 +7,9 @@ import { ListFilter, Loader2 } from 'lucide-react';
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Game, ApiGame } from '@/types';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // Define a type for the API tag response
 interface ApiTag {
@@ -53,7 +56,7 @@ export default function GamesPage() {
   useEffect(() => {
     async function fetchTags() {
       try {
-        const res = await fetch('/api/tags/list', {
+        const res = await fetch(`${API_BASE_URL}/tags/list`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ page: 1, pageSize: 15, sortType: "most_used" })
@@ -84,7 +87,7 @@ export default function GamesPage() {
         delete (body as any).id;
       }
       
-      const res = await fetch('/api/tags/list-games', {
+      const res = await fetch(`${API_BASE_URL}/tags/list-games`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)

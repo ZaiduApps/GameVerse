@@ -10,6 +10,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
 interface SearchOverlayProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
@@ -82,7 +84,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
       // Fetch recommended games only if they haven't been fetched yet
       if (recommendedGames.length === 0) {
         setIsLoading(true);
-        fetch('/api/albums/album-details/6957c97f4ca3f95323fc6e44')
+        fetch(`${API_BASE_URL}/albums/album-details/6957c97f4ca3f95323fc6e44`)
           .then(res => res.json())
           .then(data => {
             if (data.code === 0 && data.data?.games) {
@@ -117,7 +119,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
     
     const debounceTimer = setTimeout(() => {
         setIsSearching(true);
-        fetch(`/api/game/q?q=${encodeURIComponent(searchTerm)}`)
+        fetch(`${API_BASE_URL}/game/q?q=${encodeURIComponent(searchTerm)}`)
           .then(res => res.json())
           .then(data => {
             if (data.code === 0 && data.data?.list) {

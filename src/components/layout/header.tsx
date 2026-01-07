@@ -57,7 +57,7 @@ export default function Header() {
             className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity"
           >
             <Gamepad2 size={28} />
-            <span className="text-xl font-bold sm:text-2xl">游戏宇宙</span>
+            <span className="text-xl font-bold sm:text-2xl">Apks.cc</span>
           </Link>
 
           <div className="hidden md:flex items-center flex-1 justify-end lg:justify-center">
@@ -213,7 +213,7 @@ export default function Header() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <Gamepad2 size={24} />
-                    <span>游戏宇宙</span>
+                    <span>Apks.cc</span>
                   </Link>
 
                   <nav className="flex flex-col space-y-1 px-4 flex-grow mt-4">
@@ -244,7 +244,7 @@ export default function Header() {
                   </nav>
                   <div className="mt-auto p-4 border-t border-border/40">
                     <p className="text-xs text-center text-muted-foreground">
-                      &copy; {new Date().getFullYear()} 游戏宇宙
+                      &copy; {new Date().getFullYear()} Apks.cc
                     </p>
                   </div>
                 </SheetContent>

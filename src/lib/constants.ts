@@ -331,7 +331,7 @@ ${game.description}
       dataAiHint: game.dataAiHint ? `${game.dataAiHint} news ${newsIndex + 1}` : `news article ${newsIndex + 1}`,
       category: newsIndex % 4 === 0 ? '游戏攻略' : newsIndex % 4 === 1 ? '行业新闻' : newsIndex % 4 === 2 ? '深度评测' : '最新动态',
       date: `2024年${Math.max(1, 7 - (gameIndex % 6))}月${Math.min(28, 5 + newsIndex + gameIndex)}日`,
-      author: '游戏宇宙编辑部',
+      author: 'Apks.cc编辑部',
       tags: game.tags ? [...game.tags, (newsIndex % 3 === 0 ? '热门' : '深度分析'), `资讯系列${newsIndex+1}`] : [`资讯系列${newsIndex+1}`],
     };
   })

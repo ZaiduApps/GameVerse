@@ -9,6 +9,8 @@ import { Flame, Zap, Gift, Newspaper } from 'lucide-react';
 import Link from 'next/link';
 import type { Game, NewsArticle, HomeData, ApiGame, ApiBanner, ApiArticle } from '@/types';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
 // Helper function to transform API game data to our Game type
 function transformApiGameToGame(apiGame: ApiGame): Game {
   return {
@@ -35,8 +37,8 @@ interface CombinedHomeData {
 async function getHomeAndNewsData(): Promise<CombinedHomeData> {
   try {
     const [homeRes, newsRes] = await Promise.all([
-      fetch('https://api.us.apks.cc/home', { cache: 'no-store' }),
-      fetch('https://api.us.apks.cc/news/list', {
+      fetch(`${API_BASE_URL}/home`, { cache: 'no-store' }),
+      fetch(`${API_BASE_URL}/news/list`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ page: 1, pageSize: 3 }),

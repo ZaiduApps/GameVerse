@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const ITEMS_PER_PAGE = 20;
 
 interface PaginationState {
@@ -54,21 +55,24 @@ export default function NewsPage() {
     setIsLoading(true);
     try {
       let res;
+      let url = '';
+      const options: RequestInit = {};
+
       if (query) {
         // Use the search endpoint when a query is present
-        res = await fetch(`/api/news/search?q=${encodeURIComponent(query)}&page=${page}&pageSize=${ITEMS_PER_PAGE}`);
+        url = `${API_BASE_URL}/news/search?q=${encodeURIComponent(query)}&page=${page}&pageSize=${ITEMS_PER_PAGE}`;
       } else {
         // Use the list endpoint for general browsing
-        const body = {
+        url = `${API_BASE_URL}/news/list`;
+        options.method = 'POST';
+        options.headers = { 'Content-Type': 'application/json' };
+        options.body = JSON.stringify({
           page: page,
           pageSize: ITEMS_PER_PAGE,
-        };
-        res = await fetch('/api/news/list', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
         });
       }
+      
+      res = await fetch(url, options);
 
       if (res.ok) {
         const data = await res.json();

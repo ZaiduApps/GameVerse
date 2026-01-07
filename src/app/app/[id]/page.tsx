@@ -3,9 +3,11 @@ import type { GameDetailData, ApiRecommendedGame } from '@/types';
 import GameDetailView from './GameDetailView';
 import { notFound } from 'next/navigation';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
 async function getGameDetails(id: string): Promise<GameDetailData | null> {
     try {
-        const res = await fetch(`http://localhost:9002/api/game/details?param=${id}`, { cache: 'no-store' });
+        const res = await fetch(`${API_BASE_URL}/game/details?param=${id}`, { cache: 'no-store' });
         if (!res.ok) return null;
         const json = await res.json();
         return json.code === 0 ? json.data : null;
@@ -18,7 +20,7 @@ async function getGameDetails(id: string): Promise<GameDetailData | null> {
 async function getRecommendedGames(pkg: string): Promise<ApiRecommendedGame[] | null> {
     if (!pkg) return null;
     try {
-        const res = await fetch(`http://localhost:9002/api/game/recommendedApp?param=${pkg}`, { cache: 'no-store' });
+        const res = await fetch(`${API_BASE_URL}/game/recommendedApp?param=${pkg}`, { cache: 'no-store' });
         if (!res.ok) return null;
         const json = await res.json();
         return json.code === 0 ? json.data : null;

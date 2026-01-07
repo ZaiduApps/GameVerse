@@ -12,11 +12,11 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/news/search',
-        destination: 'https://api.us.apks.cc/news/search',
+        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL}/news/search`,
       },
       {
         source: '/api/:path*',
-        destination: 'https://api.us.apks.cc/:path*',
+        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL}/:path*`,
       },
     ];
   },

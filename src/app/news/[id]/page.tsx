@@ -4,10 +4,11 @@ import type { NewsArticle, ApiArticle } from '@/types';
 import NewsArticleView from './NewsArticleView';
 import { notFound } from 'next/navigation';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 async function getNewsArticle(id: string): Promise<NewsArticle | null> {
     try {
-        const res = await fetch(`https://api.us.apks.cc/news/list`, { 
+        const res = await fetch(`${API_BASE_URL}/news/list`, { 
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: id }),
