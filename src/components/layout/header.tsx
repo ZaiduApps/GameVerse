@@ -37,10 +37,10 @@ import SearchOverlay from '@/components/layout/SearchOverlay';
 const navItems = [
   { href: '/', label: '首页', icon: Home },
   { href: '/app', label: '游戏库', icon: Library },
-  { href: '/rankings', label: '排行榜', icon: BarChart3 },
+  // { href: '/rankings', label: '排行榜', icon: BarChart3 },
   { href: '/news', label: '资讯', icon: Newspaper },
-  { href: '/community', label: '社区', icon: CommunityIcon },
-  { href: '/submit-resource', label: '资源投稿', icon: UploadCloud },
+  // { href: '/community', label: '社区', icon: CommunityIcon },
+  // { href: '/submit-resource', label: '资源投稿', icon: UploadCloud },
 ];
 
 export default function Header() {

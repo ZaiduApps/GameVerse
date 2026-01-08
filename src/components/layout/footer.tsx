@@ -15,9 +15,9 @@ export default function Footer() {
   return (
     <footer className="bg-muted/50 text-muted-foreground py-8 mt-12">
       <div className="container mx-auto px-4 text-center">
-        <div className="mb-4">
+        {/* <div className="mb-4">
           <p className="text-sm">网站作者：<span className="font-semibold">Apks.cc</span></p>
-        </div>
+        </div> */}
         <div className="flex justify-center space-x-6 mb-6">
           {socialLinks.map((link) => (
             <Link key={link.name} href={link.href} target="_blank" rel="noopener noreferrer" aria-label={link.name}
