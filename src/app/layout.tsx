@@ -8,6 +8,7 @@ import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import PageTransitionLoader from '@/components/layout/PageTransitionLoader';
+import { Suspense } from 'react';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://apks.cc'),
@@ -29,7 +30,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <PageTransitionLoader />
+          <Suspense fallback={null}>
+            <PageTransitionLoader />
+          </Suspense>
           <Header />
           <main className="flex-grow container mx-auto px-4 py-8">
             {children}
