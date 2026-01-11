@@ -3,7 +3,7 @@
 
 import type { Announcement } from '@/types';
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertTriangle, Megaphone, Info, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -57,16 +57,14 @@ export default function GameAnnouncements({ announcements }: GameAnnouncementsPr
   };
 
   const handleOpenChange = (open: boolean) => {
-    // Only allow closing if it's closeable or if the component is unmounting.
-    if (!open && !popupAnnouncement?.closeable) {
-      return; // Prevent closing
+    if (!open) {
+       // Only allow closing if it's explicitly closeable.
+      if (popupAnnouncement?.closeable) {
+        handlePopupClose();
+      }
     }
-    setIsPopupOpen(open);
-    if (!open && popupAnnouncement?.once_per_user) {
-        localStorage.setItem(`popup_${popupAnnouncement._id}`, 'true');
-    }
+    // Don't change state if trying to open, as it's controlled internally.
   };
-
 
   return (
     <>
@@ -102,11 +100,11 @@ export default function GameAnnouncements({ announcements }: GameAnnouncementsPr
             {announcements.normal.map(announcement => (
                 <Card key={announcement._id} className={cn("shadow-sm", THEME_COLORS[announcement.style?.theme || 'info'])}>
                     <CardContent className="p-4">
-                        <div className="flex items-center">
+                        <div className="flex items-start">
                             {THEME_ICONS[announcement.style?.theme || 'info']}
                             <div>
                                 <h3 className="font-semibold text-primary text-sm md:text-base">{announcement.title}</h3>
-                                {announcement.summary && <p className="text-xs md:text-sm text-primary/80">{announcement.summary}</p>}
+                                {announcement.summary && <p className="text-xs md:text-sm text-primary/80 mt-1">{announcement.summary}</p>}
                             </div>
                         </div>
                     </CardContent>
@@ -119,7 +117,7 @@ export default function GameAnnouncements({ announcements }: GameAnnouncementsPr
       {/* Popup Announcement Dialog */}
       {popupAnnouncement && (
         <Dialog open={isPopupOpen} onOpenChange={handleOpenChange}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md" onInteractOutside={(e) => { if (!popupAnnouncement?.closeable) { e.preventDefault(); } }}>
             <DialogHeader>
               <DialogTitle className="flex items-center pr-8">
                 {THEME_ICONS[popupAnnouncement.style?.theme || 'warning']}
@@ -137,9 +135,10 @@ export default function GameAnnouncements({ announcements }: GameAnnouncementsPr
               </Button>
             </DialogFooter>
              {popupAnnouncement.closeable && (
-                <Button variant="ghost" size="icon" className="absolute top-4 right-4" onClick={handlePopupClose} aria-label="关闭">
+                <button onClick={handlePopupClose} className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
                     <X className="h-4 w-4" />
-                </Button>
+                    <span className="sr-only">Close</span>
+                </button>
              )}
           </DialogContent>
         </Dialog>
@@ -147,4 +146,3 @@ export default function GameAnnouncements({ announcements }: GameAnnouncementsPr
     </>
   );
 }
-
