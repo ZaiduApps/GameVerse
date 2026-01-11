@@ -35,7 +35,6 @@ const THEME_COLORS = {
 
 export default function GameAnnouncements({ announcements }: GameAnnouncementsProps) {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-
   const popupAnnouncement = announcements?.popup?.[0];
 
   useEffect(() => {
@@ -44,7 +43,9 @@ export default function GameAnnouncements({ announcements }: GameAnnouncementsPr
       if (popupAnnouncement.once_per_user && hasBeenShown) {
         return;
       }
-      setIsPopupOpen(true);
+      // Set a timeout to ensure the UI is ready before showing the popup
+      const timer = setTimeout(() => setIsPopupOpen(true), 100);
+      return () => clearTimeout(timer);
     }
   }, [popupAnnouncement]);
 
@@ -54,6 +55,18 @@ export default function GameAnnouncements({ announcements }: GameAnnouncementsPr
       localStorage.setItem(`popup_${popupAnnouncement._id}`, 'true');
     }
   };
+
+  const handleOpenChange = (open: boolean) => {
+    // Only allow closing if it's closeable or if the component is unmounting.
+    if (!open && !popupAnnouncement?.closeable) {
+      return; // Prevent closing
+    }
+    setIsPopupOpen(open);
+    if (!open && popupAnnouncement?.once_per_user) {
+        localStorage.setItem(`popup_${popupAnnouncement._id}`, 'true');
+    }
+  };
+
 
   return (
     <>
@@ -105,10 +118,10 @@ export default function GameAnnouncements({ announcements }: GameAnnouncementsPr
 
       {/* Popup Announcement Dialog */}
       {popupAnnouncement && (
-        <Dialog open={isPopupOpen} onOpenChange={setIsPopupOpen}>
+        <Dialog open={isPopupOpen} onOpenChange={handleOpenChange}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="flex items-center">
+              <DialogTitle className="flex items-center pr-8">
                 {THEME_ICONS[popupAnnouncement.style?.theme || 'warning']}
                 {popupAnnouncement.title}
               </DialogTitle>
@@ -120,11 +133,11 @@ export default function GameAnnouncements({ announcements }: GameAnnouncementsPr
             />
             <DialogFooter>
               <Button onClick={handlePopupClose}>
-                {popupAnnouncement.closeable ? '我已知晓' : '关闭'}
+                我已知晓
               </Button>
             </DialogFooter>
              {popupAnnouncement.closeable && (
-                <Button variant="ghost" size="icon" className="absolute top-4 right-4" onClick={handlePopupClose}>
+                <Button variant="ghost" size="icon" className="absolute top-4 right-4" onClick={handlePopupClose} aria-label="关闭">
                     <X className="h-4 w-4" />
                 </Button>
              )}
