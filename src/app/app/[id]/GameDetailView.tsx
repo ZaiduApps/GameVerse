@@ -5,7 +5,7 @@ import type { Game, NewsArticle, GameDetailData, ApiRecommendedGame, ApiGameDeta
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera, X as CloseIcon, ThumbsUp, ExternalLink, RefreshCw, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight, Loader2, Contact } from 'lucide-react';
+import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera, X as CloseIcon, ThumbsUp, ExternalLink, RefreshCw, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight, Loader2, Contact } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import GameDownloadDialog from '@/components/game-download-dialog';
 import Link from 'next/link';
@@ -17,6 +17,7 @@ import { MOCK_NEWS_ARTICLES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { notFound } from 'next/navigation';
 import Loading from '../loading';
+import GameAnnouncements from '@/components/game-announcements';
 
 interface MockComment {
   id: string;
@@ -316,35 +317,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
 
   return (
     <div className="space-y-8 fade-in">
-      {Announcements?.popup && Announcements.popup.length > 0 && (
-        <Card className="bg-primary/5 border-primary/20 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center">
-              <AlertTriangle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
-              <div>
-                <h3 className="font-semibold text-primary text-sm md:text-base">{Announcements.popup[0].title}</h3>
-                <p className="text-xs md:text-sm text-primary/80">
-                  {Announcements.popup[0].summary || Announcements.popup[0].content}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {Announcements?.marquee && Announcements.marquee.length > 0 && (
-        <Card className="shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center">
-              <Megaphone className="w-5 h-5 text-accent mr-3 flex-shrink-0" />
-              <p className="text-xs md:text-sm text-foreground/80">
-                <span className="font-semibold text-accent">跑马灯位置：</span> {Announcements.marquee.map(a => a.title).join(' | ')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
+      <GameAnnouncements announcements={Announcements} />
 
       <Card className="overflow-visible shadow-xl">
       <CardHeader className="p-0 relative h-[200px]">
