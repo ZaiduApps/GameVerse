@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { MOCK_NEWS_ARTICLES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import { notFound } from 'next/navigation';
+import { notFound, usePathname } from 'next/navigation';
 import Loading from '../loading';
 import GameAnnouncements from '@/components/game-announcements';
 
@@ -57,22 +57,27 @@ const formatBytes = (bytes: number | null, decimals = 2) => {
 
 
 export default function GameDetailView({ id, initialGameData, initialRecommendedGames }: GameDetailViewProps) {
-  const [gameData, setGameData] = useState<GameDetailData | null>(initialGameData || null);
+  const [gameData, setGameData] = useState<GameDetailData | null | undefined>(initialGameData);
   const [recommendedGames, setRecommendedGames] = useState<ApiRecommendedGame[]>(
     (initialRecommendedGames || []).slice(0, MAX_RECOMMENDED_GAMES)
   );
   const [isLoading, setIsLoading] = useState(!initialGameData);
+  const pathname = usePathname(); // Get current path to detect navigation
 
   useEffect(() => {
-    // If we have initial data for the current id, don't re-fetch
-    if (initialGameData && gameData?.app.pkg === id) {
-        setGameData(initialGameData);
-        setRecommendedGames((initialRecommendedGames || []).slice(0, MAX_RECOMMENDED_GAMES));
-        setIsLoading(false);
-        return;
+    // This effect handles client-side navigation.
+    // The `id` prop is the identifier from the URL.
+    // `initialGameData` is the data fetched on the server for the first-visited page.
+    
+    // Check if the currently displayed game data (if any) matches the URL id.
+    // If it matches, we are on the correct page, no need to fetch.
+    if (gameData && gameData.app.pkg === id) {
+      // Ensure loading is off if we already have the right data
+      if(isLoading) setIsLoading(false);
+      return;
     }
 
-    // This will run for client-side navigation
+    // This will run for client-side navigation to a *new* game detail page.
     async function fetchData() {
       setIsLoading(true);
       try {
@@ -80,9 +85,9 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
         if (!gameDetailsRes.ok) throw new Error('Failed to fetch game details');
         const gameDetailsJson = await gameDetailsRes.json();
         if (gameDetailsJson.code !== 0 || !gameDetailsJson.data) {
-          throw new Error('Game not found');
+          throw new Error('Game not found from API');
         }
-        const fetchedGameData = gameDetailsJson.data;
+        const fetchedGameData: GameDetailData = gameDetailsJson.data;
         setGameData(fetchedGameData);
 
         const pkg = fetchedGameData.app.pkg;
@@ -101,17 +106,20 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
         }
 
       } catch (error) {
-        console.error("Error fetching data:", error);
-        // Using notFound() in a client component can be tricky, 
-        // a better approach might be to set an error state and show an error message.
-        setGameData(null); // Clear previous data
+        console.error("Error fetching client-side data:", error);
+        setGameData(null); // Set to null to indicate an error/not found state
       } finally {
         setIsLoading(false);
       }
     }
 
-    fetchData();
-  }, [id, initialGameData, initialRecommendedGames, gameData?.app.pkg]);
+    // initialGameData is only present on the very first page load.
+    // On subsequent client-side navigations, it will be undefined, so we fetch.
+    if (!initialGameData || gameData?.app.pkg !== id) {
+       fetchData();
+    }
+
+  }, [id, pathname]); // Rerun effect when `id` or the whole `pathname` changes
 
 
   const { app: game, resources, Announcements, cardConfig } = gameData || {};
@@ -296,8 +304,15 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
       return <Loading />;
   }
 
+  if (gameData === null) {
+    // This state indicates an error or not found from the API
+    notFound();
+    return null; // notFound() throws an error, but this satisfies TypeScript
+  }
+
   if (!game) {
-    return <div className="text-center py-10">无法加载游戏数据，请稍后重试。</div>;
+    // This can happen briefly between state transitions or if data is undefined
+    return <Loading />;
   }
   
   const gameSpecificNews = MOCK_NEWS_ARTICLES.filter(article => article.gameId === game._id);
@@ -790,3 +805,4 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
   );
 }
 
+    

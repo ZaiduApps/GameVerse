@@ -10,7 +10,11 @@ async function getGameDetails(id: string): Promise<GameDetailData | null> {
         const res = await fetch(`${API_BASE_URL}/game/details?param=${id}`, { cache: 'no-store' });
         if (!res.ok) return null;
         const json = await res.json();
-        return json.code === 0 ? json.data : null;
+        if (json.code !== 0) {
+            console.error("API error for game details:", json.message);
+            return null;
+        }
+        return json.data;
     } catch (error) {
         console.error("Failed to fetch game details:", error);
         return null;
@@ -53,5 +57,7 @@ export default async function GameDetailPage({ params }: { params: { id: string 
     />
   );
 }
+
+    
 
     
