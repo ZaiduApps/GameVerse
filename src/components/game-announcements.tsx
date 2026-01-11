@@ -3,6 +3,7 @@
 
 import type { Announcement } from '@/types';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { AlertTriangle, Megaphone, Info, X } from 'lucide-react';
@@ -31,6 +32,26 @@ const THEME_COLORS = {
     success: 'border-green-500/20 bg-green-500/5',
     error: 'border-destructive/20 bg-destructive/5',
 }
+
+const AnnouncementWrapper = ({ announcement, children }: { announcement: Announcement; children: React.ReactNode }) => {
+  if (!announcement.link) {
+    return <>{children}</>;
+  }
+  
+  if (announcement.link.type === 'outer') {
+    return (
+      <a href={announcement.link.url} target="_blank" rel="noopener noreferrer" className="block">
+        {children}
+      </a>
+    );
+  }
+  
+  return (
+    <Link href={announcement.link.url} className="block">
+      {children}
+    </Link>
+  );
+};
 
 
 export default function GameAnnouncements({ announcements }: GameAnnouncementsProps) {
@@ -71,26 +92,28 @@ export default function GameAnnouncements({ announcements }: GameAnnouncementsPr
       {/* Marquee Announcements */}
       {announcements?.marquee && announcements.marquee.length > 0 && (
         <Card className="shadow-sm">
-          <CardContent className="p-3">
-            <div className="flex items-center">
-              <Megaphone className="w-5 h-5 text-accent mr-3 flex-shrink-0" />
-              <p className="text-xs md:text-sm text-foreground/80 overflow-hidden whitespace-nowrap">
-                <span className="font-semibold text-accent mr-2">公告:</span>
-                <span className="inline-block animate-marquee">
-                  {announcements.marquee.map(a => a.title).join(' | ')}
-                </span>
-              </p>
-            </div>
-             <style jsx>{`
-              @keyframes marquee {
-                from { transform: translateX(100%); }
-                to { transform: translateX(-100%); }
-              }
-              .animate-marquee {
-                animation: marquee 15s linear infinite;
-              }
-            `}</style>
-          </CardContent>
+           <AnnouncementWrapper announcement={announcements.marquee[0]}>
+            <CardContent className="p-3">
+              <div className="flex items-center">
+                <Megaphone className="w-5 h-5 text-accent mr-3 flex-shrink-0" />
+                <p className="text-xs md:text-sm text-foreground/80 overflow-hidden whitespace-nowrap">
+                  <span className="font-semibold text-accent mr-2">公告:</span>
+                  <span className="inline-block animate-marquee">
+                    {announcements.marquee.map(a => a.title).join(' | ')}
+                  </span>
+                </p>
+              </div>
+              <style jsx>{`
+                @keyframes marquee {
+                  from { transform: translateX(100%); }
+                  to { transform: translateX(-100%); }
+                }
+                .animate-marquee {
+                  animation: marquee 15s linear infinite;
+                }
+              `}</style>
+            </CardContent>
+          </AnnouncementWrapper>
         </Card>
       )}
 
@@ -98,7 +121,8 @@ export default function GameAnnouncements({ announcements }: GameAnnouncementsPr
       {announcements?.normal && announcements.normal.length > 0 && (
         <div className="space-y-4">
             {announcements.normal.map(announcement => (
-                <Card key={announcement._id} className={cn("shadow-sm", THEME_COLORS[announcement.style?.theme || 'info'])}>
+              <AnnouncementWrapper key={announcement._id} announcement={announcement}>
+                <Card className={cn("shadow-sm transition-all hover:shadow-md", THEME_COLORS[announcement.style?.theme || 'info'])}>
                     <CardContent className="p-4">
                         <div className="flex items-start">
                             {THEME_ICONS[announcement.style?.theme || 'info']}
@@ -109,6 +133,7 @@ export default function GameAnnouncements({ announcements }: GameAnnouncementsPr
                         </div>
                     </CardContent>
                 </Card>
+               </AnnouncementWrapper>
             ))}
         </div>
       )}
@@ -121,14 +146,19 @@ export default function GameAnnouncements({ announcements }: GameAnnouncementsPr
             <DialogHeader>
               <DialogTitle className="flex items-center pr-8">
                 {THEME_ICONS[popupAnnouncement.style?.theme || 'warning']}
-                {popupAnnouncement.title}
+                <AnnouncementWrapper announcement={popupAnnouncement}>
+                    {popupAnnouncement.title}
+                </AnnouncementWrapper>
               </DialogTitle>
               {popupAnnouncement.summary && <DialogDescription>{popupAnnouncement.summary}</DialogDescription>}
             </DialogHeader>
             <div
               className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed max-h-[60vh] overflow-y-auto"
-              dangerouslySetInnerHTML={renderMarkdown(popupAnnouncement.content)}
-            />
+            >
+              <AnnouncementWrapper announcement={popupAnnouncement}>
+                <div dangerouslySetInnerHTML={renderMarkdown(popupAnnouncement.content)} />
+              </AnnouncementWrapper>
+            </div>
             <DialogFooter>
               <Button onClick={handlePopupClose}>
                 我已知晓
@@ -146,3 +176,5 @@ export default function GameAnnouncements({ announcements }: GameAnnouncementsPr
     </>
   );
 }
+
+    

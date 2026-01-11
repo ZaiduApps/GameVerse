@@ -119,7 +119,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
        fetchData();
     }
 
-  }, [id, pathname]); // Rerun effect when `id` or the whole `pathname` changes
+  }, [id, pathname, gameData, initialGameData, isLoading]); // Rerun effect when `id` or the whole `pathname` changes
 
 
   const { app: game, resources, Announcements, cardConfig } = gameData || {};
@@ -804,5 +804,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     </div>
   );
 }
+
+    
 
     
