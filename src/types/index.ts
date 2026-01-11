@@ -1,5 +1,4 @@
 
-
 export interface GameScreenshot {
   url: string;
   dataAiHint?: string;
@@ -184,10 +183,52 @@ export interface ApiDownloadResource {
   };
 }
 
+// New types for Game Detail Page
+export interface Announcement {
+  _id: string;
+  title: string;
+  content: string;
+  summary?: string;
+  type: "popup" | "marquee" | "normal" | "system";
+  position: string[];
+  style?: {
+    theme?: "info" | "warning" | "success" | "error";
+    color?: string;
+    icon?: string;
+  };
+  link?: {
+    type: "inner" | "outer";
+    url: string;
+  };
+}
+
+export interface CardConfigItem {
+  _id: string;
+  content: {
+    title: string;
+    link?: string;
+    icon?: string;
+    color?: string;
+    text?: string;
+    html?: string;
+  };
+}
+
 export interface GameDetailData {
   app: ApiGameDetail;
   resources: ApiDownloadResource[];
+  Announcements?: {
+    popup?: Announcement[];
+    normal?: Announcement[];
+    marquee?: Announcement[];
+  };
+  cardConfig?: {
+    contact?: CardConfigItem[];
+    download_notice?: CardConfigItem[];
+    partner?: CardConfigItem[];
+  };
 }
+
 
 export interface ApiRecommendedGame {
   _id: string;
@@ -202,3 +243,4 @@ export interface ApiRecommendedGame {
     name: string;
   }[];
 }
+

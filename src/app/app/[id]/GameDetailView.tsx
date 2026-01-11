@@ -5,7 +5,7 @@ import type { Game, NewsArticle, GameDetailData, ApiRecommendedGame, ApiGameDeta
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera, X as CloseIcon, ThumbsUp, ExternalLink, RefreshCw, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Star, Download, Users, Tag, CalendarDays, Info, HardDrive, Tags as TagsIcon, AlertTriangle, Megaphone, Newspaper as NewsIcon, Briefcase, MessageSquare, Link as LinkIcon, BellRing, MessageCircle as CommentIcon, MessageSquarePlus, History, ChevronUp, ChevronDown, Camera, X as CloseIcon, ThumbsUp, ExternalLink, RefreshCw, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight, Loader2, Contact } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import GameDownloadDialog from '@/components/game-download-dialog';
 import Link from 'next/link';
@@ -113,7 +113,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
   }, [id, initialGameData, initialRecommendedGames, gameData?.app.pkg]);
 
 
-  const { app: game, resources } = gameData || {};
+  const { app: game, resources, Announcements, cardConfig } = gameData || {};
   const [showFab, setShowFab] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const commentsSectionRef = useRef<HTMLDivElement>(null);
@@ -316,30 +316,35 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
 
   return (
     <div className="space-y-8 fade-in">
-      <Card className="bg-primary/5 border-primary/20 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex items-center">
-            <AlertTriangle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
-            <div>
-              <h3 className="font-semibold text-primary text-sm md:text-base">全站重要公告</h3>
-              <p className="text-xs md:text-sm text-primary/80">
-                游戏宇宙系统维护通知：预计今晚10点进行服务器升级，期间部分服务可能短暂中断，敬请谅解。
+      {Announcements?.popup && Announcements.popup.length > 0 && (
+        <Card className="bg-primary/5 border-primary/20 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center">
+              <AlertTriangle className="w-5 h-5 text-primary mr-3 flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-primary text-sm md:text-base">{Announcements.popup[0].title}</h3>
+                <p className="text-xs md:text-sm text-primary/80">
+                  {Announcements.popup[0].summary || Announcements.popup[0].content}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {Announcements?.marquee && Announcements.marquee.length > 0 && (
+        <Card className="shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center">
+              <Megaphone className="w-5 h-5 text-accent mr-3 flex-shrink-0" />
+              <p className="text-xs md:text-sm text-foreground/80">
+                <span className="font-semibold text-accent">跑马灯位置：</span> {Announcements.marquee.map(a => a.title).join(' | ')}
               </p>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      <Card className="shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex items-center">
-            <Megaphone className="w-5 h-5 text-accent mr-3 flex-shrink-0" />
-            <p className="text-xs md:text-sm text-foreground/80">
-              <span className="font-semibold text-accent">跑马灯位置：</span> 热门活动《夏季嘉年华》火热进行中！ | 《${game.name}》新版本 V${game.version || '1.0.0'} 现已上线，快来体验！
-            </p>
-          </div>
-        </CardContent>
-      </Card>
 
       <Card className="overflow-visible shadow-xl">
       <CardHeader className="p-0 relative h-[200px]">
@@ -348,24 +353,13 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     alt={`${game.name} banner`}
     fill
     priority
-    // 确保图片本身被正确裁剪
     className="object-cover object-center rounded-t-lg" 
     sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw, 1200px"
   />
 
-  {/* 核心修改：遮罩层 */}
   <div 
-    className="absolute inset-0 backdrop-blur-sm pointer-events-none"
-    style={{
-       // 顶部20%模糊，底部20%模糊，中间60%清晰to bottom, black 0%, transparent 20%, transparent 80%, black 100%
-       maskImage: 'linear-gradient(to bottom, black 0, transparent 10%, transparent 45%, black 70%)',
-       WebkitMaskImage: 'linear-gradient(to bottom, black 0, transparent 10%, transparent 45%, black 70%)',
-       marginTop: 0,
-       backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 20%, transparent 50%)',
-    }}
+    className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent"
   >
-    {/* 为了增强底部的融合感（你原来的设计），我们可以在模糊层里加一点点颜色 */}
-    <div className="w-full h-full bg-gradient-to-t from-card/80 to-transparent opacity-50"></div>
   </div>
 </CardHeader>
         <CardContent className="p-4 md:p-6 space-y-6 relative -mt-20 z-10">
@@ -633,46 +627,53 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
         </div>
       )}
 
-      <div className="pt-6 mt-6 border-t">
-        <h2 className="text-xl font-semibold mb-4 flex items-center">
-          <LinkIcon className="w-5 h-5 text-primary mr-2" />
-          更多资源与支持
-        </h2>
-        <div className="grid md:grid-cols-2 gap-x-6 gap-y-4">
-          <div className="space-y-3">
-            <h3 className="text-lg font-medium flex items-center text-foreground/90">
-              <Users className="w-5 h-5 mr-2 text-accent" />
-              玩家交流群
-            </h3>
-            <Button variant="outline" className="w-full justify-start btn-interactive">
-              <MessageSquare className="w-4 h-4 mr-2" /> 加入官方QQ群: 123456789 (模拟)
-            </Button>
-            <Button variant="outline" className="w-full justify-start btn-interactive">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M21.025 4.005C21.025 4.005 22.275 12.135 18.705 18.435C18.705 18.435 16.665 22.455 11.905 22.455C11.905 22.455 7.415000000000001 22.515 4.475000000000001 17.985C4.475000000000001 17.985 0.78500000000000034 12.045 0.78500000000000034 4.005C0.78500000000000034 4.005 3.2050000000000003 1.5150000000000001 7.2350000000000003 1.5150000000000001C7.2350000000000003 1.5150000000000001 10.015 1.0500000000000003 11.915 1.0500000000000003C11.915 1.0500000000000003 17.065 0.6800000000000004 21.025 4.005Z"/><path d="M8.324999999999999 10.11C8.324999999999999 10.11 9.044999999999998 9.134999999999999 10.115 9.134999999999999C11.185 9.134999999999999 11.665 10.02 11.665 10.02L12.505 13.38C12.505 13.38 12.025 13.89 11.025 13.89C10.025 13.89 8.484999999999999 12.675 8.484999999999999 12.675L8.324999999999999 10.11Z"/><path d="M15.635 10.11C15.635 10.11 14.915 9.134999999999999 13.845 9.134999999999999C12.775 9.134999999999999 12.295 10.02 12.295 10.02L11.455 13.38C11.455 13.38 11.935 13.89 12.935 13.89C13.935 13.89 15.475 12.675 15.475 12.675L15.635 10.11Z"/></svg>
-              加入Discord服务器 (模拟)
-            </Button>
-            <Button variant="outline" className="w-full justify-start btn-interactive">
-              <Users className="w-4 h-4 mr-2" /> 官方论坛/社区 (模拟)
-            </Button>
-          </div>
-
-          <div className="space-y-3">
-            <h3 className="text-lg font-medium flex items-center text-foreground/90">
-              <Briefcase className="w-5 h-5 mr-2 text-accent" />
-              合作与支持
-            </h3>
-            <Button variant="outline" className="w-full justify-start btn-interactive">
-              <Briefcase className="w-4 h-4 mr-2" /> 商务合作洽谈 (模拟)
-            </Button>
-            <Button variant="outline" className="w-full justify-start btn-interactive">
-              <NewsIcon className="w-4 h-4 mr-2" /> 媒体与内容创作 (模拟)
-            </Button>
-             <Button variant="outline" className="w-full justify-start btn-interactive">
-              <AlertTriangle className="w-4 h-4 mr-2" /> Bug反馈与建议 (模拟)
-            </Button>
+      {cardConfig && (
+        <div className="pt-6 mt-6 border-t">
+          <h2 className="text-xl font-semibold mb-4 flex items-center">
+            <LinkIcon className="w-5 h-5 text-primary mr-2" />
+            更多资源与支持
+          </h2>
+          <div className="grid md:grid-cols-2 gap-x-6 gap-y-4">
+            {cardConfig.contact && cardConfig.contact.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-medium flex items-center text-foreground/90">
+                  <Users className="w-5 h-5 mr-2 text-accent" />
+                  玩家交流群
+                </h3>
+                {cardConfig.contact.map(item => (
+                  <Button key={item._id} variant="outline" asChild className="w-full justify-start btn-interactive">
+                    <a href={item.content.link} target="_blank" rel="noopener noreferrer">
+                      {item.content.icon ? (
+                        <Image src={item.content.icon} alt={item.content.title} width={16} height={16} className="mr-2" />
+                      ) : <Contact className="w-4 h-4 mr-2" />}
+                      {item.content.title}
+                    </a>
+                  </Button>
+                ))}
+              </div>
+            )}
+            
+            {cardConfig.partner && cardConfig.partner.length > 0 && (
+               <div className="space-y-3">
+                <h3 className="text-lg font-medium flex items-center text-foreground/90">
+                  <Briefcase className="w-5 h-5 mr-2 text-accent" />
+                  合作与支持
+                </h3>
+                 {cardConfig.partner.map(item => (
+                  <Button key={item._id} variant="outline" asChild className="w-full justify-start btn-interactive">
+                    <a href={item.content.link} target="_blank" rel="noopener noreferrer">
+                      {item.content.icon ? (
+                         <Image src={item.content.icon} alt={item.content.title} width={16} height={16} className="mr-2" />
+                      ) : <Briefcase className="w-4 h-4 mr-2" />}
+                      {item.content.title}
+                    </a>
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
       <div ref={commentsSectionRef} className="pt-8 mt-8 border-t">
         <h2 className="text-xl font-semibold mb-6 flex items-center">
@@ -815,3 +816,4 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     </div>
   );
 }
+

@@ -7,16 +7,16 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   const socialLinks = [
-    { name: 'GitHub', href: 'https://github.com/apkscc', icon: Github },
-    { name: 'Twitter/X', href: 'https://x.com/apkscc', icon: Twitter },
-    { name: 'LinkedIn', href: 'https://linkedin.com/in/apkscc', icon: Linkedin },
+    { name: 'GitHub', href: 'https://github.com/PlayAPKS', icon: Github },
+    { name: 'Twitter/X', href: 'https://x.com/PlayAPKS', icon: Twitter },
+    { name: 'LinkedIn', href: 'https://linkedin.com/in/PlayAPKS', icon: Linkedin },
   ];
 
   return (
     <footer className="bg-muted/50 text-muted-foreground py-8 mt-12">
       <div className="container mx-auto px-4 text-center">
         {/* <div className="mb-4">
-          <p className="text-sm">网站作者：<span className="font-semibold">Apks.cc</span></p>
+          <p className="text-sm">网站作者：<span className="font-semibold">PlayAPKS</span></p>
         </div> */}
         <div className="flex justify-center space-x-6 mb-6">
           {socialLinks.map((link) => (
@@ -28,7 +28,7 @@ export default function Footer() {
         </div>
         <Separator className="my-4 bg-border/50" />
         <p className="text-xs">
-          &copy; {currentYear} GameVerse (Apks.cc). 保留所有权利.
+          &copy; {currentYear} PlayAPKS (apks.cc). 保留所有权利.
         </p>
         <p className="text-xs mt-1">
           本网站内容仅供娱乐参考.

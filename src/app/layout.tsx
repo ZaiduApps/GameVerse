@@ -12,7 +12,7 @@ import { Suspense } from 'react';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://apks.cc'),
-  title: 'ApksCC-免费好用的资源网站，为爱发电。',
+  title: 'PlayAPKS-免费好用的资源网站，为爱发电。',
   description: '专注于海外游戏下载和全球资源分享，提供最新热门游戏下载和游戏社区互动。',
 };
 
