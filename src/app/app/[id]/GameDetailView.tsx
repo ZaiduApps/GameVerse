@@ -335,7 +335,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
       <GameAnnouncements announcements={Announcements} />
 
       <Card className="overflow-visible shadow-xl">
-      <CardHeader className="p-0 relative h-[200px] bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500">
+      <CardHeader className="p-0 relative h-[200px]">
   <Image
     src={game.header_image}
     alt={`${game.name} banner`}

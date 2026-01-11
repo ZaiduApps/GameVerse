@@ -93,7 +93,7 @@ export default function Header() {
             </div>
             
             <Dialog open={loginDialogOpen} onOpenChange={setLoginDialogOpen}>
-              <Button
+              {/* <Button
                 variant="ghost"
                 size="sm"
                 className="hidden sm:inline-flex btn-interactive text-sm px-3"
@@ -101,7 +101,7 @@ export default function Header() {
               >
                 <LogIn size={16} className="mr-2" />
                 登录
-              </Button>
+              </Button> */}
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                   <DialogTitle className="text-2xl font-bold text-center">
