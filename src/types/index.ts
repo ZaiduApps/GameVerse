@@ -200,6 +200,8 @@ export interface Announcement {
     type: "inner" | "outer";
     url: string;
   };
+  closeable?: boolean;
+  once_per_user?: boolean;
 }
 
 export interface CardConfigItem {
@@ -243,4 +245,3 @@ export interface ApiRecommendedGame {
     name: string;
   }[];
 }
-

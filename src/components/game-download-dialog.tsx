@@ -14,13 +14,15 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Download, Smartphone, Store, Globe, Gamepad2, Loader2 } from 'lucide-react';
-import type { ApiDownloadResource } from '@/types';
+import { Download, Smartphone, Store, Globe, Gamepad2, Loader2, AlertTriangle } from 'lucide-react';
+import type { ApiDownloadResource, CardConfigItem } from '@/types';
 import Image from 'next/image';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface GameDownloadDialogProps {
   resources: ApiDownloadResource[];
   pkg: string;
+  downloadNotices?: CardConfigItem[];
 }
 
 // Fallback icons map
@@ -32,7 +34,7 @@ const iconMap: { [key: string]: React.ReactNode } = {
   third_party: <Gamepad2 className="w-5 h-5 mr-3 text-muted-foreground" />,
 };
 
-export default function GameDownloadDialog({ resources, pkg }: GameDownloadDialogProps) {
+export default function GameDownloadDialog({ resources, pkg, downloadNotices }: GameDownloadDialogProps) {
   const [loadingChannelId, setLoadingChannelId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,6 +87,23 @@ export default function GameDownloadDialog({ resources, pkg }: GameDownloadDialo
             请选择您偏好的下载方式。点击渠道即可开始下载。
           </DialogDescription>
         </DialogHeader>
+
+        {downloadNotices && downloadNotices.length > 0 && (
+          <div className="space-y-2">
+            {downloadNotices.map(notice => (
+              <Alert key={notice._id} variant="destructive" className="bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800/40 dark:text-yellow-300">
+                <AlertTriangle className="h-4 w-4 !text-yellow-500 dark:!text-yellow-400" />
+                <AlertTitle className="font-semibold">{notice.content.title}</AlertTitle>
+                <AlertDescription className="text-xs">
+                    {notice.content.text}
+                    {notice.content.html && <div dangerouslySetInnerHTML={{ __html: notice.content.html }} />}
+                </AlertDescription>
+              </Alert>
+            ))}
+          </div>
+        )}
+
+
         <div className="grid gap-3 py-4">
           {resources && resources.length > 0 ? (
             resources.map(resource => (

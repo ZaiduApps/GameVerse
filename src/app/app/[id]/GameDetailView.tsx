@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { Game, NewsArticle, GameDetailData, ApiRecommendedGame, ApiGameDetail } from '@/types';
+import type { Game, NewsArticle, GameDetailData, ApiRecommendedGame, ApiGameDetail, CardConfigItem } from '@/types';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -335,13 +335,13 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
       <GameAnnouncements announcements={Announcements} />
 
       <Card className="overflow-visible shadow-xl">
-      <CardHeader className="p-0 relative h-[200px]">
+      <CardHeader className="p-0 relative h-[200px] bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500">
   <Image
     src={game.header_image}
     alt={`${game.name} banner`}
     fill
     priority
-    className="object-cover object-center rounded-t-lg" 
+    className="object-cover object-center rounded-t-lg mix-blend-overlay" 
     sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw, 1200px"
   />
 
@@ -369,12 +369,12 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   </div>
                 </div>
                 <div className="hidden sm:block flex-shrink-0 pt-2">
-                  <GameDownloadDialog pkg={game.pkg} resources={resources} />
+                  <GameDownloadDialog pkg={game.pkg} resources={resources} downloadNotices={cardConfig?.download_notice} />
                 </div>
               </div>
 
                <div className="sm:hidden w-full">
-                  <GameDownloadDialog pkg={game.pkg} resources={resources} />
+                  <GameDownloadDialog pkg={game.pkg} resources={resources} downloadNotices={cardConfig?.download_notice} />
                 </div>
 
 
@@ -804,7 +804,3 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     </div>
   );
 }
-
-    
-
-    
