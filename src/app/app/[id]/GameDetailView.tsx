@@ -341,7 +341,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     alt={`${game.name} banner`}
     fill
     priority
-    className="object-cover object-center rounded-t-lg mix-blend-overlay" 
+    className="object-cover object-center rounded-t-lg" 
     sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw, 1200px"
   />
 
