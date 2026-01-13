@@ -11,6 +11,7 @@ import Image from 'next/image';
 import { ThumbsUp, MessageSquare, Share2, Bookmark, Send, Eye, ArrowLeft } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { renderMarkdown } from '@/lib/utils';
 
 interface PostComment {
   id: string;
@@ -111,11 +112,10 @@ export default function CommunityPostDetailView({ post }: CommunityPostDetailVie
         </CardHeader>
 
         <CardContent className="p-4 pt-2 space-y-3">
-          <article className="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-foreground/90 leading-relaxed whitespace-pre-line">
-             {post.content.split('\n\n').map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
-            ))}
-          </article>
+          <article 
+            className="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-foreground/90 leading-relaxed"
+            dangerouslySetInnerHTML={renderMarkdown(post.content)}
+          />
 
           {post.tags && post.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-2">
@@ -136,7 +136,7 @@ export default function CommunityPostDetailView({ post }: CommunityPostDetailVie
             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                 <div className="flex items-center">
                     <Eye size={16} className="mr-1.5" /> 
-                    {viewCount !== null ? viewCount : '...'} 次浏览
+                    {viewCount !== null ? `${viewCount} 次浏览` : '...'}
                 </div>
             </div>
           <div className="w-full flex items-center justify-start gap-2 sm:gap-3 border-t pt-3">
@@ -213,5 +213,3 @@ export default function CommunityPostDetailView({ post }: CommunityPostDetailVie
     </div>
   );
 }
-
-    
