@@ -63,36 +63,40 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
   );
   const [isLoading, setIsLoading] = useState(!initialGameData);
   const pathname = usePathname(); // Get current path to detect navigation
+  const [pageError, setPageError] = useState(false);
 
   useEffect(() => {
-    // This effect handles client-side navigation.
-    // The `id` prop is the identifier from the URL.
-    // `initialGameData` is the data fetched on the server for the first-visited page.
+    // This effect handles data fetching for client-side navigation.
+    // The `id` prop (from the URL) is the trigger.
     
-    // Check if the currently displayed game data (if any) matches the URL id.
-    // If it matches, we are on the correct page, no need to fetch.
-    if (gameData && gameData.app.pkg === id) {
-      // Ensure loading is off if we already have the right data
-      if(isLoading) setIsLoading(false);
+    // On initial server render with data, `initialGameData` is present.
+    // We set the state and don't need to fetch.
+    if (initialGameData && initialGameData.app.pkg === id) {
+      setGameData(initialGameData);
+      setRecommendedGames((initialRecommendedGames || []).slice(0, MAX_RECOMMENDED_GAMES));
+      setIsLoading(false);
       return;
     }
 
-    // This will run for client-side navigation to a *new* game detail page.
-    async function fetchData() {
+    // This runs for client-side navigation or if initial data was for a different game.
+    async function fetchData(fetchId: string) {
       setIsLoading(true);
+      setPageError(false);
       try {
-        const gameDetailsRes = await fetch(`/api/game/details?param=${id}`);
+        const gameDetailsRes = await fetch(`/api/game/details?param=${fetchId}`);
         if (!gameDetailsRes.ok) throw new Error('Failed to fetch game details');
+        
         const gameDetailsJson = await gameDetailsRes.json();
         if (gameDetailsJson.code !== 0 || !gameDetailsJson.data) {
           throw new Error('Game not found from API');
         }
+        
         const fetchedGameData: GameDetailData = gameDetailsJson.data;
         setGameData(fetchedGameData);
 
-        const pkg = fetchedGameData.app.pkg;
-        if (pkg) {
-            const recommendedGamesRes = await fetch(`/api/game/recommendedApp?param=${pkg}`);
+        // Fetch recommended games if package name exists
+        if (fetchedGameData.app.pkg) {
+            const recommendedGamesRes = await fetch(`/api/game/recommendedApp?param=${fetchedGameData.app.pkg}`);
             if (recommendedGamesRes.ok) {
                 const recommendedGamesJson = await recommendedGamesRes.json();
                  if (recommendedGamesJson.code === 0 && recommendedGamesJson.data) {
@@ -107,19 +111,18 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
 
       } catch (error) {
         console.error("Error fetching client-side data:", error);
-        setGameData(null); // Set to null to indicate an error/not found state
+        setGameData(null); // Set to null to indicate an error
+        setPageError(true);
       } finally {
         setIsLoading(false);
       }
     }
 
-    // initialGameData is only present on the very first page load.
-    // On subsequent client-side navigations, it will be undefined, so we fetch.
-    if (!initialGameData || gameData?.app.pkg !== id) {
-       fetchData();
+    // We fetch if the current page's ID doesn't match the data we have
+    if (gameData?.app.pkg !== id) {
+       fetchData(id);
     }
-
-  }, [id, pathname, gameData, initialGameData, isLoading]); // Rerun effect when `id` or the whole `pathname` changes
+  }, [id, initialGameData, initialRecommendedGames]); // Re-run only when the page ID changes
 
 
   const { app: game, resources, Announcements, cardConfig } = gameData || {};
@@ -225,7 +228,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
   };
 
   const truncateDescription = (text: string, limit: number): string => {
-    if (text.length <= limit) {
+    if (!text || text.length <= limit) {
       return text;
     }
     let breakPoint = text.substring(0, limit).lastIndexOf('。');
@@ -304,15 +307,9 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
       return <Loading />;
   }
 
-  if (gameData === null) {
-    // This state indicates an error or not found from the API
+  if (pageError || !gameData || !game) {
     notFound();
-    return null; // notFound() throws an error, but this satisfies TypeScript
-  }
-
-  if (!game) {
-    // This can happen briefly between state transitions or if data is undefined
-    return <Loading />;
+    return null;
   }
   
   const gameSpecificNews = MOCK_NEWS_ARTICLES.filter(article => article.gameId === game._id);
@@ -325,7 +322,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
   const newsToShow = combinedNews.slice(0, MAX_NEWS_DISPLAY);
   const hasMoreGameSpecificNews = gameSpecificNews.length > newsToShow.filter(n => n.gameId === game._id).length || gameSpecificNews.length > MAX_NEWS_DISPLAY;
   
-  const cleanDescription = game.description.replace(/<br\s*\/?>/gi, '\n');
+  const cleanDescription = game.description?.replace(/<br\s*\/?>/gi, '\n') || '';
   const needsExpansion = cleanDescription.length > DESCRIPTION_CHAR_LIMIT;
   const shortDescriptionText = truncateDescription(cleanDescription, DESCRIPTION_CHAR_LIMIT);
   const selectedScreenshotUrl = selectedScreenshotIndex !== null ? game.detail_images?.[selectedScreenshotIndex] : null;
@@ -335,34 +332,37 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
       <GameAnnouncements announcements={Announcements} />
 
       <Card className="overflow-visible shadow-xl">
-      <CardHeader className="p-0 relative h-[200px]">
-  <Image
-    src={game.header_image}
-    alt={`${game.name} banner`}
-    fill
-    priority
-    className="object-cover object-center rounded-t-lg" 
-    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw, 1200px"
-  />
-
-  <div 
-    className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent"
-  >
-  </div>
-</CardHeader>
+      <CardHeader className="p-0 relative h-[200px] bg-muted">
+        {game.header_image && (
+          <Image
+            src={game.header_image}
+            alt={`${game.name} banner`}
+            fill
+            priority
+            className="object-cover object-center rounded-t-lg" 
+            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 80vw, 1200px"
+          />
+        )}
+        <div 
+          className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent"
+        >
+        </div>
+      </CardHeader>
         <CardContent className="p-4 md:p-6 space-y-6 relative -mt-20 z-10">
           <div className="md:grid md:grid-cols-12 md:gap-x-8">
             <div className="md:col-span-8 space-y-6">
               <div className="flex items-start justify-between gap-4 sm:gap-6">
                 <div className="flex items-start gap-4 sm:gap-6">
-                  <Image
-                    src={game.icon}
-                    alt={`${game.name} icon`}
-                    width={144}
-                    height={144}
-                    className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-xl object-cover flex-shrink-0 border-4 border-background shadow-lg"
-                    data-ai-hint={`game icon large ${game.name}`}
-                  />
+                  {game.icon && (
+                    <Image
+                      src={game.icon}
+                      alt={`${game.name} icon`}
+                      width={144}
+                      height={144}
+                      className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-xl object-cover flex-shrink-0 border-4 border-background shadow-lg"
+                      data-ai-hint={`game icon large ${game.name}`}
+                    />
+                  )}
                   <div className="pt-1 sm:pt-2">
                     <h1 className="text-2xl lg:text-3xl font-bold text-foreground">{game.name}</h1>
                     <p className="text-sm text-muted-foreground mt-1 sm:mt-2">{game.developer}</p>
@@ -463,7 +463,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                 <h2 className="text-xl font-semibold mb-3">游戏介绍</h2>
                 <div 
                   className="text-foreground/80 leading-relaxed whitespace-pre-line prose prose-sm sm:prose-base dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: isDescriptionExpanded ? game.description.replace(/<br\s*\/?>/gi, '\n') : truncateDescription(cleanDescription, DESCRIPTION_CHAR_LIMIT) }}
+                  dangerouslySetInnerHTML={{ __html: isDescriptionExpanded ? cleanDescription : shortDescriptionText }}
                 />
                 {needsExpansion && (
                   <Button
@@ -805,3 +805,6 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
   );
 }
 
+
+
+    
