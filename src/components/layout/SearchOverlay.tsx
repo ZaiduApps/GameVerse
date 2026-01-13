@@ -190,14 +190,14 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
         </div>
 
         {/* Content Area */}
-        <div className="p-4 pt-2">
+        <div className="p-4 pt-2 max-h-[calc(80vh-72px)] overflow-y-auto">
             {hasSearchResults ? (
                 // Search Results
                 <div>
                      <h3 className="text-sm font-semibold text-muted-foreground px-4 mb-3">
                         搜索结果
                     </h3>
-                    <div className="max-h-[60vh] overflow-y-auto space-y-2 pr-2">
+                    <div className="space-y-2 pr-2">
                         {isSearching ? (
                             <div className="flex justify-center items-center py-8">
                                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
