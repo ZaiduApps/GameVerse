@@ -585,7 +585,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                           fill
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
                           data-ai-hint={newsItem.dataAiHint || 'news article image'}
-                           sizes="(max-width: 639px) 100vw, (max-width: 767px) 160px, (max-width: 1023px) 176px, (max-width: 1279px) 176px, 176px"
+                           sizes="(max-width: 639px) 100vw, (max-width: 767px) 160px, (max-width: 1023px) 176px, (max-width: 1279px) 176px"
                         />
                       </div>
                     </Link>
@@ -804,3 +804,4 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     </div>
   );
 }
+
