@@ -1,4 +1,5 @@
 
+
 export interface GameScreenshot {
   url: string;
   dataAiHint?: string;
@@ -244,4 +245,53 @@ export interface ApiRecommendedGame {
     id: string;
     name: string;
   }[];
+}
+
+
+// New type for Global Site Configuration
+export interface SiteConfig {
+  _id: string;
+  basic: {
+    site_name: string;
+    site_slogan: string;
+    logo_url: string;
+    favicon_url: string;
+    share_image: string;
+  };
+  header: {
+    verifications: {
+      baidu?: string;
+      google?: string;
+      q360?: string;
+      sogou?: string;
+    };
+    custom_css?: string;
+    head_scripts?: string;
+  };
+  seo: {
+    title_suffix: string;
+    keywords: string;
+    description: string;
+  };
+  footer: {
+    copyright: string;
+    icp_number?: string;
+    footer_text: string;
+    footer_scripts?: string;
+  };
+  friend_links: {
+    name: string;
+    url: string;
+    sort: number;
+  }[];
+  quick_links: {
+    group_name: string;
+    links: {
+      _id: string;
+      name: string;
+      url: string;
+      sort: number;
+    }[];
+  }[];
+  is_maintenance: boolean;
 }

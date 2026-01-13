@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -33,6 +34,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 import SearchOverlay from '@/components/layout/SearchOverlay';
+import Image from 'next/image';
 
 const navItems = [
   { href: '/', label: '首页', icon: Home },
@@ -43,7 +45,12 @@ const navItems = [
   // { href: '/submit-resource', label: '资源投稿', icon: UploadCloud },
 ];
 
-export default function Header() {
+interface HeaderProps {
+  siteName?: string;
+  logoUrl?: string;
+}
+
+export default function Header({ siteName = "PlayAPKS", logoUrl }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
@@ -56,8 +63,12 @@ export default function Header() {
             href="/"
             className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity"
           >
-            <Gamepad2 size={28} />
-            <span className="text-xl font-bold sm:text-2xl">PlayAPKS</span>
+            {logoUrl ? (
+              <Image src={logoUrl} alt={siteName} width={28} height={28} />
+            ) : (
+              <Gamepad2 size={28} />
+            )}
+            <span className="text-xl font-bold sm:text-2xl">{siteName}</span>
           </Link>
 
           <div className="hidden md:flex items-center flex-1 justify-end lg:justify-center">
@@ -212,8 +223,12 @@ export default function Header() {
                     className="flex items-center gap-2 text-xl font-bold text-primary px-6 pb-4 border-b border-border/40"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <Gamepad2 size={24} />
-                    <span>PlayAPKS</span>
+                    {logoUrl ? (
+                      <Image src={logoUrl} alt={siteName} width={24} height={24} />
+                    ) : (
+                      <Gamepad2 size={24} />
+                    )}
+                    <span>{siteName}</span>
                   </Link>
 
                   <nav className="flex flex-col space-y-1 px-4 flex-grow mt-4">
@@ -244,7 +259,7 @@ export default function Header() {
                   </nav>
                   <div className="mt-auto p-4 border-t border-border/40">
                     <p className="text-xs text-center text-muted-foreground">
-                      &copy; {new Date().getFullYear()} PlayAPKS
+                      &copy; {new Date().getFullYear()} {siteName}
                     </p>
                   </div>
                 </SheetContent>
