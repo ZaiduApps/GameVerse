@@ -91,7 +91,7 @@ export default function GameDownloadDialog({ resources, pkg, downloadNotices }: 
         {downloadNotices && downloadNotices.length > 0 && (
           <div className="space-y-2">
             {downloadNotices.map(notice => (
-              <Alert key={notice._id} variant="destructive" className="bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800/40 dark:text-yellow-300">
+              <Alert key={notice._id} variant="default" className="bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800/40 dark:text-yellow-300">
                 <AlertTriangle className="h-4 w-4 !text-yellow-500 dark:!text-yellow-400" />
                 <AlertTitle className="font-semibold">{notice.content.title}</AlertTitle>
                 <AlertDescription className="text-xs">
@@ -117,11 +117,16 @@ export default function GameDownloadDialog({ resources, pkg, downloadNotices }: 
                 {loadingChannelId === resource.channel._id ? (
                   <Loader2 className="w-5 h-5 mr-3 text-muted-foreground animate-spin" />
                 ) : resource.channel.icon ? (
-                   <Image src={resource.channel.icon} alt={resource.channel.name} width={20} height={20} className="w-5 h-5 mr-3" />
+                   <Image src={resource.channel.icon} alt={resource.channel.name} width={24} height={24} className="w-6 h-6 mr-3" />
                 ) : (
                   iconMap[resource.channel.code] || <Download className="w-5 h-5 mr-3 text-muted-foreground" />
                 )}
-                <span className="text-base font-medium">{resource.channel.name}</span>
+                <div className="flex flex-col">
+                    <span className="text-base font-medium">{resource.channel.name}</span>
+                    {resource.channel.description && (
+                        <span className="text-xs text-muted-foreground">{resource.channel.description}</span>
+                    )}
+                </div>
               </Button>
             ))
           ) : (

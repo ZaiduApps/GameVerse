@@ -181,6 +181,7 @@ export interface ApiDownloadResource {
     name: string;
     icon: string;
     code: string;
+    description?: string;
   };
 }
 
@@ -293,5 +294,9 @@ export interface SiteConfig {
       sort: number;
     }[];
   }[];
+  app_seo: {
+    app_title_template: string;
+    app_description_template: string;
+  };
   is_maintenance: boolean;
 }
