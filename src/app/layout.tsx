@@ -10,13 +10,13 @@ import Footer from '@/components/layout/footer';
 import PageTransitionLoader from '@/components/layout/PageTransitionLoader';
 import { Suspense } from 'react';
 import type { SiteConfig } from '@/types';
-
+import Script from 'next/script';
 const CONFIG_API_URL = 'https://api.hk.apks.cc/config/info?site_name=PlayAPKS';
 
 async function getSiteConfig(): Promise<SiteConfig | null> {
   try {
     const res = await fetch(CONFIG_API_URL, {
-      next: { revalidate: 3600 }, // Revalidate every hour
+      next: { revalidate: 10 }, // Revalidate every hour
     });
     if (!res.ok) {
       console.error('Failed to fetch site config:', res.status, res.statusText);
@@ -112,8 +112,15 @@ export default async function RootLayout({
           <style dangerouslySetInnerHTML={{ __html: siteConfig.header.custom_css }} />
         )}
         {siteConfig?.header?.head_scripts && (
-          <script dangerouslySetInnerHTML={{ __html: siteConfig.header.head_scripts }} />
-        )}
+  <Script
+    id="analytics"
+    strategy="afterInteractive"
+    dangerouslySetInnerHTML={{
+      __html: siteConfig.header.head_scripts,
+    }}
+  />
+)}
+
       </head>
       <body id="Top" className={`${GeistSans.variable} ${GeistMono.variable} antialiased flex flex-col min-h-screen`}>
         <ThemeProvider

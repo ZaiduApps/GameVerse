@@ -59,19 +59,18 @@ export default function Header({ siteName = "PlayAPKS", logoUrl }: HeaderProps) 
     <>
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity"
-          >
-            {logoUrl ? (
-              <Image src={logoUrl} alt={siteName} width={28} height={28} />
-            ) : (
-              <Gamepad2 size={28} />
-            )}
-            <span className="text-xl font-bold sm:text-2xl">{siteName}</span>
-          </Link>
-
-          <div className="hidden md:flex items-center flex-1 justify-end lg:justify-center">
+          <div className="flex items-center gap-6">
+            <Link
+              href="/"
+              className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity"
+            >
+              {logoUrl ? (
+                <Image src={logoUrl} alt={siteName} width={28} height={28} />
+              ) : (
+                <Gamepad2 size={28} />
+              )}
+              <span className="text-xl font-bold sm:text-2xl">{siteName}</span>
+            </Link>
             <nav className="hidden lg:flex items-center space-x-6">
               {navItems.map((item) => (
                 <Link
@@ -84,7 +83,11 @@ export default function Header({ siteName = "PlayAPKS", logoUrl }: HeaderProps) 
                 </Link>
               ))}
             </nav>
-            <div className="relative ml-6">
+          </div>
+
+
+          <div className="flex items-center gap-2 sm:gap-3">
+             <div className="relative hidden md:block">
               <Button
                 variant="outline"
                 className="pl-3 pr-4 py-2 h-9 text-sm rounded-md w-40 lg:w-56 bg-muted/30 hover:bg-muted/70 justify-start text-muted-foreground"
@@ -94,9 +97,7 @@ export default function Header({ siteName = "PlayAPKS", logoUrl }: HeaderProps) 
                 搜索...
               </Button>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
             <div className="md:hidden">
                 <Button variant="ghost" size="icon" onClick={() => setSearchOverlayOpen(true)}>
                     <Search className="h-5 w-5" />
