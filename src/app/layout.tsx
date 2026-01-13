@@ -112,7 +112,8 @@ export default async function RootLayout({
           <style dangerouslySetInnerHTML={{ __html: siteConfig.header.custom_css }} />
         )}
         {siteConfig?.header?.head_scripts && (
-          <div dangerouslySetInnerHTML={{ __html: siteConfig.header.head_scripts }} />
+          <>{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Scripts are from trusted API */}
+          <script dangerouslySetInnerHTML={{ __html: siteConfig.header.head_scripts }} /></>
         )}
       </head>
       <body id="Top" className={`${GeistSans.variable} ${GeistMono.variable} antialiased flex flex-col min-h-screen`}>
