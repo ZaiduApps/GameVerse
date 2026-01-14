@@ -379,48 +379,58 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
 
 
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3 text-sm pt-2">
-                <div className="flex items-center">
-                  <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-2" />
-                  <div>
-                    <p className="text-muted-foreground text-xs">评分</p>
-                    <p className="font-semibold">{game.star || 'N/A'}</p>
+                {game.star > 0 && (
+                  <div className="flex items-center">
+                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-2" />
+                    <div>
+                      <p className="text-muted-foreground text-xs">评分</p>
+                      <p className="font-semibold">{game.star}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center">
-                  <Download className="w-4 h-4 text-primary mr-2" />
-                  <div>
-                    <p className="text-muted-foreground text-xs">下载量</p>
-                    <p className="font-semibold">{game.download_count_show || 'N/A'}</p>
+                )}
+                {game.download_count_show && (
+                  <div className="flex items-center">
+                    <Download className="w-4 h-4 text-primary mr-2" />
+                    <div>
+                      <p className="text-muted-foreground text-xs">下载量</p>
+                      <p className="font-semibold">{game.download_count_show}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center">
-                  <Tag className="w-4 h-4 text-blue-500 mr-2" />
-                  <div>
-                    <p className="text-muted-foreground text-xs">类型</p>
-                    <p className="font-semibold">{game.tags?.[0] || '未知'}</p>
+                )}
+                {game.tags?.[0] && (
+                  <div className="flex items-center">
+                    <Tag className="w-4 h-4 text-blue-500 mr-2" />
+                    <div>
+                      <p className="text-muted-foreground text-xs">类型</p>
+                      <p className="font-semibold">{game.tags[0]}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center">
-                  <CalendarDays className="w-4 h-4 text-green-500 mr-2" />
-                  <div>
-                    <p className="text-muted-foreground text-xs">发布日期</p>
-                    <p className="font-semibold">{game.release_at ? new Date(game.release_at).toLocaleDateString('zh-CN') : '未知'}</p>
+                )}
+                {game.release_at && (
+                  <div className="flex items-center">
+                    <CalendarDays className="w-4 h-4 text-green-500 mr-2" />
+                    <div>
+                      <p className="text-muted-foreground text-xs">发布日期</p>
+                      <p className="font-semibold">{new Date(game.release_at).toLocaleDateString('zh-CN')}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center">
-                  <History className="w-4 h-4 text-purple-500 mr-2" />
-                  <div>
-                    <p className="text-muted-foreground text-xs">更新日期</p>
-                    <p className="font-semibold">{game.latest_at ? new Date(game.latest_at).toLocaleDateString('zh-CN') : '未知'}</p>
+                )}
+                {game.latest_at && (
+                  <div className="flex items-center">
+                    <History className="w-4 h-4 text-purple-500 mr-2" />
+                    <div>
+                      <p className="text-muted-foreground text-xs">更新日期</p>
+                      <p className="font-semibold">{new Date(game.latest_at).toLocaleDateString('zh-CN')}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start">
-                  <Info className="w-4 h-4 text-purple-500 mr-2 mt-0.5 flex-shrink-0" />
-                  <div className="flex-grow">
-                    <p className="text-muted-foreground text-xs">版本</p>
-                    <div className="flex items-center gap-x-2 flex-wrap">
-                        <p className="font-semibold">{game.version || 'N/A'}</p>
-                        {game.version && (
+                )}
+                {game.version && (
+                  <div className="flex items-start">
+                    <Info className="w-4 h-4 text-purple-500 mr-2 mt-0.5 flex-shrink-0" />
+                    <div className="flex-grow">
+                      <p className="text-muted-foreground text-xs">版本</p>
+                      <div className="flex items-center gap-x-2 flex-wrap">
+                          <p className="font-semibold">{game.version}</p>
                           <Button
                               variant="outline"
                               size="sm"
@@ -430,17 +440,19 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                               <BellRing className="w-3 h-3 mr-1" />
                               催更
                           </Button>
-                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center col-span-2 sm:col-span-1">
-                  <HardDrive className="w-4 h-4 text-orange-500 mr-2" />
-                  <div>
-                    <p className="text-muted-foreground text-xs">大小</p>
-                    <p className="font-semibold">{formatBytes(game.file_size)}</p>
+                )}
+                {game.file_size && (
+                  <div className="flex items-center col-span-2 sm:col-span-1">
+                    <HardDrive className="w-4 h-4 text-orange-500 mr-2" />
+                    <div>
+                      <p className="text-muted-foreground text-xs">大小</p>
+                      <p className="font-semibold">{formatBytes(game.file_size)}</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {game.tags && game.tags.length > 0 && (
