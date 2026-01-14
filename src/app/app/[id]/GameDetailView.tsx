@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { Game, NewsArticle, GameDetailData, ApiRecommendedGame, ApiGameDetail, CardConfigItem } from '@/types';
+import type { Game, NewsArticle, GameDetailData, ApiRecommendedGame, CardConfigItem } from '@/types';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -122,7 +122,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     if (gameData?.app.pkg !== id) {
        fetchData(id);
     }
-  }, [id, initialGameData, initialRecommendedGames]); // Re-run only when the page ID changes
+  }, [id, initialGameData, initialRecommendedGames, gameData?.app.pkg]); // Re-run only when the page ID changes
 
 
   const { app: game, resources, Announcements, cardConfig } = gameData || {};
@@ -325,7 +325,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
   const cleanDescription = game.description?.replace(/<br\s*\/?>/gi, '\n') || '';
   const needsExpansion = cleanDescription.length > DESCRIPTION_CHAR_LIMIT;
   const shortDescriptionText = truncateDescription(cleanDescription, DESCRIPTION_CHAR_LIMIT);
-  const selectedScreenshotUrl = selectedScreenshotIndex !== null ? game.detail_images?.[selectedScreenshotIndex] : null;
+  const selectedScreenshotUrl = selectedScreenshotIndex !== null && game.detail_images ? game.detail_images[selectedScreenshotIndex] : null;
 
   return (
     <div className="space-y-8 fade-in">
@@ -349,7 +349,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
         </div>
       </CardHeader>
         <CardContent className="p-4 md:p-6 space-y-6 relative -mt-20 z-10">
-          <div className="md:grid md:grid-cols-12 md:gap-x-8">
+          <div className="flex flex-col md:grid md:grid-cols-12 md:gap-x-8">
             <div className="md:col-span-8 space-y-6">
               <div className="flex items-start justify-between gap-4 sm:gap-6">
                 <div className="flex items-start gap-4 sm:gap-6">
@@ -478,7 +478,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
               </div>
             </div>
 
-            <div className="md:col-span-4 mt-8 md:mt-0">
+            <div className="md:col-span-4 mt-8 md:mt-0 order-2 md:order-none">
               <Card className="shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-lg flex items-center">
@@ -517,6 +517,54 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                 </CardContent>
               </Card>
             </div>
+            
+            {cardConfig && (
+                <div className="pt-6 mt-6 border-t md:col-span-12 order-1 md:order-none">
+                <h2 className="text-xl font-semibold mb-4 flex items-center">
+                    <LinkIcon className="w-5 h-5 text-primary mr-2" />
+                    更多资源与支持
+                </h2>
+                <div className="grid md:grid-cols-2 gap-x-6 gap-y-4">
+                    {cardConfig.contact && cardConfig.contact.length > 0 && (
+                    <div className="space-y-3">
+                        <h3 className="text-lg font-medium flex items-center text-foreground/90">
+                        <Users className="w-5 h-5 mr-2 text-accent" />
+                        玩家交流群
+                        </h3>
+                        {cardConfig.contact.map(item => (
+                        <Button key={item._id} variant="outline" asChild className="w-full justify-start btn-interactive">
+                            <a href={item.content.link} target="_blank" rel="noopener noreferrer">
+                            {item.content.icon ? (
+                                <Image src={item.content.icon} alt={item.content.title} width={16} height={16} className="mr-2" />
+                            ) : <Contact className="w-4 h-4 mr-2" />}
+                            {item.content.title}
+                            </a>
+                        </Button>
+                        ))}
+                    </div>
+                    )}
+                    
+                    {cardConfig.partner && cardConfig.partner.length > 0 && (
+                    <div className="space-y-3">
+                        <h3 className="text-lg font-medium flex items-center text-foreground/90">
+                        <Briefcase className="w-5 h-5 mr-2 text-accent" />
+                        合作与支持
+                        </h3>
+                        {cardConfig.partner.map(item => (
+                        <Button key={item._id} variant="outline" asChild className="w-full justify-start btn-interactive">
+                            <a href={item.content.link} target="_blank" rel="noopener noreferrer">
+                            {item.content.icon ? (
+                                <Image src={item.content.icon} alt={item.content.title} width={16} height={16} className="mr-2" />
+                            ) : <Briefcase className="w-4 h-4 mr-2" />}
+                            {item.content.title}
+                            </a>
+                        </Button>
+                        ))}
+                    </div>
+                    )}
+                </div>
+                </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -612,54 +660,6 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
               </Button>
             </div>
           )}
-        </div>
-      )}
-
-      {cardConfig && (
-        <div className="pt-6 mt-6 border-t">
-          <h2 className="text-xl font-semibold mb-4 flex items-center">
-            <LinkIcon className="w-5 h-5 text-primary mr-2" />
-            更多资源与支持
-          </h2>
-          <div className="grid md:grid-cols-2 gap-x-6 gap-y-4">
-            {cardConfig.contact && cardConfig.contact.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-lg font-medium flex items-center text-foreground/90">
-                  <Users className="w-5 h-5 mr-2 text-accent" />
-                  玩家交流群
-                </h3>
-                {cardConfig.contact.map(item => (
-                  <Button key={item._id} variant="outline" asChild className="w-full justify-start btn-interactive">
-                    <a href={item.content.link} target="_blank" rel="noopener noreferrer">
-                      {item.content.icon ? (
-                        <Image src={item.content.icon} alt={item.content.title} width={16} height={16} className="mr-2" />
-                      ) : <Contact className="w-4 h-4 mr-2" />}
-                      {item.content.title}
-                    </a>
-                  </Button>
-                ))}
-              </div>
-            )}
-            
-            {cardConfig.partner && cardConfig.partner.length > 0 && (
-               <div className="space-y-3">
-                <h3 className="text-lg font-medium flex items-center text-foreground/90">
-                  <Briefcase className="w-5 h-5 mr-2 text-accent" />
-                  合作与支持
-                </h3>
-                 {cardConfig.partner.map(item => (
-                  <Button key={item._id} variant="outline" asChild className="w-full justify-start btn-interactive">
-                    <a href={item.content.link} target="_blank" rel="noopener noreferrer">
-                      {item.content.icon ? (
-                         <Image src={item.content.icon} alt={item.content.title} width={16} height={16} className="mr-2" />
-                      ) : <Briefcase className="w-4 h-4 mr-2" />}
-                      {item.content.title}
-                    </a>
-                  </Button>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       )}
 
