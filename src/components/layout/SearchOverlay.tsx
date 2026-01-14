@@ -210,10 +210,10 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                                         <div className="flex-grow">
                                             <div className="flex items-center gap-2">
                                               <p className="font-semibold">{item.title}</p>
-                                              {item.region && <Badge variant="outline" className="text-xs whitespace-nowrap min-w-[3rem] text-center justify-center">{item.region}</Badge>}
                                             </div>
                                             <p className="text-sm text-muted-foreground">{item.category}</p>
                                         </div>
+                                        {item.region && <Badge variant="outline" className="text-xs whitespace-nowrap min-w-[3rem] text-center justify-center mx-2">{item.region}</Badge>}
                                         {item.rating && <div className="flex items-center text-sm"><Star className="w-4 h-4 mr-1 text-yellow-400 fill-yellow-400" /> {item.rating}</div>}
                                     </div>
                                 </Link>
@@ -254,12 +254,10 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                                     <div className="flex items-center p-2 rounded-lg hover:bg-muted">
                                         <Image src={item.imageUrl} alt={item.title} width={40} height={40} className="w-10 h-10 rounded-md object-cover mr-3" />
                                         <div className="flex-grow">
-                                            <div className="flex items-center gap-2">
-                                              <p className="font-semibold text-sm">{item.title}</p>
-                                               {item.region && <Badge variant="outline" className="text-xs whitespace-nowrap min-w-[3rem] text-center justify-center">{item.region}</Badge>}
-                                            </div>
+                                            <p className="font-semibold text-sm">{item.title}</p>
                                             <p className="text-xs text-muted-foreground">{item.category}</p>
                                         </div>
+                                        {item.region && <Badge variant="outline" className="text-xs whitespace-nowrap min-w-[3rem] text-center justify-center ml-2">{item.region}</Badge>}
                                         <Button variant="ghost" size="sm" className="text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                                             <Download className="w-4 h-4" />
                                         </Button>
