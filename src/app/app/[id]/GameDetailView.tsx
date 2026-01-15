@@ -379,6 +379,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
 
 
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3 text-sm pt-2">
+                
                 {game.star > 0 && (
                   <div className="flex items-center">
                     <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-2" />
@@ -424,6 +425,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                     </div>
                   </div>
                 )}
+                
                 {game.version && (
                   <div className="flex items-start">
                     <Info className="w-4 h-4 text-purple-500 mr-2 mt-0.5 flex-shrink-0" />
@@ -444,7 +446,8 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                     </div>
                   </div>
                 )}
-                {game.file_size && (
+
+                {Number.isFinite(game.file_size) && game.file_size > 0 && (
                   <div className="flex items-center col-span-2 sm:col-span-1">
                     <HardDrive className="w-4 h-4 text-orange-500 mr-2" />
                     <div>
@@ -453,6 +456,8 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                     </div>
                   </div>
                 )}
+
+
               </div>
 
               {game.tags && game.tags.length > 0 && (
