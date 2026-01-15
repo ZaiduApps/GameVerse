@@ -35,8 +35,8 @@ export default function GameCard({ game, className, ...props }: GameCardProps) {
             <Image
               src={game.imageUrl} // Using main image as icon source
               alt={`${game.title} icon`}
-              width={40}
-              height={40}
+              width={36}
+              height={36}
               className="rounded object-cover flex-shrink-0 mt-0.5"
               data-ai-hint={game.dataAiHint ? `${game.dataAiHint} icon` : "game icon"}
             />
