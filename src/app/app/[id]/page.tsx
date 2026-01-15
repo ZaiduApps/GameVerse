@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-const CONFIG_API_URL = 'https://api.hk.apks.cc/config/info?site_name=PlayAPKS';
+const CONFIG_API_URL = 'https://api.hk.apks.cc/config/info?site_name=APKScc';
 
 async function getSiteConfig(): Promise<SiteConfig | null> {
   try {

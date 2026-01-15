@@ -50,7 +50,7 @@ interface HeaderProps {
   logoUrl?: string;
 }
 
-export default function Header({ siteName = "PlayAPKS", logoUrl }: HeaderProps) {
+export default function Header({ siteName = "APKScc", logoUrl }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);

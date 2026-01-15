@@ -13,7 +13,7 @@ export default function Footer({ config }: FooterProps) {
     return (
       <footer className="bg-muted/50 text-muted-foreground py-8 mt-12">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-xs">&copy; {new Date().getFullYear()} PlayAPKS. Site data failed to load.</p>
+          <p className="text-xs">&copy; {new Date().getFullYear()} APKScc. Site data failed to load.</p>
         </div>
       </footer>
     );

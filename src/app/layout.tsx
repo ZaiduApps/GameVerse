@@ -11,7 +11,7 @@ import PageTransitionLoader from '@/components/layout/PageTransitionLoader';
 import { Suspense } from 'react';
 import type { SiteConfig } from '@/types';
 import Script from 'next/script';
-const CONFIG_API_URL = 'https://api.hk.apks.cc/config/info?site_name=PlayAPKS';
+const CONFIG_API_URL = 'https://api.hk.apks.cc/config/info?site_name=APKScc';
 
 async function getSiteConfig(): Promise<SiteConfig | null> {
   try {
@@ -39,7 +39,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   if (!config) {
     return {
-      title: 'PlayAPKS',
+      title: 'APKScc',
       description: 'Failed to load site configuration.',
     };
   }

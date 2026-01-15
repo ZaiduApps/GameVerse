@@ -1,10 +1,10 @@
-# **App Name**: PlayAPKS
+# **App Name**: APKScc
 
 ## Core Features:
 
 - Homepage Carousel: Homepage carousel for featured mobile games, auto-rotating for dynamic content display.
 - Content Highlighting: Clear visual hierarchy using strategic layouts to highlight game information for readability.
-- Author Section: Author information area displaying PlayAPKS's name, copyright, and social media links like GitHub, Twitter/X, and LinkedIn.
+- Author Section: Author information area displaying APKScc's name, copyright, and social media links like GitHub, Twitter/X, and LinkedIn.
 - Dark/Light Mode: Complete dark/light mode switch that defaults to system settings, providing comfortable viewing experiences.
 - Responsive Layout: Responsive design adapting perfectly to mobile, tablet, and desktop, ensuring consistent user experience across devices.
 - Icon Integration: Professional icon library usage for consistent and recognizable visual cues within the gaming content.
