@@ -69,7 +69,7 @@ export default function Header({ siteName = "APKScc", logoUrl }: HeaderProps) {
               ) : (
                 <Gamepad2 size={28} />
               )}
-              <span className="text-xl font-bold sm:text-2xl">{siteName}</span>
+              <h1 className="text-xl font-bold sm:text-2xl">{siteName}</h1>
             </Link>
             <nav className="hidden lg:flex items-center space-x-6">
               {navItems.map((item) => (
