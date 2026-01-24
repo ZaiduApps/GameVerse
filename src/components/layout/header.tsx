@@ -71,17 +71,20 @@ export default function Header({ siteName = "APKScc", logoUrl }: HeaderProps) {
               )}
               <h1 className="text-xl font-bold sm:text-2xl">{siteName}</h1>
             </Link>
-            <nav className="hidden lg:flex items-center space-x-6">
-              {navItems.map((item) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5"
-                >
-                  {item.icon && <item.icon size={16} />}
-                  {item.label}
-                </Link>
-              ))}
+            <nav className="hidden lg:flex items-center">
+              <ul className="flex items-center space-x-6">
+                {navItems.map((item) => (
+                  <li key={item.label}>
+                    <Link
+                      href={item.href}
+                      className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5"
+                    >
+                      {item.icon && <item.icon size={16} />}
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </nav>
           </div>
 
@@ -232,31 +235,37 @@ export default function Header({ siteName = "APKScc", logoUrl }: HeaderProps) {
                     <span>{siteName}</span>
                   </Link>
 
-                  <nav className="flex flex-col space-y-1 px-4 flex-grow mt-4">
-                    {navItems.map((item) => (
-                      <SheetClose asChild key={item.label}>
-                        <Link
-                          href={item.href}
-                          className="text-base font-medium text-foreground/80 hover:text-primary transition-colors px-2 py-3 rounded-md hover:bg-muted/50 flex items-center gap-2"
-                        >
-                          {item.icon && <item.icon size={18} />}
-                          {item.label}
-                        </Link>
-                      </SheetClose>
-                    ))}
-                    <SheetClose asChild>
-                      <Button
-                        variant="ghost"
-                        className="text-base font-medium text-foreground/80 hover:text-primary transition-colors px-2 py-3 rounded-md hover:bg-muted/50 flex items-center gap-2 justify-start"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          setLoginDialogOpen(true);
-                        }}
-                      >
-                        <LogIn size={18} />
-                        登录 / 注册
-                      </Button>
-                    </SheetClose>
+                  <nav className="flex-grow mt-4">
+                    <ul className="flex flex-col space-y-1 px-4">
+                      {navItems.map((item) => (
+                        <li key={item.label}>
+                          <SheetClose asChild>
+                            <Link
+                              href={item.href}
+                              className="w-full justify-start text-base font-medium text-foreground/80 hover:text-primary transition-colors px-2 py-3 rounded-md hover:bg-muted/50 flex items-center gap-2"
+                            >
+                              {item.icon && <item.icon size={18} />}
+                              {item.label}
+                            </Link>
+                          </SheetClose>
+                        </li>
+                      ))}
+                      <li>
+                        <SheetClose asChild>
+                          <Button
+                            variant="ghost"
+                            className="w-full text-base font-medium text-foreground/80 hover:text-primary transition-colors px-2 py-3 rounded-md hover:bg-muted/50 flex items-center gap-2 justify-start"
+                            onClick={() => {
+                              setMobileMenuOpen(false);
+                              setLoginDialogOpen(true);
+                            }}
+                          >
+                            <LogIn size={18} />
+                            登录 / 注册
+                          </Button>
+                        </SheetClose>
+                      </li>
+                    </ul>
                   </nav>
                   <div className="mt-auto p-4 border-t border-border/40">
                     <p className="text-xs text-center text-muted-foreground">
