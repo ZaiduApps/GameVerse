@@ -1,4 +1,3 @@
-
 import GameCarousel from '@/components/game-carousel';
 import GameCard from '@/components/game-card';
 import SectionHeader from '@/components/home/SectionHeader';
@@ -102,7 +101,7 @@ export default async function HomePage() {
 
       {popularGames.length > 0 && (
         <section className="fade-in" style={{ animationDelay: '0.3s' }}>
-          <SectionHeader title={popularAlbum?.title || "热门推荐"} icon={Flame} iconClassName="text-primary" moreHref="/app?sort=popular" />
+          <SectionHeader as="h1" title={popularAlbum?.title || "热门推荐"} icon={Flame} iconClassName="text-primary" moreHref="/app?sort=popular" />
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
             {popularGames.map((game, index) => (
               <GameCard

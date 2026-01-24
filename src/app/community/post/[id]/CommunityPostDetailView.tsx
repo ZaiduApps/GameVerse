@@ -108,7 +108,7 @@ export default function CommunityPostDetailView({ post }: CommunityPostDetailVie
               </p>
             </div>
           </div>
-          {post.title && <CardTitle className="text-xl md:text-2xl font-bold mt-3">{post.title}</CardTitle>}
+          {post.title && <h1 className="text-xl md:text-2xl font-bold mt-3">{post.title}</h1>}
         </CardHeader>
 
         <CardContent className="p-4 pt-2 space-y-3">
