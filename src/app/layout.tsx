@@ -44,46 +44,63 @@ export async function generateMetadata(): Promise<Metadata> {
     };
   }
 
-  const verifications: { [key: string]: string } = {};
-  if (config.header.verifications?.google) verifications.google = config.header.verifications.google;
-  if (config.header.verifications?.baidu) verifications.baidu = config.header.verifications.baidu;
-  if (config.header.verifications?.q360) verifications['360'] = config.header.verifications.q360;
-  if (config.header.verifications?.sogou) verifications.sogou = config.header.verifications.sogou;
+  const { header, basic, seo } = config;
+
+  const verification: Metadata['verification'] = {};
+  if (header.verifications) {
+    const { google, baidu, q360, sogou } = header.verifications;
+    if (google) {
+      verification.google = google;
+    }
+    const other: { [key: string]: string } = {};
+    if (baidu) {
+      other['baidu-site-verification'] = baidu;
+    }
+    if (q360) {
+      other['360-site-verification'] = q360;
+    }
+    if (sogou) {
+      other['sogou_site_verification'] = sogou;
+    }
+    if (Object.keys(other).length > 0) {
+      verification.other = other;
+    }
+  }
 
   return {
     metadataBase: new URL('https://apks.cc'),
     title: {
-      default: config.basic.site_slogan,
-      template: `%s${config.seo.title_suffix}`,
+      default: basic.site_slogan,
+      template: `%s${seo.title_suffix}`,
     },
-    description: config.seo.description,
-    keywords: config.seo.keywords.split(','),
-    verification: verifications,
+    description: seo.description,
+    keywords: seo.keywords.split(','),
+    verification,
     openGraph: {
-      title: config.basic.site_slogan,
-      description: config.seo.description,
+      title: basic.site_slogan,
+      description: seo.description,
       images: [
         {
-          url: config.basic.share_image,
+          url: basic.share_image,
           width: 1200,
           height: 630,
-          alt: config.basic.site_name,
+          alt: basic.site_name,
         },
       ],
-      siteName: config.basic.site_name,
+      siteName: basic.site_name,
       type: 'website',
       locale: 'zh_CN',
     },
     twitter: {
       card: 'summary_large_image',
-      title: config.basic.site_slogan,
-      description: config.seo.description,
-      images: [config.basic.share_image],
+      title: basic.site_slogan,
+      description: seo.description,
+      images: [basic.share_image],
     },
     icons: {
-      icon: config.basic.favicon_url,
-      shortcut: config.basic.favicon_url,
-      apple: config.basic.favicon_url,
+      icon: basic.favicon_url,
+      shortcut: basic.favicon_url,
+      apple: basic.favicon_url,
     },
   };
 }
