@@ -103,7 +103,7 @@ export default async function HomePage() {
         let sectionHeaderProps;
 
         if (album.style === 'Box') {
-            sectionHeaderProps = { title: album.title || "热门推荐", icon: Flame, iconClassName: "text-primary", moreHref: "/app?sort=popular" };
+            sectionHeaderProps = { title: album.title || "热门推荐", icon: Flame, iconClassName: "text-primary", moreHref: "/app?sort=popular", as: albumIndex === 0 ? 'h2' : undefined };
             sectionContent = (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
                     {games.map((game, index) => (
@@ -119,7 +119,7 @@ export default async function HomePage() {
         } else if (album.style === 'Grid') {
             sectionHeaderProps = { title: album.title || "新游戏速递", icon: Zap, iconClassName: "text-accent", moreHref: "/app?sort=new" };
             sectionContent = (
-                <div className="flex overflow-x-auto space-x-3 sm:space-x-4 py-2 -mx-1 px-1 cursor-grab select-none">
+                <div className="flex overflow-x-auto space-x-2 sm:space-x-3 py-2 -mx-1 px-1 cursor-grab select-none">
                     {games.map((game, index) => (
                     <NewReleaseGameCard
                         key={game.id}
@@ -133,7 +133,7 @@ export default async function HomePage() {
         } else if (album.style === 'Pre') {
             sectionHeaderProps = { title: album.title || "事前登录", icon: Gift, iconClassName: "text-green-500", moreHref: "/app?status=preregistration" };
             sectionContent = (
-                <div className="flex overflow-x-auto space-x-3 sm:space-x-4 py-2 -mx-1 px-1 cursor-grab select-none">
+                <div className="flex overflow-x-auto space-x-2 sm:space-x-3 py-2 -mx-1 px-1 cursor-grab select-none">
                     {games.map((game, index) => (
                     <PreregistrationGameCard
                         key={game.id}

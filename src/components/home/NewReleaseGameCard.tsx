@@ -13,13 +13,13 @@ export default function NewReleaseGameCard({ game, className, ...props }: NewRel
   const roundedRating = Math.round(game.rating || 0);
 
   return (
-    <Link href={`/app/${game.pkg || game.id}`} className={`flex flex-col items-center text-center group flex-shrink-0 w-20 md:w-28 ${className}`} {...props}>
-      <div className="relative w-14 h-14 md:w-20 md:h-20 mb-2">
+    <Link href={`/app/${game.pkg || game.id}`} className={`flex flex-col items-center text-center group flex-shrink-0 w-16 md:w-24 ${className}`} {...props}>
+      <div className="relative w-14 h-14 md:w-16 md:h-16 mb-2">
         <Image
           src={game.imageUrl}
           alt={game.title}
           fill
-          sizes="(max-width: 768px) 56px, 80px"
+          sizes="(max-width: 768px) 56px, 64px"
           className="rounded-lg object-cover group-hover:shadow-lg transition-shadow"
           data-ai-hint={game.dataAiHint || "game icon square"}
         />
