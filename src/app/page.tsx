@@ -1,4 +1,5 @@
 
+import React from 'react';
 import GameCarousel from '@/components/game-carousel';
 import GameCard from '@/components/game-card';
 import SectionHeader from '@/components/home/SectionHeader';
@@ -73,14 +74,6 @@ export default async function HomePage() {
     return <div className="text-center py-10">无法加载主页数据，请稍后重试。</div>;
   }
 
-  const popularAlbum = homeData.albums.find(a => a.style === 'Box');
-  const newReleaseAlbum = homeData.albums.find(a => a.style === 'Grid');
-  const preregistrationAlbum = homeData.albums.find(a => a.style === 'Pre');
-
-  const popularGames: Game[] = popularAlbum?.games.map(transformApiGameToGame) || [];
-  const newReleaseGames: Game[] = newReleaseAlbum?.games.map(transformApiGameToGame) || [];
-  const preregistrationGames: Game[] = preregistrationAlbum?.games.map(transformApiGameToGame) || [];
-  
   const newsItems: NewsArticle[] = (newsData || []).map((a: ApiArticle) => ({
       id: a.gid || a._id, // Use gid for linking, fallback to _id
       title: a.name,
@@ -100,87 +93,96 @@ export default async function HomePage() {
         <GameCarousel bannerItems={homeData.banner} />
       </section>
 
-      {popularGames.length > 0 && (
-        <section className="fade-in" style={{ animationDelay: '0.3s' }}>
-          <SectionHeader as="h1" title={popularAlbum?.title || "热门推荐"} icon={Flame} iconClassName="text-primary" moreHref="/app?sort=popular" />
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
-            {popularGames.map((game, index) => (
-              <GameCard
-                key={game.id}
-                game={game}
-                className="fade-in"
-                style={{ animationDelay: `${0.4 + index * 0.05}s` }}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+      {homeData.albums.map((album, albumIndex) => {
+        const games: Game[] = album.games.map(transformApiGameToGame);
+        if (games.length === 0) return null;
 
-      <Separator className="my-8 bg-border/50" />
+        const animationDelay = 0.3 + albumIndex * 0.3;
 
-      {newReleaseGames.length > 0 && (
-         <section className="fade-in" style={{ animationDelay: '0.6s' }}>
-          <SectionHeader title={newReleaseAlbum?.title || "新游戏速递"} icon={Zap} iconClassName="text-accent" moreHref="/app?sort=new" />
-          <div
-            className="flex overflow-x-auto space-x-3 sm:space-x-4 py-2 -mx-1 px-1 cursor-grab select-none"
-          >
-            {newReleaseGames.map((game, index) => (
-              <NewReleaseGameCard
-                key={game.id}
-                game={game}
-                className="fade-in flex-shrink-0"
-                style={{ animationDelay: `${0.7 + index * 0.05}s` }}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+        let sectionContent;
+        let sectionHeaderProps;
 
+        if (album.style === 'Box') {
+            sectionHeaderProps = { title: album.title || "热门推荐", icon: Flame, iconClassName: "text-primary", moreHref: "/app?sort=popular" };
+            sectionContent = (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
+                    {games.map((game, index) => (
+                    <GameCard
+                        key={game.id}
+                        game={game}
+                        className="fade-in"
+                        style={{ animationDelay: `${animationDelay + 0.1 + index * 0.05}s` }}
+                    />
+                    ))}
+                </div>
+            );
+        } else if (album.style === 'Grid') {
+            sectionHeaderProps = { title: album.title || "新游戏速递", icon: Zap, iconClassName: "text-accent", moreHref: "/app?sort=new" };
+            sectionContent = (
+                <div className="flex overflow-x-auto space-x-3 sm:space-x-4 py-2 -mx-1 px-1 cursor-grab select-none">
+                    {games.map((game, index) => (
+                    <NewReleaseGameCard
+                        key={game.id}
+                        game={game}
+                        className="fade-in flex-shrink-0"
+                        style={{ animationDelay: `${animationDelay + 0.1 + index * 0.05}s` }}
+                    />
+                    ))}
+                </div>
+            );
+        } else if (album.style === 'Pre') {
+            sectionHeaderProps = { title: album.title || "事前登录", icon: Gift, iconClassName: "text-green-500", moreHref: "/app?status=preregistration" };
+            sectionContent = (
+                <div className="flex overflow-x-auto space-x-3 sm:space-x-4 py-2 -mx-1 px-1 cursor-grab select-none">
+                    {games.map((game, index) => (
+                    <PreregistrationGameCard
+                        key={game.id}
+                        game={game}
+                        className="fade-in flex-shrink-0"
+                        style={{ animationDelay: `${animationDelay + 0.1 + index * 0.05}s` }}
+                    />
+                    ))}
+                </div>
+            );
+        } else {
+            return null;
+        }
 
-      <Separator className="my-8 bg-border/50" />
-
-      {preregistrationGames.length > 0 && (
-        <section className="fade-in" style={{ animationDelay: '0.9s' }}>
-          <SectionHeader title={preregistrationAlbum?.title || "事前登录"} icon={Gift} iconClassName="text-green-500" moreHref="/app?status=preregistration" />
-          <div
-            className="flex overflow-x-auto space-x-3 sm:space-x-4 py-2 -mx-1 px-1 cursor-grab select-none"
-          >
-            {preregistrationGames.map((game, index) => (
-              <PreregistrationGameCard
-                key={game.id}
-                game={game}
-                className="fade-in flex-shrink-0"
-                style={{ animationDelay: `${1.0 + index * 0.05}s` }}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-
-      <Separator className="my-8 bg-border/50" />
+        return (
+            <React.Fragment key={album._id}>
+                <Separator className="my-8 bg-border/50" />
+                <section className="fade-in" style={{ animationDelay: `${animationDelay}s` }}>
+                    <SectionHeader {...sectionHeaderProps} />
+                    {sectionContent}
+                </section>
+            </React.Fragment>
+        );
+      })}
 
       {newsItems.length > 0 && (
-        <section className="fade-in" style={{ animationDelay: '1.2s' }}>
-           <SectionHeader title="游戏资讯" icon={Newspaper} iconClassName="text-primary/80" moreHref="/news" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {newsItems.map((article, index) => (
-              <div
-                key={article.id}
-                className="bg-card p-4 sm:p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 fade-in"
-                style={{ animationDelay: `${1.3 + index * 0.1}s` }}
-              >
-                <h3 className="text-base sm:text-lg font-semibold mb-2 text-card-foreground">{article.title}</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground mb-3 line-clamp-2">
-                  {article.excerpt}
-                </p>
-                <Link href={`/news/${article.id}`} className="text-xs text-primary hover:underline">
-                  阅读更多 &rarr;
-                </Link>
-              </div>
-            ))}
-          </div>
-        </section>
+        <>
+          <Separator className="my-8 bg-border/50" />
+          <section className="fade-in" style={{ animationDelay: `${0.3 + homeData.albums.length * 0.3}s` }}>
+            <SectionHeader title="游戏资讯" icon={Newspaper} iconClassName="text-primary/80" moreHref="/news" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {newsItems.map((article, index) => (
+                <div
+                  key={article.id}
+                  className="bg-card p-4 sm:p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 fade-in"
+                  style={{ animationDelay: `${0.4 + homeData.albums.length * 0.3 + index * 0.1}s` }}
+                >
+                  <h3 className="text-base sm:text-lg font-semibold mb-2 text-card-foreground">{article.title}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-3 line-clamp-2">
+                    {article.excerpt}
+                  </p>
+                  <Link href={`/news/${article.id}`} className="text-xs text-primary hover:underline">
+                    阅读更多 &rarr;
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
       )}
     </div>
   );
