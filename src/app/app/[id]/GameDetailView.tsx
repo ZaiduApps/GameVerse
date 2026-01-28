@@ -550,11 +550,11 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                         </h3>
                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                             {cardConfig.contact.map(item => (
-                            <Button key={item._id} variant="outline" asChild className="btn-interactive">
+                            <Button key={item._id} variant="outline" asChild className="btn-interactive justify-start">
                                 <a href={item.content.link} target="_blank" rel="noopener noreferrer">
                                 {item.content.icon ? (
-                                    <Image src={item.content.icon} alt={item.content.title} width={16} height={16} className="mr-2" />
-                                ) : <Contact className="w-4 h-4 mr-2" />}
+                                    <Image src={item.content.icon} alt={item.content.title} width={20} height={20} className="mr-2" />
+                                ) : <Contact className="mr-2" />}
                                 {item.content.title}
                                 </a>
                             </Button>
@@ -571,11 +571,11 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                             {cardConfig.partner.map(item => (
-                            <Button key={item._id} variant="outline" asChild className="btn-interactive">
+                            <Button key={item._id} variant="outline" asChild className="btn-interactive justify-start">
                                 <a href={item.content.link} target="_blank" rel="noopener noreferrer">
                                 {item.content.icon ? (
-                                    <Image src={item.content.icon} alt={item.content.title} width={16} height={16} className="mr-2" />
-                                ) : <Briefcase className="w-4 h-4 mr-2" />}
+                                    <Image src={item.content.icon} alt={item.content.title} width={20} height={20} className="mr-2" />
+                                ) : <Briefcase className="mr-2" />}
                                 {item.content.title}
                                 </a>
                             </Button>
