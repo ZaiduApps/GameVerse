@@ -548,16 +548,18 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                         <Users className="w-5 h-5 mr-2 text-accent" />
                         玩家交流群
                         </h3>
-                        {cardConfig.contact.map(item => (
-                        <Button key={item._id} variant="outline" asChild className="w-full justify-start btn-interactive">
-                            <a href={item.content.link} target="_blank" rel="noopener noreferrer">
-                            {item.content.icon ? (
-                                <Image src={item.content.icon} alt={item.content.title} width={16} height={16} className="mr-2" />
-                            ) : <Contact className="w-4 h-4 mr-2" />}
-                            {item.content.title}
-                            </a>
-                        </Button>
-                        ))}
+                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {cardConfig.contact.map(item => (
+                            <Button key={item._id} variant="outline" asChild className="btn-interactive">
+                                <a href={item.content.link} target="_blank" rel="noopener noreferrer">
+                                {item.content.icon ? (
+                                    <Image src={item.content.icon} alt={item.content.title} width={16} height={16} className="mr-2" />
+                                ) : <Contact className="w-4 h-4 mr-2" />}
+                                {item.content.title}
+                                </a>
+                            </Button>
+                            ))}
+                        </div>
                     </div>
                     )}
                     
@@ -567,16 +569,18 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                         <Briefcase className="w-5 h-5 mr-2 text-accent" />
                         合作与支持
                         </h3>
-                        {cardConfig.partner.map(item => (
-                        <Button key={item._id} variant="outline" asChild className="w-full justify-start btn-interactive">
-                            <a href={item.content.link} target="_blank" rel="noopener noreferrer">
-                            {item.content.icon ? (
-                                <Image src={item.content.icon} alt={item.content.title} width={16} height={16} className="mr-2" />
-                            ) : <Briefcase className="w-4 h-4 mr-2" />}
-                            {item.content.title}
-                            </a>
-                        </Button>
-                        ))}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {cardConfig.partner.map(item => (
+                            <Button key={item._id} variant="outline" asChild className="btn-interactive">
+                                <a href={item.content.link} target="_blank" rel="noopener noreferrer">
+                                {item.content.icon ? (
+                                    <Image src={item.content.icon} alt={item.content.title} width={16} height={16} className="mr-2" />
+                                ) : <Briefcase className="w-4 h-4 mr-2" />}
+                                {item.content.title}
+                                </a>
+                            </Button>
+                            ))}
+                        </div>
                     </div>
                     )}
                 </div>
