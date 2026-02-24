@@ -6,8 +6,10 @@ import SectionHeader from '@/components/home/SectionHeader';
 import NewReleaseGameCard from '@/components/home/NewReleaseGameCard';
 import PreregistrationGameCard from '@/components/home/PreregistrationGameCard';
 import { Separator } from '@/components/ui/separator';
-import { Flame, Zap, Gift, Newspaper } from 'lucide-react';
+import { Flame, Zap, Gift, Newspaper, CalendarDays, UserCircle } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { Button } from '@/components/ui/button';
 import type { Game, NewsArticle, HomeData, ApiGame, ApiBanner, ApiArticle } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -168,16 +170,43 @@ export default async function HomePage() {
               {newsItems.map((article, index) => (
                 <div
                   key={article.id}
-                  className="bg-card p-4 sm:p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 fade-in"
+                  className="bg-card rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col fade-in"
                   style={{ animationDelay: `${0.4 + homeData.albums.length * 0.3 + index * 0.1}s` }}
                 >
-                  <h3 className="text-base sm:text-lg font-semibold mb-2 text-card-foreground">{article.title}</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground mb-3 line-clamp-2">
-                    {article.excerpt}
-                  </p>
-                  <Link href={`/news/${article.id}`} className="text-xs text-primary hover:underline">
-                    阅读更多 &rarr;
-                  </Link>
+                  <div className="relative aspect-video w-full">
+                    <Image
+                      src={article.imageUrl || 'https://placehold.co/600x400.png'}
+                      alt={article.title}
+                      fill
+                      className="object-cover"
+                      data-ai-hint={article.dataAiHint || 'news image'}
+                    />
+                  </div>
+                  <div className="p-4 flex-grow flex flex-col">
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-2">
+                      <div className="flex items-center">
+                        <CalendarDays className="w-3 h-3 mr-1" />
+                        {article.date}
+                      </div>
+                      <div className="flex items-center">
+                        <UserCircle className="w-3 h-3 mr-1" />
+                        {article.author}
+                      </div>
+                    </div>
+                    <h3 className="text-base sm:text-lg font-semibold mb-2 text-card-foreground line-clamp-2 leading-tight">
+                      {article.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-4 line-clamp-2 flex-grow">
+                      {article.excerpt}
+                    </p>
+                    <div className="mt-auto">
+                      <Button variant="link" asChild className="p-0 h-auto text-xs text-primary hover:underline">
+                        <Link href={`/news/${article.id}`}>
+                          阅读更多 &rarr;
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
