@@ -44,7 +44,7 @@ async function getHomeAndNewsData(): Promise<CombinedHomeData> {
       fetch(`${API_BASE_URL}/news/list`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ page: 1, pageSize: 3 }),
+        body: JSON.stringify({ page: 1, pageSize: 4 }),
         cache: 'no-store'
       })
     ]);
@@ -105,7 +105,7 @@ export default async function HomePage() {
         let sectionHeaderProps;
 
         if (album.style === 'Box') {
-            sectionHeaderProps = { title: album.title || "热门推荐", icon: Flame, iconClassName: "text-primary", moreHref: "/app?sort=popular", as: albumIndex === 0 ? 'h2' : undefined };
+            sectionHeaderProps = { title: album.title || "热门推荐", icon: Flame, iconClassName: "text-primary", moreHref: "/app?sort=popular" };
             sectionContent = (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
                     {games.map((game, index) => (
@@ -121,7 +121,7 @@ export default async function HomePage() {
         } else if (album.style === 'Grid') {
             sectionHeaderProps = { title: album.title || "新游戏速递", icon: Zap, iconClassName: "text-accent", moreHref: "/app?sort=new" };
             sectionContent = (
-                <div className="flex overflow-x-auto space-x-2 sm:space-x-3 py-2 -mx-1 px-1 cursor-grab select-none">
+                <div className="flex overflow-x-auto space-x-1 sm:space-x-2 py-2 -mx-1 px-1 cursor-grab select-none">
                     {games.map((game, index) => (
                     <NewReleaseGameCard
                         key={game.id}
@@ -135,7 +135,7 @@ export default async function HomePage() {
         } else if (album.style === 'Pre') {
             sectionHeaderProps = { title: album.title || "事前登录", icon: Gift, iconClassName: "text-green-500", moreHref: "/app?status=preregistration" };
             sectionContent = (
-                <div className="flex overflow-x-auto space-x-2 sm:space-x-3 py-2 -mx-1 px-1 cursor-grab select-none">
+                <div className="flex overflow-x-auto space-x-1 sm:space-x-2 py-2 -mx-1 px-1 cursor-grab select-none">
                     {games.map((game, index) => (
                     <PreregistrationGameCard
                         key={game.id}
@@ -166,14 +166,14 @@ export default async function HomePage() {
           <Separator className="my-8 bg-border/50" />
           <section className="fade-in" style={{ animationDelay: `${0.3 + homeData.albums.length * 0.3}s` }}>
             <SectionHeader title="游戏资讯" icon={Newspaper} iconClassName="text-primary/80" moreHref="/news" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {newsItems.map((article, index) => (
                 <div
                   key={article.id}
-                  className="bg-card rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col fade-in"
+                  className="bg-card rounded-lg shadow-sm border hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col sm:flex-row h-auto sm:h-48 fade-in"
                   style={{ animationDelay: `${0.4 + homeData.albums.length * 0.3 + index * 0.1}s` }}
                 >
-                  <div className="relative aspect-video w-full">
+                  <div className="relative w-full sm:w-1/3 h-48 sm:h-auto flex-shrink-0">
                     <Image
                       src={article.imageUrl || 'https://placehold.co/600x400.png'}
                       alt={article.title}
@@ -182,25 +182,27 @@ export default async function HomePage() {
                       data-ai-hint={article.dataAiHint || 'news image'}
                     />
                   </div>
-                  <div className="p-4 flex-grow flex flex-col">
-                    <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-2">
-                      <div className="flex items-center">
-                        <CalendarDays className="w-3 h-3 mr-1" />
-                        {article.date}
-                      </div>
-                      <div className="flex items-center">
-                        <UserCircle className="w-3 h-3 mr-1" />
-                        {article.author}
-                      </div>
+                  <div className="p-4 flex-grow flex flex-col justify-between min-w-0">
+                    <div>
+                        <div className="flex items-center gap-3 text-[10px] text-muted-foreground mb-2">
+                          <span className="flex items-center">
+                            <CalendarDays className="w-3 h-3 mr-1" />
+                            {article.date}
+                          </span>
+                          <span className="flex items-center">
+                            <UserCircle className="w-3 h-3 mr-1" />
+                            {article.author}
+                          </span>
+                        </div>
+                        <h3 className="text-base font-semibold mb-2 text-foreground line-clamp-2 leading-tight hover:text-primary transition-colors">
+                          <Link href={`/news/${article.id}`}>{article.title}</Link>
+                        </h3>
+                        <p className="text-xs text-muted-foreground line-clamp-2 sm:line-clamp-3">
+                          {article.excerpt}
+                        </p>
                     </div>
-                    <h3 className="text-base sm:text-lg font-semibold mb-2 text-card-foreground line-clamp-2 leading-tight">
-                      {article.title}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground mb-4 line-clamp-2 flex-grow">
-                      {article.excerpt}
-                    </p>
-                    <div className="mt-auto">
-                      <Button variant="link" asChild className="p-0 h-auto text-xs text-primary hover:underline">
+                    <div className="mt-2 flex justify-end">
+                      <Button variant="link" asChild className="p-0 h-auto text-xs text-primary font-medium hover:underline">
                         <Link href={`/news/${article.id}`}>
                           阅读更多 &rarr;
                         </Link>
