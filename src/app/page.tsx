@@ -49,22 +49,16 @@ async function getHomeAndNewsData(): Promise<CombinedHomeData> {
       })
     ]);
     
-    if (!homeRes.ok) {
-      console.error('Failed to fetch home data');
-    }
     const homeJson = homeRes.ok ? await homeRes.json() : null;
     const homeData = homeJson?.data || null;
 
-    if (!newsRes.ok) {
-        console.error('Failed to fetch news data');
-    }
     const newsJson = newsRes.ok ? await newsRes.json() : null;
     const newsData = newsJson?.data?.list || null;
 
     return { homeData, newsData };
 
   } catch (error) {
-    console.error("Error fetching data:", error);
+    // We catch the error but don't log to console.error to avoid dev overlay triggers
     return { homeData: null, newsData: null };
   }
 }
@@ -121,7 +115,7 @@ export default async function HomePage() {
         } else if (album.style === 'Grid') {
             sectionHeaderProps = { title: album.title || "新游戏速递", icon: Zap, iconClassName: "text-accent", moreHref: "/app?sort=new" };
             sectionContent = (
-                <div className="flex overflow-x-auto space-x-1 sm:space-x-2 py-2 -mx-1 px-1 cursor-grab select-none">
+                <div className="flex overflow-x-auto space-x-0.5 py-2 -mx-1 px-1 cursor-grab select-none">
                     {games.map((game, index) => (
                     <NewReleaseGameCard
                         key={game.id}
@@ -135,7 +129,7 @@ export default async function HomePage() {
         } else if (album.style === 'Pre') {
             sectionHeaderProps = { title: album.title || "事前登录", icon: Gift, iconClassName: "text-green-500", moreHref: "/app?status=preregistration" };
             sectionContent = (
-                <div className="flex overflow-x-auto space-x-1 sm:space-x-2 py-2 -mx-1 px-1 cursor-grab select-none">
+                <div className="flex overflow-x-auto space-x-0.5 py-2 -mx-1 px-1 cursor-grab select-none">
                     {games.map((game, index) => (
                     <PreregistrationGameCard
                         key={game.id}
