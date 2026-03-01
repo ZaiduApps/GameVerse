@@ -309,7 +309,7 @@ export interface User {
   name?: string;
   avatar?: string;
   isActive: boolean;
-  roles: string[];
+  roles: (string | { name: string; code?: string; [key: string]: any })[];
   loginCount?: number;
   lastLoginTime?: string;
   created_at?: string;

@@ -230,7 +230,7 @@ export default function ProfilePage() {
                       {user.roles && user.roles.length > 0 ? (
                         user.roles.map((role, idx) => (
                           <Badge key={idx} variant="outline" className="text-xs bg-accent/5">
-                            {role}
+                            {typeof role === 'object' && role !== null ? role.name : role}
                           </Badge>
                         ))
                       ) : (
