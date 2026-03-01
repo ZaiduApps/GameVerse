@@ -313,8 +313,13 @@ export interface User {
   loginCount?: number;
   lastLoginTime?: string;
   created_at?: string;
+  updated_at?: string;
   gender?: string;
   phone?: string;
+  birthday?: string;
+  country?: string;
+  province?: string;
+  city?: string;
   isVerified?: boolean;
 }
 
