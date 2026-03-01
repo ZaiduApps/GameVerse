@@ -28,9 +28,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const storedToken = localStorage.getItem('auth_token');
     const storedUser = localStorage.getItem('auth_user');
 
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+    if (storedToken && storedUser && storedUser !== 'undefined') {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser) {
+          setToken(storedToken);
+          setUser(parsedUser);
+        }
+      } catch (error) {
+        // Clear corrupted storage data
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+      }
     }
     setIsLoading(false);
   }, []);
@@ -52,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         });
       } catch (error) {
-        console.error('Logout API failed:', error);
+        // Continue logout even if API fails
       }
     }
     setToken(null);
@@ -78,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout();
       }
     } catch (error) {
-      console.error('Failed to fetch current user:', error);
+      // Silently fail user refresh
     }
   }, [token, logout]);
 
