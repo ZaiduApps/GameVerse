@@ -4,6 +4,7 @@ import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
+import { AuthProvider } from '@/context/auth-context';
 import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
@@ -46,26 +47,14 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const { header, basic, seo } = config;
 
-  const verification: Metadata['verification'] = {};
-  if (header.verifications) {
-    const { google, baidu, q360, sogou } = header.verifications;
-    if (google) {
-      verification.google = google;
-    }
-    const other: { [key: string]: string } = {};
-    if (baidu) {
-      other['baidu-site-verification'] = baidu;
-    }
-    if (q360) {
-      other['360-site-verification'] = q360;
-    }
-    if (sogou) {
-      other['sogou_site_verification'] = sogou;
-    }
-    if (Object.keys(other).length > 0) {
-      verification.other = other;
-    }
-  }
+  const verification: Metadata['verification'] = {
+    google: header.verifications?.google,
+    other: {
+      'baidu-site-verification': header.verifications?.baidu || '',
+      '360-site-verification': header.verifications?.q360 || '',
+      'sogou_site_verification': header.verifications?.sogou || '',
+    },
+  };
 
   return {
     metadataBase: new URL('https://apks.cc'),
@@ -129,15 +118,14 @@ export default async function RootLayout({
           <style dangerouslySetInnerHTML={{ __html: siteConfig.header.custom_css }} />
         )}
         {siteConfig?.header?.head_scripts && (
-  <Script
-    id="analytics"
-    strategy="afterInteractive"
-    dangerouslySetInnerHTML={{
-      __html: siteConfig.header.head_scripts,
-    }}
-  />
-)}
-
+          <Script
+            id="analytics"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: siteConfig.header.head_scripts,
+            }}
+          />
+        )}
       </head>
       <body id="Top" className={`${GeistSans.variable} ${GeistMono.variable} antialiased flex flex-col min-h-screen`}>
         <ThemeProvider
@@ -146,15 +134,17 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Suspense fallback={null}>
-            <PageTransitionLoader />
-          </Suspense>
-          <Header siteName={siteConfig?.basic.site_name} logoUrl={siteConfig?.basic.logo_url} />
-          <main className="flex-grow container mx-auto px-4 py-8">
-            {children}
-          </main>
-          <Footer config={siteConfig} />
-          <Toaster />
+          <AuthProvider>
+            <Suspense fallback={null}>
+              <PageTransitionLoader />
+            </Suspense>
+            <Header siteName={siteConfig?.basic.site_name} logoUrl={siteConfig?.basic.logo_url} />
+            <main className="flex-grow container mx-auto px-4 py-8">
+              {children}
+            </main>
+            <Footer config={siteConfig} />
+            <Toaster />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

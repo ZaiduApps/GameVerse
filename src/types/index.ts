@@ -1,5 +1,4 @@
 
-
 export interface GameScreenshot {
   url: string;
   dataAiHint?: string;
@@ -266,6 +265,7 @@ export interface SiteConfig {
       q360?: string;
       sogou?: string;
     };
+    other?: { [key: string]: string };
     custom_css?: string;
     head_scripts?: string;
   };
@@ -299,4 +299,32 @@ export interface SiteConfig {
     app_description_template: string;
   };
   is_maintenance: boolean;
+}
+
+// User & Auth Types
+export interface User {
+  _id: string;
+  username: string;
+  email: string;
+  name?: string;
+  avatar?: string;
+  isActive: boolean;
+  roles: string[];
+  loginCount?: number;
+  lastLoginTime?: string;
+  created_at?: string;
+  gender?: string;
+  phone?: string;
+  isVerified?: boolean;
+}
+
+export interface AuthData {
+  user: User;
+  token: string;
+}
+
+export interface ApiResponse<T> {
+  code: number;
+  message: string;
+  data: T;
 }
