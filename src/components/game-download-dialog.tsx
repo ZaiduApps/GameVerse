@@ -1,4 +1,3 @@
-
 'use client';
 
 import type React from 'react';
@@ -50,6 +49,7 @@ export default function GameDownloadDialog({ resources, pkg, downloadNotices }: 
         body: JSON.stringify({
           pkg: pkg,
           channel_id: channelId,
+          site_name: 'APKScc', // Added required site_name parameter
         }),
       });
 
