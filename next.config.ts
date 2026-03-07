@@ -1,5 +1,13 @@
 import type { NextConfig } from 'next';
 
+const appEnv = (process.env.APP_ENV || process.env.NODE_ENV || 'development').toLowerCase();
+const backendBaseUrl = (
+  process.env.API_BASE_URL ||
+  (appEnv === 'production'
+    ? process.env.API_BASE_URL_PROD || 'https://api.hk.apks.cc'
+    : process.env.API_BASE_URL_DEV || 'http://127.0.0.1:9527')
+).replace(/\/+$/, '');
+
 const nextConfig: NextConfig = {
   /* config options here */
   typescript: {
@@ -12,11 +20,11 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/news/search',
-        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL}/news/search`,
+        destination: `${backendBaseUrl}/news/search`,
       },
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL}/:path*`,
+        destination: `${backendBaseUrl}/:path*`,
       },
     ];
   },
@@ -32,6 +40,12 @@ const nextConfig: NextConfig = {
         hostname: '**',
       },
     ],
+  },
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.cache = false;
+    }
+    return config;
   },
 };
 

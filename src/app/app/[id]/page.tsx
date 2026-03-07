@@ -3,11 +3,15 @@ import type { GameDetailData, ApiRecommendedGame, SiteConfig } from '@/types';
 import GameDetailView from './GameDetailView';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { apiUrl } from '@/lib/api';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-const CONFIG_API_URL = 'https://api.hk.apks.cc/config/info?site_name=APKScc';
+const CONFIG_API_URL =
+  process.env.NEXT_PUBLIC_ENABLE_SITE_CONFIG === 'true'
+    ? apiUrl('/config/info?key=main')
+    : null;
 
 async function getSiteConfig(): Promise<SiteConfig | null> {
+  if (!CONFIG_API_URL) return null;
   try {
     const res = await fetch(CONFIG_API_URL, {
       next: { revalidate: 3600 }, // Revalidate every hour
@@ -31,7 +35,7 @@ async function getSiteConfig(): Promise<SiteConfig | null> {
 
 async function getGameDetails(id: string): Promise<GameDetailData | null> {
     try {
-        const res = await fetch(`${API_BASE_URL}/game/details?param=${id}`, { cache: 'no-store' });
+        const res = await fetch(apiUrl(`/game/details?param=${id}`), { cache: 'no-store' });
         if (!res.ok) return null;
         const json = await res.json();
         if (json.code !== 0) {
@@ -48,7 +52,7 @@ async function getGameDetails(id: string): Promise<GameDetailData | null> {
 async function getRecommendedGames(pkg: string): Promise<ApiRecommendedGame[] | null> {
     if (!pkg) return null;
     try {
-        const res = await fetch(`${API_BASE_URL}/game/recommendedApp?param=${pkg}`, { cache: 'no-store' });
+        const res = await fetch(apiUrl(`/game/recommendedApp?param=${pkg}`), { cache: 'no-store' });
         if (!res.ok) return null;
         const json = await res.json();
         return json.code === 0 ? json.data : null;
@@ -58,14 +62,18 @@ async function getRecommendedGames(pkg: string): Promise<ApiRecommendedGame[] | 
     }
 }
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const { id } = params;
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
   const [siteConfig, gameData] = await Promise.all([
     getSiteConfig(),
     getGameDetails(id),
   ]);
 
-  if (!gameData || !siteConfig) {
+  if (!gameData) {
     return {
       title: 'Game Not Found',
       description: 'The requested game could not be found.',
@@ -73,6 +81,18 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   }
 
   const game = gameData.app;
+  if (!siteConfig) {
+    return {
+      title: game.name,
+      description: game.summary || game.description || '',
+      openGraph: {
+        title: game.name,
+        description: game.summary || game.description || '',
+        images: [game.header_image || game.icon].filter(Boolean),
+      },
+    };
+  }
+
   const { app_seo, basic, seo } = siteConfig;
 
   let title = app_seo.app_title_template || '{name} v{version}';
@@ -116,8 +136,12 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 }
 
 
-export default async function GameDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default async function GameDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
 
   if (!id) {
     notFound();

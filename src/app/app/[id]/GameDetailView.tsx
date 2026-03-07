@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { notFound, usePathname } from 'next/navigation';
 import Loading from '../loading';
 import GameAnnouncements from '@/components/game-announcements';
+import { apiUrl } from '@/lib/api';
 
 interface MockComment {
   id: string;
@@ -83,7 +84,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
       setIsLoading(true);
       setPageError(false);
       try {
-        const gameDetailsRes = await fetch(`/api/game/details?param=${fetchId}`);
+        const gameDetailsRes = await fetch(apiUrl(`/game/details?param=${fetchId}`));
         if (!gameDetailsRes.ok) throw new Error('Failed to fetch game details');
         
         const gameDetailsJson = await gameDetailsRes.json();
@@ -96,7 +97,9 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
 
         // Fetch recommended games if package name exists
         if (fetchedGameData.app.pkg) {
-            const recommendedGamesRes = await fetch(`/api/game/recommendedApp?param=${fetchedGameData.app.pkg}`);
+            const recommendedGamesRes = await fetch(
+              apiUrl(`/game/recommendedApp?param=${fetchedGameData.app.pkg}`),
+            );
             if (recommendedGamesRes.ok) {
                 const recommendedGamesJson = await recommendedGamesRes.json();
                  if (recommendedGamesJson.code === 0 && recommendedGamesJson.data) {
@@ -146,7 +149,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     if (!game?.pkg || isFetchingRecommended) return;
     setIsFetchingRecommended(true);
     try {
-      const res = await fetch(`/api/game/recommendedApp?param=${game.pkg}`, { cache: 'no-store' });
+      const res = await fetch(apiUrl(`/game/recommendedApp?param=${game.pkg}`), { cache: 'no-store' });
       if (res.ok) {
         const jsonResponse = await res.json();
         if (jsonResponse.code === 0 && jsonResponse.data) {
@@ -369,12 +372,12 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   </div>
                 </div>
                 <div className="hidden sm:block flex-shrink-0 pt-2">
-                  <GameDownloadDialog pkg={game.pkg} resources={resources} downloadNotices={cardConfig?.download_notice} />
+                  <GameDownloadDialog appId={game._id} pkg={game.pkg} resources={resources} downloadNotices={cardConfig?.download_notice} />
                 </div>
               </div>
 
                <div className="sm:hidden w-full">
-                  <GameDownloadDialog pkg={game.pkg} resources={resources} downloadNotices={cardConfig?.download_notice} />
+                  <GameDownloadDialog appId={game._id} pkg={game.pkg} resources={resources} downloadNotices={cardConfig?.download_notice} />
                 </div>
 
 

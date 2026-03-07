@@ -175,6 +175,7 @@ export interface ApiGameDetail {
 
 export interface ApiDownloadResource {
   _id: string;
+  channel_id?: string;
   channel: {
     _id: string;
     name: string;

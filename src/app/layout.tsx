@@ -12,9 +12,14 @@ import PageTransitionLoader from '@/components/layout/PageTransitionLoader';
 import { Suspense } from 'react';
 import type { SiteConfig } from '@/types';
 import Script from 'next/script';
-const CONFIG_API_URL = 'https://api.hk.apks.cc/config/info?site_name=APKScc';
+import { apiUrl } from '@/lib/api';
+const CONFIG_API_URL =
+  process.env.NEXT_PUBLIC_ENABLE_SITE_CONFIG === 'true'
+    ? apiUrl('/config/info?key=main')
+    : null;
 
 async function getSiteConfig(): Promise<SiteConfig | null> {
+  if (!CONFIG_API_URL) return null;
   try {
     const res = await fetch(CONFIG_API_URL, {
       next: { revalidate: 10 }, // Revalidate every hour

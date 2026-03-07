@@ -11,8 +11,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import type { Game, NewsArticle, HomeData, ApiGame, ApiBanner, ApiArticle } from '@/types';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiUrl } from '@/lib/api';
 
 // Helper function to transform API game data to our Game type
 function transformApiGameToGame(apiGame: ApiGame): Game {
@@ -39,21 +38,11 @@ interface CombinedHomeData {
 
 async function getHomeAndNewsData(): Promise<CombinedHomeData> {
   try {
-    const [homeRes, newsRes] = await Promise.all([
-      fetch(`${API_BASE_URL}/home`, { cache: 'no-store' }),
-      fetch(`${API_BASE_URL}/news/list`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ page: 1, pageSize: 4 }),
-        cache: 'no-store'
-      })
-    ]);
+    const homeRes = await fetch(apiUrl('/home'), { cache: 'no-store' });
     
     const homeJson = homeRes.ok ? await homeRes.json() : null;
     const homeData = homeJson?.data || null;
-
-    const newsJson = newsRes.ok ? await newsRes.json() : null;
-    const newsData = newsJson?.data?.list || null;
+    const newsData = homeData?.articles || null;
 
     return { homeData, newsData };
 
@@ -71,7 +60,7 @@ export default async function HomePage() {
   }
 
   const newsItems: NewsArticle[] = (newsData || []).map((a: ApiArticle) => ({
-      id: a.gid || a._id, // Use gid for linking, fallback to _id
+      id: a._id || a.gid || '',
       title: a.name,
       content: a.content || '',
       excerpt: a.summary,

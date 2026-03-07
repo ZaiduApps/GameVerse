@@ -18,13 +18,14 @@ import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Mail, Lock, User, KeyRound, Smartphone } from 'lucide-react';
 import type { ApiResponse, AuthData } from '@/types';
+import { apiUrl } from '@/lib/api';
 
 interface AuthModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const API_BASE_URL = 'https://api.hk.apks.cc/auth';
+const API_BASE_URL = apiUrl('/auth');
 
 export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
   const { login } = useAuth();

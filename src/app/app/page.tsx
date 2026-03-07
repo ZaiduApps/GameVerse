@@ -4,14 +4,13 @@
 import GameCard from '@/components/game-card';
 import { Button } from '@/components/ui/button';
 import { ListFilter, Loader2 } from 'lucide-react';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Game, ApiGame } from '@/types';
 import { cn } from '@/lib/utils';
-import { Input } from '@/components/ui/input';
+import { apiUrl } from '@/lib/api';
 
-// Define a type for the API tag response
 interface ApiTag {
-  _id: string;
+  _id: string; // use tag name as synthetic id in public mode
   name: string;
 }
 
@@ -23,7 +22,6 @@ interface PaginationState {
   hasMore: boolean;
 }
 
-// Helper to transform API game data to our Game type
 function transformApiGameToGame(apiGame: ApiGame): Game {
   return {
     id: apiGame._id,
@@ -44,83 +42,73 @@ function transformApiGameToGame(apiGame: ApiGame): Game {
 
 export default function GamesPage() {
   const [isLoading, setIsLoading] = useState(true);
-  const [tags, setTags] = useState<ApiTag[]>([]);
+  const [allGames, setAllGames] = useState<Game[]>([]);
   const [selectedTag, setSelectedTag] = useState<ApiTag | null>(null);
   const [games, setGames] = useState<Game[]>([]);
   const [pagination, setPagination] = useState<PaginationState | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Fetch tags on component mount
+  const tags = useMemo<ApiTag[]>(() => {
+    const uniqueTagNames = Array.from(
+      new Set(
+        allGames
+          .flatMap((game) => game.tags || [])
+          .map((tagName) => tagName?.trim())
+          .filter(Boolean) as string[],
+      ),
+    );
+
+    return uniqueTagNames.map((name) => ({ _id: name, name }));
+  }, [allGames]);
+
   useEffect(() => {
-    async function fetchTags() {
+    async function fetchPublicGames() {
+      setIsLoading(true);
       try {
-        const res = await fetch(`/api/tags/list`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ page: 1, pageSize: 15, sortType: "most_used" })
-        });
+        const res = await fetch(apiUrl('/game/list'), { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
-          if (data.code === 0 && data.data?.list) {
-            setTags(data.data.list);
-          }
+          const list = Array.isArray(data?.data) ? data.data : [];
+          setAllGames(list.map(transformApiGameToGame));
+        } else {
+          setAllGames([]);
         }
       } catch (error) {
-        console.error("Failed to fetch tags:", error);
+        console.error('Failed to fetch games:', error);
+        setAllGames([]);
+      } finally {
+        setIsLoading(false);
       }
     }
-    fetchTags();
-  }, []);
-
-  // Fetch games based on selected tag or page change
-  const fetchGames = useCallback(async (tagId: string | null, page: number) => {
-    setIsLoading(true);
-    try {
-      const body = {
-        id: tagId,
-        page: page,
-        pageSize: 20
-      };
-      if (!tagId) {
-        delete (body as any).id;
-      }
-      
-      const res = await fetch(`/api/tags/list-games`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        if (data.code === 0 && data.data) {
-          const transformedGames = data.data.list.map(transformApiGameToGame);
-          setGames(transformedGames);
-          setPagination(data.data.pagination);
-        } else {
-          setGames([]);
-          setPagination(null);
-        }
-      } else {
-        setGames([]);
-        setPagination(null);
-      }
-    } catch (error) {
-      console.error("Failed to fetch games:", error);
-      setGames([]);
-      setPagination(null);
-    } finally {
-      setIsLoading(false);
-    }
+    fetchPublicGames();
   }, []);
 
   useEffect(() => {
-    fetchGames(selectedTag?._id || null, currentPage);
-  }, [selectedTag, currentPage, fetchGames]);
+    const pageSize = 20;
+    const filtered = selectedTag
+      ? allGames.filter((game) => game.tags?.includes(selectedTag.name))
+      : allGames;
+
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const safePage = Math.min(Math.max(1, currentPage), totalPages);
+    const start = (safePage - 1) * pageSize;
+    const end = start + pageSize;
+    const list = filtered.slice(start, end);
+
+    setGames(list);
+    setPagination({
+      total,
+      page: safePage,
+      pageSize,
+      totalPages,
+      hasMore: safePage < totalPages,
+    });
+  }, [allGames, selectedTag, currentPage]);
   
   const handleTagClick = (tag: ApiTag | null) => {
     setSelectedTag(tag);
-    setCurrentPage(1); // Reset to first page on new tag selection
+    setCurrentPage(1);
   }
 
   const handlePageChange = (newPage: number) => {

@@ -10,6 +10,7 @@ import { CalendarDays, UserCircle, Newspaper, Search, Loader2 } from 'lucide-rea
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
+import { apiUrl } from '@/lib/api';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -23,7 +24,7 @@ interface PaginationState {
 
 function transformApiArticle(apiArticle: ApiArticle): NewsArticle {
      return {
-        id: apiArticle.gid || apiArticle._id,
+        id: apiArticle._id || apiArticle.gid || '',
         title: apiArticle.name,
         content: apiArticle.content || '',
         excerpt: apiArticle.summary,
@@ -53,39 +54,55 @@ export default function NewsPage() {
   const fetchArticles = useCallback(async (page: number, query: string) => {
     setIsLoading(true);
     try {
-      let res;
-      let url = '';
-      const options: RequestInit = {};
-
       if (query) {
-        // Use the search endpoint when a query is present
-        url = `/api/news/search?q=${encodeURIComponent(query)}&page=${page}&pageSize=${ITEMS_PER_PAGE}`;
-      } else {
-        // Use the list endpoint for general browsing
-        url = `/api/news/list`;
-        options.method = 'POST';
-        options.headers = { 'Content-Type': 'application/json' };
-        options.body = JSON.stringify({
-          page: page,
-          pageSize: ITEMS_PER_PAGE,
-        });
-      }
-      
-      res = await fetch(url, options);
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.code === 0 && data.data) {
-          const transformedArticles = data.data.list.map(transformApiArticle);
-          setArticles(transformedArticles);
-          setPagination(data.data.pagination);
+        const res = await fetch(
+          apiUrl(`/news/search?q=${encodeURIComponent(query)}&page=${page}&pageSize=${ITEMS_PER_PAGE}`),
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data.code === 0 && data.data) {
+            const transformedArticles = data.data.list.map(transformApiArticle);
+            setArticles(transformedArticles);
+            setPagination({
+              total: data.data.total || transformedArticles.length,
+              page: data.data.page || page,
+              pageSize: data.data.pageSize || ITEMS_PER_PAGE,
+              totalPages:
+                data.data.totalPages ||
+                Math.max(1, Math.ceil((data.data.total || 0) / ITEMS_PER_PAGE)),
+              hasMore: Boolean(data.data.hasMore),
+            });
+          } else {
+            setArticles([]);
+            setPagination(null);
+          }
         } else {
           setArticles([]);
           setPagination(null);
         }
       } else {
-        setArticles([]);
-        setPagination(null);
+        const res = await fetch(apiUrl('/home'), { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          const rawArticles = Array.isArray(data?.data?.articles) ? data.data.articles : [];
+          const transformedArticles = rawArticles.map(transformApiArticle);
+          const total = transformedArticles.length;
+          const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
+          const safePage = Math.min(Math.max(1, page), totalPages);
+          const start = (safePage - 1) * ITEMS_PER_PAGE;
+          const end = start + ITEMS_PER_PAGE;
+          setArticles(transformedArticles.slice(start, end));
+          setPagination({
+            total,
+            page: safePage,
+            pageSize: ITEMS_PER_PAGE,
+            totalPages,
+            hasMore: safePage < totalPages,
+          });
+        } else {
+          setArticles([]);
+          setPagination(null);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch articles:", error);

@@ -1,30 +1,39 @@
-'use client';
+﻿'use client';
 
 import type React from 'react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { Download, Smartphone, Store, Globe, Gamepad2, Loader2, AlertTriangle } from 'lucide-react';
+} from '@/components/ui/dialog';
+import {
+  AlertTriangle,
+  Download,
+  Gamepad2,
+  Globe,
+  Loader2,
+  Smartphone,
+  Store,
+} from 'lucide-react';
 import type { ApiDownloadResource, CardConfigItem } from '@/types';
 import Image from 'next/image';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { apiUrl } from '@/lib/api';
 
 interface GameDownloadDialogProps {
   resources: ApiDownloadResource[];
-  pkg: string;
+  appId?: string;
+  pkg?: string;
   downloadNotices?: CardConfigItem[];
 }
 
-// Fallback icons map
 const iconMap: { [key: string]: React.ReactNode } = {
   app_store: <Smartphone className="w-5 h-5 mr-3 text-muted-foreground" />,
   google_play: <Store className="w-5 h-5 mr-3 text-muted-foreground" />,
@@ -33,24 +42,34 @@ const iconMap: { [key: string]: React.ReactNode } = {
   third_party: <Gamepad2 className="w-5 h-5 mr-3 text-muted-foreground" />,
 };
 
-export default function GameDownloadDialog({ resources, pkg, downloadNotices }: GameDownloadDialogProps) {
+export default function GameDownloadDialog({
+  resources,
+  appId,
+  pkg,
+  downloadNotices,
+}: GameDownloadDialogProps) {
   const [loadingChannelId, setLoadingChannelId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleDownloadClick = async (channelId: string) => {
+    if ((!appId && !pkg) || !channelId) {
+      setError('下载参数缺失，请刷新页面后重试');
+      return;
+    }
+
     setLoadingChannelId(channelId);
     setError(null);
+
     try {
-      // Adding site_name to both query and body for maximum compatibility
-      const response = await fetch('/api/game/getAppDownload?site_name=APKScc', {
+      const response = await fetch(apiUrl('/game/getAppDownload'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          pkg: pkg,
+          app_id: appId,
+          pkg,
           channel_id: channelId,
-          site_name: 'APKScc',
         }),
       });
 
@@ -59,14 +78,12 @@ export default function GameDownloadDialog({ resources, pkg, downloadNotices }: 
       }
 
       const result = await response.json();
-
       if (result.code === 0 && result.data?.url) {
         window.open(result.data.url, '_blank');
       } else {
         throw new Error(result.message || '无法获取下载链接');
       }
     } catch (e: any) {
-      // Avoid using console.error to prevent dev overlay in some environments
       setError(e.message || '发生未知错误');
     } finally {
       setLoadingChannelId(null);
@@ -74,7 +91,11 @@ export default function GameDownloadDialog({ resources, pkg, downloadNotices }: 
   };
 
   return (
-    <Dialog onOpenChange={(open) => { if(!open) setError(null); }}>
+    <Dialog
+      onOpenChange={(open) => {
+        if (!open) setError(null);
+      }}
+    >
       <DialogTrigger asChild>
         <Button size="lg" className="w-full md:w-auto btn-interactive">
           <Download className="mr-2 h-5 w-5" />
@@ -85,56 +106,84 @@ export default function GameDownloadDialog({ resources, pkg, downloadNotices }: 
         <DialogHeader>
           <DialogTitle>选择下载渠道</DialogTitle>
           <DialogDescription>
-            请选择您偏好的下载方式。点击渠道即可开始下载。
+            请选择您偏好的下载方式，点击渠道即可开始下载。
           </DialogDescription>
         </DialogHeader>
 
         {downloadNotices && downloadNotices.length > 0 && (
           <div className="space-y-2">
-            {downloadNotices.map(notice => (
-              <Alert key={notice._id} variant="default" className="bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800/40 dark:text-yellow-300">
+            {downloadNotices.map((notice) => (
+              <Alert
+                key={notice._id}
+                variant="default"
+                className="bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800/40 dark:text-yellow-300"
+              >
                 <AlertTriangle className="h-4 w-4 !text-yellow-500 dark:!text-yellow-400" />
-                <AlertTitle className="font-semibold">{notice.content.title}</AlertTitle>
+                <AlertTitle className="font-semibold">
+                  {notice.content.title}
+                </AlertTitle>
                 <AlertDescription className="text-xs">
-                    {notice.content.text}
-                    {notice.content.html && <div dangerouslySetInnerHTML={{ __html: notice.content.html }} />}
+                  {notice.content.text}
+                  {notice.content.html && (
+                    <div
+                      dangerouslySetInnerHTML={{ __html: notice.content.html }}
+                    />
+                  )}
                 </AlertDescription>
               </Alert>
             ))}
           </div>
         )}
 
-
         <div className="grid gap-3 py-4">
           {resources && resources.length > 0 ? (
-            resources.map(resource => (
-              <Button
-                key={resource._id}
-                variant="outline"
-                className="w-full justify-start text-left h-auto py-3 px-4 relative group"
-                disabled={loadingChannelId !== null}
-                onClick={() => handleDownloadClick(resource.channel._id)}
-              >
-                {loadingChannelId === resource.channel._id ? (
-                  <Loader2 className="w-5 h-5 mr-3 text-muted-foreground animate-spin" />
-                ) : resource.channel.icon ? (
-                   <div className="relative w-6 h-6 mr-3">
-                    <Image src={resource.channel.icon} alt={resource.channel.name} fill className="object-contain" />
-                   </div>
-                ) : (
-                  iconMap[resource.channel.code] || <Download className="w-5 h-5 mr-3 text-muted-foreground" />
-                )}
-                <div className="flex flex-col">
-                    <span className="text-base font-medium group-hover:text-primary transition-colors">{resource.channel.name}</span>
-                    {resource.channel.description && (
-                        <span className="text-xs text-muted-foreground">{resource.channel.description}</span>
+            resources.map((resource) => {
+              const channelId = resource.channel?._id || resource.channel_id || '';
+              const loading = loadingChannelId === channelId;
+
+              return (
+                <Button
+                  key={resource._id}
+                  variant="outline"
+                  className="w-full justify-start text-left h-auto py-3 px-4 relative group"
+                  disabled={loadingChannelId !== null}
+                  onClick={() => handleDownloadClick(channelId)}
+                >
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 mr-3 text-muted-foreground animate-spin" />
+                  ) : resource.channel?.icon ? (
+                    <div className="relative w-6 h-6 mr-3">
+                      <Image
+                        src={resource.channel.icon}
+                        alt={resource.channel.name || 'channel'}
+                        fill
+                        className="object-contain"
+                      />
+                    </div>
+                  ) : (
+                    iconMap[resource.channel?.code || ''] || (
+                      <Download className="w-5 h-5 mr-3 text-muted-foreground" />
+                    )
+                  )}
+                  <div className="flex flex-col">
+                    <span className="text-base font-medium group-hover:text-primary transition-colors">
+                      {resource.channel?.name || '未知渠道'}
+                    </span>
+                    {resource.channel?.description && (
+                      <span className="text-xs text-muted-foreground">
+                        {resource.channel.description}
+                      </span>
                     )}
-                </div>
-              </Button>
-            ))
+                  </div>
+                </Button>
+              );
+            })
           ) : (
-            <p className='text-sm text-muted-foreground text-center py-4'>暂无可用下载渠道。</p>
+            <p className="text-sm text-muted-foreground text-center py-4">
+              暂无可用下载渠道。
+            </p>
           )}
+
           {error && (
             <Alert variant="destructive" className="mt-2">
               <AlertTriangle className="h-4 w-4" />
@@ -143,9 +192,14 @@ export default function GameDownloadDialog({ resources, pkg, downloadNotices }: 
             </Alert>
           )}
         </div>
+
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="secondary" disabled={loadingChannelId !== null}>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={loadingChannelId !== null}
+            >
               关闭
             </Button>
           </DialogClose>

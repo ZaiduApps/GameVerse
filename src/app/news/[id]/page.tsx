@@ -3,16 +3,12 @@ import { MOCK_NEWS_ARTICLES } from '@/lib/constants';
 import type { NewsArticle, ApiArticle } from '@/types';
 import NewsArticleView from './NewsArticleView';
 import { notFound } from 'next/navigation';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+import { apiUrl } from '@/lib/api';
 
 async function getNewsArticle(id: string): Promise<NewsArticle | null> {
     try {
-        const res = await fetch(`${API_BASE_URL}/news/list`, { 
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: id }),
-          cache: 'no-store' 
+        const res = await fetch(apiUrl(`/news/active/${id}`), {
+          cache: 'no-store',
         });
 
         if (!res.ok) {
@@ -22,12 +18,12 @@ async function getNewsArticle(id: string): Promise<NewsArticle | null> {
         
         const json = await res.json();
         
-        if (json.code !== 0 || !json.data || !json.data.list || json.data.list.length === 0) {
+        if (json.code !== 0 || !json.data) {
             console.error('API response for news article is invalid:', json);
             return null;
         }
         
-        const apiArticle: ApiArticle = json.data.list[0];
+        const apiArticle: ApiArticle = json.data;
         return transformApiArticle(apiArticle);
 
     } catch (error) {
@@ -57,8 +53,12 @@ function transformApiArticle(apiArticle: ApiArticle): NewsArticle {
 
 
 // This default export is for a Server Component page
-export default async function NewsArticlePage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default async function NewsArticlePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
 
   if (!id) {
     notFound();

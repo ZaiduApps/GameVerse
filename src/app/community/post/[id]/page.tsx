@@ -10,8 +10,13 @@ export async function generateStaticParams() {
   }));
 }
 
-export default function CommunityPostPage({ params }: { params: { id: string } }) {
-  const post = MOCK_COMMUNITY_POSTS.find(p => p.id === params.id);
+export default async function CommunityPostPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const post = MOCK_COMMUNITY_POSTS.find(p => p.id === id);
 
   if (!post) {
     notFound();

@@ -3,6 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { User, ApiResponse, AuthData } from '@/types';
+import { apiUrl } from '@/lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -16,7 +17,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_BASE_URL = 'https://api.hk.apks.cc/auth';
+const API_BASE_URL = apiUrl('/auth');
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);

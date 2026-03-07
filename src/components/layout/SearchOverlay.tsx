@@ -9,6 +9,7 @@ import type { SearchResult, ApiGame } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
+import { apiUrl } from '@/lib/api';
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -82,7 +83,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
       // Fetch recommended games only if they haven't been fetched yet
       if (recommendedGames.length === 0) {
         setIsLoading(true);
-        fetch(`/api/albums/album-details/6957c97f4ca3f95323fc6e44`)
+        fetch(apiUrl(`/albums/album-details/6957c97f4ca3f95323fc6e44`))
           .then(res => res.json())
           .then(data => {
             if (data.code === 0 && data.data?.games) {
@@ -117,7 +118,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
     
     const debounceTimer = setTimeout(() => {
         setIsSearching(true);
-        fetch(`/api/game/q?q=${encodeURIComponent(searchTerm)}`)
+        fetch(apiUrl(`/game/q?q=${encodeURIComponent(searchTerm)}`))
           .then(res => res.json())
           .then(data => {
             if (data.code === 0 && data.data?.list) {
