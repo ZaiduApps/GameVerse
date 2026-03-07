@@ -29,6 +29,7 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    unoptimized: true,
     // 使用通配符允许所有 HTTPS 和 HTTP 的图片域名
     remotePatterns: [
       {
