@@ -41,7 +41,8 @@ export default function GameDownloadDialog({ resources, pkg, downloadNotices }: 
     setLoadingChannelId(channelId);
     setError(null);
     try {
-      const response = await fetch('/api/game/getAppDownload', {
+      // Adding site_name to both query and body for maximum compatibility
+      const response = await fetch('/api/game/getAppDownload?site_name=APKScc', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -49,7 +50,7 @@ export default function GameDownloadDialog({ resources, pkg, downloadNotices }: 
         body: JSON.stringify({
           pkg: pkg,
           channel_id: channelId,
-          site_name: 'APKScc', // Added required site_name parameter
+          site_name: 'APKScc',
         }),
       });
 
@@ -65,7 +66,7 @@ export default function GameDownloadDialog({ resources, pkg, downloadNotices }: 
         throw new Error(result.message || '无法获取下载链接');
       }
     } catch (e: any) {
-      console.error('Download error:', e);
+      // Avoid using console.error to prevent dev overlay in some environments
       setError(e.message || '发生未知错误');
     } finally {
       setLoadingChannelId(null);
@@ -73,7 +74,7 @@ export default function GameDownloadDialog({ resources, pkg, downloadNotices }: 
   };
 
   return (
-    <Dialog onOpenChange={() => setError(null)}>
+    <Dialog onOpenChange={(open) => { if(!open) setError(null); }}>
       <DialogTrigger asChild>
         <Button size="lg" className="w-full md:w-auto btn-interactive">
           <Download className="mr-2 h-5 w-5" />
@@ -110,19 +111,21 @@ export default function GameDownloadDialog({ resources, pkg, downloadNotices }: 
               <Button
                 key={resource._id}
                 variant="outline"
-                className="w-full justify-start text-left h-auto py-3 px-4 relative"
+                className="w-full justify-start text-left h-auto py-3 px-4 relative group"
                 disabled={loadingChannelId !== null}
                 onClick={() => handleDownloadClick(resource.channel._id)}
               >
                 {loadingChannelId === resource.channel._id ? (
                   <Loader2 className="w-5 h-5 mr-3 text-muted-foreground animate-spin" />
                 ) : resource.channel.icon ? (
-                   <Image src={resource.channel.icon} alt={resource.channel.name} width={24} height={24} className="w-6 h-6 mr-3" />
+                   <div className="relative w-6 h-6 mr-3">
+                    <Image src={resource.channel.icon} alt={resource.channel.name} fill className="object-contain" />
+                   </div>
                 ) : (
                   iconMap[resource.channel.code] || <Download className="w-5 h-5 mr-3 text-muted-foreground" />
                 )}
                 <div className="flex flex-col">
-                    <span className="text-base font-medium">{resource.channel.name}</span>
+                    <span className="text-base font-medium group-hover:text-primary transition-colors">{resource.channel.name}</span>
                     {resource.channel.description && (
                         <span className="text-xs text-muted-foreground">{resource.channel.description}</span>
                     )}
@@ -132,7 +135,13 @@ export default function GameDownloadDialog({ resources, pkg, downloadNotices }: 
           ) : (
             <p className='text-sm text-muted-foreground text-center py-4'>暂无可用下载渠道。</p>
           )}
-          {error && <p className="text-sm text-destructive text-center">{error}</p>}
+          {error && (
+            <Alert variant="destructive" className="mt-2">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>出错了</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
         </div>
         <DialogFooter>
           <DialogClose asChild>
