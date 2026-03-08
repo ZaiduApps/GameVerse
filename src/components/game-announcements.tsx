@@ -34,20 +34,24 @@ const THEME_COLORS = {
 }
 
 const AnnouncementWrapper = ({ announcement, children }: { announcement: Announcement; children: React.ReactNode }) => {
-  if (!announcement.link) {
+  const href = announcement.link?.url?.trim();
+
+  // Some announcements are plain text or missing link.url from backend.
+  // Render non-clickable content instead of passing an invalid href to Next Link.
+  if (!announcement.link || !href) {
     return <>{children}</>;
   }
   
   if (announcement.link.type === 'outer') {
     return (
-      <a href={announcement.link.url} target="_blank" rel="noopener noreferrer" className="block">
+      <a href={href} target="_blank" rel="noopener noreferrer" className="block">
         {children}
       </a>
     );
   }
   
   return (
-    <Link href={announcement.link.url} className="block">
+    <Link href={href} className="block">
       {children}
     </Link>
   );

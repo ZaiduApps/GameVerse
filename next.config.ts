@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 
 const appEnv = (process.env.APP_ENV || process.env.NODE_ENV || 'development').toLowerCase();
+const isDevRuntime = process.env.NODE_ENV !== 'production';
 const backendBaseUrl = (
   process.env.API_BASE_URL ||
   (appEnv === 'production'
@@ -10,6 +11,8 @@ const backendBaseUrl = (
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // Separate dev and prod artifacts to avoid stale chunk manifest conflicts.
+  distDir: isDevRuntime ? '.next-dev' : '.next',
   typescript: {
     ignoreBuildErrors: true,
   },
