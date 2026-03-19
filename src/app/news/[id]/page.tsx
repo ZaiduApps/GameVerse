@@ -3,11 +3,11 @@ import { MOCK_NEWS_ARTICLES } from '@/lib/constants';
 import type { NewsArticle, ApiArticle } from '@/types';
 import NewsArticleView from './NewsArticleView';
 import { notFound } from 'next/navigation';
-import { apiUrl } from '@/lib/api';
+import { trackedApiFetch } from '@/lib/api';
 
 async function getNewsArticle(id: string): Promise<NewsArticle | null> {
     try {
-        const res = await fetch(apiUrl(`/news/active/${id}`), {
+  const res = await trackedApiFetch(`/news/active/${id}`, {
           cache: 'no-store',
         });
 

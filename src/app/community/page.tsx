@@ -1,4 +1,6 @@
 
+'use client';
+
 import CommunitySidebar from '@/components/community/CommunitySidebar';
 import CreatePostForm from '@/components/community/CreatePostForm';
 import CommunityPostCard from '@/components/community/CommunityPostCard';
@@ -6,8 +8,35 @@ import CommunityInfoPanel from '@/components/community/CommunityInfoPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MOCK_COMMUNITY_POSTS } from '@/lib/constants';
 import { Separator } from '@/components/ui/separator';
+import { getCommunityFeed } from '@/lib/community-api';
+import { useEffect, useState } from 'react';
+import type { CommunityPost } from '@/types';
 
 export default function CommunityPage() {
+  const [latestPosts, setLatestPosts] = useState<CommunityPost[]>(MOCK_COMMUNITY_POSTS);
+  const [hotPosts, setHotPosts] = useState<CommunityPost[]>(
+    MOCK_COMMUNITY_POSTS.filter((_, i) => i % 2 === 0),
+  );
+
+  useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      const [latest, hot] = await Promise.all([
+        getCommunityFeed('latest', 20),
+        getCommunityFeed('hot', 20),
+      ]);
+
+      if (!alive) return;
+      if (latest.length > 0) setLatestPosts(latest);
+      if (hot.length > 0) setHotPosts(hot);
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   return (
     <div className="container mx-auto px-2 py-4 sm:px-4 sm:py-6 lg:py-8">
       <div className="flex flex-col lg:flex-row lg:gap-x-6">
@@ -27,13 +56,13 @@ export default function CommunityPage() {
               <TabsTrigger value="hot" className="text-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary">热门</TabsTrigger>
             </TabsList>
             <TabsContent value="latest" className="space-y-4">
-              {MOCK_COMMUNITY_POSTS.map((post) => ( // Show all posts for "Latest"
-                <CommunityPostCard key={post.id} post={post} />
+              {latestPosts.map((post, index) => (
+                <CommunityPostCard key={post.id} post={post} index={index} />
               ))}
             </TabsContent>
             <TabsContent value="hot" className="space-y-4">
-              {MOCK_COMMUNITY_POSTS.filter((_,i) => i % 2 === 0).map((post) => ( // Show some posts for "Hot"
-                <CommunityPostCard key={post.id} post={post} />
+              {hotPosts.map((post, index) => (
+                <CommunityPostCard key={post.id} post={post} index={index} />
               ))}
             </TabsContent>
           </Tabs>
@@ -41,7 +70,7 @@ export default function CommunityPage() {
 
         {/* Right Info Panel (Optional) */}
         <div className="hidden xl:block xl:w-1/4 mt-6 lg:mt-0">
-          <CommunityInfoPanel />
+          <CommunityInfoPanel posts={latestPosts} />
         </div>
       </div>
     </div>

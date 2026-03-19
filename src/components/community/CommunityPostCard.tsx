@@ -5,16 +5,22 @@ import type { CommunityPost } from '@/types';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { MessageSquare, ThumbsUp, MoreHorizontal, Bookmark, Share2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link'; // Added Link
+import { cn, renderMarkdown } from '@/lib/utils';
+import { useState } from 'react';
 
 interface CommunityPostCardProps {
   post: CommunityPost;
+  index?: number;
 }
 
-export default function CommunityPostCard({ post }: CommunityPostCardProps) {
+export default function CommunityPostCard({ post, index = 0 }: CommunityPostCardProps) {
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [isImageError, setIsImageError] = useState(false);
+
   return (
     <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
       <CardHeader className="p-4 pb-2">
@@ -52,20 +58,43 @@ export default function CommunityPostCard({ post }: CommunityPostCardProps) {
           </Link>
         )}
         <Link href={`/community/post/${post.id}`} className="block">
-          <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed line-clamp-5 hover:text-foreground"> {/* Increased line-clamp */}
-            {post.content}
-          </p>
+          <article
+            className="text-sm text-foreground/90 leading-relaxed line-clamp-5 hover:text-foreground prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={renderMarkdown(post.content)}
+          />
         </Link>
         {post.tags && post.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-1">
-            {post.tags.map(tag => (
-              <Badge key={tag} variant="outline" className="text-xs font-normal">{tag}</Badge>
+            {post.tags.map((tag, index) => (
+              <Badge key={`${post.id}-tag-${index}-${tag}`} variant="outline" className="text-xs font-normal">{tag}</Badge>
             ))}
           </div>
         )}
         {post.imageUrl && (
           <Link href={`/community/post/${post.id}`} className="block mt-3 rounded-lg overflow-hidden aspect-video relative bg-muted">
-            <Image src={post.imageUrl} alt={post.title || "Post image"} fill className="object-cover" data-ai-hint={post.imageAiHint || "community post image"} />
+            {!isImageLoaded && !isImageError && (
+              <div className="absolute inset-0 animate-pulse bg-muted/70" />
+            )}
+            {!isImageError ? (
+              <Image
+                src={post.imageUrl}
+                alt={post.title || "Post image"}
+                fill
+                className={cn(
+                  "object-cover transition-opacity duration-300",
+                  isImageLoaded ? "opacity-100" : "opacity-0",
+                )}
+                data-ai-hint={post.imageAiHint || "community post image"}
+                priority={index === 0}
+                loading={index === 0 ? 'eager' : 'lazy'}
+                onLoad={() => setIsImageLoaded(true)}
+                onError={() => setIsImageError(true)}
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
+                图片加载失败
+              </div>
+            )}
           </Link>
         )}
       </CardContent>

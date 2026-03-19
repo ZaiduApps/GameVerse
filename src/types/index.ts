@@ -74,6 +74,16 @@ export interface CommunityPost {
   category?: string; // e.g., "游戏综合区"
   commentsCount: number;
   likesCount: number;
+  viewsCount?: number;
+  relatedApp?: {
+    id?: string;
+    name: string;
+    pkg?: string;
+    icon?: string;
+    summary?: string;
+    regionTag?: string;
+    tags?: string[];
+  };
 }
 
 export interface SearchResult {
@@ -147,6 +157,38 @@ export interface HomeData {
   banner: ApiBanner[];
   albums: ApiAlbum[];
   articles: ApiArticle[];
+  dynamic_posts?: ApiDynamicPost[];
+  announcements?: HomeAnnouncements;
+}
+
+export interface ApiDynamicPost {
+  _id: string;
+  post_type?: string;
+  title?: string;
+  summary?: string;
+  cover?: string;
+  publish_at?: string;
+  last_commented_at?: string;
+  like_count?: number;
+  comment_count?: number;
+  author_name?: string;
+  author_avatar?: string;
+  app_id?: string;
+  app_info?: {
+    _id?: string;
+    name?: string;
+    pkg?: string;
+    icon?: string;
+    summary?: string;
+    tags?: string[];
+  };
+}
+
+export interface HomeAnnouncements {
+  popup?: Announcement[];
+  normal?: Announcement[];
+  marquee?: Announcement[];
+  [key: string]: Announcement[] | undefined;
 }
 
 // Detail Page API Types
@@ -251,15 +293,16 @@ export interface ApiRecommendedGame {
 
 // New type for Global Site Configuration
 export interface SiteConfig {
-  _id: string;
-  basic: {
+  key?: string;
+  _id?: string;
+  basic?: {
     site_name: string;
     site_slogan: string;
     logo_url: string;
     favicon_url: string;
     share_image: string;
   };
-  header: {
+  header?: {
     verifications: {
       baidu?: string;
       google?: string;
@@ -270,36 +313,37 @@ export interface SiteConfig {
     custom_css?: string;
     head_scripts?: string;
   };
-  seo: {
+  seo?: {
     title_suffix: string;
     keywords: string;
     description: string;
   };
-  footer: {
+  footer?: {
     copyright: string;
     icp_number?: string;
     footer_text: string;
     footer_scripts?: string;
   };
-  friend_links: {
+  friend_links?: {
     name: string;
     url: string;
     sort: number;
   }[];
-  quick_links: {
+  quick_links?: {
     group_name: string;
     links: {
-      _id: string;
+      _id?: string | { $oid?: string };
       name: string;
       url: string;
       sort: number;
     }[];
   }[];
-  app_seo: {
+  app_seo?: {
     app_title_template: string;
     app_description_template: string;
   };
-  is_maintenance: boolean;
+  is_active?: boolean;
+  is_maintenance?: boolean;
 }
 
 // User & Auth Types
@@ -313,6 +357,13 @@ export interface User {
   roles: (string | { name: string; code?: string; [key: string]: any })[];
   loginCount?: number;
   lastLoginTime?: string;
+  lastLoginIp?: string;
+  lastLoginCity?: string;
+  lastLoginDeviceId?: string;
+  lastLoginDeviceName?: string;
+  lastLoginUserAgent?: string;
+  loginIpHistory?: string[];
+  loginDeviceIds?: string[];
   created_at?: string;
   updated_at?: string;
   gender?: string;

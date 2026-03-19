@@ -5,15 +5,17 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Star } from 'lucide-react';
 
-interface NewReleaseGameCardProps extends React.HTMLAttributes<HTMLDivElement> {
+interface NewReleaseGameCardProps {
   game: Game;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
-export default function NewReleaseGameCard({ game, className, ...props }: NewReleaseGameCardProps) {
+export default function NewReleaseGameCard({ game, className, style }: NewReleaseGameCardProps) {
   const roundedRating = Math.round(game.rating || 0);
 
   return (
-    <Link href={`/app/${game.pkg || game.id}`} className={`flex flex-col items-center text-center group flex-shrink-0 w-16 md:w-24 ${className}`} {...props}>
+    <Link href={`/app/${game.pkg || game.id}`} className={`flex flex-col items-center text-center group flex-shrink-0 w-16 md:w-24 ${className || ''}`} style={style}>
       <div className="relative w-14 h-14 md:w-16 md:h-16 mb-2">
         <Image
           src={game.imageUrl}

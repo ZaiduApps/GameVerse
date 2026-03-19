@@ -1,9 +1,12 @@
-
-'use client';
+﻿'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useFieldArray, useForm } from 'react-hook-form';
 import * as z from 'zod';
+
+import { useAuth } from '@/context/auth-context';
+import { apiUrl, trackedApiFetch } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -18,33 +21,51 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { PlusCircle, Trash2, UploadCloud } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
 
 const requestResourceSchema = z.object({
-  resourceName: z.string().min(1, "资源名称不能为空"),
-  sourceUrl: z.string().url("请输入有效的URL").optional().or(z.literal('')),
+  resourceName: z.string().min(1, '资源名称不能为空'),
+  sourceUrl: z.string().url('请输入有效的 URL').optional().or(z.literal('')),
 });
 
 type RequestResourceFormValues = z.infer<typeof requestResourceSchema>;
 
 const authorSubmissionSchema = z.object({
-  resourceType: z.enum(["app", "game"], { required_error: "请选择资源类型" }),
-  resourceName: z.string().min(1, "资源名称不能为空"),
-  description: z.string().min(10, "资源介绍至少需要10个字符"),
-  downloadUrl: z.string().url("请输入有效的下载链接"),
-  resourceSize: z.string().min(1, "资源大小不能为空").regex(/^\d+(\.\d+)?(KB|MB|GB|TB)$/i, "格式如: 1.5GB, 200MB"),
-  imageUrls: z.array(
-      z.object({ value: z.string().url({ message: "请输入有效的图片链接" }).min(1, "图片链接不能为空") })
-    ).min(1, "至少需要一张介绍图").max(5, "最多只能添加5张介绍图"),
-  authorName: z.string().min(1, "作者名不能为空"),
+  resourceType: z.enum(['app', 'game'], { required_error: '请选择资源类型' }),
+  resourceName: z.string().min(1, '资源名称不能为空'),
+  description: z.string().min(10, '资源介绍至少 10 个字符'),
+  downloadUrl: z.string().url('请输入有效的下载链接'),
+  resourceSize: z
+    .string()
+    .min(1, '资源大小不能为空')
+    .regex(/^\d+(\.\d+)?(KB|MB|GB|TB)$/i, '格式如 1.5GB、200MB'),
+  imageUrls: z
+    .array(
+      z.object({
+        value: z
+          .string()
+          .url({ message: '请输入有效的图片链接' })
+          .min(1, '图片链接不能为空'),
+      }),
+    )
+    .min(1, '至少需要 1 张介绍图')
+    .max(5, '最多只能添加 5 张介绍图'),
+  authorName: z.string().min(1, '作者名不能为空'),
 });
 
 type AuthorSubmissionFormValues = z.infer<typeof authorSubmissionSchema>;
 
 export default function SubmitResourcePage() {
   const { toast } = useToast();
+  const { user, token } = useAuth();
 
   const requestForm = useForm<RequestResourceFormValues>({
     resolver: zodResolver(requestResourceSchema),
@@ -67,30 +88,119 @@ export default function SubmitResourcePage() {
     },
   });
 
-  const { fields: imageUrlFields, append: appendImageUrl, remove: removeImageUrl } = useFieldArray({
-    control: authorForm.control,
-    name: "imageUrls",
-  });
-
-  function onRequestSubmit(data: RequestResourceFormValues) {
-    console.log('Requesting resource:', data);
-    toast({
-      title: "请求已提交",
-      description: "感谢您的请求，我们会尽快处理。",
+  const { fields: imageUrlFields, append: appendImageUrl, remove: removeImageUrl } =
+    useFieldArray({
+      control: authorForm.control,
+      name: 'imageUrls',
     });
-    requestForm.reset();
-  }
 
-  function onAuthorSubmit(data: AuthorSubmissionFormValues) {
-    console.log('Author submission:', data);
-     toast({
-      title: "投稿已提交",
-      description: "感谢您的投稿！我们将审核您的内容。",
+  const buildCommonFeedbackFields = () => {
+    const displayName = user?.name || user?.username || '游客';
+    const contact = user?.email || user?.phone || '';
+    return {
+      user_id: user?._id || '',
+      nickname: displayName,
+      contact,
+      clientType: 'Web',
+      clientVersion: process.env.NEXT_PUBLIC_CLIENT_VERSION || '',
+      osVersion: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      deviceModel: typeof navigator !== 'undefined' ? navigator.platform : '',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+    };
+  };
+
+  const submitFeedback = async (payload: Record<string, unknown>) => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+      const res = await trackedApiFetch('/feedbacks', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
     });
-    authorForm.reset();
-    // Reset field array to initial state
-    authorForm.setValue('imageUrls', [{ value: '' }]);
-  }
+
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json?.code !== 0) {
+      throw new Error(json?.message || `HTTP ${res.status}`);
+    }
+  };
+
+  const onRequestSubmit = async (data: RequestResourceFormValues) => {
+    const common = buildCommonFeedbackFields();
+    const payload = {
+      type: 'missing',
+      title: '求添加资源反馈',
+      description: [
+        `资源名称：${data.resourceName}`,
+        `资源来源：${data.sourceUrl || '未提供'}`,
+        '提交入口：Web /submit-resource（求添加资源）',
+        `提交用户：${common.nickname || '游客'}`,
+        `联系方式：${common.contact || '未提供'}`,
+      ].join('\n'),
+      ref_url: data.sourceUrl || '',
+      ...common,
+    };
+
+    try {
+      await submitFeedback(payload);
+      toast({
+        title: '请求已提交',
+        description: '已按反馈工单提交，感谢你的建议。',
+      });
+      requestForm.reset();
+    } catch (error) {
+      toast({
+        title: '提交失败',
+        description: error instanceof Error ? error.message : '请稍后重试',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const onAuthorSubmit = async (data: AuthorSubmissionFormValues) => {
+    const common = buildCommonFeedbackFields();
+    const imageUrls = (data.imageUrls || [])
+      .map((item) => item?.value?.trim())
+      .filter(Boolean);
+
+    const payload = {
+      type: 'suggestion',
+      title: '资源投稿反馈',
+      description: [
+        `资源类型：${data.resourceType}`,
+        `资源名称：${data.resourceName}`,
+        `作者/团队：${data.authorName}`,
+        `资源大小：${data.resourceSize}`,
+        `下载链接：${data.downloadUrl}`,
+        `资源介绍：${data.description}`,
+        `配图数量：${imageUrls.length}`,
+        '',
+        `提交用户：${common.nickname || '游客'}`,
+        `联系方式：${common.contact || '未提供'}`,
+      ].join('\n'),
+      images: imageUrls,
+      ref_url: data.downloadUrl,
+      ...common,
+    };
+
+    try {
+      await submitFeedback(payload);
+      toast({
+        title: '投稿已提交',
+        description: '已按反馈工单提交，等待审核处理。',
+      });
+      authorForm.reset();
+      authorForm.setValue('imageUrls', [{ value: '' }]);
+    } catch (error) {
+      toast({
+        title: '提交失败',
+        description: error instanceof Error ? error.message : '请稍后重试',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
     <div className="container mx-auto max-w-2xl py-8 px-4 fade-in">
@@ -98,7 +208,7 @@ export default function SubmitResourcePage() {
         <UploadCloud className="w-12 h-12 text-primary mb-3" />
         <h1 className="text-3xl font-bold text-center">资源投稿</h1>
         <p className="text-muted-foreground text-center mt-2">
-          帮助我们丰富资源库，分享您的发现或创作。
+          帮助我们丰富资源库，分享你的发现或创作。
         </p>
       </div>
 
@@ -112,7 +222,7 @@ export default function SubmitResourcePage() {
           <Card>
             <CardHeader>
               <CardTitle>缺少游戏/应用资源求添加</CardTitle>
-              <CardDescription>如果您发现我们缺少某些资源，请告诉我们。</CardDescription>
+              <CardDescription>如果你发现我们缺少某些资源，请告诉我们。</CardDescription>
             </CardHeader>
             <Form {...requestForm}>
               <form onSubmit={requestForm.handleSubmit(onRequestSubmit)}>
@@ -135,12 +245,12 @@ export default function SubmitResourcePage() {
                     name="sourceUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>资源来源地址 (选填)</FormLabel>
+                        <FormLabel>资源来源地址（选填）</FormLabel>
                         <FormControl>
                           <Input placeholder="例如：https://example.com/game-info" {...field} />
                         </FormControl>
                         <FormDescription>
-                          提供资源的官方网站、介绍页面或相关信息链接。
+                          可提供资源官网、介绍页或其它参考信息链接。
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -148,7 +258,9 @@ export default function SubmitResourcePage() {
                   />
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full md:w-auto btn-interactive">提交请求</Button>
+                  <Button type="submit" className="w-full md:w-auto btn-interactive">
+                    提交请求
+                  </Button>
                 </CardFooter>
               </form>
             </Form>
@@ -159,7 +271,9 @@ export default function SubmitResourcePage() {
           <Card>
             <CardHeader>
               <CardTitle>作者投稿</CardTitle>
-              <CardDescription>如果您是应用的开发者或游戏的作者，欢迎在此提交您的作品。</CardDescription>
+              <CardDescription>
+                如果你是应用开发者或游戏作者，欢迎在此提交你的作品。
+              </CardDescription>
             </CardHeader>
             <Form {...authorForm}>
               <form onSubmit={authorForm.handleSubmit(onAuthorSubmit)}>
@@ -202,7 +316,7 @@ export default function SubmitResourcePage() {
                       <FormItem>
                         <FormLabel>资源名称 *</FormLabel>
                         <FormControl>
-                          <Input placeholder="您的应用/游戏名称" {...field} />
+                          <Input placeholder="你的应用/游戏名称" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -217,7 +331,7 @@ export default function SubmitResourcePage() {
                         <FormLabel>资源介绍 *</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="详细介绍您的资源特点、玩法等 (至少10字符)"
+                            placeholder="详细介绍资源特点、玩法等（至少10字符）"
                             className="resize-y min-h-[100px]"
                             {...field}
                           />
@@ -240,7 +354,7 @@ export default function SubmitResourcePage() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={authorForm.control}
                     name="resourceSize"
@@ -248,19 +362,17 @@ export default function SubmitResourcePage() {
                       <FormItem>
                         <FormLabel>资源大小 *</FormLabel>
                         <FormControl>
-                          <Input placeholder="例如: 100MB, 1.2GB" {...field} />
+                          <Input placeholder="例如：100MB、1.2GB" {...field} />
                         </FormControl>
-                         <FormDescription>
-                          请包含单位 (KB, MB, GB, TB)。
-                        </FormDescription>
+                        <FormDescription>请包含单位（KB、MB、GB、TB）。</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
                   <div>
-                    <FormLabel>资源介绍图链接 * (至少1张, 最多5张)</FormLabel>
-                    <FormDescription className="mb-2">请提供可公开访问的图片URL。</FormDescription>
+                    <FormLabel>资源介绍图链接 *（至少1张，最多5张）</FormLabel>
+                    <FormDescription className="mb-2">请提供可公开访问的图片 URL。</FormDescription>
                     {imageUrlFields.map((field, index) => (
                       <FormField
                         control={authorForm.control}
@@ -287,19 +399,20 @@ export default function SubmitResourcePage() {
                         )}
                       />
                     ))}
-                     {/* Error message for the entire array */}
-                    {authorForm.formState.errors.imageUrls && !authorForm.formState.errors.imageUrls?.root && !authorForm.formState.errors.imageUrls?.[imageUrlFields.length-1]?.value && (
-                        <p className="text-sm font-medium text-destructive">
-                            {authorForm.formState.errors.imageUrls.message}
-                        </p>
-                    )}
-                    {/* Display error for the last item if specific */}
-                     {authorForm.formState.errors.imageUrls?.[imageUrlFields.length-1]?.value && (
-                        <p className="text-sm font-medium text-destructive">
-                            {authorForm.formState.errors.imageUrls?.[imageUrlFields.length-1]?.value?.message}
-                        </p>
-                    )}
 
+                    {authorForm.formState.errors.imageUrls &&
+                      !authorForm.formState.errors.imageUrls?.root &&
+                      !authorForm.formState.errors.imageUrls?.[imageUrlFields.length - 1]?.value && (
+                        <p className="text-sm font-medium text-destructive">
+                          {authorForm.formState.errors.imageUrls.message}
+                        </p>
+                      )}
+
+                    {authorForm.formState.errors.imageUrls?.[imageUrlFields.length - 1]?.value && (
+                      <p className="text-sm font-medium text-destructive">
+                        {authorForm.formState.errors.imageUrls?.[imageUrlFields.length - 1]?.value?.message}
+                      </p>
+                    )}
 
                     {imageUrlFields.length < 5 && (
                       <Button
@@ -315,7 +428,6 @@ export default function SubmitResourcePage() {
                     )}
                   </div>
 
-
                   <FormField
                     control={authorForm.control}
                     name="authorName"
@@ -323,7 +435,7 @@ export default function SubmitResourcePage() {
                       <FormItem>
                         <FormLabel>作者名/团队名 *</FormLabel>
                         <FormControl>
-                          <Input placeholder="您的署名" {...field} />
+                          <Input placeholder="你的署名" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -331,7 +443,9 @@ export default function SubmitResourcePage() {
                   />
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full md:w-auto btn-interactive">提交投稿</Button>
+                  <Button type="submit" className="w-full md:w-auto btn-interactive">
+                    提交投稿
+                  </Button>
                 </CardFooter>
               </form>
             </Form>
@@ -342,4 +456,3 @@ export default function SubmitResourcePage() {
   );
 }
 
-    

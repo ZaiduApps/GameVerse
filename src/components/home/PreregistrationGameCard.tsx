@@ -4,14 +4,15 @@ import type { Game } from '@/types';
 import Image from 'next/image';
 import Link from 'next/link';
 
-interface PreregistrationGameCardProps extends React.HTMLAttributes<HTMLDivElement> {
+interface PreregistrationGameCardProps {
   game: Game;
   className?: string;
+  style?: React.CSSProperties;
 }
 
-export default function PreregistrationGameCard({ game, className, ...props }: PreregistrationGameCardProps) {
+export default function PreregistrationGameCard({ game, className, style }: PreregistrationGameCardProps) {
   return (
-    <Link href={`/app/${game.pkg || game.id}`} className={`flex flex-col items-center text-center group flex-shrink-0 w-20 md:w-24 ${className}`} {...props}>
+    <Link href={`/app/${game.pkg || game.id}`} className={`flex flex-col items-center text-center group flex-shrink-0 w-20 md:w-24 ${className || ''}`} style={style}>
       <div className="relative w-16 h-16 mb-2">
         <Image
           src={game.imageUrl}

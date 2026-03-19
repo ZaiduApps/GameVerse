@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 
 import GameCard from '@/components/game-card';
@@ -7,7 +7,7 @@ import { ListFilter, Loader2 } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Game, ApiGame } from '@/types';
 import { cn } from '@/lib/utils';
-import { apiUrl } from '@/lib/api';
+import { apiUrl, trackedApiFetch } from '@/lib/api';
 
 interface ApiTag {
   _id: string; // use tag name as synthetic id in public mode
@@ -31,7 +31,7 @@ function transformApiGameToGame(apiGame: ApiGame): Game {
     shortDescription: apiGame.summary,
     imageUrl: apiGame.icon || 'https://placehold.co/300x300.png', // Fallback
     bannerUrl: apiGame.header_image || apiGame.icon || 'https://placehold.co/600x338.png', // Fallback
-    category: apiGame.tags?.[0] || '游戏',
+    category: apiGame.tags?.[0] || '娓告垙',
     rating: apiGame.star,
     tags: apiGame.tags,
     status: 'released', // This might need to be derived differently
@@ -41,9 +41,11 @@ function transformApiGameToGame(apiGame: ApiGame): Game {
 
 
 export default function GamesPage() {
+  const TAG_VISIBLE_LIMIT = 25;
   const [isLoading, setIsLoading] = useState(true);
   const [allGames, setAllGames] = useState<Game[]>([]);
   const [selectedTag, setSelectedTag] = useState<ApiTag | null>(null);
+  const [showAllTags, setShowAllTags] = useState(false);
   const [games, setGames] = useState<Game[]>([]);
   const [pagination, setPagination] = useState<PaginationState | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -61,11 +63,20 @@ export default function GamesPage() {
     return uniqueTagNames.map((name) => ({ _id: name, name }));
   }, [allGames]);
 
+  const displayedTags = useMemo<ApiTag[]>(() => {
+    if (showAllTags || tags.length <= TAG_VISIBLE_LIMIT) return tags;
+    const limited = tags.slice(0, TAG_VISIBLE_LIMIT);
+    if (!selectedTag || limited.some((tag) => tag._id === selectedTag._id)) return limited;
+    return [selectedTag, ...limited];
+  }, [showAllTags, tags, selectedTag]);
+
+  const hiddenTagCount = Math.max(0, tags.length - TAG_VISIBLE_LIMIT);
+
   useEffect(() => {
     async function fetchPublicGames() {
       setIsLoading(true);
       try {
-        const res = await fetch(apiUrl('/game/list'), { cache: 'no-store' });
+        const res = await trackedApiFetch('/game/list', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           const list = Array.isArray(data?.data) ? data.data : [];
@@ -122,13 +133,13 @@ export default function GamesPage() {
     <div className="space-y-8">
       <section className="bg-card p-6 rounded-lg shadow fade-in">
         <h1 className="text-3xl font-bold mb-4 text-primary">游戏库</h1>
-        <p className="text-muted-foreground">探索我们庞大的游戏收藏，找到你的下一个最爱。</p>
+        <p className="text-muted-foreground">探索海量游戏资源，找到你的下一款最爱。</p>
       </section>
 
       <section className="fade-in" style={{ animationDelay: '0.2s' }}>
         <div className="mb-6 flex flex-wrap gap-2 items-center">
           <ListFilter size={20} className="mr-2 text-muted-foreground" />
-          <span className="text-sm font-medium mr-2 text-muted-foreground">类型:</span>
+          <span className="text-sm font-medium mr-2 text-muted-foreground">绫诲瀷:</span>
           
           <Button
               key="all-games"
@@ -137,10 +148,10 @@ export default function GamesPage() {
               onClick={() => handleTagClick(null)}
               className="btn-interactive transition-all duration-200 text-xs sm:text-sm"
           >
-              全部游戏
+              鍏ㄩ儴娓告垙
           </Button>
 
-          {tags.map((tag) => (
+          {displayedTags.map((tag) => (
             <Button
               key={tag._id}
               variant={selectedTag?._id === tag._id ? 'default' : 'outline'}
@@ -154,6 +165,18 @@ export default function GamesPage() {
               {tag.name}
             </Button>
           ))}
+
+          {hiddenTagCount > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAllTags((prev) => !prev)}
+              className="btn-interactive transition-all duration-200 text-xs sm:text-sm"
+            >
+              {showAllTags ? '鏀惰捣' : `鏌ョ湅鏇村 (${hiddenTagCount})`}
+            </Button>
+          )}
         </div>
         
         {isLoading ? (
@@ -182,10 +205,10 @@ export default function GamesPage() {
                   disabled={currentPage <= 1}
                   className="btn-interactive"
                 >
-                  上一页
+                  涓婁竴椤?
                 </Button>
                 <span className="text-sm text-muted-foreground">
-                  第 {currentPage} 页 / 共 {pagination.totalPages} 页
+                  绗?{currentPage} 椤?/ 鍏?{pagination.totalPages} 椤?
                 </span>
                 <Button 
                   variant="outline" 
@@ -194,18 +217,19 @@ export default function GamesPage() {
                   disabled={currentPage >= pagination.totalPages}
                   className="btn-interactive"
                 >
-                  下一页
+                  涓嬩竴椤?
                 </Button>
               </div>
             )}
           </>
         ) : (
           <div className="text-center py-10 text-muted-foreground fade-in">
-            <p className="text-xl mb-2">Σ( ° △ °|||)︴ 哎呀！</p>
-            <p>没有找到符合条件的游戏。</p>
+              <p className="text-xl mb-2">未找到结果</p>
+              <p>没有找到符合条件的游戏。</p>
           </div>
         )}
       </section>
     </div>
   );
 }
+

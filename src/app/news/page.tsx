@@ -1,4 +1,4 @@
-
+﻿
 'use client'; 
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { CalendarDays, UserCircle, Newspaper, Search, Loader2 } from 'lucide-rea
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
-import { apiUrl } from '@/lib/api';
+import { trackedApiFetch } from '@/lib/api';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -29,9 +29,9 @@ function transformApiArticle(apiArticle: ApiArticle): NewsArticle {
         content: apiArticle.content || '',
         excerpt: apiArticle.summary,
         imageUrl: apiArticle.image_cover,
-        category: apiArticle.tags?.[0] || '资讯',
-        date: apiArticle.release_at ? new Date(apiArticle.release_at).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : '未知日期',
-        author: apiArticle.author || '匿名',
+        category: apiArticle.tags?.[0] || '璧勮',
+        date: apiArticle.release_at ? new Date(apiArticle.release_at).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : '鏈煡鏃ユ湡',
+        author: apiArticle.author || '鍖垮悕',
         tags: apiArticle.tags,
         isTop: apiArticle.is_top,
         isRecommended: apiArticle.is_recommended,
@@ -55,8 +55,8 @@ export default function NewsPage() {
     setIsLoading(true);
     try {
       if (query) {
-        const res = await fetch(
-          apiUrl(`/news/search?q=${encodeURIComponent(query)}&page=${page}&pageSize=${ITEMS_PER_PAGE}`),
+        const res = await trackedApiFetch(
+          `/news/search?q=${encodeURIComponent(query)}&page=${page}&pageSize=${ITEMS_PER_PAGE}`,
         );
         if (res.ok) {
           const data = await res.json();
@@ -81,7 +81,7 @@ export default function NewsPage() {
           setPagination(null);
         }
       } else {
-        const res = await fetch(apiUrl('/home'), { cache: 'no-store' });
+      const res = await trackedApiFetch('/home', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           const rawArticles = Array.isArray(data?.data?.articles) ? data.data.articles : [];
@@ -158,7 +158,7 @@ export default function NewsPage() {
           <Link href={articleLink} className="block">
             <CardTitle className="font-semibold mb-1.5 hover:text-primary transition-colors text-lg md:text-xl line-clamp-2">{article.title}</CardTitle>
           </Link>
-          <CardDescription className="text-muted-foreground flex-grow text-sm line-clamp-3">{article.excerpt || '暂无摘要'}</CardDescription>
+          <CardDescription className="text-muted-foreground flex-grow text-sm line-clamp-3">{article.excerpt || '鏆傛棤鎽樿'}</CardDescription>
         </CardContent>
         <CardFooter className="border-t mt-auto p-4">
           <div className="flex justify-between items-center w-full text-xs text-muted-foreground">
@@ -182,9 +182,9 @@ export default function NewsPage() {
       <section className="bg-card p-6 rounded-lg shadow">
         <div className="flex items-center mb-4">
          <Newspaper className="w-8 h-8 text-primary mr-3" />
-          <h1 className="text-3xl font-bold text-primary">游戏资讯</h1>
+          <h1 className="text-3xl font-bold text-primary">娓告垙璧勮</h1>
         </div>
-        <p className="text-muted-foreground">获取最新的游戏新闻、更新和深度分析。</p>
+        <p className="text-muted-foreground">获取最新游戏资讯、更新与深度内容。</p>
       </section>
 
       <section>
@@ -193,13 +193,13 @@ export default function NewsPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input 
                     type="search" 
-                    placeholder="搜索文章标题或摘要..." 
+                    placeholder="鎼滅储鏂囩珷鏍囬鎴栨憳瑕?.." 
                     className="pl-10 h-11 text-base"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
-            <Button type="submit" size="lg" className="h-11 btn-interactive">搜索</Button>
+            <Button type="submit" size="lg" className="h-11 btn-interactive">鎼滅储</Button>
         </form>
       </section>
 
@@ -224,10 +224,10 @@ export default function NewsPage() {
                 disabled={currentPage === 1}
                 className="btn-interactive"
                >
-                 上一页
+                 涓婁竴椤?
                </Button>
                <span className="text-sm text-muted-foreground">
-                 第 {currentPage} 页 / 共 {pagination.totalPages} 页
+                 绗?{currentPage} 椤?/ 鍏?{pagination.totalPages} 椤?
                </span>
                <Button 
                 variant="outline" 
@@ -236,14 +236,15 @@ export default function NewsPage() {
                 disabled={currentPage === pagination.totalPages || !pagination.hasMore}
                 className="btn-interactive"
                >
-                 下一页
+                 涓嬩竴椤?
                </Button>
              </div>
           )}
         </>
       ) : (
-        <p className="text-center text-muted-foreground py-8">没有找到相关资讯。</p>
+            <p className="text-center text-muted-foreground py-8">没有找到相关资讯。</p>
       )}
     </div>
   );
 }
+

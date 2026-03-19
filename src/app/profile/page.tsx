@@ -31,7 +31,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { User, ApiResponse } from '@/types';
-import { apiUrl } from '@/lib/api';
+import { trackedApiFetch } from '@/lib/api';
 
 export default function ProfilePage() {
   const { user: authUser, token, isAuthenticated, isLoading: isAuthLoading, logout, login } = useAuth();
@@ -68,7 +68,7 @@ export default function ProfilePage() {
       if (!token) return;
       setIsFetchingProfile(true);
       try {
-        const res = await fetch(apiUrl('/users/profile'), {
+        const res = await trackedApiFetch('/users/profile', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const json: ApiResponse<User> = await res.json();
@@ -101,7 +101,7 @@ export default function ProfilePage() {
     e.preventDefault();
     setIsUpdatingProfile(true);
     try {
-      const res = await fetch(apiUrl('/users/profile'), {
+      const res = await trackedApiFetch('/users/profile', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -150,7 +150,7 @@ export default function ProfilePage() {
 
     setIsChangingPassword(true);
     try {
-      const res = await fetch(apiUrl('/auth/change-password'), {
+      const res = await trackedApiFetch('/auth/change-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

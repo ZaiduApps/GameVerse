@@ -25,7 +25,7 @@ import {
 import type { ApiDownloadResource, CardConfigItem } from '@/types';
 import Image from 'next/image';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { apiUrl } from '@/lib/api';
+import { trackedApiFetch } from '@/lib/api';
 
 interface GameDownloadDialogProps {
   resources: ApiDownloadResource[];
@@ -61,11 +61,9 @@ export default function GameDownloadDialog({
     setError(null);
 
     try {
-      const response = await fetch(apiUrl('/game/getAppDownload'), {
+      const response = await trackedApiFetch('/game/getAppDownload', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
           app_id: appId,
           pkg,

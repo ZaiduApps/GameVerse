@@ -4,6 +4,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { User, ApiResponse, AuthData } from '@/types';
 import { apiUrl } from '@/lib/api';
+import { getDeviceHeaders } from '@/lib/auth-device';
+import { buildTrackingHeaders } from '@/lib/tracking-headers';
 
 interface AuthContextType {
   user: User | null;
@@ -23,6 +25,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const applyAuthData = useCallback((data: AuthData) => {
+    setToken(data.token);
+    setUser(data.user);
+    localStorage.setItem('auth_token', data.token);
+    localStorage.setItem('auth_user', JSON.stringify(data.user));
+  }, []);
 
   // Restore session on mount
   useEffect(() => {
@@ -46,11 +55,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback((data: AuthData) => {
-    setToken(data.token);
-    setUser(data.user);
-    localStorage.setItem('auth_token', data.token);
-    localStorage.setItem('auth_user', JSON.stringify(data.user));
-  }, []);
+    applyAuthData(data);
+  }, [applyAuthData]);
 
   const logout = useCallback(async () => {
     if (token) {
@@ -58,7 +64,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await fetch(`${API_BASE_URL}/logout`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            ...getDeviceHeaders(),
+            ...buildTrackingHeaders(),
           }
         });
       } catch (error) {
@@ -75,22 +83,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!token) return;
 
     try {
-      const res = await fetch(`${API_BASE_URL}/me`, {
+      const meRes = await fetch(`${API_BASE_URL}/me`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          ...buildTrackingHeaders(),
         }
       });
-      const json: ApiResponse<User> = await res.json();
+      const json: ApiResponse<User> = await meRes.json();
+
+      if (json.code === 401) {
+        const refreshRes = await fetch(`${API_BASE_URL}/refresh`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            ...getDeviceHeaders(),
+            ...buildTrackingHeaders(),
+          },
+        });
+
+        const refreshJson: ApiResponse<{ token: string }> = await refreshRes.json();
+        if (refreshJson.code === 0 && refreshJson.data?.token) {
+          localStorage.setItem('auth_token', refreshJson.data.token);
+          setToken(refreshJson.data.token);
+
+          const retryRes = await fetch(`${API_BASE_URL}/me`, {
+            headers: {
+              'Authorization': `Bearer ${refreshJson.data.token}`,
+              ...buildTrackingHeaders(),
+            }
+          });
+          const retryJson: ApiResponse<User> = await retryRes.json();
+          if (retryJson.code === 0) {
+            setUser(retryJson.data);
+            localStorage.setItem('auth_user', JSON.stringify(retryJson.data));
+            return;
+          }
+        }
+
+        logout();
+        return;
+      }
+
       if (json.code === 0) {
         setUser(json.data);
         localStorage.setItem('auth_user', JSON.stringify(json.data));
-      } else if (json.code === 401) {
-        logout();
       }
     } catch (error) {
       // Silently fail user refresh
     }
   }, [token, logout]);
+
+  useEffect(() => {
+    if (!isLoading && token) {
+      refreshUser();
+    }
+  }, [isLoading, token, refreshUser]);
 
   return (
     <AuthContext.Provider value={{

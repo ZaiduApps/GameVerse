@@ -19,6 +19,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Mail, Lock, User, KeyRound, Smartphone } from 'lucide-react';
 import type { ApiResponse, AuthData } from '@/types';
 import { apiUrl } from '@/lib/api';
+import { getDeviceHeaders, getDeviceId, getDeviceName } from '@/lib/auth-device';
+import { buildTrackingHeaders } from '@/lib/tracking-headers';
 
 interface AuthModalProps {
   open: boolean;
@@ -71,7 +73,10 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
       const type = activeTab === 'login' ? 'login' : 'register';
       const res = await fetch(`${API_BASE_URL}/send-code`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...buildTrackingHeaders(),
+        },
         body: JSON.stringify({ email, type })
       });
       const json: ApiResponse<{ message: string }> = await res.json();
@@ -95,16 +100,30 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
     
     try {
       let url = `${API_BASE_URL}/login`;
-      let body: any = { username, password };
+      let body: any = {
+        username,
+        password,
+        device_id: getDeviceId(),
+        device_name: getDeviceName(),
+      };
       
       if (method === 'email') {
         url = `${API_BASE_URL}/login-by-email`;
-        body = { email, code };
+        body = {
+          email,
+          code,
+          device_id: getDeviceId(),
+          device_name: getDeviceName(),
+        };
       }
 
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getDeviceHeaders(),
+          ...buildTrackingHeaders(),
+        },
         body: JSON.stringify(body)
       });
       const json: ApiResponse<AuthData> = await res.json();
@@ -139,7 +158,10 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
 
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...buildTrackingHeaders(),
+        },
         body: JSON.stringify(body)
       });
       const json: ApiResponse<AuthData> = await res.json();

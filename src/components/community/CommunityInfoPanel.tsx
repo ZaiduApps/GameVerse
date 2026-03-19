@@ -5,8 +5,13 @@ import Link from 'next/link';
 import { MOCK_COMMUNITY_POSTS } from '@/lib/constants';
 import type { CommunityPost } from '@/types';
 
-export default function CommunityInfoPanel() {
-  const hotPosts: CommunityPost[] = [...MOCK_COMMUNITY_POSTS]
+interface CommunityInfoPanelProps {
+  posts?: CommunityPost[];
+}
+
+export default function CommunityInfoPanel({ posts }: CommunityInfoPanelProps) {
+  const source = posts && posts.length > 0 ? posts : MOCK_COMMUNITY_POSTS;
+  const hotPosts: CommunityPost[] = [...source]
     .sort((a, b) => b.likesCount - a.likesCount)
     .slice(0, 3); // Display top 3 hot posts
 

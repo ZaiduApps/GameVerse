@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "node scripts/next-runner.mjs start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:markdown": "node --test tests/markdown-render.test.cjs"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.8.0",

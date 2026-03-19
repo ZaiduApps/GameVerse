@@ -1,7 +1,7 @@
-
+﻿
 'use client';
 
-import type { Game, NewsArticle, GameDetailData, ApiRecommendedGame, CardConfigItem } from '@/types';
+import type { Game, NewsArticle, GameDetailData, ApiRecommendedGame, CardConfigItem, CommunityPost } from '@/types';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,28 +13,16 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { MOCK_NEWS_ARTICLES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { notFound, usePathname } from 'next/navigation';
 import Loading from '../loading';
 import GameAnnouncements from '@/components/game-announcements';
-import { apiUrl } from '@/lib/api';
-
-interface MockComment {
-  id: string;
-  username: string;
-  avatarFallback: string;
-  avatarUrl?: string;
-  dataAiHint?: string;
-  timestamp: string;
-  text: string;
-}
-
-const mockComments: MockComment[] = [
-  { id: 'c1', username: '游戏达人小明', avatarFallback: 'XM', timestamp: '2 小时前', text: '这款游戏太棒了，画面精美，玩法新颖！希望开发组能多出点活动。' },
-  { id: 'c2', username: '萌新小白', avatarFallback: 'XB', avatarUrl: 'https://placehold.co/40x40.png?text=MB', dataAiHint: "avatar user", timestamp: '5 小时前', text: '刚开始玩，感觉有点难上手，不过剧情很吸引人。有没有大佬带带我？' },
-  { id: 'c3', username: '氪金大佬', avatarFallback: 'DL', timestamp: '1 天前', text: '服务器再稳定一点就好了，其他都挺满意的。' },
-];
+import { apiUrl, trackedApiFetch } from '@/lib/api';
+import { useAuth } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast';
+import { getCommunityPostsByGame } from '@/lib/community-api';
 
 interface GameDetailViewProps {
   id: string;
@@ -45,6 +33,9 @@ interface GameDetailViewProps {
 const DESCRIPTION_CHAR_LIMIT = 120;
 const MAX_NEWS_DISPLAY = 4;
 const MAX_RECOMMENDED_GAMES = 5;
+const CLIENT_PLATFORM = process.env.NEXT_PUBLIC_CLIENT_PLATFORM || 'android';
+const CLIENT_REGION = process.env.NEXT_PUBLIC_CLIENT_REGION || '';
+const CLIENT_VERSION = process.env.NEXT_PUBLIC_CLIENT_VERSION || '';
 
 // Helper to format bytes into a human-readable string
 const formatBytes = (bytes: number | null, decimals = 2) => {
@@ -56,8 +47,19 @@ const formatBytes = (bytes: number | null, decimals = 2) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
+const buildGameDetailsUrl = (param: string) => {
+  const query = new URLSearchParams();
+  query.set('param', param);
+  if (CLIENT_PLATFORM) query.set('platform', CLIENT_PLATFORM);
+  if (CLIENT_REGION) query.set('region', CLIENT_REGION);
+  if (CLIENT_VERSION) query.set('client_version', CLIENT_VERSION);
+  return `/game/details?${query.toString()}`;
+};
+
 
 export default function GameDetailView({ id, initialGameData, initialRecommendedGames }: GameDetailViewProps) {
+  const { token, user, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const [gameData, setGameData] = useState<GameDetailData | null | undefined>(initialGameData);
   const [recommendedGames, setRecommendedGames] = useState<ApiRecommendedGame[]>(
     (initialRecommendedGames || []).slice(0, MAX_RECOMMENDED_GAMES)
@@ -84,7 +86,9 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
       setIsLoading(true);
       setPageError(false);
       try {
-        const gameDetailsRes = await fetch(apiUrl(`/game/details?param=${fetchId}`));
+        const gameDetailsRes = await trackedApiFetch(buildGameDetailsUrl(fetchId), {
+          cache: 'no-store',
+        });
         if (!gameDetailsRes.ok) throw new Error('Failed to fetch game details');
         
         const gameDetailsJson = await gameDetailsRes.json();
@@ -97,8 +101,9 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
 
         // Fetch recommended games if package name exists
         if (fetchedGameData.app.pkg) {
-            const recommendedGamesRes = await fetch(
-              apiUrl(`/game/recommendedApp?param=${fetchedGameData.app.pkg}`),
+            const recommendedGamesRes = await trackedApiFetch(
+              `/game/recommendedApp?param=${fetchedGameData.app.pkg}`,
+              { cache: 'no-store' },
             );
             if (recommendedGamesRes.ok) {
                 const recommendedGamesJson = await recommendedGamesRes.json();
@@ -132,15 +137,30 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
   const [showFab, setShowFab] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const commentsSectionRef = useRef<HTMLDivElement>(null);
-  const commentInputRef = useRef<HTMLTextAreaElement>(null);
+  const [communitySort, setCommunitySort] = useState<'latest' | 'hot'>('latest');
+  const [relatedPosts, setRelatedPosts] = useState<CommunityPost[]>([]);
+  const [isCommunityLoading, setIsCommunityLoading] = useState(false);
+  const [isCommunityLoaded, setIsCommunityLoaded] = useState(false);
+  const [communityReloadKey, setCommunityReloadKey] = useState(0);
+  const [likePendingPostId, setLikePendingPostId] = useState<string | null>(null);
+  const [likedPostIds, setLikedPostIds] = useState<Record<string, boolean>>({});
+  const [postLikeCounts, setPostLikeCounts] = useState<Record<string, number>>({});
+  const [isSubmittingUrge, setIsSubmittingUrge] = useState(false);
   
   // Screenshot Preview State
   const [selectedScreenshotIndex, setSelectedScreenshotIndex] = useState<number | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [isPreviewMounted, setIsPreviewMounted] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
+  const dragStateRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+  } | null>(null);
 
 
   const [isFetchingRecommended, setIsFetchingRecommended] = useState(false);
@@ -149,7 +169,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     if (!game?.pkg || isFetchingRecommended) return;
     setIsFetchingRecommended(true);
     try {
-      const res = await fetch(apiUrl(`/game/recommendedApp?param=${game.pkg}`), { cache: 'no-store' });
+      const res = await trackedApiFetch(`/game/recommendedApp?param=${game.pkg}`, { cache: 'no-store' });
       if (res.ok) {
         const jsonResponse = await res.json();
         if (jsonResponse.code === 0 && jsonResponse.data) {
@@ -165,6 +185,110 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     }
   };
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRelatedPosts() {
+      if (!game?._id && !game?.pkg && !game?.name) {
+        setRelatedPosts([]);
+        setIsCommunityLoaded(true);
+        return;
+      }
+
+      setIsCommunityLoading(true);
+      try {
+        const list = await getCommunityPostsByGame({
+          sort: communitySort,
+          pageSize: 20,
+          appId: game?._id,
+          pkg: game?.pkg,
+          gameName: game?.name,
+        });
+        if (cancelled) return;
+
+        setRelatedPosts(list);
+        setPostLikeCounts((prev) => {
+          const next = { ...prev };
+          list.forEach((post) => {
+            if (typeof next[post.id] !== 'number') next[post.id] = post.likesCount || 0;
+          });
+          return next;
+        });
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to load related community posts:', error);
+          setRelatedPosts([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsCommunityLoading(false);
+          setIsCommunityLoaded(true);
+        }
+      }
+    }
+
+    loadRelatedPosts();
+    return () => {
+      cancelled = true;
+    };
+  }, [communitySort, communityReloadKey, game?._id, game?.pkg, game?.name]);
+
+  const handleRelatedPostLike = async (postId: string) => {
+    if (likePendingPostId === postId) return;
+    if (!isAuthenticated || !token) {
+      toast({
+        title: '需要登录',
+        description: '请先登录后再点赞社区帖子。',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const wasLiked = Boolean(likedPostIds[postId]);
+    const previousCount = postLikeCounts[postId] ?? 0;
+    const nextLiked = !wasLiked;
+
+    setLikedPostIds((prev) => ({ ...prev, [postId]: nextLiked }));
+    setPostLikeCounts((prev) => ({
+      ...prev,
+      [postId]: nextLiked ? previousCount + 1 : Math.max(0, previousCount - 1),
+    }));
+    setLikePendingPostId(postId);
+
+    try {
+      const res = await trackedApiFetch(`/content/${postId}/like`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: 'toggle' }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.code !== 0) {
+        throw new Error(json?.message || `HTTP ${res.status}`);
+      }
+
+      const serverLiked = Boolean(json?.data?.liked);
+      const serverCount = Number(json?.data?.like_count);
+      setLikedPostIds((prev) => ({ ...prev, [postId]: serverLiked }));
+      setPostLikeCounts((prev) => ({
+        ...prev,
+        [postId]: Number.isFinite(serverCount) ? serverCount : prev[postId] ?? 0,
+      }));
+    } catch (error) {
+      console.error('Failed to like related community post:', error);
+      setLikedPostIds((prev) => ({ ...prev, [postId]: wasLiked }));
+      setPostLikeCounts((prev) => ({ ...prev, [postId]: previousCount }));
+      toast({
+        title: '点赞失败',
+        description: '请稍后重试。',
+        variant: 'destructive',
+      });
+    } finally {
+      setLikePendingPostId((prev) => (prev === postId ? null : prev));
+    }
+  };
   useEffect(() => {
     const commentsDiv = commentsSectionRef.current;
     if (!commentsDiv) return;
@@ -186,6 +310,11 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
   }, [gameData]); // Depend on gameData to re-attach after loading
 
   useEffect(() => {
+    setIsPreviewMounted(true);
+    return () => setIsPreviewMounted(false);
+  }, []);
+
+  useEffect(() => {
     if (selectedScreenshotIndex !== null) {
       document.body.style.overflow = 'hidden';
     } else {
@@ -196,14 +325,132 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     };
   }, [selectedScreenshotIndex]);
 
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const dragState = dragStateRef.current;
+      if (!dragState || event.pointerId !== dragState.pointerId) return;
+
+      event.preventDefault();
+      setPosition({
+        x: dragState.originX + (event.clientX - dragState.startX),
+        y: dragState.originY + (event.clientY - dragState.startY),
+      });
+    };
+
+    const handlePointerEnd = (event: PointerEvent) => {
+      const dragState = dragStateRef.current;
+      if (!dragState || event.pointerId !== dragState.pointerId) return;
+      dragStateRef.current = null;
+      setIsDragging(false);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove, { passive: false });
+    window.addEventListener('pointerup', handlePointerEnd);
+    window.addEventListener('pointercancel', handlePointerEnd);
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerEnd);
+      window.removeEventListener('pointercancel', handlePointerEnd);
+    };
+  }, [isDragging]);
+
+  useEffect(() => {
+    if (selectedScreenshotIndex === null) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeScreenshotPreview();
+        return;
+      }
+
+      if (!game?.detail_images || game.detail_images.length <= 1) return;
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        setSelectedScreenshotIndex((prev) => {
+          if (prev === null) return prev;
+          return (prev - 1 + game.detail_images.length) % game.detail_images.length;
+        });
+        return;
+      }
+
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        setSelectedScreenshotIndex((prev) => {
+          if (prev === null) return prev;
+          return (prev + 1) % game.detail_images.length;
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedScreenshotIndex, game?.detail_images]);
+
 
   const handleFabClick = () => {
     if (commentsSectionRef.current) {
       commentsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    setTimeout(() => {
-      commentInputRef.current?.focus();
-    }, 350); 
+  };
+
+  const handleUrgeUpdate = async () => {
+    if (!game?.name || isSubmittingUrge) return;
+
+    setIsSubmittingUrge(true);
+    try {
+      const payload = {
+        type: 'missing',
+        title: '求添加资源反馈',
+        description: [
+          `缺少资源：${game.name}`,
+          `游戏包名：${game.pkg || '未提供'}`,
+          `当前版本：${game.version || '未提供'}`,
+          '',
+          `提交用户：${user?.name || user?.username || '游客'}`,
+          `联系方式：${user?.email || user?.phone || '未提供'}`,
+        ].join('\n'),
+        user_id: user?._id || '',
+        nickname: user?.name || user?.username || '游客',
+        contact: user?.email || user?.phone || '',
+        clientType: 'Web',
+        clientVersion: process.env.NEXT_PUBLIC_CLIENT_VERSION || '',
+        osVersion: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+        deviceModel: typeof navigator !== 'undefined' ? navigator.platform : '',
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      };
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const res = await fetch(apiUrl('/feedbacks'), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.code !== 0) {
+        throw new Error(json?.message || `HTTP ${res.status}`);
+      }
+
+      toast({
+        title: '催更已提交',
+        description: '已按反馈工单提交，请等待处理。',
+      });
+    } catch (error) {
+      toast({
+        title: '提交失败',
+        description: error instanceof Error ? error.message : '请稍后重试。',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingUrge(false);
+    }
   };
 
   const createLocalExcerpt = (text: string, maxLength: number = 100): string => {
@@ -212,7 +459,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     if (firstParagraph.length <= maxLength) return firstParagraph;
     
     let cutPoint = -1;
-    const punctuation = ['。', '！', '？', '.', '!', '?'];
+    const punctuation = ['。', '，', '！', '.', '!', '?'];
     for (const p of punctuation) {
       const point = firstParagraph.lastIndexOf(p, maxLength);
       if (point > cutPoint) {
@@ -230,13 +477,24 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     return firstParagraph.substring(0, cutPoint + 1) + '...';
   };
 
+  const getPostExcerpt = (post: CommunityPost): string => {
+    const raw = post.content || post.title || '';
+    const normalized = raw
+      .replace(/!\[[^\]]*]\([^)]*\)/g, ' ')
+      .replace(/\[([^\]]+)]\([^)]*\)/g, '$1')
+      .replace(/[`#>*_~\-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return createLocalExcerpt(normalized, 120) || '点击查看帖子详情';
+  };
+
   const truncateDescription = (text: string, limit: number): string => {
     if (!text || text.length <= limit) {
       return text;
     }
     let breakPoint = text.substring(0, limit).lastIndexOf('。');
+    if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf('，');
     if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf('！');
-    if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf('？');
     if (breakPoint === -1 || breakPoint < limit / 2) breakPoint = text.substring(0, limit).lastIndexOf(' ');
 
     if (breakPoint > limit / 2) {
@@ -250,9 +508,13 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     setSelectedScreenshotIndex(index);
     setZoomLevel(1);
     setPosition({ x: 0, y: 0 });
+    setIsDragging(false);
   };
 
   const closeScreenshotPreview = () => {
+    setIsDragging(false);
+    setZoomLevel(1);
+    setPosition({ x: 0, y: 0 });
     setSelectedScreenshotIndex(null);
   };
   
@@ -264,35 +526,25 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     }
   }
 
-  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+  const handleDragStart = (event: React.PointerEvent<HTMLImageElement>) => {
     if (zoomLevel <= 1) return;
-    e.preventDefault();
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+
+    dragStateRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: position.x,
+      originY: position.y,
+    };
+
     setIsDragging(true);
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    setStartPos({
-      x: clientX - position.x,
-      y: clientY - position.y,
-    });
-    if (imageRef.current) imageRef.current.style.cursor = 'grabbing';
   };
 
-  const handleDragMove = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDragging || zoomLevel <= 1) return;
-    e.preventDefault();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    setPosition({
-      x: clientX - startPos.x,
-      y: clientY - startPos.y,
-    });
-  };
-
-  const handleDragEnd = () => {
-    if (zoomLevel <= 1) return;
-    setIsDragging(false);
-    if (imageRef.current) imageRef.current.style.cursor = 'grab';
-  };
+  // Legacy handlers kept for compatibility with existing JSX block below.
+  const handleDragMove = () => {};
+  const handleDragEnd = () => {};
   
   const handleNextScreenshot = () => {
     if (selectedScreenshotIndex === null || !game?.detail_images) return;
@@ -304,6 +556,38 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     if (selectedScreenshotIndex === null || !game?.detail_images) return;
     const prevIndex = (selectedScreenshotIndex - 1 + game.detail_images.length) % game.detail_images.length;
     openScreenshotPreview(prevIndex);
+  };
+
+  const handlePreviewKeydown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') {
+      closeScreenshotPreview();
+      return;
+    }
+
+    if (!game?.detail_images || game.detail_images.length <= 1) return;
+
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      handlePrevScreenshot();
+      return;
+    }
+
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      handleNextScreenshot();
+    }
+  };
+
+  const handlePreviewBackdropClick = () => {
+    const isTransformed = zoomLevel > 1 || position.x !== 0 || position.y !== 0;
+    if (isTransformed) {
+      setIsDragging(false);
+      handleZoom(1);
+      setPosition({ x: 0, y: 0 });
+      return;
+    }
+
+    closeScreenshotPreview();
   };
 
   if (isLoading) {
@@ -372,12 +656,12 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   </div>
                 </div>
                 <div className="hidden sm:block flex-shrink-0 pt-2">
-                  <GameDownloadDialog appId={game._id} pkg={game.pkg} resources={resources} downloadNotices={cardConfig?.download_notice} />
+                  <GameDownloadDialog appId={game._id} pkg={game.pkg} resources={resources || []} downloadNotices={cardConfig?.download_notice} />
                 </div>
               </div>
 
                <div className="sm:hidden w-full">
-                  <GameDownloadDialog appId={game._id} pkg={game.pkg} resources={resources} downloadNotices={cardConfig?.download_notice} />
+                  <GameDownloadDialog appId={game._id} pkg={game.pkg} resources={resources || []} downloadNotices={cardConfig?.download_notice} />
                 </div>
 
 
@@ -387,7 +671,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   <div className="flex items-center">
                     <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-2" />
                     <div>
-                      <p className="text-muted-foreground text-xs">评分</p>
+                      <p className="text-muted-foreground text-xs">璇勫垎</p>
                       <p className="font-semibold">{game.star}</p>
                     </div>
                   </div>
@@ -405,7 +689,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   <div className="flex items-center">
                     <Tag className="w-4 h-4 text-blue-500 mr-2" />
                     <div>
-                      <p className="text-muted-foreground text-xs">类型</p>
+                      <p className="text-muted-foreground text-xs">绫诲瀷</p>
                       <p className="font-semibold">{game.tags[0]}</p>
                     </div>
                   </div>
@@ -414,7 +698,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   <div className="flex items-center">
                     <CalendarDays className="w-4 h-4 text-green-500 mr-2" />
                     <div>
-                      <p className="text-muted-foreground text-xs">发布日期</p>
+                      <p className="text-muted-foreground text-xs">鍙戝竷鏃ユ湡</p>
                       <p className="font-semibold">{new Date(game.release_at).toLocaleDateString('zh-CN')}</p>
                     </div>
                   </div>
@@ -423,7 +707,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   <div className="flex items-center">
                     <History className="w-4 h-4 text-purple-500 mr-2" />
                     <div>
-                      <p className="text-muted-foreground text-xs">更新日期</p>
+                      <p className="text-muted-foreground text-xs">鏇存柊鏃ユ湡</p>
                       <p className="font-semibold">{new Date(game.latest_at).toLocaleDateString('zh-CN')}</p>
                     </div>
                   </div>
@@ -433,29 +717,30 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   <div className="flex items-start">
                     <Info className="w-4 h-4 text-purple-500 mr-2 mt-0.5 flex-shrink-0" />
                     <div className="flex-grow">
-                      <p className="text-muted-foreground text-xs">版本</p>
+                      <p className="text-muted-foreground text-xs">鐗堟湰</p>
                       <div className="flex items-center gap-x-2 flex-wrap">
                           <p className="font-semibold">{game.version}</p>
                           <Button
                               variant="outline"
                               size="sm"
                               className="h-auto px-2 py-0.5 text-xs btn-interactive"
-                              onClick={() => alert('催更请求已发送 (模拟)')}
+                              onClick={handleUrgeUpdate}
+                              disabled={isSubmittingUrge}
                           >
                               <BellRing className="w-3 h-3 mr-1" />
-                              催更
+                              鍌洿
                           </Button>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {Number.isFinite(game.file_size) && game.file_size > 0 && (
+                {Number.isFinite(Number(game.file_size || 0)) && Number(game.file_size || 0) > 0 && (
                   <div className="flex items-center col-span-2 sm:col-span-1">
                     <HardDrive className="w-4 h-4 text-orange-500 mr-2" />
                     <div>
-                      <p className="text-muted-foreground text-xs">大小</p>
-                      <p className="font-semibold">{formatBytes(game.file_size)}</p>
+                      <p className="text-muted-foreground text-xs">澶у皬</p>
+                      <p className="font-semibold">{formatBytes(Number(game.file_size || 0))}</p>
                     </div>
                   </div>
                 )}
@@ -467,11 +752,11 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                 <div className="pt-2">
                   <h3 className="text-base font-semibold text-muted-foreground mb-2 flex items-center">
                     <TagsIcon className="w-4 h-4 mr-2" />
-                    标签
+                    鏍囩
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {game.tags.map(tag => (
-                      <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                    {game.tags.map((tag, index) => (
+                      <Badge key={`${game._id}-tag-${index}-${tag}`} variant="secondary" className="text-xs">{tag}</Badge>
                     ))}
                   </div>
                 </div>
@@ -480,7 +765,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
               <Separator className="my-4 md:my-6" />
 
               <div>
-                <h2 className="text-xl font-semibold mb-3">游戏介绍</h2>
+                <h2 className="text-xl font-semibold mb-3">娓告垙浠嬬粛</h2>
                 <div 
                   className="text-foreground/80 leading-relaxed whitespace-pre-line prose prose-sm sm:prose-base dark:prose-invert max-w-none"
                   dangerouslySetInnerHTML={{ __html: isDescriptionExpanded ? cleanDescription : shortDescriptionText }}
@@ -491,7 +776,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                     className="p-0 h-auto text-primary hover:underline mt-2 text-sm"
                     onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
                   >
-                    {isDescriptionExpanded ? '收起' : '展开全文'}
+                    {isDescriptionExpanded ? '鏀惰捣' : '灞曞紑鍏ㄦ枃'}
                     {isDescriptionExpanded ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
                   </Button>
                 )}
@@ -503,11 +788,11 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-lg flex items-center">
                     <ThumbsUp className="w-5 h-5 mr-2 text-primary" />
-                    为你推荐
+                    涓轰綘鎺ㄨ崘
                   </CardTitle>
                   <Button variant="ghost" size="sm" onClick={fetchRecommendedGames} className="text-xs text-muted-foreground hover:text-primary btn-interactive" disabled={isFetchingRecommended}>
                      <RefreshCw className={cn("w-3.5 h-3.5 mr-1.5", isFetchingRecommended && "animate-spin")} />
-                     换一换
+                     鎹竴鎹?
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-3 pt-2">
@@ -524,9 +809,9 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                         />
                         <div className="flex-grow">
                           <h4 className="font-semibold text-sm text-foreground group-hover:text-primary line-clamp-2">{recGame.name}</h4>
-                          <p className="text-xs text-muted-foreground mt-0.5">{recGame.tags?.[0]?.name || '游戏'}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{recGame.tags?.[0]?.name || '娓告垙'}</p>
                            <Button variant="link" size="sm" className="text-xs p-0 h-auto mt-1 text-primary/80 hover:text-primary">
-                            查看详情 <ExternalLink className="w-3 h-3 ml-1" />
+                            鏌ョ湅璇︽儏 <ExternalLink className="w-3 h-3 ml-1" />
                            </Button>
                         </div>
                       </div>
@@ -542,14 +827,14 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                 <div className="pt-6 mt-6 border-t md:col-span-12 order-1 md:order-none">
                 <h2 className="text-xl font-semibold mb-4 flex items-center">
                     <LinkIcon className="w-5 h-5 text-primary mr-2" />
-                    更多资源与支持
+                    鏇村璧勬簮涓庢敮鎸?
                 </h2>
                 <div className="grid md:grid-cols-2 gap-x-6 gap-y-4">
                     {cardConfig.contact && cardConfig.contact.length > 0 && (
                     <div className="space-y-3">
                         <h3 className="text-lg font-medium flex items-center text-foreground/90">
                         <Users className="w-5 h-5 mr-2 text-accent" />
-                        玩家交流群
+                        鐜╁浜ゆ祦缇?
                         </h3>
                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                             {cardConfig.contact.map(item => (
@@ -570,7 +855,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                     <div className="space-y-3">
                         <h3 className="text-lg font-medium flex items-center text-foreground/90">
                         <Briefcase className="w-5 h-5 mr-2 text-accent" />
-                        合作与支持
+                        鍚堜綔涓庢敮鎸?
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                             {cardConfig.partner.map(item => (
@@ -596,7 +881,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
       <div>
         <h2 className="text-xl font-semibold mt-6 mb-3 flex items-center">
           <Camera className="w-5 h-5 text-primary mr-2" />
-          游戏截图
+          娓告垙鎴浘
         </h2>
         {game.detail_images && game.detail_images.length > 0 ? (
           <div className="flex overflow-x-auto space-x-3 md:space-x-4 py-2 -mx-1 px-1">
@@ -608,7 +893,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
               >
                 <Image
                   src={screenshotUrl}
-                  alt={`游戏截图 ${index + 1}`}
+                  alt={`娓告垙鎴浘 ${index + 1}`}
                   width={288}
                   height={162}
                   className="w-full h-full object-cover transition-transform group-hover:scale-105"
@@ -688,61 +973,138 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
       )}
 
       <div ref={commentsSectionRef} className="pt-8 mt-8 border-t">
-        <h2 className="text-xl font-semibold mb-6 flex items-center">
-          <CommentIcon className="w-6 h-6 text-primary mr-3" />
-          玩家评论区
-        </h2>
-
-        <Card className="mb-6 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-start space-x-3">
-              <Avatar className="mt-1">
-                <AvatarImage src="https://placehold.co/40x40.png?text=ME" alt="当前用户" data-ai-hint="avatar user" />
-                <AvatarFallback>我</AvatarFallback>
-              </Avatar>
-              <div className="flex-grow space-y-2">
-                <Textarea
-                  ref={commentInputRef}
-                  placeholder="发表你的看法，分享游戏心得..."
-                  rows={3}
-                  className="text-sm"
-                />
-                <div className="flex justify-end">
-                  <Button className="btn-interactive">发表评论</Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          {mockComments.map((comment) => (
-            <Card key={comment.id} className="shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-start space-x-3">
-                  <Avatar>
-                    {comment.avatarUrl ? (
-                       <AvatarImage src={comment.avatarUrl} alt={comment.username} data-ai-hint={comment.dataAiHint || "avatar user"} />
-                    ) : (
-                       <AvatarImage src={`https://placehold.co/40x40.png?text=${comment.avatarFallback}`} alt={comment.username} data-ai-hint="avatar user" />
-                    )}
-                    <AvatarFallback>{comment.avatarFallback}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-grow">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-semibold text-sm text-foreground">{comment.username}</span>
-                      <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
-                    </div>
-                    <p className="text-sm text-foreground/90 whitespace-pre-line">{comment.text}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          {mockComments.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">暂无评论，快来抢沙发吧！</p>
-          )}
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-xl font-semibold flex items-center">
+            <CommentIcon className="w-6 h-6 text-primary mr-3" />
+            玩家评论区
+          </h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant={communitySort === 'latest' ? 'default' : 'outline'}
+              size="sm"
+              className="btn-interactive"
+              onClick={() => setCommunitySort('latest')}
+            >
+              最新
+            </Button>
+            <Button
+              type="button"
+              variant={communitySort === 'hot' ? 'default' : 'outline'}
+              size="sm"
+              className="btn-interactive"
+              onClick={() => setCommunitySort('hot')}
+            >
+              最热
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="btn-interactive"
+              onClick={() => {
+                setIsCommunityLoaded(false);
+                setCommunityReloadKey((v) => v + 1);
+              }}
+            >
+              刷新
+            </Button>
+            <Button asChild size="sm" className="btn-interactive">
+              <Link href={game?.pkg ? `/community?app=${encodeURIComponent(game.pkg)}` : '/community'}>
+                去社区发帖
+              </Link>
+            </Button>
+          </div>
         </div>
+
+        {isCommunityLoading && (
+          <div className="py-8 flex items-center justify-center text-muted-foreground">
+            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+            正在加载关联帖子...
+          </div>
+        )}
+
+        {!isCommunityLoading && relatedPosts.length > 0 && (
+          <div className="space-y-4">
+            {relatedPosts.map((post) => {
+              const likeCount = postLikeCounts[post.id] ?? post.likesCount ?? 0;
+              const isLiked = Boolean(likedPostIds[post.id]);
+              const cover = post.imageUrl || post.relatedApp?.icon;
+              return (
+                <Card key={post.id} className="overflow-hidden border-border/60 shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={post.user.avatarUrl} alt={post.user.name} />
+                        <AvatarFallback>{(post.user.name || 'U').slice(0, 1)}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="font-semibold text-foreground">{post.user.name || '匿名用户'}</span>
+                          <span className="text-muted-foreground">·</span>
+                          <span className="text-xs text-muted-foreground">{post.timestamp}</span>
+                        </div>
+                        <h3 className="mt-2 line-clamp-2 text-base font-semibold leading-snug">
+                          <Link href={`/community/post/${post.id}`} className="hover:text-primary transition-colors">
+                            {post.title || '社区帖子'}
+                          </Link>
+                        </h3>
+                        <p className="mt-1.5 text-sm text-foreground/80 line-clamp-3">
+                          {getPostExcerpt(post)}
+                        </p>
+                      </div>
+                      {cover && (
+                        <Link href={`/community/post/${post.id}`} className="relative hidden h-20 w-32 shrink-0 overflow-hidden rounded-md border bg-muted sm:block">
+                          <Image
+                            src={cover}
+                            alt={post.title || '帖子封面'}
+                            fill
+                            className="object-cover"
+                            data-ai-hint="community post cover"
+                          />
+                        </Link>
+                      )}
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className={cn('px-2 text-xs', isLiked && 'text-primary')}
+                        disabled={likePendingPostId === post.id}
+                        onClick={() => handleRelatedPostLike(post.id)}
+                      >
+                        <ThumbsUp className={cn('mr-1.5 h-4 w-4', isLiked && 'fill-primary')} />
+                        点赞 {likeCount}
+                      </Button>
+                      <Button asChild variant="ghost" size="sm" className="px-2 text-xs">
+                        <Link href={`/community/post/${post.id}#comments`}>
+                          <MessageSquare className="mr-1.5 h-4 w-4" />
+                          评论 {post.commentsCount || 0}
+                        </Link>
+                      </Button>
+                      <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+                        <span>{post.viewsCount || 0} 浏览</span>
+                        <Link href={`/community/post/${post.id}`} className="inline-flex items-center text-primary hover:underline">
+                          快捷跳转
+                          <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                        </Link>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {!isCommunityLoading && isCommunityLoaded && relatedPosts.length === 0 && (
+          <Card className="shadow-sm">
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              暂无关联社区帖子，欢迎发布第一条讨论。
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {showFab && (
@@ -757,74 +1119,97 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
         </Button>
       )}
 
-      {selectedScreenshotUrl && (
-        <div
-          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in-50"
-          onClick={closeScreenshotPreview}
-        >
-          {game.detail_images && game.detail_images.length > 1 && (
-            <>
-              <Button variant="ghost" size="icon" className="fixed left-2 sm:left-4 z-[110] rounded-full bg-background/30 hover:bg-background/70 text-white hover:text-primary w-10 h-10 sm:w-12 sm:h-12" onClick={(e) => { e.stopPropagation(); handlePrevScreenshot(); }} aria-label="上一张">
-                  <ChevronLeft className="w-6 h-6"/>
-              </Button>
-              <Button variant="ghost" size="icon" className="fixed right-2 sm:right-4 z-[110] rounded-full bg-background/30 hover:bg-background/70 text-white hover:text-primary w-10 h-10 sm:w-12 sm:h-12" onClick={(e) => { e.stopPropagation(); handleNextScreenshot(); }} aria-label="下一张">
-                  <ChevronRight className="w-6 h-6"/>
-              </Button>
-            </>
-          )}
-
+      {selectedScreenshotUrl &&
+        isPreviewMounted &&
+        createPortal(
           <div
-            className="relative flex flex-col items-center justify-center"
-            onClick={(e) => e.stopPropagation()}
-            onMouseMove={handleDragMove}
-            onMouseUp={handleDragEnd}
-            onMouseLeave={handleDragEnd}
-            onTouchMove={handleDragMove}
-            onTouchEnd={handleDragEnd}
+            className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-sm"
+            onClick={handlePreviewBackdropClick}
+            onKeyDown={handlePreviewKeydown}
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
           >
-             <Button
-              variant="ghost"
-              size="icon"
-              className="absolute -top-2 -right-3 md:top-2 md:right-2 z-[110] rounded-full bg-background/50 hover:bg-background/80 text-foreground hover:text-primary w-8 h-8 md:w-10 md:h-10"
-              onClick={closeScreenshotPreview}
-              aria-label="关闭预览"
-            >
-              <CloseIcon className="w-5 h-5 md:w-6 md:h-6" />
-            </Button>
-            
-            <div className="relative flex items-center justify-center w-full h-full overflow-hidden">
-                <Image
-                    ref={imageRef}
-                    src={selectedScreenshotUrl}
-                    alt="游戏截图预览"
-                    width={1280}
-                    height={720}
-                    className="object-contain rounded-lg shadow-2xl transition-transform duration-300 select-none"
-                    style={{
-                        transform: `scale(${zoomLevel}) translate(${position.x}px, ${position.y}px)`,
-                        maxWidth: 'calc(100vw - 4rem)',
-                        maxHeight: 'calc(100vh - 8rem)',
-                        cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
-                    }}
-                    onMouseDown={handleDragStart}
-                    onTouchStart={handleDragStart}
-                />
+            {game.detail_images && game.detail_images.length > 1 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="fixed left-2 top-1/2 z-[10000] -translate-y-1/2 rounded-full bg-background/30 text-white hover:bg-background/70 hover:text-primary sm:left-4 sm:h-12 sm:w-12"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrevScreenshot();
+                  }}
+                  aria-label="Previous screenshot"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="fixed right-2 top-1/2 z-[10000] -translate-y-1/2 rounded-full bg-background/30 text-white hover:bg-background/70 hover:text-primary sm:right-4 sm:h-12 sm:w-12"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNextScreenshot();
+                  }}
+                  aria-label="Next screenshot"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </Button>
+              </>
+            )}
+
+            <div className="relative flex h-full w-full items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="fixed right-4 top-4 z-[10000] h-10 w-10 rounded-full bg-background/50 text-foreground hover:bg-background/80 hover:text-primary"
+                onClick={closeScreenshotPreview}
+                aria-label="Close preview"
+              >
+                <CloseIcon className="h-6 w-6" />
+              </Button>
+
+              <Image
+                src={selectedScreenshotUrl}
+                alt="Screenshot preview"
+                width={1280}
+                height={720}
+                className="select-none rounded-lg object-contain shadow-2xl transition-transform duration-200"
+                style={{
+                  transform: `translate(${position.x}px, ${position.y}px) scale(${zoomLevel})`,
+                  transformOrigin: 'center center',
+                  maxWidth: 'calc(100vw - 2rem)',
+                  maxHeight: 'calc(100vh - 5rem)',
+                  touchAction: zoomLevel > 1 ? 'none' : 'manipulation',
+                  cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
+                }}
+                onPointerDown={handleDragStart}
+              />
+
+              <div className="fixed bottom-4 left-1/2 z-[10000] flex -translate-x-1/2 items-center gap-2 rounded-full bg-background/80 p-2 shadow-lg">
+                <Button variant="ghost" size="icon" onClick={() => handleZoom(zoomLevel - 0.2)} aria-label="Zoom out">
+                  <ZoomOut className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    handleZoom(1);
+                    setPosition({ x: 0, y: 0 });
+                  }}
+                  aria-label="Reset zoom"
+                >
+                  <RotateCcw className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => handleZoom(zoomLevel + 0.2)} aria-label="Zoom in">
+                  <ZoomIn className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
-            
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/80 p-2 rounded-full flex items-center gap-2 shadow-lg">
-                <Button variant="ghost" size="icon" onClick={() => handleZoom(zoomLevel - 0.2)} aria-label="缩小">
-                    <ZoomOut className="w-5 h-5" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => { handleZoom(1); setPosition({x:0, y:0}) }} aria-label="重置大小">
-                    <RotateCcw className="w-5 h-5" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => handleZoom(zoomLevel + 0.2)} aria-label="放大">
-                    <ZoomIn className="w-5 h-5" />
-                </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
@@ -832,3 +1217,5 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
 
 
     
+
+

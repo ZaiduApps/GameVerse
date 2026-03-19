@@ -1,5 +1,4 @@
-
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import {
@@ -15,15 +14,15 @@ import {
   BarChart3,
   Newspaper,
   User as UserIcon,
+  Bell,
 } from 'lucide-react';
+import Image from 'next/image';
+import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-  SheetClose,
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,16 +32,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useState } from 'react';
 import SearchOverlay from '@/components/layout/SearchOverlay';
 import AuthModal from '@/components/auth/auth-modal';
-import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
+import { apiUrl, trackedApiFetch } from '@/lib/api';
 
 const navItems = [
   { href: '/', label: '首页', icon: Home },
   { href: '/app', label: '游戏库', icon: Library },
+  { href: '/rankings', label: '排行榜', icon: BarChart3 },
   { href: '/news', label: '资讯', icon: Newspaper },
+  { href: '/community', label: '社区', icon: CommunityIcon },
+  { href: '/submit-resource', label: '资源投稿', icon: UploadCloud },
 ];
 
 interface HeaderProps {
@@ -50,27 +51,55 @@ interface HeaderProps {
   logoUrl?: string;
 }
 
-export default function Header({ siteName = "APKScc", logoUrl }: HeaderProps) {
-  const { user, isAuthenticated, logout } = useAuth();
+export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
+  const { user, token, isAuthenticated, logout } = useAuth();
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
+  const [unreadTotal, setUnreadTotal] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadUnreadSummary() {
+      if (!isAuthenticated || !token) {
+        setUnreadTotal(0);
+        return;
+      }
+      try {
+      const res = await trackedApiFetch('/notifications/summary', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: 'no-store',
+        });
+        const json = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (!res.ok || json?.code !== 0) {
+          setUnreadTotal(0);
+          return;
+        }
+        setUnreadTotal(Number(json?.data?.total_unread || 0));
+      } catch {
+        if (!cancelled) setUnreadTotal(0);
+      }
+    }
+
+    loadUnreadSummary();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, token, pathname]);
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b-2 border-foreground bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-6">
-            <Link
-              href="/"
-              className="flex items-center gap-2 text-primary hover:opacity-80 transition-opacity"
-            >
-              {logoUrl ? (
-                <Image src={logoUrl} alt={siteName} width={28} height={28} />
-              ) : (
-                <Gamepad2 size={28} />
-              )}
-              <h1 className="text-xl font-bold sm:text-2xl">{siteName}</h1>
+            <Link href="/" className="flex items-center gap-2 text-primary hover:opacity-90 transition-opacity">
+              {logoUrl ? <Image src={logoUrl} alt={siteName} width={28} height={28} /> : <Gamepad2 size={28} />}
+              <h1 className="text-xl font-bold sm:text-2xl tracking-wide">{siteName}</h1>
             </Link>
             <nav className="hidden lg:flex items-center">
               <ul className="flex items-center space-x-6">
@@ -78,7 +107,7 @@ export default function Header({ siteName = "APKScc", logoUrl }: HeaderProps) {
                   <li key={item.label}>
                     <Link
                       href={item.href}
-                      className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5"
+                      className="text-sm font-semibold text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5"
                     >
                       {item.icon && <item.icon size={16} />}
                       {item.label}
@@ -93,7 +122,7 @@ export default function Header({ siteName = "APKScc", logoUrl }: HeaderProps) {
             <div className="relative hidden md:block">
               <Button
                 variant="outline"
-                className="pl-3 pr-4 py-2 h-9 text-sm rounded-md w-40 lg:w-56 bg-muted/30 hover:bg-muted/70 justify-start text-muted-foreground"
+                className="pl-3 pr-4 py-2 h-9 text-sm rounded-sm border-2 border-foreground/80 w-40 lg:w-56 bg-background hover:bg-secondary/35 justify-start text-muted-foreground"
                 onClick={() => setSearchOverlayOpen(true)}
               >
                 <Search className="mr-2 h-4 w-4" />
@@ -115,6 +144,9 @@ export default function Header({ siteName = "APKScc", logoUrl }: HeaderProps) {
                       <AvatarImage src={user?.avatar} alt={user?.name || user?.username} />
                       <AvatarFallback>{(user?.name || user?.username || 'U').substring(0, 1).toUpperCase()}</AvatarFallback>
                     </Avatar>
+                    {unreadTotal > 0 && (
+                      <span className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-background" />
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
@@ -129,6 +161,12 @@ export default function Header({ siteName = "APKScc", logoUrl }: HeaderProps) {
                     <Link href="/profile">
                       <UserIcon className="mr-2 h-4 w-4" />
                       <span>个人资料</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/messages">
+                      <Bell className="mr-2 h-4 w-4" />
+                      <span>我的消息</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={logout}>
@@ -151,7 +189,6 @@ export default function Header({ siteName = "APKScc", logoUrl }: HeaderProps) {
 
             <ThemeToggle />
 
-            {/* Mobile Menu Button and Sheet */}
             <div className="md:hidden">
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
@@ -160,20 +197,13 @@ export default function Header({ siteName = "APKScc", logoUrl }: HeaderProps) {
                     <span className="sr-only">打开菜单</span>
                   </Button>
                 </SheetTrigger>
-                <SheetContent
-                  side="right"
-                  className="w-[280px] p-0 pt-6 flex flex-col"
-                >
+                <SheetContent side="right" className="w-[280px] p-0 pt-6 flex flex-col">
                   <Link
                     href="/"
                     className="flex items-center gap-2 text-xl font-bold text-primary px-6 pb-4 border-b border-border/40"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    {logoUrl ? (
-                      <Image src={logoUrl} alt={siteName} width={24} height={24} />
-                    ) : (
-                      <Gamepad2 size={24} />
-                    )}
+                    {logoUrl ? <Image src={logoUrl} alt={siteName} width={24} height={24} /> : <Gamepad2 size={24} />}
                     <span>{siteName}</span>
                   </Link>
 
@@ -192,6 +222,7 @@ export default function Header({ siteName = "APKScc", logoUrl }: HeaderProps) {
                           </SheetClose>
                         </li>
                       ))}
+
                       {!isAuthenticated && (
                         <li>
                           <SheetClose asChild>
@@ -209,6 +240,7 @@ export default function Header({ siteName = "APKScc", logoUrl }: HeaderProps) {
                           </SheetClose>
                         </li>
                       )}
+
                       {isAuthenticated && (
                         <>
                           <li>
@@ -219,6 +251,16 @@ export default function Header({ siteName = "APKScc", logoUrl }: HeaderProps) {
                             >
                               <UserIcon size={18} />
                               个人资料
+                            </Link>
+                          </li>
+                          <li>
+                            <Link
+                              href="/messages"
+                              className="w-full justify-start text-base font-medium text-foreground/80 hover:text-primary transition-colors px-2 py-3 rounded-md hover:bg-muted/50 flex items-center gap-2"
+                              onClick={() => setMobileMenuOpen(false)}
+                            >
+                              <Bell size={18} />
+                              我的消息
                             </Link>
                           </li>
                           <li>
@@ -238,6 +280,7 @@ export default function Header({ siteName = "APKScc", logoUrl }: HeaderProps) {
                       )}
                     </ul>
                   </nav>
+
                   <div className="mt-auto p-4 border-t border-border/40">
                     <p className="text-xs text-center text-muted-foreground">
                       &copy; {new Date().getFullYear()} {siteName}
@@ -249,8 +292,10 @@ export default function Header({ siteName = "APKScc", logoUrl }: HeaderProps) {
           </div>
         </div>
       </header>
+
       <SearchOverlay isOpen={searchOverlayOpen} setIsOpen={setSearchOverlayOpen} />
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </>
   );
 }
+
