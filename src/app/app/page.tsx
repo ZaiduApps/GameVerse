@@ -31,7 +31,7 @@ function transformApiGameToGame(apiGame: ApiGame): Game {
     shortDescription: apiGame.summary,
     imageUrl: apiGame.icon || 'https://placehold.co/300x300.png', // Fallback
     bannerUrl: apiGame.header_image || apiGame.icon || 'https://placehold.co/600x338.png', // Fallback
-    category: apiGame.tags?.[0] || '娓告垙',
+    category: apiGame.tags?.[0] || '游戏',
     rating: apiGame.star,
     tags: apiGame.tags,
     status: 'released', // This might need to be derived differently
@@ -139,7 +139,7 @@ export default function GamesPage() {
       <section className="fade-in" style={{ animationDelay: '0.2s' }}>
         <div className="mb-6 flex flex-wrap gap-2 items-center">
           <ListFilter size={20} className="mr-2 text-muted-foreground" />
-          <span className="text-sm font-medium mr-2 text-muted-foreground">绫诲瀷:</span>
+          <span className="text-sm font-medium mr-2 text-muted-foreground">类型:</span>
           
           <Button
               key="all-games"
@@ -148,7 +148,7 @@ export default function GamesPage() {
               onClick={() => handleTagClick(null)}
               className="btn-interactive transition-all duration-200 text-xs sm:text-sm"
           >
-              鍏ㄩ儴娓告垙
+              全部游戏
           </Button>
 
           {displayedTags.map((tag) => (
@@ -174,7 +174,7 @@ export default function GamesPage() {
               onClick={() => setShowAllTags((prev) => !prev)}
               className="btn-interactive transition-all duration-200 text-xs sm:text-sm"
             >
-              {showAllTags ? '鏀惰捣' : `鏌ョ湅鏇村 (${hiddenTagCount})`}
+              {showAllTags ? '收起' : `查看更多 (${hiddenTagCount})`}
             </Button>
           )}
         </div>
@@ -205,10 +205,10 @@ export default function GamesPage() {
                   disabled={currentPage <= 1}
                   className="btn-interactive"
                 >
-                  涓婁竴椤?
+                  上一页
                 </Button>
                 <span className="text-sm text-muted-foreground">
-                  绗?{currentPage} 椤?/ 鍏?{pagination.totalPages} 椤?
+                  第 {currentPage} 页 / 共 {pagination.totalPages} 页
                 </span>
                 <Button 
                   variant="outline" 
@@ -217,7 +217,7 @@ export default function GamesPage() {
                   disabled={currentPage >= pagination.totalPages}
                   className="btn-interactive"
                 >
-                  涓嬩竴椤?
+                  下一页
                 </Button>
               </div>
             )}

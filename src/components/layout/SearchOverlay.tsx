@@ -4,12 +4,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, X, History, Flame, Star, Download, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import type { SearchResult, ApiGame } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
-import { apiUrl, trackedApiFetch } from '@/lib/api';
+import { trackedApiFetch } from '@/lib/api';
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -25,7 +24,7 @@ function transformApiGameToSearchResult(apiGame: ApiGame): SearchResult {
     id: apiGame._id,
     pkg: apiGame.pkg,
     title: apiGame.name,
-    category: apiGame.tags?.[0] || '娓告垙',
+    category: apiGame.tags?.[0] || '游戏',
     imageUrl: apiGame.icon,
     rating: apiGame.star,
     region: apiGame.metadata?.region,
@@ -171,7 +170,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
               id="search-overlay-input"
               name="search"
               type="search"
-              placeholder="鎼滅储娓告垙銆佸簲鐢ㄣ€佽祫璁?.."
+              placeholder="搜索游戏、应用、资讯..."
               className="w-full h-14 pl-14 pr-14 rounded-full text-lg bg-background/80 border-2"
               defaultValue={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -184,7 +183,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
             size="icon" 
             className="absolute right-6 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full"
             onClick={() => setIsOpen(false)}
-            aria-label="鍏抽棴鎼滅储"
+            aria-label="关闭搜索"
           >
             <X className="h-6 w-6" />
           </Button>
@@ -196,7 +195,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                 // Search Results
                 <div>
                      <h3 className="text-sm font-semibold text-muted-foreground px-4 mb-3">
-                        鎼滅储缁撴灉
+                        搜索结果
                     </h3>
                     <div className="space-y-2 pr-2">
                         {isSearching ? (
@@ -220,7 +219,16 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                                 </Link>
                             ))
                         ) : (
-                <p className="text-center text-muted-foreground py-8">未找到相关结果。</p>
+                <div className="py-8 text-center">
+                  <p className="text-muted-foreground">未找到相关结果。</p>
+                  <Link
+                    href="/submit-resource"
+                    onClick={() => setIsOpen(false)}
+                    className="mx-auto mt-3 inline-flex text-sm font-medium text-primary hover:underline"
+                  >
+                    找不到资源？点我反馈
+                  </Link>
+                </div>
                         )}
                     </div>
                 </div>
@@ -231,8 +239,8 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                     {searchHistory.length > 0 && (
                       <div>
                           <div className="flex justify-between items-center px-4 mb-3">
-                              <h3 className="text-sm font-semibold text-muted-foreground flex items-center"><History className="w-4 h-4 mr-2" /> 鎼滅储鍘嗗彶</h3>
-                              <Button variant="ghost" size="sm" className="text-xs h-auto py-1" onClick={handleClearHistory}>娓呴櫎</Button>
+                              <h3 className="text-sm font-semibold text-muted-foreground flex items-center"><History className="w-4 h-4 mr-2" /> 搜索历史</h3>
+                              <Button variant="ghost" size="sm" className="text-xs h-auto py-1" onClick={handleClearHistory}>清除</Button>
                           </div>
                           <div className="flex flex-wrap gap-2 px-4">
                               {searchHistory.map((item, index) => (
@@ -243,7 +251,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                     )}
                     {/* Recommendations */}
                     <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground px-4 mb-3 flex items-center"><Flame className="w-4 h-4 mr-2 text-red-500" /> 鐑棬鎺ㄨ崘</h3>
+                        <h3 className="text-sm font-semibold text-muted-foreground px-4 mb-3 flex items-center"><Flame className="w-4 h-4 mr-2 text-red-500" /> 热门推荐</h3>
                         {isLoading ? (
                            <div className="flex justify-center items-center py-8">
                              <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -269,6 +277,15 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                         ) : (
                 <p className="text-center text-muted-foreground py-8">暂无热门推荐。</p>
                         )}
+                        <div className="flex justify-center px-4 pt-3">
+                          <Link
+                            href="/submit-resource"
+                            onClick={() => setIsOpen(false)}
+                            className="inline-flex text-sm font-medium text-primary hover:underline"
+                          >
+                            找不到资源？点我反馈
+                          </Link>
+                        </div>
                     </div>
                 </div>
             )}

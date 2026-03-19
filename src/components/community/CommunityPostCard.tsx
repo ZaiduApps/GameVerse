@@ -1,5 +1,4 @@
-
-'use client';
+﻿'use client';
 
 import type { CommunityPost } from '@/types';
 import Image from 'next/image';
@@ -8,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { MessageSquare, ThumbsUp, MoreHorizontal, Bookmark, Share2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import Link from 'next/link'; // Added Link
+import Link from 'next/link';
 import { cn, renderMarkdown } from '@/lib/utils';
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 interface CommunityPostCardProps {
   post: CommunityPost;
@@ -20,6 +20,28 @@ interface CommunityPostCardProps {
 export default function CommunityPostCard({ post, index = 0 }: CommunityPostCardProps) {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [isImageError, setIsImageError] = useState(false);
+  const { toast } = useToast();
+
+  const handleShare = async () => {
+    const path = `/community/post/${post.id}`;
+    const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}${path}` : path;
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+      } else {
+        const input = document.createElement('input');
+        input.value = shareUrl;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      }
+      toast({ title: '复制链接成功', description: '已复制帖子链接，可直接分享。' });
+    } catch {
+      toast({ title: '复制失败', description: '请稍后重试。', variant: 'destructive' });
+    }
+  };
 
   return (
     <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
@@ -27,7 +49,7 @@ export default function CommunityPostCard({ post, index = 0 }: CommunityPostCard
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Avatar>
-              <AvatarImage src={post.user.avatarUrl} alt={post.user.name} data-ai-hint={post.user.dataAiHint || "user avatar"} />
+              <AvatarImage src={post.user.avatarUrl} alt={post.user.name} data-ai-hint={post.user.dataAiHint || 'user avatar'} />
               <AvatarFallback>{post.user.name.substring(0, 2)}</AvatarFallback>
             </Avatar>
             <div>
@@ -65,26 +87,23 @@ export default function CommunityPostCard({ post, index = 0 }: CommunityPostCard
         </Link>
         {post.tags && post.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-1">
-            {post.tags.map((tag, index) => (
-              <Badge key={`${post.id}-tag-${index}-${tag}`} variant="outline" className="text-xs font-normal">{tag}</Badge>
+            {post.tags.map((tag, tagIndex) => (
+              <Badge key={`${post.id}-tag-${tagIndex}-${tag}`} variant="outline" className="text-xs font-normal">
+                {tag}
+              </Badge>
             ))}
           </div>
         )}
         {post.imageUrl && (
           <Link href={`/community/post/${post.id}`} className="block mt-3 rounded-lg overflow-hidden aspect-video relative bg-muted">
-            {!isImageLoaded && !isImageError && (
-              <div className="absolute inset-0 animate-pulse bg-muted/70" />
-            )}
+            {!isImageLoaded && !isImageError && <div className="absolute inset-0 animate-pulse bg-muted/70" />}
             {!isImageError ? (
               <Image
                 src={post.imageUrl}
-                alt={post.title || "Post image"}
+                alt={post.title || 'Post image'}
                 fill
-                className={cn(
-                  "object-cover transition-opacity duration-300",
-                  isImageLoaded ? "opacity-100" : "opacity-0",
-                )}
-                data-ai-hint={post.imageAiHint || "community post image"}
+                className={cn('object-cover transition-opacity duration-300', isImageLoaded ? 'opacity-100' : 'opacity-0')}
+                data-ai-hint={post.imageAiHint || 'community post image'}
                 priority={index === 0}
                 loading={index === 0 ? 'eager' : 'lazy'}
                 onLoad={() => setIsImageLoaded(true)}
@@ -108,7 +127,7 @@ export default function CommunityPostCard({ post, index = 0 }: CommunityPostCard
         <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary px-2">
           <ThumbsUp size={18} className="mr-1.5" /> {post.likesCount}
         </Button>
-        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary px-2 ml-auto">
+        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary px-2 ml-auto" onClick={handleShare}>
           <Share2 size={18} className="mr-1.5" /> 分享
         </Button>
       </CardFooter>

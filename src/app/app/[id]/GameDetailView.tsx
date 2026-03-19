@@ -616,7 +616,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
 
   return (
     <div className="space-y-8 fade-in">
-      <GameAnnouncements announcements={Announcements} />
+      <GameAnnouncements announcements={Announcements} position="game_detail" />
 
       <Card className="overflow-visible shadow-xl">
       <CardHeader className="p-0 relative h-[200px] bg-muted">
@@ -671,7 +671,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   <div className="flex items-center">
                     <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-2" />
                     <div>
-                      <p className="text-muted-foreground text-xs">璇勫垎</p>
+                      <p className="text-muted-foreground text-xs">评分</p>
                       <p className="font-semibold">{game.star}</p>
                     </div>
                   </div>
@@ -689,7 +689,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   <div className="flex items-center">
                     <Tag className="w-4 h-4 text-blue-500 mr-2" />
                     <div>
-                      <p className="text-muted-foreground text-xs">绫诲瀷</p>
+                      <p className="text-muted-foreground text-xs">类型</p>
                       <p className="font-semibold">{game.tags[0]}</p>
                     </div>
                   </div>
@@ -698,7 +698,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   <div className="flex items-center">
                     <CalendarDays className="w-4 h-4 text-green-500 mr-2" />
                     <div>
-                      <p className="text-muted-foreground text-xs">鍙戝竷鏃ユ湡</p>
+                      <p className="text-muted-foreground text-xs">发布日期</p>
                       <p className="font-semibold">{new Date(game.release_at).toLocaleDateString('zh-CN')}</p>
                     </div>
                   </div>
@@ -707,7 +707,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   <div className="flex items-center">
                     <History className="w-4 h-4 text-purple-500 mr-2" />
                     <div>
-                      <p className="text-muted-foreground text-xs">鏇存柊鏃ユ湡</p>
+                      <p className="text-muted-foreground text-xs">更新日期</p>
                       <p className="font-semibold">{new Date(game.latest_at).toLocaleDateString('zh-CN')}</p>
                     </div>
                   </div>
@@ -717,7 +717,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   <div className="flex items-start">
                     <Info className="w-4 h-4 text-purple-500 mr-2 mt-0.5 flex-shrink-0" />
                     <div className="flex-grow">
-                      <p className="text-muted-foreground text-xs">鐗堟湰</p>
+                      <p className="text-muted-foreground text-xs">版本</p>
                       <div className="flex items-center gap-x-2 flex-wrap">
                           <p className="font-semibold">{game.version}</p>
                           <Button
@@ -728,7 +728,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                               disabled={isSubmittingUrge}
                           >
                               <BellRing className="w-3 h-3 mr-1" />
-                              鍌洿
+                              催更
                           </Button>
                       </div>
                     </div>
@@ -739,7 +739,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   <div className="flex items-center col-span-2 sm:col-span-1">
                     <HardDrive className="w-4 h-4 text-orange-500 mr-2" />
                     <div>
-                      <p className="text-muted-foreground text-xs">澶у皬</p>
+                      <p className="text-muted-foreground text-xs">大小</p>
                       <p className="font-semibold">{formatBytes(Number(game.file_size || 0))}</p>
                     </div>
                   </div>
@@ -752,7 +752,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                 <div className="pt-2">
                   <h3 className="text-base font-semibold text-muted-foreground mb-2 flex items-center">
                     <TagsIcon className="w-4 h-4 mr-2" />
-                    鏍囩
+                    标签
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {game.tags.map((tag, index) => (
@@ -765,7 +765,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
               <Separator className="my-4 md:my-6" />
 
               <div>
-                <h2 className="text-xl font-semibold mb-3">娓告垙浠嬬粛</h2>
+                <h2 className="text-xl font-semibold mb-3">游戏介绍</h2>
                 <div 
                   className="text-foreground/80 leading-relaxed whitespace-pre-line prose prose-sm sm:prose-base dark:prose-invert max-w-none"
                   dangerouslySetInnerHTML={{ __html: isDescriptionExpanded ? cleanDescription : shortDescriptionText }}
@@ -776,7 +776,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                     className="p-0 h-auto text-primary hover:underline mt-2 text-sm"
                     onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
                   >
-                    {isDescriptionExpanded ? '鏀惰捣' : '灞曞紑鍏ㄦ枃'}
+                    {isDescriptionExpanded ? '收起' : '展开全文'}
                     {isDescriptionExpanded ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
                   </Button>
                 )}
@@ -788,11 +788,11 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-lg flex items-center">
                     <ThumbsUp className="w-5 h-5 mr-2 text-primary" />
-                    涓轰綘鎺ㄨ崘
+                    为你推荐
                   </CardTitle>
                   <Button variant="ghost" size="sm" onClick={fetchRecommendedGames} className="text-xs text-muted-foreground hover:text-primary btn-interactive" disabled={isFetchingRecommended}>
                      <RefreshCw className={cn("w-3.5 h-3.5 mr-1.5", isFetchingRecommended && "animate-spin")} />
-                     鎹竴鎹?
+                     换一换
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-3 pt-2">
@@ -809,9 +809,9 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                         />
                         <div className="flex-grow">
                           <h4 className="font-semibold text-sm text-foreground group-hover:text-primary line-clamp-2">{recGame.name}</h4>
-                          <p className="text-xs text-muted-foreground mt-0.5">{recGame.tags?.[0]?.name || '娓告垙'}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{recGame.tags?.[0]?.name || '游戏'}</p>
                            <Button variant="link" size="sm" className="text-xs p-0 h-auto mt-1 text-primary/80 hover:text-primary">
-                            鏌ョ湅璇︽儏 <ExternalLink className="w-3 h-3 ml-1" />
+                            查看详情 <ExternalLink className="w-3 h-3 ml-1" />
                            </Button>
                         </div>
                       </div>
@@ -827,14 +827,14 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                 <div className="pt-6 mt-6 border-t md:col-span-12 order-1 md:order-none">
                 <h2 className="text-xl font-semibold mb-4 flex items-center">
                     <LinkIcon className="w-5 h-5 text-primary mr-2" />
-                    鏇村璧勬簮涓庢敮鎸?
+                    更多资源与支持
                 </h2>
                 <div className="grid md:grid-cols-2 gap-x-6 gap-y-4">
                     {cardConfig.contact && cardConfig.contact.length > 0 && (
                     <div className="space-y-3">
                         <h3 className="text-lg font-medium flex items-center text-foreground/90">
                         <Users className="w-5 h-5 mr-2 text-accent" />
-                        鐜╁浜ゆ祦缇?
+                        玩家交流群
                         </h3>
                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                             {cardConfig.contact.map(item => (
@@ -855,7 +855,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                     <div className="space-y-3">
                         <h3 className="text-lg font-medium flex items-center text-foreground/90">
                         <Briefcase className="w-5 h-5 mr-2 text-accent" />
-                        鍚堜綔涓庢敮鎸?
+                        合作与支持
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                             {cardConfig.partner.map(item => (
@@ -881,7 +881,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
       <div>
         <h2 className="text-xl font-semibold mt-6 mb-3 flex items-center">
           <Camera className="w-5 h-5 text-primary mr-2" />
-          娓告垙鎴浘
+          游戏截图
         </h2>
         {game.detail_images && game.detail_images.length > 0 ? (
           <div className="flex overflow-x-auto space-x-3 md:space-x-4 py-2 -mx-1 px-1">
@@ -893,7 +893,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
               >
                 <Image
                   src={screenshotUrl}
-                  alt={`娓告垙鎴浘 ${index + 1}`}
+                  alt={`游戏截图 ${index + 1}`}
                   width={288}
                   height={162}
                   className="w-full h-full object-cover transition-transform group-hover:scale-105"

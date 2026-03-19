@@ -60,9 +60,9 @@ export interface CommunityCommentThread extends CommunityCommentItem {
 }
 
 function formatTimestamp(value?: string): string {
-  if (!value) return '鍒氬垰';
+  if (!value) return '刚刚';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '鍒氬垰';
+  if (Number.isNaN(date.getTime())) return '刚刚';
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   const hour = String(date.getHours()).padStart(2, '0');
@@ -71,7 +71,7 @@ function formatTimestamp(value?: string): string {
 }
 
 export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
-  const content = item.content?.trim() || item.summary?.trim() || '鏆傛棤鍐呭';
+  const content = item.content?.trim() || item.summary?.trim() || '暂无内容';
   const firstImage = item.cover || item.media_urls?.[0] || undefined;
   const tags = [
     item.topic_info?.name,
@@ -82,7 +82,7 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
   return {
     id: String(item._id || ''),
     user: {
-      name: item.author_name?.trim() || '鍖垮悕鐢ㄦ埛',
+      name: item.author_name?.trim() || '匿名用户',
       avatarUrl: item.author_avatar?.trim() || FALLBACK_AVATAR,
       dataAiHint: 'user avatar',
     },
@@ -95,7 +95,7 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
     imageUrl: firstImage,
     imageAiHint: firstImage ? 'community post image' : undefined,
     tags: uniqueTags.slice(0, 4),
-    category: item.topic_info?.name || item.app_info?.name || '绀惧尯',
+    category: item.topic_info?.name || item.app_info?.name || '社区',
     commentsCount: Number(item.comment_count || 0),
     likesCount: Number(item.like_count || 0),
     viewsCount: Number(item.view_count || 0),
@@ -127,7 +127,7 @@ export function toPostComments(list: ApiCommunityComment[]): Array<{
   }> = [];
 
   list.forEach((root) => {
-    const rootUser = root.user_name?.trim() || '鍖垮悕鐢ㄦ埛';
+    const rootUser = root.user_name?.trim() || '匿名用户';
     result.push({
       id: String(root._id || `c-${result.length + 1}`),
       user: {
@@ -140,7 +140,7 @@ export function toPostComments(list: ApiCommunityComment[]): Array<{
     });
 
     (root.replies || []).forEach((reply) => {
-      const replyUser = reply.user_name?.trim() || '鍖垮悕鐢ㄦ埛';
+      const replyUser = reply.user_name?.trim() || '匿名用户';
       const replyTo = reply.reply_to_user_name?.trim();
       result.push({
         id: String(reply._id || `c-${result.length + 1}`),
@@ -150,7 +150,7 @@ export function toPostComments(list: ApiCommunityComment[]): Array<{
           dataAiHint: 'user avatar',
         },
         timestamp: formatTimestamp(reply.created_at),
-        text: `${replyTo ? `鍥炲 @${replyTo}: ` : ''}${reply.content?.trim() || ''}`,
+        text: `${replyTo ? `回复 @${replyTo}: ` : ''}${reply.content?.trim() || ''}`,
       });
     });
   });
@@ -162,7 +162,7 @@ function toCommentItem(input: ApiCommunityComment): CommunityCommentItem {
   return {
     id: String(input._id || ''),
     user: {
-      name: input.user_name?.trim() || '鍖垮悕鐢ㄦ埛',
+      name: input.user_name?.trim() || '匿名用户',
       avatarUrl: input.user_avatar?.trim() || FALLBACK_AVATAR,
       dataAiHint: 'user avatar',
     },
@@ -180,7 +180,7 @@ export function toCommentThreads(list: ApiCommunityComment[]): CommunityCommentT
       const replyTo = reply.reply_to_user_name?.trim();
       return {
         ...item,
-        text: `${replyTo ? `鍥炲 @${replyTo}: ` : ''}${item.text}`,
+        text: `${replyTo ? `回复 @${replyTo}: ` : ''}${item.text}`,
       };
     });
     return {

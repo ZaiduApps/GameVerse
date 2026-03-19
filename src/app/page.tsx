@@ -179,7 +179,7 @@ export default async function HomePage() {
 
       {announcements && (
         <section className="fade-in" style={{ animationDelay: '0.2s' }}>
-          <GameAnnouncements announcements={announcements} />
+          <GameAnnouncements announcements={announcements} position="home" />
         </section>
       )}
 
