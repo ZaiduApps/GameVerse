@@ -1,4 +1,4 @@
-
+﻿
 import type { Metadata, Viewport } from 'next';
 import { GeistMono } from 'geist/font/mono';
 import { Bebas_Neue, Noto_Sans_SC } from 'next/font/google';
@@ -150,3 +150,4 @@ export default async function RootLayout({
     </html>
   );
 }
+

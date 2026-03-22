@@ -1,14 +1,8 @@
-'use client';
+﻿'use client';
 
 import type { NewsArticle } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ArrowLeft,
   CalendarDays,
@@ -42,14 +36,14 @@ const initialMockComments: MockComment[] = [
   {
     id: 'c1',
     username: '资讯爱好者',
-    avatarFallback: 'Z',
+    avatarFallback: '资',
     timestamp: '1 小时前',
     text: '文章分析很有帮助。',
   },
   {
     id: 'c2',
     username: '游戏玩家',
-    avatarFallback: 'Y',
+    avatarFallback: '游',
     avatarUrl: 'https://placehold.co/40x40.png?text=Y',
     timestamp: '3 小时前',
     text: '感谢分享，期待更多内容。',
@@ -79,9 +73,7 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
   function handleLike() {
     setIsLiked((prev) => !prev);
     setLikeCount((prev) => (isLiked ? prev - 1 : prev + 1));
-    toast({
-      title: isLiked ? '已取消点赞' : '点赞成功',
-    });
+    toast({ title: isLiked ? '已取消点赞' : '点赞成功' });
   }
 
   function handleShare() {
@@ -94,6 +86,7 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
     if (!text) {
       return;
     }
+
     setComments((prev) => [
       {
         id: `c${prev.length + 1}`,
@@ -105,23 +98,20 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
       },
       ...prev,
     ]);
+
     setNewComment('');
     toast({ title: '评论已提交' });
   }
 
   function handleMarkdownContainerClick(event: React.MouseEvent<HTMLElement>) {
     const target = event.target as HTMLElement | null;
-    const appLinkEl = target?.closest(
-      '[data-app-link], [data-acbox-url]',
-    ) as HTMLElement | null;
+    const appLinkEl = target?.closest('[data-app-link], [data-acbox-url]') as HTMLElement | null;
     if (!appLinkEl) return;
 
     event.preventDefault();
     setAcboxDialogOpen(true);
     setAcboxDialogUrl(
-      appLinkEl.getAttribute('data-app-link') ||
-        appLinkEl.getAttribute('data-acbox-url') ||
-        '',
+      appLinkEl.getAttribute('data-app-link') || appLinkEl.getAttribute('data-acbox-url') || '',
     );
   }
 
@@ -145,9 +135,7 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
             {article.isRecommended && <Badge variant="secondary">推荐</Badge>}
           </div>
 
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            {article.title}
-          </h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">{article.title}</h1>
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground mb-3">
             <div className="flex items-center">
@@ -179,11 +167,7 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
 
         <CardFooter className="p-4 border-t">
           <div className="flex items-center gap-2">
-            <Button
-              variant={isLiked ? 'default' : 'outline'}
-              size="sm"
-              onClick={handleLike}
-            >
+            <Button variant={isLiked ? 'default' : 'outline'} size="sm" onClick={handleLike}>
               <ThumbsUp size={14} className="mr-1" />
               {likeCount}
             </Button>
@@ -225,9 +209,7 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
                 </Avatar>
                 <div className="flex-1">
                   <div className="text-sm font-medium">{item.username}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {item.timestamp}
-                  </div>
+                  <div className="text-xs text-muted-foreground">{item.timestamp}</div>
                   <p className="text-sm mt-1">{item.text}</p>
                 </div>
               </div>
@@ -246,7 +228,7 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
               <CardTitle className="text-lg">请在 App 内打开</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <p>该链接需在 ACBOX App 内访问。</p>
+              <p>该链接需要在 ACBOX App 内访问。</p>
               {acboxDialogUrl && <p className="break-all text-xs">{acboxDialogUrl}</p>}
               <div className="mx-auto relative h-44 w-44 overflow-hidden rounded-md border">
                 <Image
