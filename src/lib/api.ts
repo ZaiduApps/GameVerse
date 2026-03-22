@@ -8,9 +8,12 @@ const serverBaseUrl = (
     : process.env.API_BASE_URL_DEV || 'http://127.0.0.1:9527')
 ).replace(/\/+$/, '');
 
+const rawBrowserBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || '').trim();
+const useBrowserProxy = (process.env.NEXT_PUBLIC_API_USE_PROXY || 'true').toLowerCase() !== 'false';
 const browserBaseUrl = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  (process.env.NODE_ENV === 'production' ? 'https://api.hk.apks.cc' : '/api')
+  useBrowserProxy
+    ? '/api'
+    : rawBrowserBaseUrl || '/api'
 ).replace(/\/+$/, '');
 
 // SSR uses API_BASE_URL*, browser uses NEXT_PUBLIC_API_BASE_URL (or env defaults).
