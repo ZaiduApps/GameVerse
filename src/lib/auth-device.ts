@@ -1,4 +1,5 @@
 const DEVICE_ID_STORAGE_KEY = 'auth_device_id';
+const TRACKING_DEVICE_ID_STORAGE_KEY = 'tracking_device_id';
 
 function generateDeviceId(): string {
   const now = Date.now().toString(36);
@@ -9,11 +10,23 @@ function generateDeviceId(): string {
 export function getDeviceId(): string {
   if (typeof window === 'undefined') return 'web-server';
 
-  const existing = localStorage.getItem(DEVICE_ID_STORAGE_KEY);
-  if (existing) return existing;
+  const existingTracking = localStorage.getItem(TRACKING_DEVICE_ID_STORAGE_KEY);
+  if (existingTracking) {
+    if (!localStorage.getItem(DEVICE_ID_STORAGE_KEY)) {
+      localStorage.setItem(DEVICE_ID_STORAGE_KEY, existingTracking);
+    }
+    return existingTracking;
+  }
+
+  const existingAuth = localStorage.getItem(DEVICE_ID_STORAGE_KEY);
+  if (existingAuth) {
+    localStorage.setItem(TRACKING_DEVICE_ID_STORAGE_KEY, existingAuth);
+    return existingAuth;
+  }
 
   const deviceId = generateDeviceId();
   localStorage.setItem(DEVICE_ID_STORAGE_KEY, deviceId);
+  localStorage.setItem(TRACKING_DEVICE_ID_STORAGE_KEY, deviceId);
   return deviceId;
 }
 

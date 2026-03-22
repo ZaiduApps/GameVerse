@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 import { notFound, usePathname } from 'next/navigation';
 import Loading from '../loading';
 import GameAnnouncements from '@/components/game-announcements';
-import { apiUrl, trackedApiFetch } from '@/lib/api';
+import { trackedApiFetch } from '@/lib/api';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { getCommunityPostsByGame } from '@/lib/community-api';
@@ -132,6 +132,30 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     }
   }, [id, initialGameData, initialRecommendedGames, gameData?.app.pkg]); // Re-run only when the page ID changes
 
+  useEffect(() => {
+    // SSR initial data path does not call /game/details in browser.
+    // Send a lightweight ping so detail view stats are not missed.
+    if (!initialGameData || initialGameData.app.pkg !== id) return;
+    const appId = String(gameData?.app?._id || '').trim();
+    const pkg = String(gameData?.app?.pkg || '').trim();
+    const dedupeKey = pkg || appId || id;
+    if (!dedupeKey || trackedDetailViewIdRef.current === dedupeKey) return;
+    trackedDetailViewIdRef.current = dedupeKey;
+
+    void trackedApiFetch('/game/track/detail', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        app_id: appId || undefined,
+        pkg: pkg || undefined,
+        resource_count: Array.isArray(gameData?.resources) ? gameData.resources.length : 0,
+        source: 'web_ssr_initial',
+      }),
+    }).catch(() => undefined);
+  }, [id, initialGameData, gameData?.app?._id, gameData?.app?.pkg, gameData?.resources]);
+
 
   const { app: game, resources, Announcements, cardConfig } = gameData || {};
   const [showFab, setShowFab] = useState(false);
@@ -164,6 +188,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
 
 
   const [isFetchingRecommended, setIsFetchingRecommended] = useState(false);
+  const trackedDetailViewIdRef = useRef('');
 
   const fetchRecommendedGames = async () => {
     if (!game?.pkg || isFetchingRecommended) return;
@@ -428,7 +453,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
       };
       if (token) headers.Authorization = `Bearer ${token}`;
 
-      const res = await fetch(apiUrl('/feedbacks'), {
+      const res = await trackedApiFetch('/feedbacks', {
         method: 'POST',
         headers,
         body: JSON.stringify(payload),
@@ -756,7 +781,13 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {game.tags.map((tag, index) => (
-                      <Badge key={`${game._id}-tag-${index}-${tag}`} variant="secondary" className="text-xs">{tag}</Badge>
+                      <Badge
+                        key={`${game._id}-tag-${index}-${tag}`}
+                        variant="outline"
+                        className="text-xs border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-400/30 dark:bg-orange-400/15 dark:text-orange-200"
+                      >
+                        {tag}
+                      </Badge>
                     ))}
                   </div>
                 </div>

@@ -157,23 +157,6 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
                   </Link>
                 </p>
 
-                {post.app_info?.pkg && (
-                  <div className="mt-2 inline-flex items-center gap-2">
-                    {(post.app_info.icon || cover) && (
-                      <div className="relative h-6 w-6 overflow-hidden rounded-sm border border-border/50 bg-muted">
-                        <Image
-                          src={post.app_info.icon || cover || 'https://placehold.co/64x64.png'}
-                          alt={post.app_info.name || post.app_info.pkg || '关联游戏'}
-                          fill
-                          className="object-cover"
-                          data-ai-hint="game icon"
-                        />
-                      </div>
-                    )}
-                    <span className="sticker-tag">{post.app_info.name || post.app_info.pkg}</span>
-                  </div>
-                )}
-
                 {cover && (
                   <Link href={`/community/post/${postId}`} className="mt-2 block">
                     <div className="relative h-24 w-full overflow-hidden rounded-md bg-muted/30 md:h-20">
@@ -208,6 +191,40 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
                     <Eye className="h-3 w-3" />
                     {viewCount}
                   </span>
+                  {post.app_info?.pkg && (
+                    <div className="ml-auto inline-flex rotate-[-2deg]">
+                      <div className="relative inline-flex items-center gap-1.5 overflow-hidden rounded-md border border-white/35 px-2 py-1 shadow-sm">
+                        {(post.app_info.icon || cover) && (
+                          <>
+                            <div className="absolute inset-0">
+                              <Image
+                                src={post.app_info.icon || cover || 'https://placehold.co/64x64.png'}
+                                alt=""
+                                fill
+                                className="scale-150 object-cover blur-lg opacity-95 saturate-150"
+                                aria-hidden="true"
+                              />
+                            </div>
+                            <div className="absolute inset-0 bg-black/30 backdrop-blur-md dark:bg-black/40" />
+                          </>
+                        )}
+                        {(post.app_info.icon || cover) && (
+                          <div className="relative z-10 h-5 w-5 overflow-hidden rounded-sm border border-white/40 bg-black/20">
+                            <Image
+                              src={post.app_info.icon || cover || 'https://placehold.co/64x64.png'}
+                              alt={post.app_info.name || post.app_info.pkg || '关联游戏'}
+                              fill
+                              className="object-cover"
+                              data-ai-hint="game icon"
+                            />
+                          </div>
+                        )}
+                        <span className="relative z-10 max-w-[140px] truncate text-[11px] font-semibold text-white">
+                          {post.app_info.name || post.app_info.pkg}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
