@@ -12,6 +12,7 @@ import { apiUrl, trackedApiFetch } from '@/lib/api';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { getCommunityCommentThreads, type CommunityCommentThread } from '@/lib/community-api';
+import AppDownloadGuideDialog from '@/components/app-download-guide-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -77,7 +78,7 @@ export default function CommunityPostDetailView({
   const [likedCommentIds, setLikedCommentIds] = useState<Record<string, boolean>>({});
   const [commentLikeCounts, setCommentLikeCounts] = useState<Record<string, number>>({});
   const [pendingCommentLikeIds, setPendingCommentLikeIds] = useState<Record<string, boolean>>({});
-  const [appPromptDialog, setAppPromptDialog] = useState<{ open: boolean; url?: string }>({ open: false });
+  const [appPromptDialogOpen, setAppPromptDialogOpen] = useState(false);
 
   useEffect(() => {
     if (typeof post.viewsCount === 'number' && post.viewsCount >= 0) {
@@ -439,10 +440,7 @@ export default function CommunityPostDetailView({
     const appLinkEl = target?.closest('[data-app-link], [data-acbox-url]') as HTMLElement | null;
     if (!appLinkEl) return;
     event.preventDefault();
-    setAppPromptDialog({
-      open: true,
-      url: appLinkEl.getAttribute('data-app-link') || appLinkEl.getAttribute('data-acbox-url') || '',
-    });
+    setAppPromptDialogOpen(true);
   };
 
   const relatedApp = post.relatedApp;
@@ -937,35 +935,10 @@ export default function CommunityPostDetailView({
         </div>
       )}
 
-      {appPromptDialog.open && (
-        <div
-          className="fixed inset-0 z-[9999] bg-black/70 flex items-center justify-center p-4"
-          onClick={() => setAppPromptDialog({ open: false })}
-        >
-          <Card className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <CardHeader>
-              <CardTitle className="text-lg">请在 App 中打开</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <p>该链接需要使用 ACBOX App 打开。</p>
-              {appPromptDialog.url && <p className="break-all text-xs">{appPromptDialog.url}</p>}
-              <div className="mx-auto relative h-44 w-44 overflow-hidden rounded-md border">
-                <Image
-                  src="https://cdn.apks.cc/blinko/ACBOX_QR.png"
-                  alt="ACBOX QR"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="justify-end">
-              <Button type="button" onClick={() => setAppPromptDialog({ open: false })}>
-                关闭
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-      )}
+      <AppDownloadGuideDialog
+        open={appPromptDialogOpen}
+        onOpenChange={setAppPromptDialogOpen}
+      />
     </div>
   );
 }

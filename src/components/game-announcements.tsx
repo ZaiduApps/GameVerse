@@ -24,6 +24,7 @@ interface GameAnnouncementsProps {
 
 type AnnouncementType = 'popup' | 'marquee' | 'normal' | 'system';
 type AnnouncementTheme = 'info' | 'warning' | 'success' | 'error';
+type AnnouncementPosition = 'home' | 'game_detail';
 
 const VALID_TYPES: AnnouncementType[] = ['popup', 'marquee', 'normal', 'system'];
 const VALID_THEMES: AnnouncementTheme[] = ['info', 'warning', 'success', 'error'];
@@ -46,8 +47,32 @@ function normalizeString(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
+function normalizeKey(value: unknown): string {
+  return normalizeString(value).trim().toLowerCase().replace(/[\s-]+/g, '_');
+}
+
 function normalizeType(value: unknown, fallbackType: AnnouncementType = 'normal'): AnnouncementType {
-  const t = normalizeString(value) as AnnouncementType;
+  const key = normalizeKey(value);
+  const typeAliasMap: Record<string, AnnouncementType> = {
+    popup: 'popup',
+    popups: 'popup',
+    modal: 'popup',
+    dialog: 'popup',
+    marquee: 'marquee',
+    marquees: 'marquee',
+    ticker: 'marquee',
+    scroll: 'marquee',
+    scrolling: 'marquee',
+    system: 'system',
+    systems: 'system',
+    system_notice: 'system',
+    sys: 'system',
+    normal: 'normal',
+    notice: 'normal',
+    notices: 'normal',
+    list: 'normal',
+  };
+  const t = (typeAliasMap[key] || key) as AnnouncementType;
   return VALID_TYPES.includes(t) ? t : fallbackType;
 }
 
@@ -56,16 +81,37 @@ function normalizeTheme(value: unknown): AnnouncementTheme {
   return VALID_THEMES.includes(t) ? t : 'info';
 }
 
-function isAllowedByPosition(item: Announcement, currentPosition: 'home' | 'game_detail'): boolean {
-  const positions = Array.isArray(item.position) ? item.position : [];
+function normalizePosition(value: string): AnnouncementPosition | 'global' | '' {
+  const key = normalizeKey(value);
+  if (!key) return '';
+  if (key === 'global' || key === 'all') return 'global';
+  if (key === 'home' || key === 'home_page' || key === 'homepage' || key === 'index') return 'home';
+  if (
+    key === 'game_detail' ||
+    key === 'detail' ||
+    key === 'app_detail' ||
+    key === 'game_page' ||
+    key === 'detail_page'
+  ) {
+    return 'game_detail';
+  }
+  return '';
+}
+
+function isAllowedByPosition(item: Announcement, currentPosition: AnnouncementPosition): boolean {
+  const positions = Array.isArray(item.position)
+    ? item.position
+        .map((p) => normalizePosition(String(p)))
+        .filter((p): p is 'global' | AnnouncementPosition => !!p)
+    : [];
   if (positions.length === 0) return true;
   if (positions.includes('global')) return true;
-  return currentPosition === 'home' ? positions.includes('home') : positions.includes('game_detail');
+  return positions.includes(currentPosition);
 }
 
 function normalizeAnnouncements(
   input: GameAnnouncementsProps['announcements'],
-  currentPosition: 'home' | 'game_detail',
+  currentPosition: AnnouncementPosition,
 ): { popup: Announcement[]; marquee: Announcement[]; system: Announcement[]; normal: Announcement[] } {
   const list: Announcement[] = [];
 
@@ -85,7 +131,6 @@ function normalizeAnnouncements(
       title: normalizeString(raw.title),
       summary: normalizeString(raw.summary),
       content: normalizeString(raw.content),
-      cover: normalizeString(raw.cover),
       type: normalizeType(raw.type, fallbackType),
       position: Array.isArray(raw.position)
         ? (raw.position.filter((p) => typeof p === 'string') as string[])
@@ -109,9 +154,30 @@ function normalizeAnnouncements(
   if (Array.isArray(input)) {
     input.forEach((item) => pushItem(item, 'normal'));
   } else if (input && typeof input === 'object') {
-    (Object.entries(input) as Array<[string, Announcement[] | undefined]>).forEach(([groupKey, arr]) => {
+    (Object.entries(input) as Array<[string, unknown]>).forEach(([groupKey, rawValue]) => {
       const fallbackType = normalizeType(groupKey, 'normal');
-      (arr || []).forEach((item) => pushItem(item, fallbackType));
+
+      if (Array.isArray(rawValue)) {
+        rawValue.forEach((item) => pushItem(item, fallbackType));
+        return;
+      }
+
+      if (rawValue && typeof rawValue === 'object') {
+        const wrapped = rawValue as Record<string, unknown>;
+        const nested =
+          (Array.isArray(wrapped.list) && wrapped.list) ||
+          (Array.isArray(wrapped.items) && wrapped.items) ||
+          (Array.isArray(wrapped.data) && wrapped.data);
+
+        if (Array.isArray(nested)) {
+          nested.forEach((item) => pushItem(item, fallbackType));
+          return;
+        }
+
+        if ('_id' in wrapped || 'title' in wrapped || 'content' in wrapped) {
+          pushItem(wrapped, fallbackType);
+        }
+      }
     });
   }
 
@@ -172,7 +238,7 @@ export default function GameAnnouncements({ announcements, position = 'home' }: 
     }
 
     const userKey = user?._id || 'guest';
-    const seenKey = `popup_seen_${userKey}_${popupAnnouncement._id}`;
+    const seenKey = `popup_seen_${position}_${userKey}_${popupAnnouncement._id}`;
     const hasBeenShown = localStorage.getItem(seenKey);
     if (popupAnnouncement.once_per_user && hasBeenShown) {
       setIsPopupOpen(false);
@@ -190,7 +256,7 @@ export default function GameAnnouncements({ announcements, position = 'home' }: 
     setIsPopupOpen(false);
     if (popupAnnouncement.once_per_user) {
       const userKey = user?._id || 'guest';
-      const seenKey = `popup_seen_${userKey}_${popupAnnouncement._id}`;
+      const seenKey = `popup_seen_${position}_${userKey}_${popupAnnouncement._id}`;
       localStorage.setItem(seenKey, '1');
     }
   };

@@ -27,9 +27,15 @@ export function apiUrl(path: string): string {
 }
 
 export function trackedApiFetch(path: string, init: RequestInit = {}) {
+  const serverRequestId = `srv-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   const trackingHeaders =
     typeof window === 'undefined'
-      ? { 'x-tracking-skip': '1' }
+      ? {
+          'x-tracking-skip': '1',
+          'x-client-platform': 'web',
+          'x-app-version': process.env.NEXT_PUBLIC_APP_VERSION || process.env.NEXT_PUBLIC_GIT_SHA || 'web-server',
+          'x-request-id': serverRequestId,
+        }
       : buildTrackingHeaders();
 
   return fetch(apiUrl(path), {

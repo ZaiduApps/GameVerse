@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { renderMarkdown } from '@/lib/utils';
+import AppDownloadGuideDialog from '@/components/app-download-guide-dialog';
 
 interface MockComment {
   id: string;
@@ -63,8 +64,7 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
   const [viewCount, setViewCount] = useState(article.viewCount ?? 0);
   const [comments, setComments] = useState<MockComment[]>(initialMockComments);
   const [newComment, setNewComment] = useState('');
-  const [acboxDialogOpen, setAcboxDialogOpen] = useState(false);
-  const [acboxDialogUrl, setAcboxDialogUrl] = useState('');
+  const [appGuideOpen, setAppGuideOpen] = useState(false);
 
   useEffect(() => {
     setViewCount((prev) => prev + 1);
@@ -109,10 +109,7 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
     if (!appLinkEl) return;
 
     event.preventDefault();
-    setAcboxDialogOpen(true);
-    setAcboxDialogUrl(
-      appLinkEl.getAttribute('data-app-link') || appLinkEl.getAttribute('data-acbox-url') || '',
-    );
+    setAppGuideOpen(true);
   }
 
   return (
@@ -218,35 +215,7 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
         </CardContent>
       </Card>
 
-      {acboxDialogOpen && (
-        <div
-          className="fixed inset-0 z-[9999] bg-black/70 flex items-center justify-center p-4"
-          onClick={() => setAcboxDialogOpen(false)}
-        >
-          <Card className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <CardHeader>
-              <CardTitle className="text-lg">请在 App 内打开</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <p>该链接需要在 ACBOX App 内访问。</p>
-              {acboxDialogUrl && <p className="break-all text-xs">{acboxDialogUrl}</p>}
-              <div className="mx-auto relative h-44 w-44 overflow-hidden rounded-md border">
-                <Image
-                  src="https://cdn.apks.cc/blinko/ACBOX_QR.png"
-                  alt="ACBOX 下载二维码"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="justify-end">
-              <Button type="button" onClick={() => setAcboxDialogOpen(false)}>
-                确认
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-      )}
+      <AppDownloadGuideDialog open={appGuideOpen} onOpenChange={setAppGuideOpen} />
 
       <div className="pt-2">
         <Link href="/news" className="text-sm text-primary hover:underline">

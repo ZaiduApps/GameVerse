@@ -73,7 +73,7 @@ interface CombinedHomeData {
 async function getHomeAndNewsData(): Promise<CombinedHomeData> {
   try {
     const dynamicCount = Math.min(20, Math.max(1, toNumber(process.env.HOME_DYNAMIC_COUNT, 8)));
-    const platform = process.env.NEXT_PUBLIC_CLIENT_PLATFORM || process.env.CLIENT_PLATFORM || 'android';
+    const platform = process.env.NEXT_PUBLIC_CLIENT_PLATFORM || process.env.CLIENT_PLATFORM || 'web';
     const region = process.env.NEXT_PUBLIC_CLIENT_REGION || process.env.CLIENT_REGION || '';
     const clientVersion = process.env.NEXT_PUBLIC_CLIENT_VERSION || process.env.CLIENT_VERSION || '';
 

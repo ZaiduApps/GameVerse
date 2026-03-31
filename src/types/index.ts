@@ -218,12 +218,16 @@ export interface ApiGameDetail {
 export interface ApiDownloadResource {
   _id: string;
   channel_id?: string;
+  platform_range?: string[] | string;
+  platform_ranges?: string[] | string;
   channel: {
     _id: string;
     name: string;
     icon: string;
     code: string;
     description?: string;
+    platform_range?: string[] | string;
+    platform_ranges?: string[] | string;
   };
 }
 
