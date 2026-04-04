@@ -11,13 +11,13 @@ import GameDownloadDialog from '@/components/game-download-dialog';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { MOCK_NEWS_ARTICLES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { notFound, usePathname } from 'next/navigation';
-import Loading from '../loading';
 import GameAnnouncements from '@/components/game-announcements';
 import { trackedApiFetch } from '@/lib/api';
 import { useAuth } from '@/context/auth-context';
@@ -55,6 +55,54 @@ const buildGameDetailsUrl = (param: string) => {
   if (CLIENT_VERSION) query.set('client_version', CLIENT_VERSION);
   return `/game/details?${query.toString()}`;
 };
+
+function GameDetailSkeleton() {
+  return (
+    <div className="space-y-6 animate-in fade-in-50">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_360px]">
+        <div className="space-y-6">
+          <Skeleton className="h-72 w-full rounded-2xl md:h-80" />
+          <div className="space-y-4 rounded-2xl border border-border/30 bg-card/80 p-5 shadow-sm">
+            <div className="flex items-start gap-4">
+              <Skeleton className="h-16 w-16 rounded-2xl" />
+              <div className="flex-1 space-y-3">
+                <Skeleton className="h-7 w-1/2 rounded-lg" />
+                <Skeleton className="h-4 w-32 rounded-lg" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                </div>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Skeleton className="h-20 rounded-xl" />
+              <Skeleton className="h-20 rounded-xl" />
+            </div>
+            <Skeleton className="h-12 w-40 rounded-xl" />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <Skeleton className="h-52 rounded-2xl" />
+          <Skeleton className="h-40 rounded-2xl" />
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <Skeleton className="aspect-video rounded-xl" />
+        <Skeleton className="aspect-video rounded-xl" />
+        <Skeleton className="aspect-video rounded-xl" />
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-border/30 bg-card/80 p-5 shadow-sm">
+        <Skeleton className="h-6 w-44 rounded-lg" />
+        <Skeleton className="h-20 rounded-xl" />
+        <Skeleton className="h-20 rounded-xl" />
+        <Skeleton className="h-20 rounded-xl" />
+      </div>
+    </div>
+  );
+}
 
 
 export default function GameDetailView({ id, initialGameData, initialRecommendedGames }: GameDetailViewProps) {
@@ -616,7 +664,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
   };
 
   if (isLoading) {
-      return <Loading />;
+    return <GameDetailSkeleton />;
   }
 
   if (pageError || !gameData || !game) {

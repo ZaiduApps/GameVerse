@@ -140,10 +140,10 @@ export default function GameCarousel({ bannerItems, autoPlayInterval = 5000 }: G
   }
 
   return (
-    <div className="md:flex md:gap-4 lg:gap-6 rounded-lg overflow-hidden bg-card shadow-lg p-0 md:p-1">
+    <div className="overflow-hidden rounded-xl bg-card p-0 shadow-lg md:flex md:gap-4 md:p-1 lg:gap-6">
       {/* Left Side: Main Carousel Display */}
       <div 
-        className="w-full md:w-3/4 lg:w-[70%] relative overflow-hidden select-none rounded-l-lg"
+        className="relative w-full select-none overflow-hidden rounded-xl md:w-3/4 md:rounded-l-xl md:rounded-r-md lg:w-[70%]"
         ref={carouselRef}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -173,22 +173,22 @@ export default function GameCarousel({ bannerItems, autoPlayInterval = 5000 }: G
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
               </Link>
-              <div className="absolute bottom-0 left-0 p-3 sm:p-4 md:p-6 text-white pointer-events-none w-full">
-                <div className="flex items-end gap-4">
+              <div className="pointer-events-none absolute bottom-0 left-0 w-full p-3 text-white sm:p-4 md:p-6">
+                <div className="flex items-end gap-3 md:gap-4">
                   {item.goto_type === 'game' && item.game && (
-                    <div className="relative w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0">
+                    <div className="relative h-12 w-12 flex-shrink-0 sm:h-14 sm:w-14 md:h-16 md:w-16">
                       <Image
                         src={item.game.icon}
                         alt={`${item.game.name} icon`}
                         fill
-                        className="object-cover rounded-lg"
-                        sizes="80px"
+                        className="rounded-xl object-cover"
+                        sizes="64px"
                       />
                     </div>
                   )}
                   <div className="flex-grow min-w-0">
-                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-1 drop-shadow-lg">{item.name}</h2>
-                    <p className="text-xs text-gray-200 line-clamp-2 drop-shadow-md">
+                    <h2 className="mb-1 text-base font-bold drop-shadow-lg sm:text-lg md:text-xl lg:text-2xl">{item.name}</h2>
+                    <p className="line-clamp-2 text-sm text-gray-200 drop-shadow-md sm:text-base md:text-lg">
                       {item.description}
                     </p>
                   </div>
@@ -200,13 +200,13 @@ export default function GameCarousel({ bannerItems, autoPlayInterval = 5000 }: G
       </div>
 
       {/* Right Side: Preview List (Desktop Only) */}
-      <div className="hidden md:block md:w-1/4 lg:w-[30%] space-y-1.5 py-2 pr-2 md:max-h-[320px] lg:max-h-[360px] overflow-y-auto">
+      <div className="hidden space-y-2 overflow-y-auto py-2 pr-2 md:block md:max-h-[320px] md:w-1/4 lg:max-h-[360px] lg:w-[30%]">
         {bannerItems.map((item, index) => (
           <Link
             key={item._id}
             href={getLinkHref(item)}
             className={cn(
-              "flex items-center p-2.5 rounded-md cursor-pointer transition-all duration-200 ease-in-out group",
+              "group flex cursor-pointer items-center rounded-xl p-2.5 transition-all duration-200 ease-in-out",
               currentIndex === index 
                 ? "bg-primary/15 border border-primary/50 shadow-sm" 
                 : "hover:bg-muted/60 hover:shadow-sm"
@@ -217,12 +217,12 @@ export default function GameCarousel({ bannerItems, autoPlayInterval = 5000 }: G
               setTranslateX(0);
             }}
           >
-            <div className="relative w-20 h-12 lg:w-24 lg:h-14 flex-shrink-0 bg-muted rounded-sm flex items-center justify-center">
+            <div className="relative flex h-12 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted lg:h-14 lg:w-24">
               <Image
-                src={item.game?.icon || item.url_image}
+                src={item.url_image}
                 alt={item.name}
                 fill
-                className="object-cover rounded-sm"
+                className="rounded-xl object-cover"
                 sizes="100px"
               />
             </div>

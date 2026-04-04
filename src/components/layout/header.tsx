@@ -59,6 +59,11 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
   const [unreadTotal, setUnreadTotal] = useState(0);
 
+  const isNavItemActive = (href: string) => {
+    if (href === '/') return pathname === '/';
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -94,7 +99,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b-2 border-foreground bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center gap-2 text-primary hover:opacity-90 transition-opacity">
@@ -107,7 +112,11 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                   <li key={item.label}>
                     <Link
                       href={item.href}
-                      className="text-sm font-semibold text-foreground/80 hover:text-primary transition-colors flex items-center gap-1.5"
+                      className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition-colors ${
+                        isNavItemActive(item.href)
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-foreground/80 hover:bg-muted/60 hover:text-primary'
+                      }`}
                     >
                       {item.icon && <item.icon size={16} />}
                       {item.label}
@@ -122,7 +131,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
             <div className="relative hidden md:block">
               <Button
                 variant="outline"
-                className="pl-3 pr-4 py-2 h-9 text-sm rounded-sm border-2 border-foreground/80 w-40 lg:w-56 bg-background hover:bg-secondary/35 justify-start text-muted-foreground"
+                className="h-10 w-40 justify-start rounded-xl border-transparent bg-card/90 pl-3 pr-4 py-2 text-sm text-muted-foreground shadow-sm hover:bg-secondary/35 lg:w-56"
                 onClick={() => setSearchOverlayOpen(true)}
               >
                 <Search className="mr-2 h-4 w-4" />
@@ -214,7 +223,11 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                           <SheetClose asChild>
                             <Link
                               href={item.href}
-                              className="w-full justify-start text-base font-medium text-foreground/80 hover:text-primary transition-colors px-2 py-3 rounded-md hover:bg-muted/50 flex items-center gap-2"
+                              className={`flex w-full items-center justify-start gap-2 rounded-md px-2 py-3 text-base font-medium transition-colors ${
+                                isNavItemActive(item.href)
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'text-foreground/80 hover:bg-muted/50 hover:text-primary'
+                              }`}
                             >
                               {item.icon && <item.icon size={18} />}
                               {item.label}

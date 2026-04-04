@@ -264,7 +264,7 @@ export default function GameAnnouncements({ announcements, position = 'home' }: 
   return (
     <>
       {groupedAnnouncements.marquee.length > 0 && (
-        <Card className="shadow-sm">
+        <Card className="border-transparent bg-card/90 shadow-sm">
           <AnnouncementWrapper announcement={groupedAnnouncements.marquee[0]}>
             <CardContent className="p-3">
               <div className="flex items-center">
@@ -294,7 +294,7 @@ export default function GameAnnouncements({ announcements, position = 'home' }: 
         <div className="space-y-3 mt-3">
           {groupedAnnouncements.system.slice(0, 2).map((announcement) => (
             <AnnouncementWrapper key={announcement._id} announcement={announcement}>
-              <Card className="shadow-sm border-sky-500/20 bg-sky-500/5">
+              <Card className="border-transparent bg-sky-500/5 shadow-sm">
                 <CardContent className="p-4">
                   <div className="flex items-start">
                     <ShieldAlert className="w-5 h-5 text-sky-600 mr-3 flex-shrink-0" />
@@ -318,7 +318,7 @@ export default function GameAnnouncements({ announcements, position = 'home' }: 
         <div className="space-y-4 mt-3">
           {groupedAnnouncements.normal.slice(0, 2).map((announcement) => (
             <AnnouncementWrapper key={announcement._id} announcement={announcement}>
-              <Card className={cn('shadow-sm transition-all hover:shadow-md', THEME_COLORS[announcement.style?.theme || 'info'])}>
+              <Card className={cn('border-transparent shadow-sm transition-all hover:shadow-md', THEME_COLORS[announcement.style?.theme || 'info'])}>
                 <CardContent className="p-4">
                   <div className="flex items-start">
                     {THEME_ICONS[announcement.style?.theme || 'info']}

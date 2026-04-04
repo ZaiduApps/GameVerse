@@ -25,7 +25,7 @@ export function ThemeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="btn-interactive relative border-2 border-foreground/80">
+        <Button variant="outline" size="icon" className="btn-interactive relative rounded-xl border-transparent bg-card/90 shadow-sm">
           <Sun className={`h-[1.2rem] w-[1.2rem] transition-all ${isDark ? "rotate-90 scale-0" : "rotate-0 scale-100"}`} />
           <Moon className={`absolute h-[1.2rem] w-[1.2rem] transition-all ${isDark ? "rotate-0 scale-100" : "-rotate-90 scale-0"}`} />
           <span className="sr-only">切换主题</span>

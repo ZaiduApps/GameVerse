@@ -267,10 +267,10 @@ export default async function HomePage() {
                 <Link
                   key={game.id}
                   href={`/app/${game.pkg || game.id}`}
-                  className="fade-in group flex items-center gap-3 rounded-sm border-2 border-border bg-card p-3 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary"
+                  className="fade-in group flex items-center gap-3 rounded-xl border border-transparent bg-card/95 p-3 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/15 hover:shadow-md"
                   style={{ animationDelay: `${animationDelay + 0.1 + index * 0.04}s` }}
                 >
-                  <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-sm border border-border bg-muted">
+                  <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
                     <Image
                       src={game.imageUrl || 'https://placehold.co/120x120.png'}
                       alt={game.title}
@@ -329,7 +329,7 @@ export default async function HomePage() {
               {newsItems.map((article, index) => (
                 <div
                   key={article.id}
-                  className="relative rounded-lg shadow-sm border hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col sm:flex-row fade-in"
+                  className="relative overflow-hidden rounded-xl border border-transparent shadow-sm transition-all duration-300 hover:shadow-md flex flex-col sm:flex-row fade-in"
                   style={{ animationDelay: `${0.55 + albums.length * 0.3 + index * 0.1}s` }}
                 >
                   {article.imageUrl && (
