@@ -170,7 +170,7 @@ export default function CommunityPage() {
     setTopicsLoading(true);
     const data = await getCommunityTopics({
       page: 1,
-      pageSize: 30,
+      pageSize: 10,
       sort: 'hot',
     });
     setTopicList(data.list || []);
@@ -550,7 +550,7 @@ export default function CommunityPage() {
   return (
     <div className="container mx-auto px-2 py-4 sm:px-4 sm:py-6 lg:py-8">
       <div className="flex flex-col lg:flex-row lg:gap-x-6">
-        <div className="mb-6 w-full lg:mb-0 lg:w-1/4 xl:w-1/5">
+        <div className="mb-6 hidden w-full lg:mb-0 lg:block lg:w-1/4 xl:w-1/5">
           <CommunitySidebar
             topics={topicList}
             loading={topicsLoading}

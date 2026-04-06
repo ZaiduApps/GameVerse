@@ -70,6 +70,15 @@ export default function CreatePostForm({ onPosted, selectedTopic }: CreatePostFo
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const hashtagKeyword = useMemo(() => detectCurrentHashtag(content, cursor), [content, cursor]);
+  const resolvedAppId = useMemo(() => {
+    const selectedAppId = String(selectedTopic?.app_id || '').trim();
+    if (selectedAppId) return selectedAppId;
+    for (const topic of selectedTopics) {
+      const topicAppId = String(topic?.app_id || '').trim();
+      if (topicAppId) return topicAppId;
+    }
+    return '';
+  }, [selectedTopic, selectedTopics]);
 
   const setTextareaCursor = (nextCursor: number) => {
     const safeCursor = Math.max(0, nextCursor);
@@ -95,7 +104,11 @@ export default function CreatePostForm({ onPosted, selectedTopic }: CreatePostFo
 
     const timer = window.setTimeout(async () => {
       setIsSuggestingTopic(true);
-      const list = await getCommunityTopicSuggestions({ q: keyword, limit: 8 });
+      const list = await getCommunityTopicSuggestions({
+        q: keyword,
+        limit: 8,
+        appId: resolvedAppId || undefined,
+      });
       if (!active) return;
       setTopicSuggestions(list);
       setIsSuggestingTopic(false);
@@ -105,7 +118,7 @@ export default function CreatePostForm({ onPosted, selectedTopic }: CreatePostFo
       active = false;
       window.clearTimeout(timer);
     };
-  }, [hashtagKeyword]);
+  }, [hashtagKeyword, resolvedAppId]);
 
   function handlePickTopic(topic: CommunityTopicItem) {
     const topicName = String(topic?.name || '').trim();
@@ -153,7 +166,7 @@ export default function CreatePostForm({ onPosted, selectedTopic }: CreatePostFo
     const result = await quickCreateCommunityTopic({
       token,
       name: keyword.slice(0, MAX_TOPIC_NAME_LENGTH),
-      appId: selectedTopic?.app_id || undefined,
+      appId: resolvedAppId || undefined,
     });
     setIsCreatingTopic(false);
 
@@ -202,7 +215,7 @@ export default function CreatePostForm({ onPosted, selectedTopic }: CreatePostFo
         .filter(Boolean),
       topicNames: hashtagNames,
       source: 'web',
-      appId: selectedTopic?.app_id || undefined,
+      appId: resolvedAppId || undefined,
     });
     setIsSubmitting(false);
 

@@ -744,7 +744,7 @@ export default function CommunityPostDetailView({
   }, [selectedPreviewIndex, activePreviewImages.length]);
 
   const commentsCard = (
-    <Card className="shadow-lg">
+    <Card id="comments" className="scroll-mt-24 shadow-lg">
       <CardHeader>
         <CardTitle className="text-lg font-semibold flex items-center">
           <MessageSquare size={20} className="mr-2 text-primary" />
@@ -971,8 +971,15 @@ export default function CommunityPostDetailView({
     selectedPreviewIndex !== null ? activePreviewImages[selectedPreviewIndex] || '' : '';
   const previewOverlay =
     selectedPreviewIndex !== null && currentPreviewUrl ? (
-      <div className="fixed inset-0 z-[10000] bg-black/90" onClick={closePreviewImage}>
-        <div className="absolute inset-0 flex items-center justify-center overflow-hidden p-4" onClick={(e) => e.stopPropagation()}>
+      <div className="fixed inset-0 z-[10000] bg-black/90">
+        <div
+          className="absolute inset-0 flex items-center justify-center overflow-hidden p-4"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              closePreviewImage();
+            }
+          }}
+        >
           <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
             <Button
               type="button"

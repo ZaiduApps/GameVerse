@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ACBOX - 动感次元游戏殿堂</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: "Plus Jakarta Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+        .kinetic-gradient-primary {
+            background: linear-gradient(135deg, #b71211 0%, #ff7767 100%);
+        }
+        .glass-header {
+            background: rgba(245, 246, 247, 0.8);
+            backdrop-filter: blur(20px);
+        }
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline-variant": "#abadae",
+                        "tertiary-dim": "#664b00",
+                        "secondary-container": "#b3d4ff",
+                        "on-primary-fixed-variant": "#610002",
+                        "primary-fixed-dim": "#ff5b4b",
+                        "error-container": "#fb5151",
+                        "on-background": "#2c2f30",
+                        "on-tertiary": "#fff1db",
+                        "on-error": "#ffefee",
+                        "inverse-surface": "#0c0f10",
+                        "surface-container-highest": "#dadddf",
+                        "on-tertiary-fixed": "#3d2b00",
+                        "surface-container-lowest": "#ffffff",
+                        "error": "#b31b25",
+                        "background": "#f5f6f7",
+                        "on-error-container": "#570008",
+                        "tertiary-container": "#fdc003",
+                        "primary-dim": "#a40007",
+                        "on-tertiary-fixed-variant": "#604700",
+                        "on-secondary-fixed": "#00365e",
+                        "on-surface-variant": "#595c5d",
+                        "primary": "#b71211",
+                        "error-dim": "#9f0519",
+                        "on-tertiary-container": "#553e00",
+                        "surface": "#f5f6f7",
+                        "surface-dim": "#d1d5d7",
+                        "tertiary-fixed-dim": "#ecb200",
+                        "secondary-fixed": "#b3d4ff",
+                        "outline": "#757778",
+                        "on-secondary-container": "#004a7e",
+                        "surface-container": "#e6e8ea",
+                        "on-secondary": "#edf3ff",
+                        "surface-tint": "#b71211",
+                        "on-secondary-fixed-variant": "#00538d",
+                        "secondary-fixed-dim": "#99c7ff",
+                        "surface-variant": "#dadddf",
+                        "surface-container-low": "#eff1f2",
+                        "on-primary": "#ffefed",
+                        "surface-bright": "#f5f6f7",
+                        "on-surface": "#2c2f30",
+                        "on-primary-fixed": "#000000",
+                        "inverse-on-surface": "#9b9d9e",
+                        "inverse-primary": "#ff5445",
+                        "tertiary": "#755700",
+                        "primary-container": "#ff7767",
+                        "primary-fixed": "#ff7767",
+                        "on-primary-container": "#4f0001",
+                        "tertiary-fixed": "#fdc003",
+                        "secondary-dim": "#00528b",
+                        "secondary": "#005e9f",
+                        "surface-container-high": "#e0e3e4"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface min-h-screen">
+<!-- Shared TopNavBar -->
+<header class="glass-header sticky top-0 z-50 border-b border-surface-container px-4 lg:px-10 py-3">
+<div class="max-w-[1440px] mx-auto flex items-center justify-between gap-8">
+<div class="flex items-center gap-4">
+<div class="size-10">
+<img alt="Logo" class="w-full h-full object-contain" data-alt="vibrant abstract geometric logo with sharp angles and bold red and white colors for a gaming brand" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtTpXa4LBdCdQ4Bm8YOU7wKwYEQy09RUXeihNuLF8A7yJIyySd8i_dA7db9RyXq7KdQELnDmJYUoqSHYgavU9dbuntHFcX0JupcPhNwVOiTFfK5iZz6_3xLr1CbJO9DSzOfSRh5D9YJ9O00PI-MWJaw_Jvy3eCDNZjcCvQEgIwD43d63pSJvnPZuiTn5Qn-o-JqSy8N8_TIs5e2vc3iKUBl1PpgI3cE1WiY6RwgQZYaIqolgbT0syFmEnDy47-TyJMPNqnWJs4kAWn"/>
+</div>
+<h1 class="text-on-surface text-2xl font-black tracking-tighter uppercase">ACBOX</h1>
+</div>
+<nav class="hidden md:flex items-center gap-2 bg-surface-container-low p-1 rounded-full">
+<a class="px-6 py-2 rounded-full bg-primary text-on-primary font-bold text-sm transition-all" href="#">首页</a>
+<a class="px-6 py-2 rounded-full hover:bg-surface-container-high text-on-surface-variant font-bold text-sm transition-all" href="#">游戏库</a>
+<a class="px-6 py-2 rounded-full hover:bg-surface-container-high text-on-surface-variant font-bold text-sm transition-all" href="#">排行</a>
+<a class="px-6 py-2 rounded-full hover:bg-surface-container-high text-on-surface-variant font-bold text-sm transition-all" href="#">社区</a>
+</nav>
+<div class="flex items-center gap-3">
+<div class="relative hidden sm:block">
+<div class="absolute inset-y-0 left-3 flex items-center text-outline" data-icon="search">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="w-64 bg-surface-container-low border-none rounded-full pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-secondary/20 placeholder:text-outline-variant" placeholder="搜索次元世界..." type="text"/>
+</div>
+<button class="p-2 rounded-full bg-surface-container-low text-on-surface" data-icon="notifications">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="size-10 rounded-full border-2 border-primary-container p-0.5 overflow-hidden">
+<img alt="User" class="w-full h-full rounded-full bg-secondary-container" data-alt="cute stylized anime avatar of a young person with vibrant hair and glasses" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDbSq4PnEaUyPRL3B3xxTFMnQg1NDXVmAnIIk_v-wQys3s9Gn36GHO49gWs9iDFkb7APaSo4hhNNfLr-5FRmYgn1heahza4SaGP_hlh4cILFF3fUJxx-myabo08rMkMQo6O_6ABXymsOAAgmvhbzxLz9mbgy8-FYyA4sicMeHpMbZV8nHfcWmHemhSAeUjQn516rmM-kIeVEFsaSdEWacpWWM2CtEGxQibYcCoVB5NBFnbKjEGXQQxELC0hhay4YKWw-yDVYF2tYy6Y"/>
+</div>
+</div>
+</div>
+</header>
+<main class="max-w-[1440px] mx-auto px-4 lg:px-10 py-6 space-y-12">
+<!-- 1. Hero Banner Carousel -->
+<section class="relative group">
+<div class="w-full aspect-[21/9] rounded-xl lg:rounded-lg overflow-hidden relative shadow-xl bg-surface-container-highest">
+<img class="w-full h-full object-cover" data-alt="vibrant epic anime landscape with floating islands and high-tech fantasy architecture during a glowing violet sunset" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKAiA9wMxh1LMKXeckxzX3_ztN5FTxWSsYEad3ibm9fYMeMJ2MGYgqmZrY-_8Ef23kN-szceenmeI6nYxhIWJa6OdA1E8JlmKZWiXC2VlChMNHz8zg2M1WjA9IHJqd97QULMWPbzo00SCkv90keXBKmCKXI96auzbQveRd160GIRE17GOst2xTkLLLbmZx3WFjqDsOPlxlvXYvH6B8FNehS0gIoFm-U7Goc34S_hEFdkZ_VopEWXqc3KDV92aTmySPcQbyBGeeGKDd"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-8 lg:p-12">
+<div class="flex items-center gap-3 mb-4">
+<span class="px-3 py-1 bg-tertiary-container text-on-tertiary-container rounded-full text-xs font-black uppercase tracking-widest">Featured</span>
+<span class="px-3 py-1 bg-white/20 backdrop-blur-md text-white rounded-full text-xs font-bold">开放世界 RPG</span>
+</div>
+<h2 class="text-white text-5xl lg:text-7xl font-black mb-4 leading-[0.9] tracking-tighter">异次元：<br/>破晓战歌</h2>
+<p class="text-white/80 text-lg max-w-xl mb-6">沉浸式多维时空冒险，与个性鲜明的伙伴建立羁绊。全新版本「虚空余烬」现已开启。</p>
+<div class="flex gap-4">
+<button class="kinetic-gradient-primary text-white px-8 py-4 rounded-full font-bold text-lg flex items-center gap-2 hover:scale-105 transition-transform">
+                            立即下载
+                            <span class="material-symbols-outlined">download</span>
+</button>
+<button class="bg-white/10 backdrop-blur-md text-white px-8 py-4 rounded-full font-bold text-lg border border-white/20 hover:bg-white/20 transition-all">
+                            了解更多
+                        </button>
+</div>
+</div>
+</div>
+<!-- Pagination dots -->
+<div class="absolute bottom-6 right-12 flex gap-2">
+<span class="w-8 h-2 bg-white rounded-full"></span>
+<span class="w-2 h-2 bg-white/40 rounded-full"></span>
+<span class="w-2 h-2 bg-white/40 rounded-full"></span>
+</div>
+</section>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+<!-- Left Side: Main Content -->
+<div class="lg:col-span-8 space-y-12">
+<!-- 2. 重磅推荐 Heavyweight Recommendations -->
+<section>
+<div class="flex items-end justify-between mb-6">
+<div>
+<h3 class="text-3xl font-black tracking-tight flex items-center gap-2">
+                                重磅推荐
+                                <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
+</h3>
+<p class="text-on-surface-variant font-medium">编辑精选必玩佳作</p>
+</div>
+<a class="text-secondary font-bold flex items-center gap-1 hover:underline" href="#">
+                            查看全部
+                            <span class="material-symbols-outlined">chevron_right</span>
+</a>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-6">
+<!-- Recommendation Card 1 -->
+<div class="bg-surface-container-lowest p-3 rounded-lg group cursor-pointer hover:bg-white transition-all shadow-sm hover:shadow-md">
+<div class="relative aspect-square rounded-lg overflow-hidden mb-4">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="dynamic anime girl character concept art with glowing cyan armor and futuristic sword" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7V4cYIXwiXSXPbvWHJHd1ISOs36ngEIyQ42oapFmJ7Zfb-PF89N_GyIm91BtWYOzRwOkwZo2QszwzJnbXFLKHg8sVJVNbN9EUhBJq5nlfXhyTWITqpUHLzE_L7zq_Jub-Mz-bzYTQTs0LwIbgCgNA_T1-2NWw8QTZb5qHy8h_eECTwiLBVEn4I7-wETVwQV7DcssGSyJPq_x6obMl_aiusJAKEBCsKI-3N01YQ-y3x4Uwh0zZ8yUClCef3elTe0mKVGUtVz8avmYY"/>
+<div class="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-tertiary-fixed" style="font-variation-settings: 'FILL' 1;">star</span>
+                                    9.8
+                                </div>
+</div>
+<h4 class="font-bold text-lg mb-1 truncate">鸣潮</h4>
+<p class="text-on-surface-variant text-xs mb-3">高画质动作冒险</p>
+<button class="w-full py-2.5 rounded-full bg-secondary-container text-on-secondary-container font-black text-xs uppercase tracking-wider hover:bg-secondary hover:text-white transition-colors">
+                                下载
+                            </button>
+</div>
+<!-- Recommendation Card 2 -->
+<div class="bg-surface-container-lowest p-3 rounded-lg group cursor-pointer hover:bg-white transition-all shadow-sm hover:shadow-md">
+<div class="relative aspect-square rounded-lg overflow-hidden mb-4">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="stylized 2D illustration of a gothic fantasy landscape with dark towers and glowing crystals" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtghs9C1DzS3EAIJWSpz-CbPE4tmvN1CYU5ijyn9-IFrko6_lfPtQQqicVr-39uhzSDWJE6U5G0QoE7Hyy8P4T3qBxn4HsiEPd3TRBHWFMj5OLrzkJuTLuVSk1eyYnN2hGcaTMAC91hwiJ-KVnVnqv3kvdBEijJs9ycak9j9Eq5mLRZJNZnK92-M65Y3gEWpdMNvUMOFMV7IG2WyhQSYkgVqTAptDNxh4c1HtNajgHiAFwV2PybeyzJVfD8neULAM_1yxUGZBvFyRh"/>
+<div class="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-tertiary-fixed" style="font-variation-settings: 'FILL' 1;">star</span>
+                                    9.4
+                                </div>
+</div>
+<h4 class="font-bold text-lg mb-1 truncate">明日方舟</h4>
+<p class="text-on-surface-variant text-xs mb-3">策略塔防</p>
+<button class="w-full py-2.5 rounded-full bg-secondary-container text-on-secondary-container font-black text-xs uppercase tracking-wider hover:bg-secondary hover:text-white transition-colors">
+                                下载
+                            </button>
+</div>
+<!-- Recommendation Card 3 -->
+<div class="bg-surface-container-lowest p-3 rounded-lg group cursor-pointer hover:bg-white transition-all shadow-sm hover:shadow-md">
+<div class="relative aspect-square rounded-lg overflow-hidden mb-4">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="detailed 3D cyberpunk street scene with bright neon lights and reflective wet surfaces" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDU0YBZy7Dr_vqTb5CNMmCVJnZPs5ikeJaERSIfV6j-Z2jqu-nmt5FxrRB55Nl99URGoxyeYEP_HNDjp-mJplkSCWcpH1U2sRPEl6YPAUhXgpixyEPeBWWty0y54f3G5sFwKXTQqbrk-eyVSAOU-pbuiqc7wPouTWkkDds1VebjVd00G7qAr3E0-dtylXXYRXcQ0TUfJRz7WS8Y5JZZNp-jM7WFDuA5-QMc_cn3oDIX7l7vvcY9PADhyk22GYg8locHKeA7cHZPCrJe"/>
+<div class="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-tertiary-fixed" style="font-variation-settings: 'FILL' 1;">star</span>
+                                    9.1
+                                </div>
+</div>
+<h4 class="font-bold text-lg mb-1 truncate">绝区零</h4>
+<p class="text-on-surface-variant text-xs mb-3">都市动作新番</p>
+<button class="w-full py-2.5 rounded-full bg-secondary-container text-on-secondary-container font-black text-xs uppercase tracking-wider hover:bg-secondary hover:text-white transition-colors">
+                                下载
+                            </button>
+</div>
+</div>
+</section>
+<!-- 4. 最近更新 Recently Updated -->
+<section class="bg-surface-container-low rounded-lg p-8">
+<div class="flex items-center justify-between mb-8">
+<h3 class="text-2xl font-black tracking-tight">最近更新</h3>
+<div class="flex gap-2">
+<button class="size-10 rounded-full bg-white flex items-center justify-center text-on-surface shadow-sm hover:bg-secondary hover:text-white transition-colors">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="size-10 rounded-full bg-white flex items-center justify-center text-on-surface shadow-sm hover:bg-secondary hover:text-white transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 overflow-x-auto pb-4">
+<!-- Repeat item 12 times in a real app -->
+<div class="flex items-center gap-3 bg-white p-2 rounded-full shadow-sm min-w-[180px]">
+<img class="size-12 rounded-full bg-primary-container" data-alt="abstract geometric icon with red and yellow shapes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBw2sNWZ9Gy4c1OOs-Y5pToEgBOaUqHmwkomg8R_mo1tyKNOt-WcqmCi78cYlV5PuXezGmoZkhqK9aOodffxpce3lH8faGnAribGUJkCY8utwm7KUycgTkJmABFY3ngnxRZ7bnJ4-ZFD-fNZmo0E533AOsDgUw4gbx2btkyhiNc-vsosCsNr-SXe1UBCyxK6gVgKwWjodsD7bO4ex9H7vPt3-pFPwFIzek3w2Ni_Uzdsc0uBPnMei_4Jh7JNq8yCyoepIYCbOeOc2VV"/>
+<div class="flex-1 min-w-0">
+<p class="font-bold text-sm truncate">少女前线 2</p>
+<span class="text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-bold">新章节</span>
+</div>
+</div>
+<div class="flex items-center gap-3 bg-white p-2 rounded-full shadow-sm min-w-[180px]">
+<img class="size-12 rounded-full bg-secondary-container" data-alt="abstract geometric icon with blue and cyan shapes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNKW_aWA5FFWQdAwDX4Z-yB9oSXCstVxfoCZkMJyD2KX3D6_n_KNoEwRVBhj7QLzKOQFTxkoaMNtu8fRxwH9E8Av8RtzRFbk7TyD8eVo6pGIs55SqkGgTwm4NXk129XKTbRC46QcqmJwzkgAJ4B2Tm2ZvTVIuQ9Nl5q4JT66f6eoZWQZa0Ql9pcfqA-pvebExJZKnw3HkgWvzVw6J1Ii6NO3ZRmcKrNyVe8gyJ34kJnOY-v8-llNfBoTnTEsYfzMxLcsILyrYUbqwZ"/>
+<div class="flex-1 min-w-0">
+<p class="font-bold text-sm truncate">崩坏：星穹铁道</p>
+<span class="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded-full font-bold">1.2版本</span>
+</div>
+</div>
+<div class="flex items-center gap-3 bg-white p-2 rounded-full shadow-sm min-w-[180px]">
+<img class="size-12 rounded-full bg-tertiary-container" data-alt="abstract geometric icon with orange and yellow shapes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2vwH5sgBKsWBCxj8qckWYCMZTzZLJZlfJtJN1XUSi51Lnilw8JHgsosTOc3sL7tbToqyck_Q7vffCrOBaxqRwqGgHzDrc6I3unSWLG7lIoDV6hg_5rXBK05UFfPBMfPfcK33U6HMvuIPFAJiz4JLVD5CWdvkvDbIhDqjxT04hVtkIMrC9JaWFGnrKEllwvXm4-k-FtSc3EHR2dGpCKar2IhvshV_TXmzIG85jtWId--DrUZmM6ldL7oWctuBp4THU0IhfIOKAJtBe"/>
+<div class="flex-1 min-w-0">
+<p class="font-bold text-sm truncate">碧蓝航线</p>
+<span class="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-bold">夏日泳装</span>
+</div>
+</div>
+<div class="flex items-center gap-3 bg-white p-2 rounded-full shadow-sm min-w-[180px]">
+<img class="size-12 rounded-full bg-outline-variant" data-alt="abstract geometric icon with gray and white shapes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVEr-FYd_7rbIynk35AC_ImRWWmw1-1FVuxcSwu8ERHXYJFv_6VVOOG3QWttcqI_LgThv36CskYr64P9VQmM108xSTFjjDPdGfCVxcRSoqpiD2E-iLLQSO67uLrkQ2UPI-6kUqOcrkpcC5wz_2Sg1hL7wmi2NZJszEBAjW3Kt30DJYWTKoSJx_-aSJFlHeW489-teBC8P5Sisr6wxQvC5eL_jh1OSrSlc6DA4YdlwOtXVvOwX6q3p2XVFf1g4L4eX3FAQuHjyLCuDs"/>
+<div class="flex-1 min-w-0">
+<p class="font-bold text-sm truncate">战双帕弥什</p>
+<span class="text-[10px] px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-bold">BOSS挑战</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 5. 新游期待榜 Pre-register -->
+<section>
+<h3 class="text-2xl font-black mb-6 tracking-tight">事前登录</h3>
+<div class="space-y-4">
+<div class="flex items-center justify-between p-4 rounded-lg bg-surface-container-low hover:bg-secondary-container/10 transition-colors group">
+<div class="flex items-center gap-4">
+<img class="size-20 rounded-lg object-cover" data-alt="fantasy mountain peak with glowing blue crystals at night" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDD6eIVvugUuUfSdCpYNZ64R5y0pq0scdpJwIEmVoDlsiV3oZ9qc71oHPdRx-mAI6tcXgdBz2J2QhTVFaZrHyfQ-knYvFznt9Y1aw_Sokx5iJnvV9KjSzJkO-sD1jv_XaKfwhE3zMfKuig0dYBEIwD9ZCDAcHswzH2-68UL-_rn8DZbOInrCMtttDZDhMyQKSVWXtPMFyA8mQpr2fSavrlmr0pMbDP-bA_kw3x4xBR_L1dT-jmLewwpj6i1Nxz_bvxKBjcHjDhl8y4I"/>
+<div>
+<h4 class="font-black text-xl">代号：奇点</h4>
+<p class="text-on-surface-variant font-medium">152.4万人已预约 • 距离开测还有 12天</p>
+<div class="flex gap-2 mt-2">
+<span class="px-2 py-0.5 rounded bg-surface-container text-xs font-bold">二次元</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-xs font-bold">竞技</span>
+</div>
+</div>
+</div>
+<button class="kinetic-gradient-primary text-white px-8 py-3 rounded-full font-black text-lg shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
+                                预约
+                            </button>
+</div>
+<div class="flex items-center justify-between p-4 rounded-lg bg-surface-container-low hover:bg-secondary-container/10 transition-colors group">
+<div class="flex items-center gap-4">
+<img class="size-20 rounded-lg object-cover" data-alt="retro gaming setup with neon lights and futuristic computers" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCG0Kc0uSUPaJPj9aTi70XBwdQ_foi32uOll3k1zVbRbPHnMaZo-jaEtQYvUCVbiHC5OgyXQzekegYoczNSPDrTHRFufBIGUx0ywXtHeb7oxdWMU7EQPR-HVcYuUxhAJe0QYr89tInhFzZedgC1g1bTaOs9rrGbAv-urwn24ifFDGmVrJlMfQlexZLXZ_p4o5OyNALGxXcWYxA1BfqVXcYCkjQsVnak0h8rt58TCklvMzBWYm1DASRTiMDNfPGzu0uAYWbFuIuz28ys"/>
+<div>
+<h4 class="font-black text-xl">无限暖暖</h4>
+<p class="text-on-surface-variant font-medium">89.1万人已预约 • 暑期重磅登场</p>
+<div class="flex gap-2 mt-2">
+<span class="px-2 py-0.5 rounded bg-surface-container text-xs font-bold">换装</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-xs font-bold">开放世界</span>
+</div>
+</div>
+</div>
+<button class="bg-secondary text-white px-8 py-3 rounded-full font-black text-lg shadow-lg shadow-secondary/20 group-hover:scale-105 transition-transform">
+                                预约
+                            </button>
+</div>
+</div>
+</section>
+<!-- 6. 社区精选 Community Selection -->
+<section class="space-y-6">
+<div class="flex items-end justify-between">
+<div>
+<h3 class="text-3xl font-black tracking-tight">社区动态</h3>
+<p class="text-on-surface-variant font-medium">来自次元住民的实时分享</p>
+</div>
+</div>
+<div class="grid grid-cols-1 gap-4">
+<!-- Card 1 -->
+<div class="bg-surface-container-low p-4 rounded-lg hover:bg-white transition-all shadow-sm">
+<div class="flex items-center gap-3 mb-3">
+<img alt="Avatar" class="size-10 rounded-full border border-primary/20" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDbSq4PnEaUyPRL3B3xxTFMnQg1NDXVmAnIIk_v-wQys3s9Gn36GHO49gWs9iDFkb7APaSo4hhNNfLr-5FRmYgn1heahza4SaGP_hlh4cILFF3fUJxx-myabo08rMkMQo6O_6ABXymsOAAgmvhbzxLz9mbgy8-FYyA4sicMeHpMbZV8nHfcWmHemhSAeUjQn516rmM-kIeVEFsaSdEWacpWWM2CtEGxQibYcCoVB5NBFnbKjEGXQQxELC0hhay4YKWw-yDVYF2tYy6Y"/>
+<div class="flex-1">
+<p class="font-bold text-sm">次元旅人·莉莉丝</p>
+<p class="text-[10px] text-outline-variant">15分钟前</p>
+</div>
+<button class="text-primary text-xs font-bold px-3 py-1 rounded-full border border-primary/30 hover:bg-primary/5">+ 关注</button>
+</div>
+<p class="text-sm text-on-surface mb-3 line-clamp-2">
+                刚抽到了《破晓战歌》的新角色！这立绘也太好看了吧，动作模组手感极佳，大家快去试一试！✨
+            </p>
+<div class="grid grid-cols-3 gap-2 mb-3">
+<img alt="Post image" class="aspect-square object-cover rounded-lg w-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7V4cYIXwiXSXPbvWHJHd1ISOs36ngEIyQ42oapFmJ7Zfb-PF89N_GyIm91BtWYOzRwOkwZo2QszwzJnbXFLKHg8sVJVNbN9EUhBJq5nlfXhyTWITqpUHLzE_L7zq_Jub-Mz-bzYTQTs0LwIbgCgNA_T1-2NWw8QTZb5qHy8h_eECTwiLBVEn4I7-wETVwQV7DcssGSyJPq_x6obMl_aiusJAKEBCsKI-3N01YQ-y3x4Uwh0zZ8yUClCef3elTe0mKVGUtVz8avmYY"/>
+<img alt="Post image" class="aspect-square object-cover rounded-lg w-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKAiA9wMxh1LMKXeckxzX3_ztN5FTxWSsYEad3ibm9fYMeMJ2MGYgqmZrY-_8Ef23kN-szceenmeI6nYxhIWJa6OdA1E8JlmKZWiXC2VlChMNHz8zg2M1WjA9IHJqd97QULMWPbzo00SCkv90keXBKmCKXI96auzbQveRd160GIRE17GOst2xTkLLLbmZx3WFjqDsOPlxlvXYvH6B8FNehS0gIoFm-U7Goc34S_hEFdkZ_VopEWXqc3KDV92aTmySPcQbyBGeeGKDd"/>
+<img alt="Post image" class="aspect-square object-cover rounded-lg w-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDU0YBZy7Dr_vqTb5CNMmCVJnZPs5ikeJaERSIfV6j-Z2jqu-nmt5FxrRB55Nl99URGoxyeYEP_HNDjp-mJplkSCWcpH1U2sRPEl6YPAUhXgpixyEPeBWWty0y54f3G5sFwKXTQqbrk-eyVSAOU-pbuiqc7wPouTWkkDds1VebjVd00G7qAr3E0-dtylXXYRXcQ0TUfJRz7WS8Y5JZZNp-jM7WFDuA5-QMc_cn3oDIX7l7vvcY9PADhyk22GYg8locHKeA7cHZPCrJe"/>
+</div>
+<div class="flex items-center gap-6 text-on-surface-variant">
+<span class="flex items-center gap-1.5 text-xs font-bold cursor-pointer hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg">favorite</span> 128
+                </span>
+<span class="flex items-center gap-1.5 text-xs font-bold cursor-pointer hover:text-secondary transition-colors">
+<span class="material-symbols-outlined text-lg">chat_bubble</span> 42
+                </span>
+<span class="flex items-center gap-1.5 text-xs font-bold cursor-pointer hover:text-secondary transition-colors">
+<span class="material-symbols-outlined text-lg">share</span> 分享
+                </span>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-low p-4 rounded-lg hover:bg-white transition-all shadow-sm">
+<div class="flex items-center gap-3 mb-3">
+<img alt="Avatar" class="size-10 rounded-full border border-primary/20" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcUQm31fY7KnKmshdgcljBekerlnuCAxDHt1l92icOlVBWsVf6oohCZhN3TpBZhRGefiNMSdouGLnzuE0_DhqEtCpw4ls-jG9aRcVu3uih_9u9KYmOwHrqwi2OnrD4fEV67xit4l6p7AePs1PZy_tMomLokK5AjeXc_HTFMrVjU8NTN0iCP3g8_nI3maqNnvb_pGP8UuW4qbkgccLqjwI-kgelLQwyHtq0hjYlwIAUwdncGx3TKwcF88UNg-5VvWXcqvlfIXw114-1"/>
+<div class="flex-1">
+<p class="font-bold text-sm">游戏考据帝</p>
+<p class="text-[10px] text-outline-variant">45分钟前</p>
+</div>
+</div>
+<p class="text-sm text-on-surface mb-3">
+                关于《代号：奇点》世界观背景的深度拆解。原来那个浮空岛的历史可以追溯到一千年前的机械纪元...
+            </p>
+<div class="flex gap-2 mb-3 overflow-hidden">
+<img alt="Post image" class="h-32 flex-1 object-cover rounded-lg shadow-inner" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDD6eIVvugUuUfSdCpYNZ64R5y0pq0scdpJwIEmVoDlsiV3oZ9qc71oHPdRx-mAI6tcXgdBz2J2QhTVFaZrHyfQ-knYvFznt9Y1aw_Sokx5iJnvV9KjSzJkO-sD1jv_XaKfwhE3zMfKuig0dYBEIwD9ZCDAcHswzH2-68UL-_rn8DZbOInrCMtttDZDhMyQKSVWXtPMFyA8mQpr2fSavrlmr0pMbDP-bA_kw3x4xBR_L1dT-jmLewwpj6i1Nxz_bvxKBjcHjDhl8y4I"/>
+</div>
+<div class="flex items-center gap-6 text-on-surface-variant">
+<span class="flex items-center gap-1.5 text-xs font-bold cursor-pointer hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg">favorite</span> 342
+                </span>
+<span class="flex items-center gap-1.5 text-xs font-bold cursor-pointer hover:text-secondary transition-colors">
+<span class="material-symbols-outlined text-lg">chat_bubble</span> 89
+                </span>
+</div>
+</div>
+</div>
+</section><section>
+<div class="flex items-end justify-between mb-8">
+<div>
+<h3 class="text-3xl font-black tracking-tight">游戏资讯</h3>
+<p class="text-on-surface-variant font-medium">发现次元世界的精彩瞬间</p>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<article class="bg-surface-container-lowest rounded-lg overflow-hidden border border-surface-container shadow-sm">
+<div class="grid grid-cols-2 gap-1 p-1">
+<img class="aspect-square object-cover" data-alt="digital painting of a magical forest with glowing bioluminescent plants" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXKwhBO8zsSvIxUVoig2TO9R-ueNxbZbvdGZavrb9bImWjLlAJxUnbYzKCH9NI55mcPUSY2mJNsnH7X271xULVbU2IO2yYd3C9OKcYhiXEsyUSeRoLhjz8ZS8WvoH1cZaxGBDpG0Zebb7xSqBHhTlyRsQbnKDoGB5rAJdNbsEO6jA1PZLbmpf5pIGMb6NalLCYuAVQ8OP-8kPgG_QqD_YtpsS7WHC6d3iu0q4XyrXx7P5qzrc_Uq09ItzHd0budOq52N4G5Brcky11"/>
+<img class="aspect-square object-cover" data-alt="minimalist anime style illustration of a person walking on a beach under a blue sky" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBV1WwoIYl4sroz7kb6-O0Ni8zFkWKbXG7Gl6LKayvKCAyMQtOfR5_9qScyv91YEU6OrZM_UvO20YtrFBBBQgIdpnbMtzpGPEHFbZ3GS9kzD83GtRuoDorEVC5dSGIBccJc6xqqKbgFDLiiC00iEKDHYFwtBZ9ClM1DBCVa1eNXnJXtmFbvC0OaZgDh1hF1KgreoPB1dmT-V3ZXNcX8sE6wAf8g-Wqt7oDXjlBbYuE9XGgK2KQiY9jQdMfhsoOCh_83UOtQvIDNrif_"/>
+</div>
+<div class="p-5">
+<div class="flex items-center gap-2 mb-3">
+<img class="size-6 rounded-full" data-alt="pixel art avatar of an artist" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZCR-NF4Mec-Ftsz6kg0SAR1tajc7recUP2DtE4DHMwI61nnovMU_no6cu5jTBdYBnkIB0uhtJ9mI2bvEVPZjT1sNxkesi5M11sqc5iJ2gJRT5DeEM6vHTd_DJqMaPUl38Qb2Dj10nzN4aQQiT5LyUCG2AibQZblo8is8PIyJvXOpU20LVVjW__LXAhsZEObuKOWDbQIT9zm-ajPoi0XzWFypgqElkKImqgD5chM-ZvqEV6SH07anzRlvHaKWec_mleTXsJbUsiZKV"/>
+<span class="text-sm font-bold">画师：空月</span>
+<span class="text-xs text-outline-variant">2小时前</span>
+</div>
+<h4 class="font-bold text-lg mb-2">【同人手绘】鸣潮新角色今汐，画了好久！</h4>
+<div class="flex items-center justify-between text-on-surface-variant text-sm">
+<div class="flex gap-4">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">favorite</span> 1.2k</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">chat_bubble</span> 256</span>
+</div>
+<button class="text-secondary font-bold">查看详情</button>
+</div>
+</div>
+</article>
+<article class="bg-surface-container-lowest rounded-lg overflow-hidden border border-surface-container shadow-sm">
+<div class="grid grid-cols-2 gap-1 p-1">
+<img class="aspect-square object-cover" data-alt="stylized orange and pink gradient abstract digital background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBmyiOlew-P9K8agMeJj2QFuKRsVsKFsaxImpT2fppTFLRRhywKlajum42y8TMEnoSPwm9Zm99Gu8iUslHFmB6jMZ71X-M8HVsBvv4zE04hovIBn9oJ0pPydTwpGeNl6MrulOtfrsmQYO9IRM0Th8aigvQAfI395ehENmHydY7mIG-PoT0BSEU2fJEBxyqoZLn-dgoAqNB0cZrisooMqgRqm6j78qucoXFe43m9EVlAa6w8Y0HRM3l4IbZq4l2_hkLbdeFx0YT59Vy"/>
+<img class="aspect-square object-cover" data-alt="cinematic top down shot of a clean minimal office desk with a gaming mouse" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZ4g7FYvqURsxiiqrpsAUguy26D_v4lll57TDxJt7tmSeiShdBxSi6ztMCsYdulevXmAplFql7sIE3RL9mZAp0ECOPjtoaTyS6pWX68p8ucagcw7UF_4FzKctL1NtOAzVZePb4pLRXrB0LP7K_Gbg_V6luPj4ubcenrMoh0OqNzM0G-cDGpJeRwbOn-qAd_BcgOZF-4eIXVgbdlNsT33TmTG5M8ULBIAbrBwddozEMo9yLZfLJUIb8M-Sy9_ki2m57uwXNfH7h5vlz"/>
+</div>
+<div class="p-5">
+<div class="flex items-center gap-2 mb-3">
+<img class="size-6 rounded-full" data-alt="pixel art avatar of a gamer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcUQm31fY7KnKmshdgcljBekerlnuCAxDHt1l92icOlVBWsVf6oohCZhN3TpBZhRGefiNMSdouGLnzuE0_DhqEtCpw4ls-jG9aRcVu3uih_9u9KYmOwHrqwi2OnrD4fEV67xit4l6p7AePs1PZy_tMomLokK5AjeXc_HTFMrVjU8NTN0iCP3g8_nI3maqNnvb_pGP8UuW4qbkgccLqjwI-kgelLQwyHtq0hjYlwIAUwdncGx3TKwcF88UNg-5VvWXcqvlfIXw114-1"/>
+<span class="text-sm font-bold">大魔王玩家</span>
+<span class="text-xs text-outline-variant">5小时前</span>
+</div>
+<h4 class="font-bold text-lg mb-2">深度测评：绝区零的打击感究竟如何？</h4>
+<div class="flex items-center justify-between text-on-surface-variant text-sm">
+<div class="flex gap-4">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">favorite</span> 856</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">chat_bubble</span> 142</span>
+</div>
+<button class="text-secondary font-bold">查看详情</button>
+</div>
+</div>
+</article>
+</div>
+</section>
+</div>
+<!-- Right Side: Sidebar -->
+<aside class="lg:col-span-4 space-y-10">
+<!-- 3. 热门排行 Popularity Ranking -->
+<section class="bg-surface-container-lowest rounded-lg p-6 shadow-sm">
+<div class="flex items-center justify-between mb-8">
+<h3 class="text-2xl font-black tracking-tight">热门游戏</h3>
+<div class="flex bg-surface-container p-1 rounded-full text-[10px] font-bold">
+<button class="px-3 py-1 bg-white rounded-full">总榜</button>
+<button class="px-3 py-1">新作</button>
+</div>
+</div>
+<div class="space-y-6">
+<!-- Ranking Items -->
+<div class="flex items-center gap-4 group cursor-pointer">
+<span class="text-3xl font-black italic text-primary group-hover:scale-110 transition-transform">01</span>
+<img class="size-14 rounded-lg bg-surface-container" data-alt="geometric icon for rank 1 game" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCF2gtbKHewcpxRLmcZJBYSSz8yfeckS4j3disYhL_TUWpuR8ay6pKHYb3rQgJXiY9syJZCmGd0-AhlcG1cWeYFQhclUg9M1SQYtm71tCa3iIqsPWMWYSAf5ZAEGh2vSv4-pJ-S_eIlEi_Frvd_nJ3BjJeWJzszP-0leFmTQAnxAKJrC1_j3vtTdc5Lwz7qMzwuvev3g6HDIF4ls586e9qHGLJ9RcLKLcrXsIlxYyyNWM544TizQPoAceXwLGX2GsPJ3bDcqagjnnie"/>
+<div class="flex-1 min-w-0">
+<p class="font-black text-base truncate">原神</p>
+<p class="text-xs text-on-surface-variant">开放世界 • 5.2亿下载</p>
+</div>
+<span class="material-symbols-outlined text-green-500">trending_up</span>
+</div>
+<div class="flex items-center gap-4 group cursor-pointer">
+<span class="text-3xl font-black italic text-primary/60 group-hover:scale-110 transition-transform">02</span>
+<img class="size-14 rounded-lg bg-surface-container" data-alt="geometric icon for rank 2 game" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqAPSzbrafG-RtOPGfU6rUYKxQGKC5BCBSmYHiflxbWKGrUwjHlqvLUkgwxfv8vUNuQLdz7405DpIu5d3y-7g6wIFnX3PiXfanSlXd6s3eO9bcbphqKxNmTRd4RAKwyYGNOG3p75uLgtthDedStQAP-DJXu4HCW40GcbWeeU98w5uIP_uVk7U6ChKcwwBn6K-Hi1wzzqFffTlNGiisaZ4xPEnSkfrx7YxjCC0ebe4t1Mf3QoNME-X1ksf1BHsydVfXqCIjJ2y7C4FS"/>
+<div class="flex-1 min-w-0">
+<p class="font-black text-base truncate">崩坏：星穹铁道</p>
+<p class="text-xs text-on-surface-variant">回合制 • 3.8亿下载</p>
+</div>
+<span class="material-symbols-outlined text-green-500">trending_up</span>
+</div>
+<div class="flex items-center gap-4 group cursor-pointer">
+<span class="text-3xl font-black italic text-primary/40 group-hover:scale-110 transition-transform">03</span>
+<img class="size-14 rounded-lg bg-surface-container" data-alt="geometric icon for rank 3 game" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJ27eRFP4SopLtfo351nDQQScKGW7kgZwKaH4T8IdN5gqNEkZkmGU35xXvn4OGfw-eJLN3UF7DYGnemUgrPIdiI0j_ZrP9RGo4V9jw--KOtbg8UGZKQejAiBb8TiTECAN5F0PTjGlZY7rY0zCAUBMNok_0hwqGukkqyIXsUgHGWLErFO5tQgz64PmP-uSoZ2PAhyIPjffi9jfZphrp9FFgSusQwsGIGWwPSVT69LHVwnXzC5y1Xrdk4xjho-JKcFiV5WdcydHDIsrL"/>
+<div class="flex-1 min-w-0">
+<p class="font-black text-base truncate">王者荣耀</p>
+<p class="text-xs text-on-surface-variant">竞技 MOBA • 8.1亿下载</p>
+</div>
+<span class="material-symbols-outlined text-outline-variant">horizontal_rule</span>
+</div>
+<!-- ... more ranking items ... -->
+<div class="flex items-center gap-4">
+<span class="text-2xl font-bold text-outline-variant w-8 text-center">04</span>
+<img class="size-12 rounded-lg bg-surface-container" data-alt="geometric icon for rank 4 game" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrZdMaSVg7x0Al2CxOuxcsaTYAidxR6eKiAGrUH9WVkRE_3CIUm9h09q6W2dzodrUrzdC-nL4p7ay54e1hV8lO0Z_NIxuGL0dlPGBjM0vnrZNXib8kwfIUh6mRFEFO3u8ZMcgsmv8g47a0tyuRrYUnKzDMHrUo38CPN23YWWtBlGlpg-HH0i5YkGw0SsM8qoFuCGr7KYKFuxokMPhGVRBl3JzgRsz48eVujuCaVPyqyCu0RzEqKU2Ay3b9kw13t3Myjeo_0E-gEmFc"/>
+<p class="font-bold flex-1">和平精英</p>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-2xl font-bold text-outline-variant w-8 text-center">05</span>
+<img class="size-12 rounded-lg bg-surface-container" data-alt="geometric icon for rank 5 game" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBszL3v5G9U4tjPn8NZubXt-XUeIdRb-obVi25vftEMKpC43QA2CT2CK9ZKWVMPhU4ZwGtBoFWSUwc2ev8UJFOtlfqmL_hJEf3cp5zmfyfEh-cpVTncsqxFt7bJfiF2zAvqQl6-AZ7W1hRbo6cSYHT9jQbXPmIbRPy0IX1s0gb4m6_VjAqvg7LsCnrVWx7h31IaIqJEoxpTo4wTOTLmbEnPA2gvGKR2kgUTKc1s8tMm9rT22NF0QpS99BmgJWgFP0XMgnvzuRwBF03n"/>
+<p class="font-bold flex-1">蛋仔派对</p>
+</div>
+</div>
+<button class="w-full mt-8 py-3 rounded-full bg-surface-container text-on-surface-variant font-bold text-sm hover:bg-surface-container-high transition-colors">
+                        查看完整榜单
+                    </button>
+</section>
+<!-- 7. 效率工具 Utility Tools -->
+<section class="bg-surface-container p-6 rounded-lg">
+<h3 class="text-xl font-black mb-6 flex items-center gap-2">
+                        效率工具
+                        <span class="material-symbols-outlined text-secondary">build</span>
+</h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-white p-4 rounded-lg flex flex-col items-center text-center hover:shadow-md transition-shadow cursor-pointer group">
+<div class="size-12 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">speed</span>
+</div>
+<span class="font-bold text-sm">极速加速器</span>
+</div>
+<div class="bg-white p-4 rounded-lg flex flex-col items-center text-center hover:shadow-md transition-shadow cursor-pointer group">
+<div class="size-12 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">palette</span>
+</div>
+<span class="font-bold text-sm">皮肤制作坊</span>
+</div>
+<div class="bg-white p-4 rounded-lg flex flex-col items-center text-center hover:shadow-md transition-shadow cursor-pointer group">
+<div class="size-12 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">videocam</span>
+</div>
+<span class="font-bold text-sm">录屏助手</span>
+</div>
+<div class="bg-white p-4 rounded-lg flex flex-col items-center text-center hover:shadow-md transition-shadow cursor-pointer group">
+<div class="size-12 rounded-full bg-green-200 text-green-800 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">auto_awesome</span>
+</div>
+<span class="font-bold text-sm">攻略 AI</span>
+</div>
+</div>
+</section>
+<!-- Small Promo Card -->
+<section class="bg-primary rounded-lg p-8 text-white relative overflow-hidden group">
+<div class="relative z-10">
+<h3 class="text-2xl font-black mb-2 leading-tight">加入ACBOX<br/>开发者计划</h3>
+<p class="text-white/80 text-sm mb-6">让你的作品被全球玩家看见</p>
+<button class="bg-white text-primary px-6 py-2 rounded-full font-bold text-sm hover:scale-105 transition-transform">
+                            立即申请
+                        </button>
+</div>
+<div class="absolute -bottom-4 -right-4 opacity-20 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[120px]">rocket_launch</span>
+</div>
+</section>
+</aside>
+</div>
+</main>
+<footer class="bg-surface-container-highest mt-20 py-16 px-10">
+<div class="max-w-[1440px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
+<div class="space-y-4">
+<div class="flex items-center gap-2">
+<img class="size-8" data-alt="vibrant abstract geometric logo icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-Q9xetF0p0MARbBt5-v5CrftBCmuFzMu7spJMvBK6MRo9x3AHJSRvC4SE5Wx2lF52wIQxqsZ73W9HFqbGSJ75M0b2UmHC7n_ZDKO5eoxy1ZJiQTZqlptpTYZ0dCoBkiZLNUelToCphx0JqChSks1gtUSlanuqBJyLV3ajwPIWtfmuAsBvFlTNkrwReFc_6Bh9OgWzHXc4jVcmt0XV6cluDTxbXXPVbPtQyhPnXqn4fZlYjQ6tMWhVF-hqaJLaBGyMfjl4ggrDovrb"/>
+<span class="text-xl font-black uppercase">ACBOX</span>
+</div>
+<p class="text-on-surface-variant text-sm">专注二次元游戏的潮流商店，连接每一个热爱ACG的灵魂。</p>
+<div class="flex gap-4">
+<button class="size-10 rounded-full bg-white flex items-center justify-center text-on-surface hover:bg-secondary hover:text-white transition-colors">
+<span class="material-symbols-outlined">public</span>
+</button>
+<button class="size-10 rounded-full bg-white flex items-center justify-center text-on-surface hover:bg-secondary hover:text-white transition-colors">
+<span class="material-symbols-outlined">share</span>
+</button>
+</div>
+</div>
+<div>
+<h5 class="font-black mb-6 text-sm uppercase tracking-widest text-outline">探索</h5>
+<ul class="space-y-3 text-sm font-bold">
+<li><a class="hover:text-primary" href="#">新游预约</a></li>
+<li><a class="hover:text-primary" href="#">热门排行榜</a></li>
+<li><a class="hover:text-primary" href="#">开发者沙龙</a></li>
+<li><a class="hover:text-primary" href="#">玩家社区</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-black mb-6 text-sm uppercase tracking-widest text-outline">支持</h5>
+<ul class="space-y-3 text-sm font-bold">
+<li><a class="hover:text-primary" href="#">帮助中心</a></li>
+<li><a class="hover:text-primary" href="#">隐私协议</a></li>
+<li><a class="hover:text-primary" href="#">联系我们</a></li>
+<li><a class="hover:text-primary" href="#">举报反馈</a></li>
+</ul>
+</div>
+<div>
+<h5 class="font-black mb-6 text-sm uppercase tracking-widest text-outline">移动端</h5>
+<div class="space-y-4">
+<button class="flex items-center gap-3 bg-black text-white px-6 py-3 rounded-lg w-full">
+<span class="material-symbols-outlined">android</span>
+<div class="text-left">
+<p class="text-[10px] opacity-60">Download on the</p>
+<p class="font-bold">Android APK</p>
+</div>
+</button>
+<button class="flex items-center gap-3 border-2 border-black text-black px-6 py-3 rounded-lg w-full">
+<span class="material-symbols-outlined">phone_iphone</span>
+<div class="text-left">
+<p class="text-[10px] opacity-60">Available on the</p>
+<p class="font-bold">iOS Store</p>
+</div>
+</button>
+</div>
+</div>
+</div>
+<div class="max-w-[1440px] mx-auto mt-16 pt-8 border-t border-outline-variant/20 text-center text-xs text-outline-variant font-medium">
+            © 2024 ACBOX Interactive Entertainment. All Rights Reserved.
+        </div>
+</footer>
+<!-- Bottom Nav for Mobile -->
+<nav class="fixed bottom-0 left-0 right-0 lg:hidden bg-white/90 backdrop-blur-lg border-t border-surface-container flex justify-around items-center p-3 z-50">
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="text-[10px] font-bold">首页</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">explore</span>
+<span class="text-[10px] font-bold">发现</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">forum</span>
+<span class="text-[10px] font-bold">社区</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-bold">我的</span>
+</button>
+</nav>
+</body></html>

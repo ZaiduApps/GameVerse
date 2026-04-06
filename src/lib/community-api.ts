@@ -161,9 +161,20 @@ function formatTimestamp(value?: string): string {
 
 function normalizePlainText(text: string): string {
   return text
-    .replace(/!\[[^\]]*\]\(([^)]+)\)/g, ' ')
+    .replace(/\r\n?/g, '\n')
+    .replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1')
+    .replace(/!\[([^\]]*)\]\((?:[^)]+)\)/g, '$1')
+    .replace(/\[([^\]]+)\]\((?:[^)]+)\)/g, '$1')
     .replace(/<img[^>]*>/gi, ' ')
-    .replace(/[#*_`>\-\[\]\(\)!]/g, ' ')
+    .replace(/\b(?:https?|acbox|uu-mobile):\/\/[^\s<>"')\]]+/gi, ' ')
+    .replace(/^>+\s?/gm, '')
+    .replace(/^#{1,6}\s*/gm, '')
+    .replace(/^---+$/gm, ' ')
+    .replace(/^[-*+]\s+/gm, '')
+    .replace(/^\d+\.\s+/gm, '')
+    .replace(/[`*_~]/g, '')
+    .replace(/<\/?(?:p|div|section|article|blockquote|li|ul|ol|h[1-6]|span|strong|em|code|pre)[^>]*>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }

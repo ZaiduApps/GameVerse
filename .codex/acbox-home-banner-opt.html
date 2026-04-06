@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#e0e3e4",
+                        "surface-dim": "#d1d5d7",
+                        "on-surface-variant": "#595c5d",
+                        "on-tertiary-fixed-variant": "#604700",
+                        "secondary": "#005e9f",
+                        "primary-container": "#ff7767",
+                        "error-container": "#fb5151",
+                        "error": "#b31b25",
+                        "tertiary": "#755700",
+                        "on-error-container": "#570008",
+                        "secondary-dim": "#00528b",
+                        "inverse-on-surface": "#9b9d9e",
+                        "primary": "#b71211",
+                        "outline": "#757778",
+                        "secondary-container": "#b3d4ff",
+                        "secondary-fixed-dim": "#99c7ff",
+                        "error-dim": "#9f0519",
+                        "surface-container": "#e6e8ea",
+                        "on-tertiary-container": "#553e00",
+                        "on-secondary": "#edf3ff",
+                        "on-secondary-container": "#004a7e",
+                        "primary-fixed": "#ff7767",
+                        "on-primary": "#ffefed",
+                        "surface-container-highest": "#dadddf",
+                        "background": "#f5f6f7",
+                        "on-secondary-fixed-variant": "#00538d",
+                        "secondary-fixed": "#b3d4ff",
+                        "on-tertiary-fixed": "#3d2b00",
+                        "on-primary-fixed": "#000000",
+                        "on-background": "#2c2f30",
+                        "on-secondary-fixed": "#00365e",
+                        "on-error": "#ffefee",
+                        "on-tertiary": "#fff1db",
+                        "on-primary-container": "#4f0001",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-surface": "#0c0f10",
+                        "surface-bright": "#f5f6f7",
+                        "primary-fixed-dim": "#ff5b4b",
+                        "surface": "#f5f6f7",
+                        "inverse-primary": "#ff5445",
+                        "on-primary-fixed-variant": "#610002",
+                        "tertiary-container": "#fdc003",
+                        "tertiary-fixed": "#fdc003",
+                        "tertiary-fixed-dim": "#ecb200",
+                        "surface-container-low": "#eff1f2",
+                        "surface-variant": "#dadddf",
+                        "on-surface": "#2c2f30",
+                        "tertiary-dim": "#664b00",
+                        "primary-dim": "#a40007",
+                        "surface-tint": "#b71211",
+                        "outline-variant": "#abadae"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Plus Jakarta Sans"],
+                        "label": ["Plus Jakarta Sans"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f5f6f7;
+            color: #2c2f30;
+        }
+        .kinetic-shadow {
+            box-shadow: 0 24px 32px -12px rgba(44, 47, 48, 0.08);
+        }
+        .glass-header {
+            background: rgba(245, 246, 247, 0.8);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background">
+<!-- Shared TopNavBar Component -->
+<header class="sticky top-0 z-50 glass-header border-b border-surface-container-high px-4 md:px-10 py-3">
+<div class="max-w-[1280px] mx-auto flex items-center justify-between whitespace-nowrap">
+<div class="flex items-center gap-4 text-on-surface">
+<div class="size-6 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M39.475 21.6262C40.358 21.4363 40.6863 21.5589 40.7581 21.5934C40.7876 21.655 40.8547 21.857 40.8082 22.3336C40.7408 23.0255 40.4502 24.0046 39.8572 25.2301C38.6799 27.6631 36.5085 30.6631 33.5858 33.5858C30.6631 36.5085 27.6632 38.6799 25.2301 39.8572C24.0046 40.4502 23.0255 40.7407 22.3336 40.8082C21.8571 40.8547 21.6551 40.7875 21.5934 40.7581C21.5589 40.6863 21.4363 40.358 21.6262 39.475C21.8562 38.4054 22.4689 36.9657 23.5038 35.2817C24.7575 33.2417 26.5497 30.9744 28.7621 28.762C30.9744 26.5497 33.2417 24.7574 35.2817 23.5037C36.9657 22.4689 38.4054 21.8562 39.475 21.6262ZM4.41189 29.2403L18.7597 43.5881C19.8813 44.7097 21.4027 44.9179 22.7217 44.7893C24.0585 44.659 25.5148 44.1631 26.9723 43.4579C29.9052 42.0387 33.2618 39.5667 36.4142 36.4142C39.5667 33.2618 42.0387 29.9052 43.4579 26.9723C44.1631 25.5148 44.659 24.0585 44.7893 22.7217C44.9179 21.4027 44.7097 19.8813 43.5881 18.7597L29.2403 4.41187C27.8527 3.02428 25.8765 3.02573 24.2861 3.36776C22.6081 3.72863 20.7334 4.58419 18.8396 5.74801C16.4978 7.18716 13.9881 9.18353 11.5858 11.5858C9.18354 13.988 7.18717 16.4978 5.74802 18.8396C4.58421 20.7334 3.72865 22.6081 3.36778 24.2861C3.02574 25.8765 3.02429 27.8527 4.41189 29.2403Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-on-surface text-xl font-extrabold leading-tight tracking-tight">ACBOX</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8 items-center">
+<nav class="hidden lg:flex items-center gap-9">
+<a class="text-on-surface text-sm font-bold hover:text-primary transition-colors" href="#">首页</a>
+<a class="text-on-surface text-sm font-medium hover:text-primary transition-colors" href="#">游戏库</a>
+<a class="text-on-surface text-sm font-medium hover:text-primary transition-colors" href="#">社区</a>
+<a class="text-on-surface text-sm font-medium hover:text-primary transition-colors" href="#">工具箱</a>
+<a class="text-on-surface text-sm font-medium hover:text-primary transition-colors" href="#">资讯</a>
+</nav>
+<div class="flex gap-3">
+<button class="flex items-center justify-center rounded-full size-10 bg-surface-container-low text-on-surface hover:bg-surface-container-high transition-all">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 ring-2 ring-surface-container-high" data-alt="vibrant anime style avatar portrait of a cheerful young character with blue hair" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCCdTnGF4_IVuN4qwy4K9MccYlXFWvZsBvkMLpp0S0NiBL3qxyAP_MESN2qG5rJkGUadr_WB0IgcYWY5L8ladCXF0i1UTPgHzJn3fSGssEyG3RhzcvpPWRhO9n8NP3O3pe06piPBJOkOsoPchVzielKQo8tKNEbKXdqmvAYhC1IaD0fsgBXWrlztEXip-lfaxX4uH7NM2SAUIlIflgHlIkma26hlDAcBN_eEwTuoujCgAGP61M4ILJccKJ-Rewv0I3NnMtbXtzVBwsg");'></div>
+</div>
+</div>
+</div>
+</header>
+<main class="max-w-[1280px] mx-auto px-4 md:px-10 py-6 space-y-12">
+<!-- Banner & Side Panel Section -->
+<section class="flex flex-col lg:flex-row gap-6 h-auto lg:h-[480px]">
+<!-- Left: Banner Carousel (75%) -->
+<div class="lg:w-3/4 w-full h-[300px] lg:h-full relative rounded-lg overflow-hidden kinetic-shadow group">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="cinematic anime key art showing heroic characters in a futuristic neon city with high energy action pose and vibrant blue and red lighting" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDwvdYP3M2xKpVmhS1RDky83at7tApDHhwI4WfZ2O4CiYMQR1_U5nsyIZjPMzjv_vqvnJcmRjtab-s6MBr_OwcPSoJYI0xEN-CzV0bqQTNm1Smn0R_Q1CSPW670OjX5S7tfeihg7slj05CXDV85FSWNXIuD2bjJJVUO3wnFoOHCRRGxkvMGbJYJKRPyyf1C7OQ9PTTHutbkiDGs_uT74zHspBIpNb259fRGWMi-bMkZ_Xtsqwemm7ov9DXA9AClkBfBVTW33rlPTpm_');">
+</div>
+<!-- Banner Content -->
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-8">
+<div class="space-y-2">
+<span class="bg-primary text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">限时联动</span>
+<h1 class="text-white text-4xl font-extrabold tracking-tight">《绝区零》× ACBOX 独家联动开启</h1>
+<p class="text-white/80 text-lg max-w-xl">全新艾利都冒险，立即下载获取专属限定头像框与周边奖励。</p>
+</div>
+</div>
+<!-- Carousel Indicators -->
+<div class="absolute bottom-6 right-8 flex gap-2">
+<div class="w-8 h-1.5 rounded-full bg-white"></div>
+<div class="w-2 h-1.5 rounded-full bg-white/40"></div>
+<div class="w-2 h-1.5 rounded-full bg-white/40"></div>
+</div>
+</div>
+<!-- Right: Search & App Download (25%) -->
+<div class="lg:w-1/4 w-full flex flex-col gap-6">
+<!-- Search Module -->
+<div class="bg-surface-container-lowest p-6 rounded-lg kinetic-shadow flex flex-col gap-4">
+<h3 class="text-on-surface text-lg font-bold">快速探索</h3>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-full py-3 pl-12 pr-4 text-sm focus:ring-2 focus:ring-secondary/20 placeholder:text-outline-variant" placeholder="搜索你感兴趣的二次元世界..." type="text"/>
+</div>
+</div>
+<!-- APP Download Guide -->
+<div class="flex-1 bg-surface-container-lowest p-6 rounded-lg kinetic-shadow flex flex-col justify-between border-t-4 border-secondary">
+<div class="space-y-3">
+<h3 class="text-on-surface text-lg font-bold">ACBOX 客户端下载</h3>
+<div class="flex gap-4 items-center">
+<div class="size-20 bg-white p-1 rounded-xl shadow-sm border border-surface-container-high">
+<img alt="QR Code" class="w-full h-full" data-alt="clean minimalist black and white qr code on a white background for mobile application download" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD61vzIRUKQX2ifBhWpeIVbvjb0jpgSHVtL47M2EZhLEdZBwVx8sKDIdPBVrbj9CBq1YVgsnklBlD9yaqizTxfvgdhkzXNhq_PlewXzQDb-bCJx2y-C21D2ObaCGyL_xdQcBOuxQ5ZBxX1-kbwPAdC6ntVRc1KFZWVKowCx4O2oLwaTUn1KGCowK3GoyUJ6X2PZBIdOI-0LXwScurjDEHZ_RQzy6TGx76R3rkgNW_z05E19TIbZXgKsrDuOOdVdtFkZpeTbgWlvTufw"/>
+</div>
+<div class="space-y-1">
+<div class="flex items-center gap-1 text-secondary text-xs font-bold">
+<span class="material-symbols-outlined text-sm">bolt</span>
+<span>更流畅体验</span>
+</div>
+<div class="flex items-center gap-1 text-tertiary text-xs font-bold">
+<span class="material-symbols-outlined text-sm">stars</span>
+<span>独家签到特权</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-3 mt-4">
+<button class="w-full bg-secondary text-white py-2.5 rounded-full flex items-center justify-center gap-2 text-sm font-bold hover:brightness-110 transition-all">
+<span class="material-symbols-outlined text-lg">android</span>
+                            Android 下载
+                        </button>
+<button class="w-full bg-surface-container-high text-on-surface py-2.5 rounded-full flex items-center justify-center gap-2 text-sm font-bold hover:bg-surface-container-highest transition-all">
+<span class="material-symbols-outlined text-lg">ios</span>
+                            iOS 下载
+                        </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Heavy Recommendation Section -->
+<section class="space-y-6">
+<div class="flex items-center justify-between">
+<h2 class="text-2xl font-extrabold flex items-center gap-2">
+<span class="w-2 h-8 bg-primary rounded-full"></span>
+                    重磅推荐
+                </h2>
+<a class="text-secondary text-sm font-bold flex items-center gap-1" href="#">查看全部 <span class="material-symbols-outlined text-sm">chevron_right</span></a>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- Card 1-8 (Simulated 2 rows) -->
+<div class="group cursor-pointer">
+<div class="relative aspect-video rounded-lg overflow-hidden mb-3">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="vibrant fantasy anime game landscape with floating islands and crystal clear waterfalls in a dreamy daylight setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC35X2hgGSvVrrIVy_odx1ad5kla9_ClrHMBemWjQ8ABN9mc2QZ-X31bCjtcKB9L55AXvlssQIg3059EDEBNOgGFAKOmYGOlZ0acM44qeIBvnM4jHpXZ-gMtDUlAn_Q5MonsN3e5aukTu35V8v_vBv_R7lRXQHwJvgyjlqvhMZKaFM01TaaOJ50JnRmVBD-Q3T_sVJvuArbKW6rBSpYwuI6CYht6FT3AwInu0711CPvrl1BtwZP2P58pSsUyNg4JuCz_8av2iT-eIFv"/>
+<span class="absolute top-3 left-3 bg-secondary text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">国际服</span>
+</div>
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors">原神：纳塔篇章即将开启</h4>
+</div>
+<div class="group cursor-pointer">
+<div class="relative aspect-video rounded-lg overflow-hidden mb-3">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="cyberpunk anime street scene at night with vibrant neon signs and reflections on rainy pavement" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmuTZtujJMMya8jCzg5xKe-KypzXIod-X9uM6V6NJjdHgHESKKqcDE69NO-Ijwh8cI_SxSUgMHMJ6FrU4irW7RtqXrBmep1ReT2CaL2kHr3ErUMqvPv2faC4x_qPeaEjIk4Ymh21LXNfblbasoWgTfgvKLLPUHJPQA13eTWie5lWQ3opVvuXFPjTZaZ0P0q6Ts63YF1KfR2YOmgdyy9cB41PjJD4k0SvXsV-rx5_meXeM3JTraTs_vdGti5MU9uquozwWGtit9oxIz"/>
+<span class="absolute top-3 left-3 bg-tertiary-container text-on-tertiary-container text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">测试服</span>
+</div>
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors">绝区零：1.1版本前瞻</h4>
+</div>
+<div class="group cursor-pointer">
+<div class="relative aspect-video rounded-lg overflow-hidden mb-3">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="cinematic anime space scene with a futuristic spaceship flying through a colorful nebula and sparkling stars" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJUCNoK4XlkcPinasEjlN4qC_1EJN2hBhvBDDkHLT5WGUa3pyN6r_RvAuCaO3VHf7LsPfsd2yOzFBEtIzDMADO4l9QSpMxch6evqi1gC48kbyLkvOk0bmYrwp6A83begujfT05Ktnmxwhev2Do_GatOdI6jBWTRIQVwdnWrBF0Dw2O9e5qwZJ0rzgKmAWt6TG4qehEqkg_pNcHls9blz0Zo0w9jF1sYFvTD-xPFqoV8Scw8lmWMPpmaa41u-Mub1wEg5p5bTkKIawl"/>
+<span class="absolute top-3 left-3 bg-secondary text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">国际服</span>
+</div>
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors">崩坏：星穹铁道 角色复刻</h4>
+</div>
+<div class="group cursor-pointer">
+<div class="relative aspect-video rounded-lg overflow-hidden mb-3">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="detailed anime illustration of a magical academy library with floating books and warm magical lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSZHY2MSpGGxA6oJaqe4aNGp_2HnGDH0iixJWf3lcHlVKnWtw6ltIovkWxcDFl5eOsfYlOf2p402eJcxH2t3d20FRDsgZTj69VdurAwF7MVfc54BWFV3yv9jcWke1DIY7ICYTn3F176jleamnmdi869g0KQzSW8ALhHisy_srj3BJ2MBsaMbTo4t6CuA6Uh_oaz4Qas0HLsKiGzceBx57daIW8CzpfLY7DV3xyYipst5YaxYftdWp4J5MrAQwfh_mj3cy5vqLiZzBL"/>
+<span class="absolute top-3 left-3 bg-error-container text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">Hot</span>
+</div>
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors">鸣潮：新角色登场预告</h4>
+</div>
+<!-- Row 2 -->
+<div class="group cursor-pointer">
+<div class="relative aspect-video rounded-lg overflow-hidden mb-3">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="vibrant anime beach scene during a summer festival with fireworks in the night sky and traditional stalls" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDoNCL8PGaOxDCfex_vjy4hH-f3fFRz64SfVF_FpSquOBoJ4dY38FNFhUojaKyyT4g4EyOeQJkQV7GmmxkeNipAsLs8Lb8Xz6Dvn5W5wIOjb7w-g8diLRlRM2nEYAeDQ-LV-_O8gsSLUpWpNJ0_zV6YlXZq-aUpqf21CsXnDoWBRJQhcTTc16kINv6q8HUunSMAR6sfYeYAPn2CipIc1I7YADL6tX7Vbwatm_ElrFVjrzZrZqRx9UpSf4JtFfDOErfK9jQ2kZ6h_gWX"/>
+<span class="absolute top-3 left-3 bg-secondary text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">国际服</span>
+</div>
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors">碧蓝航线：夏季限定活动</h4>
+</div>
+<div class="group cursor-pointer">
+<div class="relative aspect-video rounded-lg overflow-hidden mb-3">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="intense anime mecha battle scene with giant robots and fiery explosions on a desolate battlefield" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD35mGTqgWw3qV96NWHeYnbOCm6si53P6LT7ZJRdHSiv1uUBK3qlUqd5MrghBVGJNhQhVAZ6vpRGfYSvDjF-oKXS6bPVheqkViSzrW8ZBIqCYCXreBXLbKzQGSjuP9abLirwxi-gkbX7oZbXQh9aFO6TKY-OAgJUuIEUpOmAfQHzAo1SbdcKhA-qpPiUvVVYR2_GaRoW0jdXJ0Kfq0g3_qQUeYI6WKVPN4vNntDAJnSq2mbxZWtIW582iaKMJGKBsgsB9RiGw_BQVfL"/>
+<span class="absolute top-3 left-3 bg-tertiary-container text-on-tertiary-container text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">测试服</span>
+</div>
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors">明日方舟：新SideStory</h4>
+</div>
+<div class="group cursor-pointer">
+<div class="relative aspect-video rounded-lg overflow-hidden mb-3">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="peaceful anime scene of a traditional japanese shrine surrounded by blooming cherry blossoms and soft sunlight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_uAdoeArangescBpANp4uppz5hU-DoqMGZH_N5BGTZuvIWdO08H5kHe0yzjGzmpjMQA4HuD9kbEwAO2hsDWFzZ1IjhhinpmqWuu59NI4vJX2HZVW7An_-v-Ao7bgwuGY_n3qtSpWSrmw-qCUqNZYqqwlWY4G_jJfByOldhPF0Npag_oKnq_jJYow8fV_6PxSQwMlnrBsuAP-zYQnOnMqh3dGeVnzYK39Ie0Q48wsKm9D6-9MgJay_MIGtSUzzEBD2A3AJxveaAk9K"/>
+<span class="absolute top-3 left-3 bg-secondary text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">国际服</span>
+</div>
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors">FGO：全新主线章节</h4>
+</div>
+<div class="group cursor-pointer">
+<div class="relative aspect-video rounded-lg overflow-hidden mb-3">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="vertiginous vertical view of an anime cyber city with flying vehicles and glowing holographic advertisements" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvc6HaivSPDs-B71r-SOBPBoOni9M_5QoRdPWbTU_xQQWxyJwNcC8hD_g9lsS7Bzx8du2A409HpKp9e9UtYPMsOYNBvtOfiSaLBCSDPgvj35BsXzulSBzIRiul76QqcWbr96RvcdlaTJibuulHXpZKZK8OTOV3M2W42H3jW3muOu2jLkkb_5aHAohgm1BEXWKd88wV6IWyzxvZhxh8zCgWWNF_mNH4kS6eB9SFIIMOne85j0rFoz81KkgJV-DP2Uw6LmkDF6q6Yq9r"/>
+<span class="absolute top-3 left-3 bg-tertiary-container text-on-tertiary-container text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">测试服</span>
+</div>
+<h4 class="font-bold text-on-surface group-hover:text-primary transition-colors">异环：高自由度探索体验</h4>
+</div>
+</div>
+</section>
+<!-- Main Content Area: Ranking & Updates -->
+<div class="flex flex-col lg:flex-row gap-10">
+<!-- Left Side: Updates & Tools -->
+<div class="lg:w-2/3 space-y-12">
+<!-- Recently Updated -->
+<section class="space-y-6">
+<h2 class="text-2xl font-extrabold flex items-center gap-2">
+<span class="w-2 h-8 bg-secondary rounded-full"></span>
+                        最近更新
+                    </h2>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+<!-- 8 Items simulated -->
+<div class="bg-surface-container-low p-4 rounded-lg flex items-center gap-3 hover:bg-surface-container-high transition-colors cursor-pointer">
+<div class="size-12 rounded-lg bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA1bVa1j_WGZGAEFsjfP5RGuIUYWVXtUCAFZlb7SvMUibEzLezXDG0lSW5071XA4t6cva8CSAxlHn6M2EXbwAGsc6rliWgBN_LXw97xjdvv-oJPsqs0PsfMlcZytCdXlh_c43dtQ97TLdGL2u2sZFMjm_tg1wFjuI1wQl2XfVMBkn8l76heIkZAXQB2gWnpQ2ARsl0uNMzUngJA10BSURxdfo34QIkpVftbxeh3BVF-Ercz3NYZ-dzHNPOUdQfzvOUc9slwPJbxWlR3');"></div>
+<div>
+<p class="font-bold text-sm truncate">重返未来1999</p>
+<p class="text-[10px] text-outline">今天 14:00</p>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg flex items-center gap-3 hover:bg-surface-container-high transition-colors cursor-pointer">
+<div class="size-12 rounded-lg bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBCAT778MnVySELahdSWytGAEA5mUezoZlr0G7K7KpnfFtuBYSnN6iqJChW6UrB0O3vsZee8fgxRuNAZA_NAdVrflHuyGiMJc-Lu-2KExcJmkeIqdh9hfCfzzhTuOI2PzKD_PH8ce6vi4cIgVSEowq9yHj0LBBvWKDSHYvVg9-PkPHWwTKBHpygyfUqOP_5VH3mLEFgJ1qA826lRy-6CxRm5jeFSu1a1Re_7kt_E0WHzgJkZSMB6RFSjqHzIeuofrmMEKHeH_KH4D35');"></div>
+<div>
+<p class="font-bold text-sm truncate">无期迷途</p>
+<p class="text-[10px] text-outline">今天 10:20</p>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg flex items-center gap-3 hover:bg-surface-container-high transition-colors cursor-pointer">
+<div class="size-12 rounded-lg bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDIaJGfJi5VW2ViNm1TELtaovZVlyenznF0zgKApjr5h2hoFDfI3XQhW76VWFJiTDCxRuIInA3pieiC3W456FF7oYH5qSUAN_FO7pLJ3_elBTRD714IkLzsaHa4NzypvMw7d7n_a6U8DbpHYW09WWiMpBFI1fLDYgC1RimMVzMPaQ0agHU77zr0IbY3rgFkWaOJqmE_bB4MAo2NFzKyim8nWSmkwZkBYKNSlV3ByI3Ig42m5sUSqXbKowCiaSreL3RpA_dyM8QFqHg1');"></div>
+<div>
+<p class="font-bold text-sm truncate">蔚蓝档案</p>
+<p class="text-[10px] text-outline">昨天</p>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg flex items-center gap-3 hover:bg-surface-container-high transition-colors cursor-pointer">
+<div class="size-12 rounded-lg bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCAWxtGWTop4abz1f-owxUbb1grql75zPliR73rJzrwODVQ69TzOTXu3gfMZ_FGRVzCDSm5c033SeBnxjsbhQFsMiIbvYXTeBoxHvvicZW12x_XG3BizhYZ8GdJP17iGfES15AaJxRqtfV7TGIbQjHHl49_qi30U0mKeWklt5ParpEhPijdxid0f7I-u_PNXFhIjEtZWIdxeKjC83amOn7kl4VBcstoMZNFnbDm36evewLKUw51cPXsJQFBAtaOPFC8ryp1krfozGRJ');"></div>
+<div>
+<p class="font-bold text-sm truncate">少女前线2</p>
+<p class="text-[10px] text-outline">昨天</p>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="bg-surface-container-low p-4 rounded-lg flex items-center gap-3 hover:bg-surface-container-high transition-colors cursor-pointer">
+<div class="size-12 rounded-lg bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCO9ry3nBVsM_1fzP7n1A_-IVE7xCGCGUQ4JUEi9K7bEI-cEuvyg0r6GvLYgwNdhmS_HPS42lH_d4K5Dw9gCnJTQLHVborJmhHfe7gc3sl1om_2VZsCd2OWp26kmCwHGuvsJ9MoimuLA_GuibghdnD6HxApWdxyBbVf0bxzIkFD0-NHZne3HUeikwGDFn_m_QRM1w3t_oPWXwKTP6GHRm5Sdd8of_afP_UAc_r0lrY_ChZfjXQvXG-IFNlMHv6Mydl7JVVslS5lfBpJ');"></div>
+<div>
+<p class="font-bold text-sm truncate">白夜极光</p>
+<p class="text-[10px] text-outline">2天前</p>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg flex items-center gap-3 hover:bg-surface-container-high transition-colors cursor-pointer">
+<div class="size-12 rounded-lg bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCeHhgGrxziRrjbY75UJ0xIC2Acm-V7gBMnyiKi1dDr2xNbQYt6iecerxYWb_7GgQWFXdhhMV2YzlTbOzNhMLfI67ZXktEYvZMQrCgr0bSYk-8-zfQrg9V5w5j6hjsVEi4VhXDPzEvzqiq5j6mEfkytf4nCt3J5l2QDRs3_XgQZyQY1GqyPljjO9Lsw-o9tMpndewEh6huhNJ2GBbNqx9ouw7AAKNO64tR8f5BiLtxtIIainESXzdKIyhKdg3Luv4ZVPLjvZmIgIAAB');"></div>
+<div>
+<p class="font-bold text-sm truncate">尘白禁区</p>
+<p class="text-[10px] text-outline">2天前</p>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg flex items-center gap-3 hover:bg-surface-container-high transition-colors cursor-pointer">
+<div class="size-12 rounded-lg bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDhQfhWau6Bp3_AqDitWBYgs-pQcR7IXRC-7H3n6i6MCXMNeZIdIb4Qv124lP64WJimUN2bayLT435zjtUylkgIlJ85t8OMi17KO0ff-_sNF6XsCo2_b3JegNUQxbqxVu1hnJUng88fiRFiwsvo3J0wXLKOYTRx40nUqeWyKDCLLvopSoD-VyxDRMiwXArRRBQJ0EdTKlNtx-nzq-G2Cza9zNgkbve2GhpDRK8_wFOEogLRKnQB9KgTr_jZDYsyT6U9l61UIu8_pNQg');"></div>
+<div>
+<p class="font-bold text-sm truncate">第七史诗</p>
+<p class="text-[10px] text-outline">3天前</p>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg flex items-center gap-3 hover:bg-surface-container-high transition-colors cursor-pointer">
+<div class="size-12 rounded-lg bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDZ9QfRUpSEwInffcAyfXofBLaHvt3MAV_DIItg066AOkWIg6eVyQ7Swpe2BQIVlwWb-sCkdyX8lxIsfFSCFPcLqtCWzrjL9QWZYxkvoIQA6Bh4p4aE5L2-bUONkh5flY9lpRJP4dPVlY812OFFxwuBvK0UrHLHfSLJTl26KkNP-wT6YPfZlVB_siJlh6RgUbC_LMyj88ovuLQPrI1PNnrdFmMkI4rFEJSTwsYL_q3-wWzOyppb2idz2iAMBoEvKyBamHC5XzDUZwlz');"></div>
+<div>
+<p class="font-bold text-sm truncate">坎公骑冠剑</p>
+<p class="text-[10px] text-outline">3天前</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Pre-registration -->
+<section class="space-y-6">
+<h2 class="text-2xl font-extrabold flex items-center gap-2">
+<span class="w-2 h-8 bg-tertiary-container rounded-full"></span>
+                        事前登录
+                    </h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-surface-container-high flex justify-between items-center group">
+<div class="flex items-center gap-4">
+<div class="size-14 rounded-xl bg-surface-container shadow-inner bg-cover" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA5w1ydGhK91to69MMLegbvyhbGXVQwFkM0MoSviVl1PINcYp6mKRcZfRAj_NtQTQKSXJhS8yYwVNUEVLoHI4UP8QsumaplNxpTzqby4EGJ8eEOf82lL49XEkuZHsW_DMRzbXO_HWHSjrszxT2xbASTwfh0F5pGwucDWIO4jtE9HtaWvgyy__x2qmg2ssuXGbQyTuF1CpK76riE5X4ZqAxyP4e0MqCaeIRFIf0LmLC48VwlUHOjRNtEYe-FIPM5q1a6uIEiM0VjCGBx');"></div>
+<div>
+<h4 class="font-bold">无限大 (Infinity Nikki)</h4>
+<p class="text-xs text-outline">开放世界 × 换装冒险</p>
+<p class="text-[10px] text-secondary font-bold">1,245,678 人已预约</p>
+</div>
+</div>
+<button class="bg-primary text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-transform">预约</button>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-surface-container-high flex justify-between items-center group">
+<div class="flex items-center gap-4">
+<div class="size-14 rounded-xl bg-surface-container shadow-inner bg-cover" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDUFeYoQbYk59Vn-kfnga3yPfAKuhZ3Yyho6kz4l4AZ45GfbwZ8GpO6kU_wzU5UMwS-DjPv-jRdPwhkvweoqlKMW1n0pV6ioyq7q9EkI1WomPVSek25ctOY4f_M-bIHjsCVsg1OlexYFENmL3kEIF_My1R0xrgiVkubM4ZP3XSUm08Q63ALbLcXzMJMgfi5RR9vxJ-Bf2BJMtdwSvhRzhUCMZjthA_FmfJkn0OpOkcn_rcv2wqbgiS2GZlsSk6sgDgxShnaSuy1BDyH');"></div>
+<div>
+<h4 class="font-bold">破晓：战歌</h4>
+<p class="text-xs text-outline">史诗级日系RPG</p>
+<p class="text-[10px] text-secondary font-bold">892,100 人已预约</p>
+</div>
+</div>
+<button class="bg-primary text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-transform">预约</button>
+</div>
+</div>
+</section>
+<!-- News & Articles -->
+<section class="space-y-6">
+<h2 class="text-2xl font-extrabold flex items-center gap-2">
+<span class="w-2 h-8 bg-primary-container rounded-full"></span>
+                        游戏资讯
+                    </h2>
+<div class="space-y-4">
+<div class="flex gap-4 p-4 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer">
+<div class="w-40 h-24 rounded-lg bg-cover bg-center shrink-0" data-alt="stylized anime illustration suitable for a magazine cover with clean layout and vibrant aesthetic" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDz49lxcCCELxljeJx4JxvniCLRVFOYXF4NRA8kV4TlIkE0Nz90A2V3U7k3fGgTuHqBEAS18_Ib-Sjl9TWh4WxnOs5N9hN3I37vVsGnGwDhheSa4eKZidOJQRB7wJEb52XBayQcbPxYDpkdZJOESSGww7s1w11je9_CI76e25SIwz11FONBkMkP3C8JhPP7oGY9nzGSXVdmw4ushvnnfRwNuPnSNAyB880JhbXWBkqrqUNuu7yms8cnEp8gABSWnMX4rjwrtwM6QHPW');"></div>
+<div class="flex flex-col justify-between py-1">
+<h4 class="font-extrabold text-lg leading-snug">深度解析：米哈游新作《绝区零》的工业化美学演进</h4>
+<p class="text-sm text-outline-variant line-clamp-1">从早期概念图到公测版本，我们邀请了多位业内人士共同探讨...</p>
+<div class="flex items-center gap-4 text-[10px] text-outline">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-xs">visibility</span> 4.2w</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-xs">chat_bubble</span> 328</span>
+<span>2小时前</span>
+</div>
+</div>
+</div>
+<div class="flex gap-4 p-4 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer">
+<div class="w-40 h-24 rounded-lg bg-cover bg-center shrink-0" data-alt="anime character design sketches showing multiple views and details on a clean paper texture background" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBBK_kpwFxQsRpAS_y0ZTDdmBl7xeMC7Php6VQx1Oeirw9Xav_y_ACbSFRNNWRfxOVeweIr8cS-2D7iHvpHWXDXwoRtdGJHMdsgVk-hNOKa8jCmB7dTWVOzcSftkNuVnr29w8q1Fy2X3JiHBGiw_m17W4M3via_tgjby4LJKUyi7jEEJ-mHhHhzbv0Nq36dvMVuYoLfdVamelPDmOCNhoVAR-WR08EEdlZSQYNgCVkQNYhouVRKfCTiAJBXtheFNcoYGg8Bnw0XvmTn');"></div>
+<div class="flex flex-col justify-between py-1">
+<h4 class="font-extrabold text-lg leading-snug">新游周报：本周共有 5 款二次元新作开启公测</h4>
+<p class="text-sm text-outline-variant line-clamp-1">涵盖了塔防、卡牌以及ARPG等多种品类，点击查看详细评测...</p>
+<div class="flex items-center gap-4 text-[10px] text-outline">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-xs">visibility</span> 2.8w</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-xs">chat_bubble</span> 156</span>
+<span>5小时前</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Side: Rankings & Efficiency Tools -->
+<div class="lg:w-1/3 space-y-12">
+<!-- Popular Game Rankings -->
+<section class="space-y-6">
+<h2 class="text-2xl font-extrabold flex items-center gap-2">
+<span class="w-2 h-8 bg-secondary rounded-full"></span>
+                        热门游戏榜
+                    </h2>
+<div class="bg-surface-container-lowest rounded-lg kinetic-shadow overflow-hidden">
+<div class="p-2">
+<!-- Top 1 -->
+<div class="flex items-center gap-4 p-3 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer">
+<span class="text-2xl font-black text-primary italic w-6 text-center">1</span>
+<div class="size-12 rounded-lg bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCLRv8dURvLjG7s6ZKuHgq4YRK2SBWw70aflescK8sfub6ZApZtSXjX_KCPlDBwyHDnNY-IPkn8Vublw6tYCV7_Ql-cK8LQIKHtfvjl17tkKJnu77OY5L49h7MLfUjx_0qeM3sk-FAa6Gz3RZazsFB5m2Y5BLPt30mjp4YzDUjWdHeYp34JgQ6NE960kvsqcb53er22-xJf6iKj8PzOvjon_gzFf6yT-68rGgDQgneNebgI9FjUgU-0o-p5NUJymFe0a-UmfawFUTrG');"></div>
+<div class="flex-1">
+<h5 class="font-bold text-sm">原神</h5>
+<p class="text-[10px] text-outline">热度值 988.2w</p>
+</div>
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">trending_up</span>
+</div>
+<!-- Top 2 -->
+<div class="flex items-center gap-4 p-3 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer">
+<span class="text-2xl font-black text-primary-container italic w-6 text-center">2</span>
+<div class="size-12 rounded-lg bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCTRRYsoXSGMUgq4110Jx53mOYAshMDHNGq9DQC1ZnYkx4glSGJF3iyo0GoUDqfdt5zOFgnNBq7wzaTh66DwGUQJfQvaAadJ3aQlSKqgauuZ8jrzuhyuPaqmKC0UOg1K5tMkgx4cT2j7znRWqRp5F8d4rLlyuzgtr-6cW440T4RmZr-eDzNlpKIFE_X2o595hrKi86i8qgH0ubhDgsSdm-0b0DE3QjhhGndP11zms2Q0lCgHlR4t68HNHlwV9sP6l7lIC3OgbdALjyQ');"></div>
+<div class="flex-1">
+<h5 class="font-bold text-sm">绝区零</h5>
+<p class="text-[10px] text-outline">热度值 854.1w</p>
+</div>
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">trending_up</span>
+</div>
+<!-- Top 3 -->
+<div class="flex items-center gap-4 p-3 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer">
+<span class="text-2xl font-black text-tertiary-container italic w-6 text-center">3</span>
+<div class="size-12 rounded-lg bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDWyXP5PsFjHReFDeISJdugxAYEDxE2ZzH-KA0Ro1v6cQuj1AnN_XwgQogAMGkSLsJzlimovC8eSosCZU17xSI0kj5dhDw8RNrcZGvfPuG81MBVtJ4l3VhgKk-ZyDraZ1I5tOWPN1dvJK7jqCek1WDqVqy35LccBtmlHi2eqRAntMxyly6NxwPoeDCSUkqGswzHUOLBh11NrL8Q_qsVe9HDg7sJiKv8r-YJqBSGKPgWKRHHzxHKj-Ibodj-HSCePohJoT1qj1T0YbDA');"></div>
+<div class="flex-1">
+<h5 class="font-bold text-sm">明日方舟</h5>
+<p class="text-[10px] text-outline">热度值 722.5w</p>
+</div>
+<span class="material-symbols-outlined text-outline text-sm">horizontal_rule</span>
+</div>
+<!-- Others -->
+<div class="flex items-center gap-4 p-3 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer">
+<span class="text-lg font-bold text-outline italic w-6 text-center">4</span>
+<div class="size-10 rounded-lg bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCDLHx8kH8XM9E5gQjX1PxLtbUUWfkLgmbyRcmLNfypO-tYISfe8VvI1oyHc8nJhIfPbkiyiOqrMsjW2xRYxBq-B1M-ojl6dAw7YOPobVkUo0sUZKrG2Q-ao3Da9bKyGlVwLku0kmJajHTDbIlkEknMB1PRoFaI8j9sJOM1TikomnnAV6Yuyu0TMKF7hqXqP2pmRzM7M4cmgu9bTZhmeV8Vm2ecTHTSYtpYNq1rGZMV67lMchM46q58j1ISsKLvTxssV0DcTbmJc98-');"></div>
+<div class="flex-1">
+<h5 class="font-bold text-sm">崩坏：星穹铁道</h5>
+</div>
+</div>
+<div class="flex items-center gap-4 p-3 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer">
+<span class="text-lg font-bold text-outline italic w-6 text-center">5</span>
+<div class="size-10 rounded-lg bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA_L53NQPV4PWdkHc_wGj7x7PtKWLGywkch6wOby9tiUFpUQz4kD7rFCLQda9ZX_t5HZlmQ6eZQtgKCyjO-eiXGL49yn-lE_xcj_EGUKlEpf_1w-5Y_XxZ95OKS41SHpBQG8sw68qx1bdQTwcS17aY-gJeh9Vnb62Xi_UhSrEe_b2WAKHcFyqdCxUAbqkXbAnws14BaTBDcwKJ5lhpu53Ou6j4HnewrcDPEu8ubts3rDAH7a_BkNpD3z1KgYrraLasF-y4lpGHWjrgF');"></div>
+<div class="flex-1">
+<h5 class="font-bold text-sm">鸣潮</h5>
+</div>
+</div>
+</div>
+<button class="w-full py-4 bg-surface-container text-outline text-xs font-bold hover:text-on-surface transition-colors">查看完整榜单</button>
+</div>
+</section>
+<!-- Efficiency Tools -->
+<section class="space-y-6">
+<div class="flex items-center justify-between">
+<h2 class="text-2xl font-extrabold flex items-center gap-2">
+<span class="w-2 h-8 bg-primary rounded-full"></span>
+                            效率工具
+                        </h2>
+<a class="text-secondary text-xs font-bold" href="#">查看更多</a>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-lowest p-4 rounded-lg flex flex-col items-center gap-3 kinetic-shadow cursor-pointer hover:-translate-y-1 transition-transform border border-surface-container-high">
+<div class="size-12 rounded-full bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container">map</span>
+</div>
+<p class="font-bold text-xs">大地图工具</p>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-lg flex flex-col items-center gap-3 kinetic-shadow cursor-pointer hover:-translate-y-1 transition-transform border border-surface-container-high">
+<div class="size-12 rounded-full bg-tertiary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-tertiary-container">calculate</span>
+</div>
+<p class="font-bold text-xs">抽卡模拟器</p>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-lg flex flex-col items-center gap-3 kinetic-shadow cursor-pointer hover:-translate-y-1 transition-transform border border-surface-container-high">
+<div class="size-12 rounded-full bg-surface-container-high flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary">database</span>
+</div>
+<p class="font-bold text-xs">Wiki 图鉴</p>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-lg flex flex-col items-center gap-3 kinetic-shadow cursor-pointer hover:-translate-y-1 transition-transform border border-surface-container-high">
+<div class="size-12 rounded-full bg-error-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-error">calendar_month</span>
+</div>
+<p class="font-bold text-xs">卡池排期表</p>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+<footer class="bg-surface-container-low mt-20 py-12 px-10 border-t border-surface-container-high">
+<div class="max-w-[1280px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+<div class="flex items-center gap-4 text-on-surface opacity-50">
+<div class="size-6">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M39.475 21.6262C40.358 21.4363 40.6863 21.5589 40.7581 21.5934C40.7876 21.655 40.8547 21.857 40.8082 22.3336C40.7408 23.0255 40.4502 24.0046 39.8572 25.2301C38.6799 27.6631 36.5085 30.6631 33.5858 33.5858C30.6631 36.5085 27.6632 38.6799 25.2301 39.8572C24.0046 40.4502 23.0255 40.7407 22.3336 40.8082C21.8571 40.8547 21.6551 40.7875 21.5934 40.7581C21.5589 40.6863 21.4363 40.358 21.6262 39.475C21.8562 38.4054 22.4689 36.9657 23.5038 35.2817C24.7575 33.2417 26.5497 30.9744 28.7621 28.762C30.9744 26.5497 33.2417 24.7574 35.2817 23.5037C36.9657 22.4689 38.4054 21.8562 39.475 21.6262ZM4.41189 29.2403L18.7597 43.5881C19.8813 44.7097 21.4027 44.9179 22.7217 44.7893C24.0585 44.659 25.5148 44.1631 26.9723 43.4579C29.9052 42.0387 33.2618 39.5667 36.4142 36.4142C39.5667 33.2618 42.0387 29.9052 43.4579 26.9723C44.1631 25.5148 44.659 24.0585 44.7893 22.7217C44.9179 21.4027 44.7097 19.8813 43.5881 18.7597L29.2403 4.41187C27.8527 3.02428 25.8765 3.02573 24.2861 3.36776C22.6081 3.72863 20.7334 4.58419 18.8396 5.74801C16.4978 7.18716 13.9881 9.18353 11.5858 11.5858C9.18354 13.988 7.18717 16.4978 5.74802 18.8396C4.58421 20.7334 3.72865 22.6081 3.36778 24.2861C3.02574 25.8765 3.02429 27.8527 4.41189 29.2403Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<p class="font-extrabold">ACBOX</p>
+<p class="text-xs">© 2024 ACBOX Digital Entertainment</p>
+</div>
+<div class="flex gap-8 text-xs text-outline font-medium">
+<a class="hover:text-primary" href="#">关于我们</a>
+<a class="hover:text-primary" href="#">服务协议</a>
+<a class="hover:text-primary" href="#">隐私政策</a>
+<a class="hover:text-primary" href="#">联系我们</a>
+</div>
+</div>
+</footer>
+</body></html>

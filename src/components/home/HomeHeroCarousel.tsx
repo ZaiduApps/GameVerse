@@ -16,33 +16,69 @@ function isExternalUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
 }
 
+function hasProtocol(value: string): boolean {
+  return /^[a-z][a-z\d+\-.]*:/i.test(value);
+}
+
+function normalizeGotoType(value: string | undefined): 'game' | 'url' | 'article' | 'news' | 'unknown' {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'game' || normalized === 'url' || normalized === 'article' || normalized === 'news') {
+    return normalized;
+  }
+  return 'unknown';
+}
+
+function toInternalPath(value: string): string {
+  const cleaned = String(value || '').trim();
+  if (!cleaned) return '/';
+  if (cleaned.startsWith('/')) return cleaned;
+  return `/${cleaned.replace(/^\/+/, '')}`;
+}
+
 function toNewsHref(value: string): string {
   const cleaned = String(value || '').trim();
   if (!cleaned) return '/news';
   if (isExternalUrl(cleaned)) return cleaned;
-  if (cleaned.startsWith('/news/')) return cleaned;
-  if (cleaned.startsWith('/')) return cleaned;
-  return `/news/${cleaned.replace(/^\/+/, '')}`;
+  const normalized = cleaned.replace(/^\/+/, '');
+  if (/^news(\/|$|\?)/i.test(normalized)) return `/${normalized}`;
+  if (/^articles?(\/|$|\?)/i.test(normalized)) return `/${normalized.replace(/^articles?/i, 'news')}`;
+  if (cleaned.startsWith('/')) {
+    const tail = normalized.split('/').filter(Boolean).pop();
+    return tail ? `/news/${tail}` : '/news';
+  }
+  return `/news/${normalized}`;
+}
+
+function toGameHref(banner: ApiBanner, rawLink: string): string {
+  const gamePkg = String(banner.game?.pkg || '').trim();
+  const gameId = String(banner.game?._id || '').trim();
+  if (gamePkg || gameId) return `/app/${gamePkg || gameId}`;
+  const cleaned = String(rawLink || '').trim();
+  if (!cleaned) return '/app';
+  if (isExternalUrl(cleaned)) return cleaned;
+  const normalized = cleaned.replace(/^\/+/, '');
+  if (/^app\//i.test(normalized)) return `/${normalized}`;
+  return `/app/${normalized}`;
 }
 
 function getBannerHref(banner: ApiBanner): string {
   const rawLink = String(banner.url_link || '').trim();
-  if (rawLink && isExternalUrl(rawLink)) return rawLink;
+  const gotoType = normalizeGotoType((banner as { goto_type?: string }).goto_type);
 
-  if (banner.goto_type === 'game') {
-    const gamePkg = banner.game?.pkg;
-    const gameId = banner.game?._id;
-    if (gamePkg || gameId) return `/app/${gamePkg || gameId}`;
-    if (rawLink) return `/app/${encodeURIComponent(rawLink.replace(/^\/+/, ''))}`;
+  if (gotoType === 'game') {
+    return toGameHref(banner, rawLink);
   }
 
-  if ((banner.goto_type === 'article' || banner.goto_type === 'news') && rawLink) {
+  if ((gotoType === 'article' || gotoType === 'news') && rawLink) {
     return toNewsHref(rawLink);
   }
 
   if (rawLink) {
-    if (rawLink.startsWith('/')) return rawLink;
-    return `/${rawLink.replace(/^\/+/, '')}`;
+    if (hasProtocol(rawLink)) return rawLink;
+    return toInternalPath(rawLink);
+  }
+  if (banner.game?.pkg || banner.game?._id) {
+    return toGameHref(banner, rawLink);
   }
   return '#';
 }
@@ -58,15 +94,22 @@ function getWrappedIndex(index: number, length: number): number {
 }
 
 function ActionLink({ href, className, children }: { href: string; className: string; children: ReactNode }) {
-  if (isExternalUrl(href)) {
+  if (hasProtocol(href) || href.startsWith('//') || href.startsWith('#')) {
+    const openInNewTab = isExternalUrl(href);
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+      <a
+        href={href}
+        target={openInNewTab ? '_blank' : undefined}
+        rel={openInNewTab ? 'noopener noreferrer' : undefined}
+        className={className}
+        data-no-drag="true"
+      >
         {children}
       </a>
     );
   }
   return (
-    <Link href={href} className={className}>
+    <Link href={href} className={className} data-no-drag="true">
       {children}
     </Link>
   );
@@ -378,6 +421,7 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
                 </ActionLink>
                 <Link
                   href="/app"
+                  data-no-drag="true"
                   className={compact
                     ? 'inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/10 px-4 py-2 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-white/20'
                     : 'inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/10 px-5 py-2.5 text-sm font-medium text-white backdrop-blur transition-colors hover:bg-white/20'}

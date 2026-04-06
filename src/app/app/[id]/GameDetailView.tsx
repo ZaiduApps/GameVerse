@@ -81,6 +81,45 @@ function cleanText(input?: string | null) {
     .trim();
 }
 
+function markdownToPlainText(input?: string | null) {
+  if (!input) return '';
+  return String(input)
+    .replace(/\r\n?/g, '\n')
+    .replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1')
+    .replace(
+      /<p[^>]*class=["'][^"']*defined-image[^"']*["'][^>]*>[\s\S]*?<\/p>/gi,
+      ' ',
+    )
+    .replace(/<img[^>]*>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/!\[([^\]]*)\]\((?:[^)]+)\)/g, '$1')
+    .replace(/\[([^\]]+)\]\((?:[^)]+)\)/g, '$1')
+    .replace(/^>+\s?/gm, '')
+    .replace(/^#{1,6}\s*/gm, '')
+    .replace(/^---+$/gm, ' ')
+    .replace(/^[-*+]\s+/gm, '')
+    .replace(/^\d+\.\s+/gm, '')
+    .replace(/[`*_~]/g, '')
+    .replace(/\b(?:https?|acbox|uu-mobile):\/\/[^\s<>"')\]]+/gi, ' ')
+    .replace(/<\/?(?:p|div|section|article|blockquote|li|ul|ol|h[1-6]|span|strong|em|code|pre)[^>]*>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getPostPreviewText(post: CommunityPost, maxLength = 180, fallback = '暂无内容') {
+  const contentText = markdownToPlainText(post.content || '');
+  const summaryText = markdownToPlainText(post.summary || '');
+  const source =
+    (summaryText.length >= 12 ? summaryText : '') ||
+    (contentText.length >= 12 ? contentText : '') ||
+    summaryText ||
+    contentText ||
+    fallback;
+  if (source.length <= maxLength) return source;
+  return `${source.slice(0, maxLength).trim()}...`;
+}
+
 function formatDateText(value?: string | null) {
   if (!value) return '未知';
   const date = new Date(value);
@@ -525,9 +564,9 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
         );
 
   return (
-    <div className="game-detail-stitch relative min-h-screen overflow-x-hidden bg-[#f5f6f7] text-[#2c2f30] dark:bg-background dark:text-foreground">
+    <div className="game-detail-stitch relative min-h-screen overflow-x-hidden bg-[#f5f6f7] text-[#2c2f30] dark:bg-[#080d14] dark:text-[#f3f6fb]">
       {hasDetailAnnouncements && (
-        <div className="relative z-20 px-4 pt-20 sm:px-6 lg:absolute lg:inset-x-0 lg:top-16 lg:px-16 lg:pt-0 2xl:px-20">
+        <div className="relative z-20 px-4 pt-20 sm:px-6 lg:px-16 lg:pt-6 2xl:px-20">
           <div className="mx-auto max-w-7xl">
             <GameAnnouncements announcements={detailAnnouncements as any} position="game_detail" />
           </div>
@@ -538,9 +577,9 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
         {heroImage ? (
           <Image src={heroImage} alt={`${game.name} 背景图`} fill priority className="object-cover object-center" sizes="100vw" />
         ) : (
-          <div className="h-full w-full bg-[#e6e8ea]" />
+          <div className="h-full w-full bg-[#e6e8ea] dark:bg-[#121924]" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#f5f6f7]/80 to-[#f5f6f7] dark:via-[#0c1016]/82 dark:to-[#0c1016]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#f5f6f7]/82 to-[#f5f6f7] dark:from-[#05070c]/28 dark:via-[#080d14]/86 dark:to-[#080d14]" />
       </div>
 
       <div className="fixed bottom-8 right-8 z-[60] hidden flex-col gap-3 lg:flex">
@@ -567,7 +606,12 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
 
       <div className="relative z-10 hidden px-4 pb-20 sm:px-6 lg:block lg:px-16 2xl:px-20">
         <div className="mx-auto max-w-7xl">
-          <section className="mb-8 pt-[208px]">
+          <section
+            className={cn(
+              'mb-8',
+              hasDetailAnnouncements ? 'pt-[136px]' : 'pt-[208px]',
+            )}
+          >
             <div className="flex items-end gap-10">
               <div className="h-36 w-36 shrink-0 overflow-hidden rounded-2xl shadow-2xl xl:h-40 xl:w-40">
                 {game.icon ? (
@@ -596,9 +640,9 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                     ))}
                   </div>
 
-                  <h1 className="truncate text-2xl font-extrabold tracking-tight xl:text-3xl">{game.name}</h1>
+                  <h1 className="truncate text-2xl font-extrabold tracking-tight text-[#111417] dark:text-[#f4f7fc] xl:text-3xl">{game.name}</h1>
 
-                  <div className="flex flex-wrap gap-5 text-sm text-[#595c5d]">
+                  <div className="flex flex-wrap gap-5 text-sm text-[#595c5d] dark:text-[#c4ccda]">
                     <span className="inline-flex items-center gap-1">
                       <Users className="h-4 w-4 text-[#005e9f]" />
                       开发者：{game.developer || '未知'}
@@ -813,7 +857,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                               </div>
                             </div>
 
-                            <p className="line-clamp-3 text-sm leading-relaxed text-[#2c2f30]">{cleanText(post.content || post.summary || '暂无内容')}</p>
+                            <p className="line-clamp-3 text-sm leading-relaxed text-[#2c2f30]">{getPostPreviewText(post, 180, '暂无内容')}</p>
 
                             {cover && (
                               <div className="relative mt-4 aspect-[16/9] overflow-hidden rounded-xl">
@@ -909,7 +953,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                             <p className="text-xs text-[#595c5d]">{post.timestamp}</p>
                           </div>
                         </div>
-                        <p className="line-clamp-2 text-sm text-[#595c5d]">{cleanText(post.summary || post.content)}</p>
+                        <p className="line-clamp-2 text-sm text-[#595c5d]">{getPostPreviewText(post, 120, '暂无内容')}</p>
                         <div className="flex items-center gap-5 text-xs text-[#595c5d]">
                           <span className="inline-flex items-center gap-1">
                             <ThumbsUp className="h-3.5 w-3.5" />
@@ -989,12 +1033,12 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
           {heroImage ? (
             <Image src={heroImage} alt={`${game.name} 封面图`} fill sizes="100vw" className="object-cover" />
           ) : (
-            <div className="h-full w-full bg-[#e6e8ea]" />
+            <div className="h-full w-full bg-[#e6e8ea] dark:bg-[#121924]" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#f5f6f7] via-transparent to-black/20" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#f5f6f7] via-transparent to-black/20 dark:from-[#080d14] dark:via-[#080d14]/30 dark:to-black/35" />
         </section>
 
-        <section className="relative z-10 -mt-16 rounded-[2rem] border border-[#abadae]/10 bg-white p-6 shadow-sm">
+        <section className="relative z-10 -mt-16 rounded-[2rem] border border-[#abadae]/10 bg-white p-6 shadow-sm dark:border-border/40 dark:bg-[#111824]">
           <div className="flex gap-4">
             <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl shadow-lg">
               {game.icon ? (
@@ -1004,21 +1048,21 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-xl font-extrabold">{game.name}</h1>
+              <h1 className="truncate text-xl font-extrabold text-[#111417] dark:text-[#f4f7fc]">{game.name}</h1>
               <div className="mt-1 inline-flex items-center gap-1 text-[#b71211]">
                 <Star className="h-4 w-4 fill-current" />
                 <span className="text-base font-bold">{normalizeScore(game.star)}</span>
               </div>
-              <p className="mt-2 text-xs text-[#757778]">
+              <p className="mt-2 text-xs text-[#757778] dark:text-[#9ca6b8]">
                 {game.download_count_show || '0'} 下载 · {formatBytes(game.file_size)}
               </p>
             </div>
           </div>
 
-          <div className="mt-5 flex items-center justify-between rounded-full bg-[#eff1f2] p-3">
+          <div className="mt-5 flex items-center justify-between rounded-full bg-[#eff1f2] p-3 dark:bg-[#1a2433]">
             <div className="ml-2 flex flex-col">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#757778]">当前版本</span>
-              <span className="text-sm font-bold">v {game.version || '未知'}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#757778] dark:text-[#9ca6b8]">当前版本</span>
+              <span className="text-sm font-bold text-[#1a1f26] dark:text-[#edf2fb]">v {game.version || '未知'}</span>
             </div>
             <Button
               type="button"
@@ -1139,7 +1183,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                           <p className="text-[10px] text-[#757778]">{post.timestamp}</p>
                         </div>
                       </div>
-                      <p className="line-clamp-3 text-sm leading-relaxed text-[#595c5d]">{cleanText(post.content || post.summary || '')}</p>
+                      <p className="line-clamp-3 text-sm leading-relaxed text-[#595c5d]">{getPostPreviewText(post, 150, '暂无内容')}</p>
                       {cover && (
                         <div className="relative mt-3 aspect-[16/9] overflow-hidden rounded-xl">
                           <Image src={cover} alt={post.title || post.summary || '帖子配图'} fill sizes="100vw" className="object-cover" />
