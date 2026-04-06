@@ -30,17 +30,31 @@ const VALID_TYPES: AnnouncementType[] = ['popup', 'marquee', 'normal', 'system']
 const VALID_THEMES: AnnouncementTheme[] = ['info', 'warning', 'success', 'error'];
 
 const THEME_ICONS = {
-  info: <Info className="w-5 h-5 text-primary mr-3 flex-shrink-0" />,
-  warning: <AlertTriangle className="w-5 h-5 text-yellow-500 mr-3 flex-shrink-0" />,
-  success: <Info className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />,
-  error: <AlertTriangle className="w-5 h-5 text-destructive mr-3 flex-shrink-0" />,
+  info: <Info className="w-5 h-5 mr-3 flex-shrink-0 text-sky-700 dark:text-sky-300" />,
+  warning: <AlertTriangle className="w-5 h-5 mr-3 flex-shrink-0 text-amber-700 dark:text-amber-300" />,
+  success: <Info className="w-5 h-5 mr-3 flex-shrink-0 text-emerald-700 dark:text-emerald-300" />,
+  error: <AlertTriangle className="w-5 h-5 mr-3 flex-shrink-0 text-rose-700 dark:text-rose-300" />,
 };
 
 const THEME_COLORS = {
-  info: 'border-primary/20 bg-primary/5',
-  warning: 'border-yellow-500/20 bg-yellow-500/5',
-  success: 'border-green-500/20 bg-green-500/5',
-  error: 'border-destructive/20 bg-destructive/5',
+  info: 'border-sky-200 bg-sky-50 dark:border-sky-500/35 dark:bg-sky-950/35',
+  warning: 'border-amber-300 bg-amber-50 dark:border-amber-500/35 dark:bg-amber-950/35',
+  success: 'border-emerald-300 bg-emerald-50 dark:border-emerald-500/35 dark:bg-emerald-950/35',
+  error: 'border-rose-300 bg-rose-50 dark:border-rose-500/35 dark:bg-rose-950/35',
+};
+
+const THEME_TITLE_COLORS = {
+  info: 'text-sky-900 dark:text-sky-100',
+  warning: 'text-amber-900 dark:text-amber-100',
+  success: 'text-emerald-900 dark:text-emerald-100',
+  error: 'text-rose-900 dark:text-rose-100',
+};
+
+const THEME_DESC_COLORS = {
+  info: 'text-sky-800 dark:text-sky-200/90',
+  warning: 'text-amber-800 dark:text-amber-200/90',
+  success: 'text-emerald-800 dark:text-emerald-200/90',
+  error: 'text-rose-800 dark:text-rose-200/90',
 };
 
 function normalizeString(value: unknown): string {
@@ -264,17 +278,17 @@ export default function GameAnnouncements({ announcements, position = 'home' }: 
   return (
     <>
       {groupedAnnouncements.marquee.length > 0 && (
-        <Card className="border-transparent bg-card/90 shadow-sm">
+        <Card className="border border-border/55 bg-background/95 shadow-sm">
           <AnnouncementWrapper announcement={groupedAnnouncements.marquee[0]}>
-            <CardContent className="p-3">
-              <div className="flex items-center">
+            <CardContent className="py-3 pl-5 pr-3">
+              <div className="flex min-w-0 items-center">
                 <Megaphone className="w-5 h-5 text-accent mr-3 flex-shrink-0" />
-                <p className="text-xs md:text-sm text-foreground/80 overflow-hidden whitespace-nowrap">
-                  <span className="font-semibold text-accent mr-2">公告:</span>
-                  <span className="inline-block animate-marquee">
+                <span className="mr-2 flex-shrink-0 text-xs font-semibold text-accent md:text-sm">公告:</span>
+                <div className="relative min-w-0 flex-1 overflow-hidden whitespace-nowrap">
+                  <span className="inline-block animate-marquee pl-4 text-xs text-foreground/80 md:text-sm">
                     {groupedAnnouncements.marquee.map((a) => a.summary || a.title || a.content).filter(Boolean).join(' | ')}
                   </span>
-                </p>
+                </div>
               </div>
               <style jsx>{`
                 @keyframes marquee {
@@ -294,14 +308,36 @@ export default function GameAnnouncements({ announcements, position = 'home' }: 
         <div className="space-y-3 mt-3">
           {groupedAnnouncements.system.slice(0, 2).map((announcement) => (
             <AnnouncementWrapper key={announcement._id} announcement={announcement}>
-              <Card className="border-transparent bg-sky-500/5 shadow-sm">
+              <Card
+                className={cn(
+                  'shadow-sm transition-all hover:shadow-md',
+                  THEME_COLORS[announcement.style?.theme || 'info'],
+                )}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-start">
-                    <ShieldAlert className="w-5 h-5 text-sky-600 mr-3 flex-shrink-0" />
+                    <ShieldAlert
+                      className={cn(
+                        'w-5 h-5 mr-3 flex-shrink-0',
+                        THEME_TITLE_COLORS[announcement.style?.theme || 'info'],
+                      )}
+                    />
                     <div>
-                      <h3 className="font-semibold text-sky-700 text-sm md:text-base">{announcement.title || announcement.summary}</h3>
+                      <h3
+                        className={cn(
+                          'font-semibold text-sm md:text-base',
+                          THEME_TITLE_COLORS[announcement.style?.theme || 'info'],
+                        )}
+                      >
+                        {announcement.title || announcement.summary}
+                      </h3>
                       {(announcement.summary || announcement.content) && (
-                        <p className="text-xs md:text-sm text-sky-700/80 mt-1 line-clamp-3">
+                        <p
+                          className={cn(
+                            'mt-1 line-clamp-3 text-xs md:text-sm',
+                            THEME_DESC_COLORS[announcement.style?.theme || 'info'],
+                          )}
+                        >
                           {announcement.summary || announcement.content}
                         </p>
                       )}
@@ -318,14 +354,31 @@ export default function GameAnnouncements({ announcements, position = 'home' }: 
         <div className="space-y-4 mt-3">
           {groupedAnnouncements.normal.slice(0, 2).map((announcement) => (
             <AnnouncementWrapper key={announcement._id} announcement={announcement}>
-              <Card className={cn('border-transparent shadow-sm transition-all hover:shadow-md', THEME_COLORS[announcement.style?.theme || 'info'])}>
+              <Card
+                className={cn(
+                  'shadow-sm transition-all hover:shadow-md',
+                  THEME_COLORS[announcement.style?.theme || 'info'],
+                )}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-start">
                     {THEME_ICONS[announcement.style?.theme || 'info']}
                     <div>
-                      <h3 className="font-semibold text-primary text-sm md:text-base">{announcement.title || announcement.summary}</h3>
+                      <h3
+                        className={cn(
+                          'font-semibold text-sm md:text-base',
+                          THEME_TITLE_COLORS[announcement.style?.theme || 'info'],
+                        )}
+                      >
+                        {announcement.title || announcement.summary}
+                      </h3>
                       {(announcement.summary || announcement.content) && (
-                        <p className="text-xs md:text-sm text-primary/80 mt-1 line-clamp-3">
+                        <p
+                          className={cn(
+                            'mt-1 line-clamp-3 text-xs md:text-sm',
+                            THEME_DESC_COLORS[announcement.style?.theme || 'info'],
+                          )}
+                        >
                           {announcement.summary || announcement.content}
                         </p>
                       )}

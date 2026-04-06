@@ -191,7 +191,7 @@ export default function ProfilePage() {
   if (isAuthLoading || isFetchingProfile || !profile) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
         <p className="text-muted-foreground">正在加载个人资料...</p>
       </div>
     );
@@ -204,15 +204,15 @@ export default function ProfilePage() {
           <Card className="sticky top-24 overflow-hidden border-primary/10 shadow-lg">
             <div className="h-24 bg-gradient-to-r from-primary/20 to-accent/20" />
             <CardContent className="relative flex flex-col items-center pt-0">
-              <Avatar className="-mt-12 h-24 w-24 border-4 border-background shadow-xl">
+              <Avatar className="-mt-12 h-20 w-20 border-4 border-background shadow-xl">
                 <AvatarImage src={profile.avatar} alt={profile.name || profile.username} />
-                <AvatarFallback className="bg-primary text-2xl text-primary-foreground">
+                <AvatarFallback className="bg-primary text-xl text-primary-foreground">
                   {(profile.name || profile.username).substring(0, 1).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
 
               <div className="mt-4 space-y-1 text-center">
-                <h2 className="text-xl font-bold">{profile.name || profile.username}</h2>
+                <h2 className="text-lg font-bold">{profile.name || profile.username}</h2>
                 <p className="text-sm text-muted-foreground">{profile.email}</p>
               </div>
 

@@ -15,6 +15,7 @@ import {
   Newspaper,
   User as UserIcon,
   Bell,
+  Download,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
@@ -38,6 +39,7 @@ import { useAuth } from '@/context/auth-context';
 import { apiUrl, trackedApiFetch } from '@/lib/api';
 
 const navItems = [
+  { href: '/download/app', label: '盒子', icon: Download },
   { href: '/', label: '首页', icon: Home },
   { href: '/app', label: '游戏库', icon: Library },
   { href: '/rankings', label: '排行榜', icon: BarChart3 },
@@ -104,15 +106,15 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center gap-2 text-primary hover:opacity-90 transition-opacity">
               {logoUrl ? <Image src={logoUrl} alt={siteName} width={28} height={28} /> : <Gamepad2 size={28} />}
-              <h1 className="text-xl font-bold sm:text-2xl tracking-wide">{siteName}</h1>
+              <h1 className="text-lg font-bold sm:text-xl tracking-wide">{siteName}</h1>
             </Link>
-            <nav className="hidden lg:flex items-center">
-              <ul className="flex items-center space-x-6">
+            <nav className="hidden lg:flex items-center justify-start">
+              <ul className="flex items-center justify-start space-x-6 text-left">
                 {navItems.map((item) => (
                   <li key={item.label}>
                     <Link
                       href={item.href}
-                      className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition-colors ${
+                      className={`inline-flex items-center justify-start gap-1.5 rounded-full px-3 py-2 text-left text-sm font-semibold transition-colors ${
                         isNavItemActive(item.href)
                           ? 'bg-primary text-primary-foreground shadow-sm'
                           : 'text-foreground/80 hover:bg-muted/60 hover:text-primary'
@@ -131,7 +133,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
             <div className="relative hidden md:block">
               <Button
                 variant="outline"
-                className="h-10 w-40 justify-start rounded-xl border-transparent bg-card/90 pl-3 pr-4 py-2 text-sm text-muted-foreground shadow-sm hover:bg-secondary/35 lg:w-56"
+                className="h-9 w-40 justify-start rounded-xl border border-border/20 bg-card/90 pl-3 pr-4 py-2 text-sm text-foreground/65 shadow-sm transition-colors hover:bg-primary/8 hover:text-foreground hover:border-primary/15 lg:w-56"
                 onClick={() => setSearchOverlayOpen(true)}
               >
                 <Search className="mr-2 h-4 w-4" />
@@ -188,7 +190,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="hidden sm:inline-flex btn-interactive text-sm px-3"
+                className="hidden px-3 text-sm text-foreground/82 transition-colors hover:bg-primary/8 hover:text-primary sm:inline-flex"
                 onClick={() => setAuthModalOpen(true)}
               >
                 <LogIn size={16} className="mr-2" />
@@ -209,7 +211,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                 <SheetContent side="right" className="w-[280px] p-0 pt-6 flex flex-col">
                   <Link
                     href="/"
-                    className="flex items-center gap-2 text-xl font-bold text-primary px-6 pb-4 border-b border-border/40"
+                    className="flex items-center gap-2 text-lg font-bold text-primary px-6 pb-4 border-b border-border/40"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     {logoUrl ? <Image src={logoUrl} alt={siteName} width={24} height={24} /> : <Gamepad2 size={24} />}
@@ -223,7 +225,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                           <SheetClose asChild>
                             <Link
                               href={item.href}
-                              className={`flex w-full items-center justify-start gap-2 rounded-md px-2 py-3 text-base font-medium transition-colors ${
+                              className={`flex w-full items-center justify-start gap-2 rounded-md px-2 py-2.5 text-base font-medium transition-colors ${
                                 isNavItemActive(item.href)
                                   ? 'bg-primary text-primary-foreground'
                                   : 'text-foreground/80 hover:bg-muted/50 hover:text-primary'
@@ -241,7 +243,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                           <SheetClose asChild>
                             <Button
                               variant="ghost"
-                              className="w-full text-base font-medium text-foreground/80 hover:text-primary transition-colors px-2 py-3 rounded-md hover:bg-muted/50 flex items-center gap-2 justify-start"
+                              className="w-full text-base font-medium text-foreground/80 hover:text-primary transition-colors px-2 py-2.5 rounded-md hover:bg-muted/50 flex items-center gap-2 justify-start"
                               onClick={() => {
                                 setMobileMenuOpen(false);
                                 setAuthModalOpen(true);
@@ -259,7 +261,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                           <li>
                             <Link
                               href="/profile"
-                              className="w-full justify-start text-base font-medium text-foreground/80 hover:text-primary transition-colors px-2 py-3 rounded-md hover:bg-muted/50 flex items-center gap-2"
+                              className="w-full justify-start text-base font-medium text-foreground/80 hover:text-primary transition-colors px-2 py-2.5 rounded-md hover:bg-muted/50 flex items-center gap-2"
                               onClick={() => setMobileMenuOpen(false)}
                             >
                               <UserIcon size={18} />
@@ -269,7 +271,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                           <li>
                             <Link
                               href="/messages"
-                              className="w-full justify-start text-base font-medium text-foreground/80 hover:text-primary transition-colors px-2 py-3 rounded-md hover:bg-muted/50 flex items-center gap-2"
+                              className="w-full justify-start text-base font-medium text-foreground/80 hover:text-primary transition-colors px-2 py-2.5 rounded-md hover:bg-muted/50 flex items-center gap-2"
                               onClick={() => setMobileMenuOpen(false)}
                             >
                               <Bell size={18} />
@@ -279,7 +281,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                           <li>
                             <Button
                               variant="ghost"
-                              className="w-full text-base font-medium text-foreground/80 hover:text-destructive transition-colors px-2 py-3 rounded-md hover:bg-destructive/10 flex items-center gap-2 justify-start"
+                              className="w-full text-base font-medium text-foreground/80 hover:text-destructive transition-colors px-2 py-2.5 rounded-md hover:bg-destructive/10 flex items-center gap-2 justify-start"
                               onClick={() => {
                                 logout();
                                 setMobileMenuOpen(false);

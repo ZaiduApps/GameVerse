@@ -244,7 +244,15 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                           </div>
                           <div className="flex flex-wrap gap-2 px-4">
                               {searchHistory.map((item, index) => (
-                                  <Button key={index} variant="secondary" size="sm" className="font-normal" onClick={() => handleSearchSubmit(item)}>{item}</Button>
+                                  <Button
+                                    key={index}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 rounded-md border border-border/30 bg-card px-3 text-xs font-medium text-slate-900 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-card hover:text-slate-950 hover:shadow-md dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/16 dark:hover:text-white"
+                                    onClick={() => handleSearchSubmit(item)}
+                                  >
+                                    {item}
+                                  </Button>
                               ))}
                           </div>
                       </div>

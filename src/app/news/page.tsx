@@ -156,7 +156,7 @@ export default function NewsPage() {
         </CardHeader>
         <CardContent className="flex-grow flex flex-col p-4">
           <Link href={articleLink} className="block">
-            <CardTitle className="font-semibold mb-1.5 hover:text-primary transition-colors text-lg md:text-xl line-clamp-2">{article.title}</CardTitle>
+            <CardTitle className="mb-1.5 line-clamp-2 text-base font-semibold hover:text-primary transition-colors md:text-lg">{article.title}</CardTitle>
           </Link>
           <CardDescription className="text-muted-foreground flex-grow text-sm line-clamp-3">{article.excerpt || '暂无摘要'}</CardDescription>
         </CardContent>
@@ -181,8 +181,8 @@ export default function NewsPage() {
     <div className="space-y-8 fade-in">
       <section className="bg-card p-6 rounded-lg shadow">
         <div className="flex items-center mb-4">
-         <Newspaper className="w-8 h-8 text-primary mr-3" />
-          <h1 className="text-3xl font-bold text-primary">游戏资讯</h1>
+          <Newspaper className="mr-3 h-7 w-7 text-primary" />
+          <h1 className="text-xl font-bold text-primary">游戏资讯</h1>
         </div>
         <p className="text-muted-foreground">获取最新游戏资讯、更新与深度内容。</p>
       </section>
@@ -194,18 +194,18 @@ export default function NewsPage() {
                 <Input 
                     type="search" 
                     placeholder="搜索文章标题或摘要..." 
-                    className="pl-10 h-11 text-base"
+                    className="h-10 pl-10 text-sm"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
-            <Button type="submit" size="lg" className="h-11 btn-interactive">搜索</Button>
+            <Button type="submit" size="default" className="h-10 btn-interactive">搜索</Button>
         </form>
       </section>
 
       {isLoading ? (
         <div className="flex justify-center items-center py-20">
-          <Loader2 className="h-12 w-12 text-primary animate-spin" />
+          <Loader2 className="h-10 w-10 text-primary animate-spin" />
         </div>
       ) : articles.length > 0 ? (
         <>

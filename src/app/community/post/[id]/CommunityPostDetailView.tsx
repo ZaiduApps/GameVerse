@@ -5,13 +5,21 @@ import Link from 'next/link';
 import Image from 'next/image';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, Bookmark, ChevronLeft, ChevronRight, Eye, MessageSquare, RotateCcw, Send, Share2, ThumbsUp, X, ZoomIn, ZoomOut } from 'lucide-react';
 
 import { renderMarkdown } from '@/lib/utils';
 import { apiUrl, trackedApiFetch } from '@/lib/api';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { getCommunityCommentThreads, type CommunityCommentThread } from '@/lib/community-api';
+import {
+  getCommunityCommentReplies,
+  getCommunityCommentThreads,
+  getCommunityTopicDetail,
+  moderatorDeleteTopicComment,
+  moderatorSetTopicCommentStatus,
+  type CommunityCommentThread,
+} from '@/lib/community-api';
 import AppDownloadGuideDialog from '@/components/app-download-guide-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +35,9 @@ const initialMockComments: CommunityCommentThread[] = [
     text: '内容很有帮助，感谢分享。',
     likeCount: 0,
     replies: [],
+    replyTotal: 0,
+    replyHasMore: false,
+    replyPageSize: 20,
   },
   {
     id: 'comment2',
@@ -35,6 +46,9 @@ const initialMockComments: CommunityCommentThread[] = [
     text: '建议补充一下复现步骤。',
     likeCount: 0,
     replies: [],
+    replyTotal: 0,
+    replyHasMore: false,
+    replyPageSize: 20,
   },
 ];
 
@@ -55,6 +69,8 @@ export default function CommunityPostDetailView({
   const [newComment, setNewComment] = useState('');
   const [replyTarget, setReplyTarget] = useState<{ id: string; name: string } | null>(null);
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
+  const [replyPageMap, setReplyPageMap] = useState<Record<string, number>>({});
+  const [replyLoadingMap, setReplyLoadingMap] = useState<Record<string, boolean>>({});
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isSyncingLike, setIsSyncingLike] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
@@ -79,6 +95,21 @@ export default function CommunityPostDetailView({
   const [commentLikeCounts, setCommentLikeCounts] = useState<Record<string, number>>({});
   const [pendingCommentLikeIds, setPendingCommentLikeIds] = useState<Record<string, boolean>>({});
   const [appPromptDialogOpen, setAppPromptDialogOpen] = useState(false);
+  const [canModerateTopic, setCanModerateTopic] = useState(false);
+  const [moderatingCommentId, setModeratingCommentId] = useState('');
+  const [moderationTopicId, setModerationTopicId] = useState('');
+
+  const postTopicIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (post.topicIds || [])
+            .map((id) => String(id || '').trim())
+            .filter(Boolean),
+        ),
+      ),
+    [post.topicIds],
+  );
 
   useEffect(() => {
     if (typeof post.viewsCount === 'number' && post.viewsCount >= 0) {
@@ -88,10 +119,71 @@ export default function CommunityPostDetailView({
     setViewCount(Math.floor(Math.random() * 200) + post.commentsCount + post.likesCount + 51);
   }, [post.commentsCount, post.likesCount, post.viewsCount]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const syncTopicModerationPermission = async () => {
+      if (!isAuthenticated || !token || !user?._id || postTopicIds.length === 0) {
+        if (!cancelled) {
+          setCanModerateTopic(false);
+          setModerationTopicId('');
+        }
+        return;
+      }
+
+      const topics = await Promise.all(
+        postTopicIds.map(async (topicId) => ({
+          topicId,
+          topic: await getCommunityTopicDetail(topicId),
+        })),
+      );
+      if (cancelled) return;
+
+      const userId = String(user._id || '').trim();
+      const matched = topics.find((item) => {
+        const moderatorIds = Array.isArray(item.topic?.moderator_ids)
+          ? item.topic!.moderator_ids
+              .map((id) => String(id || '').trim())
+              .filter(Boolean)
+          : [];
+        return moderatorIds.includes(userId);
+      });
+
+      setCanModerateTopic(Boolean(matched));
+      setModerationTopicId(String(matched?.topicId || '').trim());
+    };
+
+    void syncTopicModerationPermission();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, postTopicIds, token, user?._id]);
+
   const totalCommentCount = useMemo(
-    () => comments.reduce((acc, thread) => acc + 1 + (thread.replies?.length || 0), 0),
+    () =>
+      comments.reduce(
+        (acc, thread) =>
+          acc +
+          1 +
+          Math.max(
+            Number(thread.replyTotal || 0),
+            Number(thread.replies?.length || 0),
+          ),
+        0,
+      ),
     [comments],
   );
+
+  useEffect(() => {
+    const next: Record<string, number> = {};
+    comments.forEach((thread) => {
+      const loaded = Number(thread.replies?.length || 0);
+      const pageSize = Math.max(1, Number(thread.replyPageSize || loaded || 20));
+      next[thread.id] = Math.max(1, Math.ceil(loaded / pageSize));
+    });
+    setReplyPageMap(next);
+    setReplyLoadingMap({});
+  }, [comments]);
 
   const previewImages = useMemo(() => {
     const urls: string[] = [];
@@ -122,6 +214,19 @@ export default function CommunityPostDetailView({
   const reloadComments = async () => {
     const latest = await getCommunityCommentThreads(post.id, 30);
     setComments(latest);
+    setExpandedReplies({});
+  };
+
+  const handleModeratorApiError = (message: string) => {
+    const msg = String(message || '').trim();
+    if (
+      /permission|unauthorized|forbidden|no moderation permission|401|403/i.test(
+        msg,
+      )
+    ) {
+      setCanModerateTopic(false);
+      setModerationTopicId('');
+    }
   };
 
   useEffect(() => {
@@ -208,6 +313,9 @@ export default function CommunityPostDetailView({
       text: content,
       likeCount: 0,
       replies: [] as CommunityCommentThread['replies'],
+      replyTotal: 0,
+      replyHasMore: false,
+      replyPageSize: 20,
     };
 
     setComments((prev) => {
@@ -217,6 +325,10 @@ export default function CommunityPostDetailView({
         return {
           ...thread,
           replies: [...thread.replies, { ...optimistic, text: `回复 @${replyTarget.name}：${content}` }],
+          replyTotal: Math.max(
+            Number(thread.replyTotal || 0) + 1,
+            thread.replies.length + 1,
+          ),
         };
       });
     });
@@ -250,6 +362,57 @@ export default function CommunityPostDetailView({
       });
     } finally {
       setIsSubmittingComment(false);
+    }
+  };
+
+  const handleLoadMoreReplies = async (commentId: string) => {
+    const thread = comments.find((item) => item.id === commentId);
+    if (!thread || !thread.replyHasMore || replyLoadingMap[commentId]) return;
+
+    const nextPage = Math.max(1, Number(replyPageMap[commentId] || 1)) + 1;
+    const requestPageSize = Math.max(1, Number(thread.replyPageSize || 20));
+
+    setReplyLoadingMap((prev) => ({ ...prev, [commentId]: true }));
+    try {
+      const result = await getCommunityCommentReplies(
+        post.id,
+        commentId,
+        nextPage,
+        requestPageSize,
+        'latest',
+      );
+
+      setComments((prev) =>
+        prev.map((item) => {
+          if (item.id !== commentId) return item;
+          const mergedMap = new Map<string, CommunityCommentThread['replies'][number]>();
+          item.replies.forEach((reply) => {
+            mergedMap.set(reply.id, reply);
+          });
+          result.list.forEach((reply) => {
+            mergedMap.set(reply.id, reply);
+          });
+          const mergedReplies = Array.from(mergedMap.values());
+          const total = Math.max(Number(result.total || 0), mergedReplies.length);
+          return {
+            ...item,
+            replies: mergedReplies,
+            replyTotal: total,
+            replyHasMore: mergedReplies.length < total,
+            replyPageSize: Number(result.pageSize || requestPageSize),
+          };
+        }),
+      );
+      setReplyPageMap((prev) => ({ ...prev, [commentId]: Number(result.page || nextPage) }));
+      setExpandedReplies((prev) => ({ ...prev, [commentId]: true }));
+    } catch {
+      toast({
+        title: '加载失败',
+        description: '更多回复加载失败，请稍后重试。',
+        variant: 'destructive',
+      });
+    } finally {
+      setReplyLoadingMap((prev) => ({ ...prev, [commentId]: false }));
     }
   };
 
@@ -406,6 +569,79 @@ export default function CommunityPostDetailView({
     } finally {
       setPendingCommentLikeIds((prev) => ({ ...prev, [commentId]: false }));
     }
+  };
+
+  const handleModeratorSetCommentStatus = async (
+    commentId: string,
+    status: 0 | 1,
+  ) => {
+    const targetCommentId = String(commentId || '').trim();
+    if (!targetCommentId || !moderationTopicId || !token || !canModerateTopic) {
+      return;
+    }
+
+    const actionText = status === 0 ? '下线' : '上线';
+    const confirmed = window.confirm(`确认${actionText}该评论吗？`);
+    if (!confirmed) return;
+
+    setModeratingCommentId(targetCommentId);
+    const result = await moderatorSetTopicCommentStatus({
+      token,
+      topicId: moderationTopicId,
+      commentId: targetCommentId,
+      status,
+    });
+    setModeratingCommentId('');
+
+    if (!result.ok) {
+      handleModeratorApiError(result.message);
+      toast({
+        title: `${actionText}失败`,
+        description: result.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    await reloadComments();
+    toast({
+      title: `${actionText}成功`,
+      description: result.message,
+    });
+  };
+
+  const handleModeratorDeleteComment = async (commentId: string) => {
+    const targetCommentId = String(commentId || '').trim();
+    if (!targetCommentId || !moderationTopicId || !token || !canModerateTopic) {
+      return;
+    }
+
+    const confirmed = window.confirm('确认删除该评论吗？删除后将不可见。');
+    if (!confirmed) return;
+
+    setModeratingCommentId(targetCommentId);
+    const result = await moderatorDeleteTopicComment({
+      token,
+      topicId: moderationTopicId,
+      commentId: targetCommentId,
+    });
+    setModeratingCommentId('');
+
+    if (!result.ok) {
+      handleModeratorApiError(result.message);
+      toast({
+        title: '删除失败',
+        description: result.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    await reloadComments();
+    toast({
+      title: '删除成功',
+      description: result.message,
+    });
   };
 
   const handleSharePost = async () => {
@@ -591,11 +827,35 @@ export default function CommunityPostDetailView({
                     >
                       回复
                     </Button>
+                    {canModerateTopic ? (
+                      <>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs text-amber-600 hover:text-amber-700"
+                          disabled={moderatingCommentId === comment.id}
+                          onClick={() => void handleModeratorSetCommentStatus(comment.id, 0)}
+                        >
+                          下线
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs text-red-600 hover:text-red-700"
+                          disabled={moderatingCommentId === comment.id}
+                          onClick={() => void handleModeratorDeleteComment(comment.id)}
+                        >
+                          删除
+                        </Button>
+                      </>
+                    ) : null}
                   </div>
                 </div>
               </div>
 
-              {comment.replies && comment.replies.length > 0 && (
+              {(comment.replies?.length > 0 || comment.replyHasMore) && (
                 <div className="ml-12 space-y-2">
                   {(expandedReplies[comment.id] ? comment.replies : comment.replies.slice(0, 2)).map((reply) => (
                     <div key={reply.id} className="flex items-start space-x-2">
@@ -633,6 +893,30 @@ export default function CommunityPostDetailView({
                           >
                             回复
                           </Button>
+                          {canModerateTopic ? (
+                            <>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-1.5 text-[11px] text-amber-600 hover:text-amber-700"
+                                disabled={moderatingCommentId === reply.id}
+                                onClick={() => void handleModeratorSetCommentStatus(reply.id, 0)}
+                              >
+                                下线
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-1.5 text-[11px] text-red-600 hover:text-red-700"
+                                disabled={moderatingCommentId === reply.id}
+                                onClick={() => void handleModeratorDeleteComment(reply.id)}
+                              >
+                                删除
+                              </Button>
+                            </>
+                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -656,6 +940,20 @@ export default function CommunityPostDetailView({
                         : `展开更多回复 (${comment.replies.length - 2})`}
                     </Button>
                   )}
+                  {comment.replyHasMore && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs"
+                      disabled={replyLoadingMap[comment.id]}
+                      onClick={() => void handleLoadMoreReplies(comment.id)}
+                    >
+                      {replyLoadingMap[comment.id]
+                        ? '加载中...'
+                        : `查看更多回复 (${Math.max(comment.replyTotal - comment.replies.length, 0)})`}
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
@@ -671,6 +969,111 @@ export default function CommunityPostDetailView({
 
   const currentPreviewUrl =
     selectedPreviewIndex !== null ? activePreviewImages[selectedPreviewIndex] || '' : '';
+  const previewOverlay =
+    selectedPreviewIndex !== null && currentPreviewUrl ? (
+      <div className="fixed inset-0 z-[10000] bg-black/90" onClick={closePreviewImage}>
+        <div className="absolute inset-0 flex items-center justify-center overflow-hidden p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="bg-black/50 text-white hover:bg-black/70"
+              onClick={() => handlePreviewZoom(previewZoom - 0.2)}
+            >
+              <ZoomOut size={18} />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="bg-black/50 text-white hover:bg-black/70"
+              onClick={() => {
+                setPreviewPosition({ x: 0, y: 0 });
+                setPreviewZoom(1);
+              }}
+            >
+              <RotateCcw size={18} />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="bg-black/50 text-white hover:bg-black/70"
+              onClick={() => handlePreviewZoom(previewZoom + 0.2)}
+            >
+              <ZoomIn size={18} />
+            </Button>
+            <Button asChild type="button" variant="ghost" size="sm" className="bg-black/50 text-white hover:bg-black/70">
+              <a href={currentPreviewUrl} target="_blank" rel="noopener noreferrer" download>
+                下载
+              </a>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="bg-black/50 text-white hover:bg-black/70"
+              onClick={closePreviewImage}
+            >
+              <X size={18} />
+            </Button>
+          </div>
+          {activePreviewImages.length > 1 && (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute left-4 top-1/2 z-20 -translate-y-1/2 bg-black/45 text-white hover:bg-black/65"
+                onClick={handlePrevPreviewImage}
+              >
+                <ChevronLeft size={20} />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-4 top-1/2 z-20 -translate-y-1/2 bg-black/45 text-white hover:bg-black/65"
+                onClick={handleNextPreviewImage}
+              >
+                <ChevronRight size={20} />
+              </Button>
+            </>
+          )}
+          <div className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-full bg-black/45 px-3 py-1 text-xs text-white">
+            {selectedPreviewIndex + 1} / {activePreviewImages.length || 1}
+          </div>
+
+          <img
+            src={currentPreviewUrl}
+            alt={post.title || '帖子图片'}
+            draggable={false}
+            onClick={(e) => e.stopPropagation()}
+            onWheel={(event) => {
+              event.preventDefault();
+              handlePreviewZoom(previewZoom + (event.deltaY > 0 ? -0.1 : 0.1));
+            }}
+            onPointerDown={handlePreviewImagePointerDown}
+            className="max-h-[92vh] max-w-[92vw] select-none object-contain"
+            style={{
+              transform: `translate(${previewPosition.x}px, ${previewPosition.y}px) scale(${previewZoom})`,
+              transformOrigin: 'center center',
+              touchAction: previewZoom > 1 ? 'none' : 'manipulation',
+              cursor: previewZoom > 1 ? (isPreviewDragging ? 'grabbing' : 'grab') : 'zoom-in',
+            }}
+            onError={() => setIsPreviewImageError(true)}
+          />
+          {isPreviewImageError && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+              <div className="rounded-md bg-black/55 px-3 py-2 text-sm text-white">
+                图片加载失败，请切换下一张或重试
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    ) : null;
 
   return (
     <div className="mx-auto w-full max-w-[1680px] space-y-6 py-8 fade-in">
@@ -724,7 +1127,7 @@ export default function CommunityPostDetailView({
           <Card className="shadow-lg">
             <CardHeader className="p-4 pb-3">
               <div className="flex items-start space-x-3">
-                <Avatar className="w-11 h-11">
+                <Avatar className="w-10 h-10">
                   <AvatarImage src={post.user.avatarUrl} alt={post.user.name} />
                   <AvatarFallback>{post.user.name.substring(0, 2)}</AvatarFallback>
                 </Avatar>
@@ -742,9 +1145,14 @@ export default function CommunityPostDetailView({
                     {post.source && ` · ${post.source}`}
                     {post.user.location && ` · ${post.user.location}`}
                   </p>
+                  {canModerateTopic ? (
+                    <Badge variant="outline" className="mt-1 text-[10px]">
+                      版主模式
+                    </Badge>
+                  ) : null}
                 </div>
               </div>
-              {post.title && <h1 className="text-xl md:text-2xl font-bold mt-3">{post.title}</h1>}
+              {post.title && <h1 className="mt-3 text-base font-bold md:text-lg">{post.title}</h1>}
             </CardHeader>
 
             <CardContent className="p-4 pt-2 space-y-3">
@@ -830,110 +1238,7 @@ export default function CommunityPostDetailView({
         </aside>
       </div>
 
-      {selectedPreviewIndex !== null && currentPreviewUrl && (
-        <div className="fixed inset-0 z-[10000] bg-black/90" onClick={closePreviewImage}>
-          <div className="absolute inset-0 flex items-center justify-center overflow-hidden p-4" onClick={(e) => e.stopPropagation()}>
-            <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="bg-black/50 text-white hover:bg-black/70"
-                onClick={() => handlePreviewZoom(previewZoom - 0.2)}
-              >
-                <ZoomOut size={18} />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="bg-black/50 text-white hover:bg-black/70"
-                onClick={() => {
-                  setPreviewPosition({ x: 0, y: 0 });
-                  setPreviewZoom(1);
-                }}
-              >
-                <RotateCcw size={18} />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="bg-black/50 text-white hover:bg-black/70"
-                onClick={() => handlePreviewZoom(previewZoom + 0.2)}
-              >
-                <ZoomIn size={18} />
-              </Button>
-              <Button asChild type="button" variant="ghost" size="sm" className="bg-black/50 text-white hover:bg-black/70">
-                <a href={currentPreviewUrl} target="_blank" rel="noopener noreferrer" download>
-                  下载
-                </a>
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="bg-black/50 text-white hover:bg-black/70"
-                onClick={closePreviewImage}
-              >
-                <X size={18} />
-              </Button>
-            </div>
-            {activePreviewImages.length > 1 && (
-              <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute left-4 top-1/2 z-20 -translate-y-1/2 bg-black/45 text-white hover:bg-black/65"
-                  onClick={handlePrevPreviewImage}
-                >
-                  <ChevronLeft size={20} />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-4 top-1/2 z-20 -translate-y-1/2 bg-black/45 text-white hover:bg-black/65"
-                  onClick={handleNextPreviewImage}
-                >
-                  <ChevronRight size={20} />
-                </Button>
-              </>
-            )}
-            <div className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-full bg-black/45 px-3 py-1 text-xs text-white">
-              {selectedPreviewIndex + 1} / {activePreviewImages.length || 1}
-            </div>
-
-            <img
-              src={currentPreviewUrl}
-              alt={post.title || '帖子图片'}
-              draggable={false}
-              onClick={(e) => e.stopPropagation()}
-              onWheel={(event) => {
-                event.preventDefault();
-                handlePreviewZoom(previewZoom + (event.deltaY > 0 ? -0.1 : 0.1));
-              }}
-              onPointerDown={handlePreviewImagePointerDown}
-              className="max-h-[92vh] max-w-[92vw] select-none object-contain"
-              style={{
-                transform: `translate(${previewPosition.x}px, ${previewPosition.y}px) scale(${previewZoom})`,
-                transformOrigin: 'center center',
-                touchAction: previewZoom > 1 ? 'none' : 'manipulation',
-                cursor: previewZoom > 1 ? (isPreviewDragging ? 'grabbing' : 'grab') : 'zoom-in',
-              }}
-              onError={() => setIsPreviewImageError(true)}
-            />
-            {isPreviewImageError && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-                <div className="rounded-md bg-black/55 px-3 py-2 text-sm text-white">
-                  图片加载失败，请切换下一张或重试
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {previewOverlay && typeof document !== 'undefined' ? createPortal(previewOverlay, document.body) : null}
 
       <AppDownloadGuideDialog
         open={appPromptDialogOpen}

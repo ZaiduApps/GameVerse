@@ -124,7 +124,7 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
         返回
       </Button>
 
-      <Card className="shadow-xl">
+      <Card className="shadow-lg">
         <CardContent className="p-6 md:p-8">
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <Badge variant="outline">{article.category}</Badge>
@@ -132,7 +132,7 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
             {article.isRecommended && <Badge variant="secondary">推荐</Badge>}
           </div>
 
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4">{article.title}</h1>
+          <h1 className="mb-4 text-xl font-bold text-foreground md:text-2xl">{article.title}</h1>
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground mb-3">
             <div className="flex items-center">
@@ -156,7 +156,7 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
           <Separator className="mb-6" />
 
           <div
-            className="prose prose-sm max-w-none dark:prose-invert"
+            className="prose prose-sm max-w-none dark:prose-invert md:prose-base"
             onClick={handleMarkdownContainerClick}
             dangerouslySetInnerHTML={{ __html: renderMarkdown(article.content) }}
           />

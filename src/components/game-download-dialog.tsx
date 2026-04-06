@@ -33,6 +33,8 @@ interface GameDownloadDialogProps {
   appId?: string;
   pkg?: string;
   downloadNotices?: CardConfigItem[];
+  triggerClassName?: string;
+  triggerLabel?: string;
 }
 
 const iconMap: { [key: string]: React.ReactNode } = {
@@ -48,6 +50,8 @@ export default function GameDownloadDialog({
   appId,
   pkg,
   downloadNotices,
+  triggerClassName,
+  triggerLabel,
 }: GameDownloadDialogProps) {
   const [loadingChannelId, setLoadingChannelId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -133,9 +137,12 @@ export default function GameDownloadDialog({
         }}
       >
         <DialogTrigger asChild>
-          <Button size="lg" className="w-full md:w-auto btn-interactive">
+          <Button
+            size="lg"
+            className={`w-full md:w-auto btn-interactive ${triggerClassName || ''}`}
+          >
             <Download className="mr-2 h-5 w-5" />
-            获取游戏
+            {triggerLabel || '获取游戏'}
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[480px]">

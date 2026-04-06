@@ -176,7 +176,7 @@ export default function GameCarousel({ bannerItems, autoPlayInterval = 5000 }: G
               <div className="pointer-events-none absolute bottom-0 left-0 w-full p-3 text-white sm:p-4 md:p-6">
                 <div className="flex items-end gap-3 md:gap-4">
                   {item.goto_type === 'game' && item.game && (
-                    <div className="relative h-12 w-12 flex-shrink-0 sm:h-14 sm:w-14 md:h-16 md:w-16">
+                    <div className="relative h-10 w-10 flex-shrink-0 sm:h-12 sm:w-12 md:h-14 md:w-14">
                       <Image
                         src={item.game.icon}
                         alt={`${item.game.name} icon`}
@@ -187,8 +187,8 @@ export default function GameCarousel({ bannerItems, autoPlayInterval = 5000 }: G
                     </div>
                   )}
                   <div className="flex-grow min-w-0">
-                    <h2 className="mb-1 text-base font-bold drop-shadow-lg sm:text-lg md:text-xl lg:text-2xl">{item.name}</h2>
-                    <p className="line-clamp-2 text-sm text-gray-200 drop-shadow-md sm:text-base md:text-lg">
+                    <h2 className="mb-1 text-base font-bold drop-shadow-lg sm:text-lg md:text-lg lg:text-xl">{item.name}</h2>
+                    <p className="line-clamp-2 text-sm text-gray-200 drop-shadow-md sm:text-sm md:text-base">
                       {item.description}
                     </p>
                   </div>
@@ -217,7 +217,7 @@ export default function GameCarousel({ bannerItems, autoPlayInterval = 5000 }: G
               setTranslateX(0);
             }}
           >
-            <div className="relative flex h-12 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted lg:h-14 lg:w-24">
+            <div className="relative flex h-11 w-[72px] flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted lg:h-12 lg:w-[88px]">
               <Image
                 src={item.url_image}
                 alt={item.name}

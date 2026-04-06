@@ -184,7 +184,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-center text-2xl font-bold">
+          <DialogTitle className="text-center text-xl font-bold">
             {activeTab === 'login' ? '欢迎回来' : '创建账号'}
           </DialogTitle>
           <DialogDescription className="text-center">

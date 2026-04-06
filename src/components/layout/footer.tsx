@@ -39,7 +39,7 @@ export default function Footer({ config }: FooterProps) {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between gap-8 mb-8">
             <div className="md:w-1/3 lg:w-1/4">
-              <h3 className="text-2xl font-bold text-foreground mb-3 tracking-wide">{basic.site_name}</h3>
+              <h3 className="text-xl font-bold text-foreground mb-3 tracking-wide">{basic.site_name}</h3>
               <p className="text-sm">{footer.footer_text}</p>
             </div>
 

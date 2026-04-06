@@ -74,8 +74,8 @@ export default function RankingsPage() {
     <div className="fade-in space-y-8">
       <section className="rounded-lg bg-card p-6 shadow">
         <div className="mb-4 flex items-center">
-          <BarChartBig className="mr-3 h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold text-primary">游戏排行榜</h1>
+          <BarChartBig className="mr-3 h-7 w-7 text-primary" />
+          <h1 className="text-xl font-bold text-primary">游戏排行榜</h1>
         </div>
         <p className="text-muted-foreground">查看热门与高评分游戏。</p>
       </section>
@@ -94,7 +94,7 @@ export default function RankingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Star className="mr-2 h-6 w-6 fill-yellow-400 text-yellow-400" />
+                <Star className="mr-2 h-5 w-5 fill-yellow-400 text-yellow-400" />
                 评分排行榜
               </CardTitle>
             </CardHeader>
@@ -106,7 +106,7 @@ export default function RankingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <TrendingUp className="mr-2 h-6 w-6 text-red-500" />
+                <TrendingUp className="mr-2 h-5 w-5 text-red-500" />
                 热门下载榜
               </CardTitle>
             </CardHeader>

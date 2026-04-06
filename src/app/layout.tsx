@@ -5,16 +5,12 @@ import { Bebas_Neue, Noto_Sans_SC } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/context/auth-context';
-import { Toaster } from '@/components/ui/toaster';
-import Header from '@/components/layout/header';
-import Footer from '@/components/layout/footer';
-import PageTransitionLoader from '@/components/layout/PageTransitionLoader';
-import { Suspense } from 'react';
 import type { SiteConfig } from '@/types';
 import Script from 'next/script';
 import { resolveSiteStylePreset } from '@/lib/site-style';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { getSiteUrl } from '@/lib/seo';
+import AppShell from '@/components/layout/AppShell';
 
 const bodyFont = Noto_Sans_SC({
   subsets: ['latin'],
@@ -135,15 +131,13 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <Suspense fallback={null}>
-              <PageTransitionLoader />
-            </Suspense>
-            <Header siteName={siteConfig?.basic?.site_name} logoUrl={siteConfig?.basic?.logo_url} />
-            <main className="flex-grow container mx-auto px-4 py-8">
+            <AppShell
+              siteName={siteConfig?.basic?.site_name}
+              logoUrl={siteConfig?.basic?.logo_url}
+              siteConfig={siteConfig}
+            >
               {children}
-            </main>
-            <Footer config={siteConfig} />
-            <Toaster />
+            </AppShell>
           </AuthProvider>
         </ThemeProvider>
       </body>

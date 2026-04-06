@@ -17,7 +17,7 @@ export default function SectionHeader({ title, icon: Icon, iconClassName, moreHr
     <div className="flex items-center justify-between mb-4 md:mb-6">
       <div className="flex items-center">
         {Icon && <Icon className={`w-6 h-6 md:w-7 md:h-7 mr-2 md:mr-3 ${iconClassName || ''}`} />}
-        <Tag className="text-xl md:text-2xl font-bold text-foreground">{title}</Tag>
+        <Tag className="text-base md:text-lg font-bold text-foreground">{title}</Tag>
       </div>
       {moreHref && (
         <Link href={moreHref} className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center">

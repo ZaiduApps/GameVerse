@@ -67,14 +67,19 @@ export interface CommunityPost {
   timestamp: string;
   source?: string; // e.g., "来自web", "来自Android"
   title?: string;
+  summary?: string;
   content: string;
   imageUrl?: string; // Optional image in the post
   imageAiHint?: string;
   tags?: string[];
+  topicIds?: string[];
+  topicNames?: string[];
   category?: string; // e.g., "游戏综合区"
   commentsCount: number;
   likesCount: number;
   viewsCount?: number;
+  isTop?: boolean;
+  isRecommended?: boolean;
   relatedApp?: {
     id?: string;
     name: string;
@@ -271,6 +276,13 @@ export interface GameDetailData {
     popup?: Announcement[];
     normal?: Announcement[];
     marquee?: Announcement[];
+    system?: Announcement[];
+  };
+  announcements?: {
+    popup?: Announcement[];
+    normal?: Announcement[];
+    marquee?: Announcement[];
+    system?: Announcement[];
   };
   cardConfig?: {
     contact?: CardConfigItem[];

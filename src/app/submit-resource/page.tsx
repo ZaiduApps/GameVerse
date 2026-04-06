@@ -205,8 +205,8 @@ export default function SubmitResourcePage() {
   return (
     <div className="container mx-auto max-w-2xl py-8 px-4 fade-in">
       <div className="flex flex-col items-center mb-8">
-        <UploadCloud className="w-12 h-12 text-primary mb-3" />
-        <h1 className="text-3xl font-bold text-center">资源投稿</h1>
+        <UploadCloud className="mb-3 h-10 w-10 text-primary" />
+        <h1 className="text-xl font-bold text-center">资源投稿</h1>
         <p className="text-muted-foreground text-center mt-2">
           帮助我们丰富资源库，分享你的发现或创作。
         </p>
