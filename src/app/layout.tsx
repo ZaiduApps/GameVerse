@@ -1,7 +1,7 @@
 ﻿
 import type { Metadata, Viewport } from 'next';
 import { GeistMono } from 'geist/font/mono';
-import { Bebas_Neue, Noto_Sans_SC } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/context/auth-context';
@@ -12,19 +12,15 @@ import { getPublicSiteConfig } from '@/lib/site-config';
 import { getSiteUrl } from '@/lib/seo';
 import AppShell from '@/components/layout/AppShell';
 
-const bodyFont = Noto_Sans_SC({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-body',
-});
-
-const displayFont = Bebas_Neue({
-  subsets: ['latin'],
-  weight: '400',
-  variable: '--font-display',
-});
-
 const siteStyle = resolveSiteStylePreset(process.env.NEXT_PUBLIC_SITE_STYLE);
+
+const bodyFont = localFont({
+  src: '../fonts/NotoSansSC-VariableFont_wght.ttf',
+  weight: '100 900',
+  style: 'normal',
+  variable: '--font-body',
+  display: 'swap',
+});
 async function getSiteConfig(): Promise<SiteConfig | null> {
   return getPublicSiteConfig(300);
 }
@@ -123,7 +119,7 @@ export default async function RootLayout({
           />
         )}
       </head>
-      <body id="Top" className={`${bodyFont.variable} ${displayFont.variable} ${GeistMono.variable} antialiased flex flex-col min-h-screen`}>
+      <body id="Top" className={`${bodyFont.variable} ${GeistMono.variable} antialiased flex flex-col min-h-screen`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
