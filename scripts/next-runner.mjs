@@ -7,7 +7,7 @@ loadEnv();
 
 const mode = process.argv[2] || 'dev';
 const port = process.env.PORT || '9002';
-const shouldCleanDevDist = process.env.CLEAN_NEXT_DEV_DIST !== '0';
+const shouldCleanDevDist = process.env.CLEAN_NEXT_DEV_DIST === '1';
 const cwd = process.cwd();
 const devDistDir = path.join(cwd, '.next-dev');
 const prodBuildIdFile = path.join(cwd, '.next', 'BUILD_ID');

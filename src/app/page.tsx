@@ -92,6 +92,44 @@ interface CombinedHomeData {
   clientLanding: ClientLandingAppData | null;
 }
 
+async function fetchHomeDataWithRetry(
+  query: string,
+  options?: {
+    timeoutMs?: number;
+    retries?: number;
+  },
+): Promise<HomeData | null> {
+  const timeoutMs = Math.max(2000, Number(options?.timeoutMs || 12000));
+  const retries = Math.max(0, Number(options?.retries || 1));
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const res = await trackedApiFetch(`/home?${query}`, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (!res.ok) {
+        lastError = new Error(`home request failed: ${res.status} ${res.statusText}`);
+        continue;
+      }
+
+      const json = await res.json();
+      if (json?.code !== 0 || !json?.data) {
+        lastError = new Error(`home api code invalid: ${String(json?.code ?? 'unknown')}`);
+        continue;
+      }
+
+      return json.data as HomeData;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  console.error('Failed to fetch /home after retries:', lastError);
+  return null;
+}
+
 async function getHomeAndNewsData(): Promise<CombinedHomeData> {
   try {
     const dynamicCount = Math.min(20, Math.max(1, toNumber(process.env.HOME_DYNAMIC_COUNT, 8)));
@@ -105,12 +143,13 @@ async function getHomeAndNewsData(): Promise<CombinedHomeData> {
     if (region) params.set('region', region);
     if (clientVersion) params.set('client_version', clientVersion);
 
-    const [homeRes, clientLanding] = await Promise.all([
-      trackedApiFetch(`/home?${params.toString()}`, { cache: 'no-store' }),
-      getClientLandingAppData(120),
+    const [homeData, clientLanding] = await Promise.all([
+      fetchHomeDataWithRetry(params.toString(), {
+        timeoutMs: 12000,
+        retries: 1,
+      }),
+      getClientLandingAppData(120).catch(() => null),
     ]);
-    const homeJson = homeRes.ok ? await homeRes.json() : null;
-    const homeData: HomeData | null = homeJson?.data || null;
     const safeArticles = Array.isArray(homeData?.articles) ? homeData.articles : [];
     const safeDynamicPosts = Array.isArray(homeData?.dynamic_posts) ? homeData.dynamic_posts : [];
 
