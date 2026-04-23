@@ -102,31 +102,85 @@ async function fetchHomeDataWithRetry(
   const timeoutMs = Math.max(2000, Number(options?.timeoutMs || 12000));
   const retries = Math.max(0, Number(options?.retries || 1));
   let lastError: unknown = null;
+  const requestPath = `/home?${query}`;
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const attemptNo = attempt + 1;
+    const startedAt = Date.now();
     try {
-      const res = await trackedApiFetch(`/home?${query}`, {
+      const res = await trackedApiFetch(requestPath, {
         cache: 'no-store',
         signal: AbortSignal.timeout(timeoutMs),
       });
+      const durationMs = Date.now() - startedAt;
       if (!res.ok) {
-        lastError = new Error(`home request failed: ${res.status} ${res.statusText}`);
+        const message = `home request failed: status=${res.status} statusText=${res.statusText} durationMs=${durationMs}`;
+        lastError = new Error(message);
+        console.error('[home-ssr] non-200 response', {
+          requestPath,
+          attempt: attemptNo,
+          retries: retries + 1,
+          status: res.status,
+          statusText: res.statusText,
+          durationMs,
+        });
         continue;
       }
 
       const json = await res.json();
       if (json?.code !== 0 || !json?.data) {
-        lastError = new Error(`home api code invalid: ${String(json?.code ?? 'unknown')}`);
+        const code = String(json?.code ?? 'unknown');
+        lastError = new Error(`home api code invalid: code=${code} durationMs=${durationMs}`);
+        console.error('[home-ssr] invalid payload', {
+          requestPath,
+          attempt: attemptNo,
+          retries: retries + 1,
+          code,
+          durationMs,
+        });
         continue;
       }
 
+      if (attemptNo > 1) {
+        console.warn('[home-ssr] recovered after retry', {
+          requestPath,
+          attempt: attemptNo,
+          retries: retries + 1,
+          durationMs,
+        });
+      }
       return json.data as HomeData;
     } catch (error) {
       lastError = error;
+      const durationMs = Date.now() - startedAt;
+      const errorName =
+        typeof error === 'object' && error && 'name' in error
+          ? String((error as { name?: unknown }).name || 'UnknownError')
+          : 'UnknownError';
+      const errorMessage =
+        error instanceof Error ? error.message : String(error || 'unknown');
+      const isTimeout =
+        errorName.includes('Timeout') ||
+        /timeout/i.test(errorMessage);
+      console.error('[home-ssr] request exception', {
+        requestPath,
+        attempt: attemptNo,
+        retries: retries + 1,
+        durationMs,
+        errorType: isTimeout ? 'timeout' : 'exception',
+        errorName,
+        errorMessage,
+      });
     }
   }
 
-  console.error('Failed to fetch /home after retries:', lastError);
+  console.error('[home-ssr] failed after retries', {
+    requestPath,
+    retries: retries + 1,
+    timeoutMs,
+    lastErrorMessage:
+      lastError instanceof Error ? lastError.message : String(lastError || 'unknown'),
+  });
   return null;
 }
 
@@ -390,38 +444,38 @@ export default async function HomePage() {
                   查看全部
                 </Link>
               </div>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-3.5">
                 {heavyweightGames.slice(0, 6).map((game) => (
                   <Link
                     key={game._id}
                     href={getGameHref(game)}
-                    className="group relative mx-auto flex h-full w-full max-w-[220px] flex-col rounded-[24px] bg-white p-2.5 shadow-[0_8px_18px_rgba(12,15,16,0.08)] transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_24px_rgba(12,15,16,0.12)]"
+                    className="group relative flex h-full w-full flex-col rounded-[18px] bg-white p-2 shadow-[0_8px_18px_rgba(12,15,16,0.08)] transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_24px_rgba(12,15,16,0.12)]"
                   >
                     {typeof game.star === 'number' && game.star > 0 && (
-                      <div className="absolute right-3 top-3 z-20 inline-flex items-center gap-1 rounded-full bg-black/65 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur">
+                      <div className="absolute right-2 top-2 z-20 inline-flex items-center gap-1 rounded-full bg-black/65 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur">
                         <Star className="h-3 w-3 fill-[#fdc003] text-[#fdc003]" />
                         {game.star.toFixed(1)}
                       </div>
                     )}
-                    <div className="relative mb-2.5 h-28 w-full overflow-hidden rounded-2xl bg-[#e6e8ea]">
+                    <div className="relative mb-2 h-24 w-full overflow-hidden rounded-xl bg-[#e6e8ea]">
                       <Image
                         src={game.header_image || game.icon || FALLBACK_GAME_IMAGE}
                         alt={game.name}
                         fill
-                        className="rounded-2xl object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                        sizes="220px"
+                        className="rounded-xl object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                        sizes="(max-width: 767px) 50vw, 25vw"
                       />
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <h4 className="min-w-0 flex-1 truncate text-sm font-black sm:text-base">{game.name}</h4>
+                      <h4 className="min-w-0 flex-1 truncate text-sm font-black">{game.name}</h4>
                       {game.metadata?.region && (
-                        <span className="inline-flex rounded-md bg-[#eff1f2] px-1.5 py-0.5 text-[10px] font-bold text-[#595c5d]">
+                        <span className="inline-flex rounded-md bg-[#eff1f2] px-1 py-0.5 text-[10px] font-bold text-[#595c5d]">
                           {game.metadata.region}
                         </span>
                       )}
                     </div>
-                    <p className="mt-1 line-clamp-1 text-xs text-[#595c5d]">{game.summary || game.tags?.[0] || '精品推荐'}</p>
-                    <span className="mt-2 inline-flex w-full items-center justify-center rounded-full bg-[#b3d4ff] py-1.5 text-xs font-black text-[#004a7e] transition-colors group-hover:bg-[#005e9f] group-hover:text-white">
+                    <p className="mt-1 line-clamp-1 text-[11px] text-[#595c5d]">{game.summary || game.tags?.[0] || '精品推荐'}</p>
+                    <span className="mt-1.5 inline-flex w-full items-center justify-center rounded-full bg-[#b3d4ff] py-1 text-[11px] font-black text-[#004a7e] transition-colors group-hover:bg-[#005e9f] group-hover:text-white">
                       下载
                     </span>
                   </Link>

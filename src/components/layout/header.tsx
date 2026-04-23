@@ -106,7 +106,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center gap-2 text-primary hover:opacity-90 transition-opacity">
               {logoUrl ? <Image src={logoUrl} alt={siteName} width={28} height={28} /> : <Gamepad2 size={28} />}
-              <h1 className="text-lg font-bold sm:text-xl tracking-wide">{siteName}</h1>
+              <span className="text-lg font-bold sm:text-xl tracking-wide">{siteName}</span>
             </Link>
             <nav className="hidden lg:flex items-center justify-start">
               <ul className="flex items-center justify-start space-x-6 text-left">

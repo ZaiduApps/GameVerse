@@ -93,7 +93,7 @@ export const viewport: Viewport = {
   ],
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  userScalable: true,
 }
 
 export default async function RootLayout({

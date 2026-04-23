@@ -81,6 +81,37 @@ function cleanText(input?: string | null) {
     .trim();
 }
 
+function escapeHtml(input: string) {
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function sanitizeRichHtml(input: string) {
+  return input
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<\/?(?:script|style|iframe|object|embed|link|meta)[^>]*>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*(".*?"|'.*?'|[^\s>]+)/gi, '')
+    .replace(/\s(href|src)\s*=\s*("|\')\s*javascript:[\s\S]*?\2/gi, ' $1="#"');
+}
+
+function formatDescriptionHtml(input?: string | null) {
+  const raw = String(input || '').replace(/\r\n?/g, '\n').trim();
+  if (!raw) return '';
+
+  const hasHtmlTag = /<\/?[a-z][^>]*>/i.test(raw);
+  if (hasHtmlTag) {
+    return sanitizeRichHtml(raw).replace(/\n/g, '<br />');
+  }
+
+  return escapeHtml(raw)
+    .replace(/\n{2,}/g, '<br /><br />')
+    .replace(/\n/g, '<br />');
+}
+
 function markdownToPlainText(input?: string | null) {
   if (!input) return '';
   return String(input)
@@ -270,11 +301,14 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
   }, [screenshots]);
 
   const heroImage = game?.header_image || screenshots[0] || game?.icon || '';
-  const gameDescription = cleanText(game?.description || game?.summary || '');
+  const rawGameDescription = String(game?.description || game?.summary || '');
+  const gameDescription = cleanText(rawGameDescription);
   const shortDescription =
     gameDescription.length > 260
       ? `${gameDescription.slice(0, 260).replace(/\s+\S*$/, '')}...`
       : gameDescription;
+  const fullDescriptionHtml = formatDescriptionHtml(rawGameDescription);
+  const shortDescriptionHtml = formatDescriptionHtml(shortDescription);
 
   const recommendationList = useMemo(() => {
     if (recommendedGames.length > 0) return recommendedGames;
@@ -565,6 +599,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
 
   return (
     <div className="game-detail-stitch relative min-h-screen overflow-x-hidden bg-[#f5f6f7] text-[#2c2f30] dark:bg-[#080d14] dark:text-[#f3f6fb]">
+      <h1 className="sr-only">{game.name}</h1>
       {hasDetailAnnouncements && (
         <div className="relative z-20 px-4 pt-20 sm:px-6 lg:px-16 lg:pt-6 2xl:px-20">
           <div className="mx-auto max-w-7xl">
@@ -640,9 +675,11 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                     ))}
                   </div>
 
-                  <h1 className="truncate text-2xl font-extrabold tracking-tight text-[#111417] dark:text-[#f4f7fc] xl:text-3xl">{game.name}</h1>
+                  <h2 className="line-clamp-2 text-3xl font-black leading-tight tracking-tight text-white [text-shadow:0_10px_28px_rgba(0,0,0,0.55)] xl:text-5xl">
+                    {game.name}
+                  </h2>
 
-                  <div className="flex flex-wrap gap-5 text-sm text-[#595c5d] dark:text-[#c4ccda]">
+                  <div className="flex flex-wrap gap-5 text-sm text-white/90 [text-shadow:0_3px_10px_rgba(0,0,0,0.45)]">
                     <span className="inline-flex items-center gap-1">
                       <Users className="h-4 w-4 text-[#005e9f]" />
                       开发者：{game.developer || '未知'}
@@ -741,9 +778,14 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   <span className="h-8 w-2 rounded-full bg-[#b71211]" />
                   游戏介绍
                 </h2>
-                <p className="text-base leading-relaxed text-[#595c5d]">
-                  {showFullDescription ? gameDescription || '暂无介绍' : shortDescription || '暂无介绍'}
-                </p>
+                <div
+                  className="text-base leading-relaxed text-[#595c5d] [&_p]:mb-3 [&_p:last-child]:mb-0"
+                  dangerouslySetInnerHTML={{
+                    __html: showFullDescription
+                      ? fullDescriptionHtml || '暂无介绍'
+                      : shortDescriptionHtml || '暂无介绍',
+                  }}
+                />
 
                 <div className="mt-8">
                   <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-[#595c5d]">游戏标签</h3>
@@ -1017,7 +1059,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
           >
             <ArrowLeft className="h-5 w-5 text-[#b71211]" />
           </button>
-          <h1 className="text-xl font-black tracking-tight text-[#2c2f30]">游戏详情</h1>
+          <p className="text-xl font-black tracking-tight text-[#2c2f30]">游戏详情</p>
         </div>
         <button
           type="button"
@@ -1048,7 +1090,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-xl font-extrabold text-[#111417] dark:text-[#f4f7fc]">{game.name}</h1>
+              <h2 className="line-clamp-2 text-2xl font-black leading-tight text-[#0f1720] dark:text-[#f4f7fc]">{game.name}</h2>
               <div className="mt-1 inline-flex items-center gap-1 text-[#b71211]">
                 <Star className="h-4 w-4 fill-current" />
                 <span className="text-base font-bold">{normalizeScore(game.star)}</span>
@@ -1108,9 +1150,14 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
             <span className="h-6 w-1.5 rounded-full bg-[#b71211]" />
             游戏介绍
           </h2>
-          <p className="text-sm leading-relaxed text-[#595c5d]">
-            {showFullDescription ? gameDescription || '暂无介绍' : shortDescription || '暂无介绍'}
-          </p>
+          <div
+            className="text-sm leading-relaxed text-[#595c5d] [&_p]:mb-2.5 [&_p:last-child]:mb-0"
+            dangerouslySetInnerHTML={{
+              __html: showFullDescription
+                ? fullDescriptionHtml || '暂无介绍'
+                : shortDescriptionHtml || '暂无介绍',
+            }}
+          />
           {gameDescription.length > shortDescription.length && (
             <button
               type="button"
