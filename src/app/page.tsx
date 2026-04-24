@@ -29,6 +29,8 @@ import { absoluteUrl } from '@/lib/seo';
 
 const FALLBACK_GAME_IMAGE = 'https://placehold.co/640x640/png';
 const FALLBACK_AVATAR = 'https://placehold.co/80x80/png';
+const HOME_ISR_REVALIDATE_SECONDS = 120;
+export const revalidate = 120;
 
 function toNumber(value: string | undefined, fallback: number): number {
   const n = Number(value);
@@ -109,7 +111,8 @@ async function fetchHomeDataWithRetry(
     const startedAt = Date.now();
     try {
       const res = await trackedApiFetch(requestPath, {
-        cache: 'no-store',
+        cache: 'force-cache',
+        next: { revalidate: HOME_ISR_REVALIDATE_SECONDS },
         signal: AbortSignal.timeout(timeoutMs),
       });
       const durationMs = Date.now() - startedAt;
@@ -251,7 +254,24 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { absolute: siteSlogan },
     description: seoDescription,
     keywords,
-    alternates: { canonical: '/' },
+    alternates: {
+      canonical: '/',
+      languages: {
+        'zh-CN': '/',
+        'x-default': '/',
+      },
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+        'max-video-preview': -1,
+      },
+    },
     openGraph: {
       title: siteSlogan,
       description: seoDescription,
@@ -342,6 +362,7 @@ export default async function HomePage() {
   return (
     <div className="home-page space-y-8 pb-2 text-foreground">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd) }} />
+      <h1 className="sr-only">APKScc 安卓游戏与应用下载平台</h1>
 
       <section className="flex flex-col gap-5 lg:h-[480px] lg:flex-row lg:gap-6">
         <div className="w-full lg:h-full lg:w-3/4">

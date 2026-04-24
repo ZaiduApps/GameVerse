@@ -11,6 +11,16 @@ type GameSitemapItem = {
   is_deleted?: number | boolean;
 };
 
+type NewsSitemapItem = {
+  _id?: string;
+  gid?: string;
+  release_at?: string;
+  updated_at?: string;
+  latest_at?: string;
+  status?: number;
+  is_deleted?: number | boolean;
+};
+
 type PagedList<T> = {
   list?: T[];
   total?: number;
@@ -21,6 +31,7 @@ type PagedList<T> = {
 const FALLBACK_STATIC_PATHS = ['/', '/app', '/community', '/news', '/rankings', '/submit-resource', '/download/app'];
 const SITEMAP_PAGE_SIZE = 500;
 const SITEMAP_MAX_PAGES = 200;
+const NEWS_SITEMAP_MAX_PAGES = 80;
 
 function getServerApiBaseUrl() {
   const appEnv = (process.env.APP_ENV || process.env.NODE_ENV || 'development').toLowerCase();
@@ -87,6 +98,23 @@ function toGameEntry(item: GameSitemapItem): MetadataRoute.Sitemap[number] | nul
   };
 }
 
+function toNewsEntry(item: NewsSitemapItem): MetadataRoute.Sitemap[number] | null {
+  const id = String(item?.gid || item?._id || '').trim();
+  if (!id) return null;
+
+  const isDeleted = item?.is_deleted === true || Number(item?.is_deleted || 0) === 1;
+  if (isDeleted) return null;
+  if (item?.status !== undefined && Number(item.status) !== 1) return null;
+
+  const lastmod = parseDate(item.updated_at) || parseDate(item.latest_at) || parseDate(item.release_at);
+  return {
+    url: absoluteUrl(`/news/${encodeURIComponent(id)}`),
+    lastModified: lastmod,
+    changeFrequency: 'daily',
+    priority: 0.6,
+  };
+}
+
 async function fetchGamesFromSeoEndpoint(): Promise<MetadataRoute.Sitemap[number][]> {
   const result: MetadataRoute.Sitemap[number][] = [];
   const seen = new Set<string>();
@@ -134,6 +162,53 @@ async function fetchGamesFromListFallback(): Promise<MetadataRoute.Sitemap[numbe
   return result;
 }
 
+async function fetchNewsFromSearchEndpoint(): Promise<MetadataRoute.Sitemap[number][]> {
+  const result: MetadataRoute.Sitemap[number][] = [];
+  const seen = new Set<string>();
+
+  for (let page = 1; page <= NEWS_SITEMAP_MAX_PAGES; page += 1) {
+    const json = await fetchJson(`/news/search?q=&page=${page}&pageSize=${SITEMAP_PAGE_SIZE}`);
+    if (!json || (json.code !== 0 && json.code !== undefined)) break;
+
+    const { list, total, pageSize } = normalizeListData<NewsSitemapItem>(json);
+    const safeList = Array.isArray(list) ? list : [];
+    if (safeList.length === 0) break;
+
+    for (const item of safeList) {
+      const entry = toNewsEntry(item);
+      if (!entry) continue;
+      if (seen.has(entry.url)) continue;
+      seen.add(entry.url);
+      result.push(entry);
+    }
+
+    if (total && page * (pageSize || SITEMAP_PAGE_SIZE) >= total) break;
+    if (safeList.length < SITEMAP_PAGE_SIZE) break;
+  }
+
+  return result;
+}
+
+async function fetchNewsFromHomeFallback(): Promise<MetadataRoute.Sitemap[number][]> {
+  const json = await fetchJson('/home');
+  if (!json || (json.code !== 0 && json.code !== undefined)) return [];
+
+  const data = json?.data;
+  const list = Array.isArray(data?.articles) ? (data.articles as NewsSitemapItem[]) : [];
+  const result: MetadataRoute.Sitemap[number][] = [];
+  const seen = new Set<string>();
+
+  for (const item of list) {
+    const entry = toNewsEntry(item);
+    if (!entry) continue;
+    if (seen.has(entry.url)) continue;
+    seen.add(entry.url);
+    result.push(entry);
+  }
+
+  return result;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const staticEntries: MetadataRoute.Sitemap = FALLBACK_STATIC_PATHS.map((path) => ({
@@ -143,12 +218,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: path === '/' ? 1 : 0.7,
   }));
 
-  const dynamicEntries = await fetchGamesFromSeoEndpoint();
-  if (dynamicEntries.length > 0) {
-    return [...staticEntries, ...dynamicEntries];
-  }
+  const gameEntries = await fetchGamesFromSeoEndpoint();
+  const newsEntries = await fetchNewsFromSearchEndpoint();
 
-  const fallbackEntries = await fetchGamesFromListFallback();
-  return [...staticEntries, ...fallbackEntries];
+  const safeGameEntries = gameEntries.length > 0 ? gameEntries : await fetchGamesFromListFallback();
+  const safeNewsEntries = newsEntries.length > 0 ? newsEntries : await fetchNewsFromHomeFallback();
+
+  return [...staticEntries, ...safeGameEntries, ...safeNewsEntries];
 }
-

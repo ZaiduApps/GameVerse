@@ -1,250 +1,165 @@
-﻿
-'use client'; 
+import type { Metadata } from 'next';
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import type { NewsArticle, ApiArticle } from '@/types';
-import Image from 'next/image';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { CalendarDays, UserCircle, Newspaper, Search, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useState, useEffect, useCallback } from 'react';
-import { Input } from '@/components/ui/input';
+import NewsListView from './NewsListView';
 import { trackedApiFetch } from '@/lib/api';
+import { absoluteUrl } from '@/lib/seo';
+import { getPublicSiteConfig } from '@/lib/site-config';
+import type { ApiArticle } from '@/types';
 
-const ITEMS_PER_PAGE = 20;
+const NEWS_JSONLD_PAGE_SIZE = 12;
 
-interface PaginationState {
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-  hasMore: boolean;
+type NewsQueryPayload = {
+  code?: number;
+  data?: {
+    list?: ApiArticle[];
+  };
+};
+
+type HomeNewsFallbackPayload = {
+  code?: number;
+  data?: {
+    articles?: ApiArticle[];
+  };
+};
+
+function getArticleId(article: ApiArticle): string {
+  return String(article.gid || article._id || '').trim();
 }
 
-function transformApiArticle(apiArticle: ApiArticle): NewsArticle {
-     return {
-        id: apiArticle._id || apiArticle.gid || '',
-        title: apiArticle.name,
-        content: apiArticle.content || '',
-        excerpt: apiArticle.summary,
-        imageUrl: apiArticle.image_cover,
-        category: apiArticle.tags?.[0] || '资讯',
-        date: apiArticle.release_at ? new Date(apiArticle.release_at).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : '未知日期',
-        author: apiArticle.author || '匿名',
-        tags: apiArticle.tags,
-        isTop: apiArticle.is_top,
-        isRecommended: apiArticle.is_recommended,
-        viewCount: apiArticle.view_counts,
-        likeCount: apiArticle.like_counts,
-        additionLinks: apiArticle.addition_links,
-        dataAiHint: `news article ${apiArticle.name}`,
-    };
+function getArticleHref(article: ApiArticle): string {
+  const id = getArticleId(article);
+  return id ? `/news/${encodeURIComponent(id)}` : '/news';
 }
 
-
-export default function NewsPage() {
-  const [articles, setArticles] = useState<NewsArticle[]>([]);
-  const [pagination, setPagination] = useState<PaginationState | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [submittedSearchTerm, setSubmittedSearchTerm] = useState('');
-
-  const fetchArticles = useCallback(async (page: number, query: string) => {
-    setIsLoading(true);
-    try {
-      if (query) {
-        const res = await trackedApiFetch(
-          `/news/search?q=${encodeURIComponent(query)}&page=${page}&pageSize=${ITEMS_PER_PAGE}`,
-        );
-        if (res.ok) {
-          const data = await res.json();
-          if (data.code === 0 && data.data) {
-            const transformedArticles = data.data.list.map(transformApiArticle);
-            setArticles(transformedArticles);
-            setPagination({
-              total: data.data.total || transformedArticles.length,
-              page: data.data.page || page,
-              pageSize: data.data.pageSize || ITEMS_PER_PAGE,
-              totalPages:
-                data.data.totalPages ||
-                Math.max(1, Math.ceil((data.data.total || 0) / ITEMS_PER_PAGE)),
-              hasMore: Boolean(data.data.hasMore),
-            });
-          } else {
-            setArticles([]);
-            setPagination(null);
-          }
-        } else {
-          setArticles([]);
-          setPagination(null);
-        }
-      } else {
-      const res = await trackedApiFetch('/home', { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          const rawArticles = Array.isArray(data?.data?.articles) ? data.data.articles : [];
-          const transformedArticles = rawArticles.map(transformApiArticle);
-          const total = transformedArticles.length;
-          const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
-          const safePage = Math.min(Math.max(1, page), totalPages);
-          const start = (safePage - 1) * ITEMS_PER_PAGE;
-          const end = start + ITEMS_PER_PAGE;
-          setArticles(transformedArticles.slice(start, end));
-          setPagination({
-            total,
-            page: safePage,
-            pageSize: ITEMS_PER_PAGE,
-            totalPages,
-            hasMore: safePage < totalPages,
-          });
-        } else {
-          setArticles([]);
-          setPagination(null);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to fetch articles:", error);
-      setArticles([]);
-      setPagination(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchArticles(currentPage, submittedSearchTerm);
-  }, [currentPage, submittedSearchTerm, fetchArticles]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCurrentPage(1); // Reset to first page for new search
-    setSubmittedSearchTerm(searchTerm);
+async function getLatestNewsForSeo(): Promise<ApiArticle[]> {
+  try {
+    const params = new URLSearchParams({
+      q: '',
+      page: '1',
+      pageSize: String(NEWS_JSONLD_PAGE_SIZE),
+    });
+    const res = await trackedApiFetch(`/news/search?${params.toString()}`, {
+      cache: 'force-cache',
+      next: { revalidate: 900 },
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as NewsQueryPayload;
+    if (Number(json?.code ?? -1) !== 0) return [];
+    const list = json?.data?.list;
+    if (Array.isArray(list) && list.length > 0) return list;
+  } catch {
+    // fall through to home fallback
   }
-  
-  const handlePageChange = (newPage: number) => {
-    if (newPage > 0 && (!pagination || newPage <= pagination.totalPages)) {
-      setCurrentPage(newPage);
-      window.scrollTo(0, 0); // Scroll to top on page change
-    }
+
+  try {
+    const res = await trackedApiFetch('/home', {
+      cache: 'force-cache',
+      next: { revalidate: 900 },
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as HomeNewsFallbackPayload;
+    if (Number(json?.code ?? -1) !== 0) return [];
+    const list = json?.data?.articles;
+    return Array.isArray(list) ? list.slice(0, NEWS_JSONLD_PAGE_SIZE) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const config = await getPublicSiteConfig(300);
+  const siteName = String(config?.basic?.site_name || 'APKScc').trim();
+  const title = `${siteName} 游戏资讯 - 最新更新与活动公告`;
+  const description =
+    '查看 APKScc 最新游戏资讯，包含版本更新、活动公告与深度内容。按时间与关键词快速检索你关心的游戏动态。';
+  const shareImage = String(config?.basic?.share_image || '').trim();
+
+  return {
+    title: { absolute: title },
+    description,
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+        'max-video-preview': -1,
+      },
+    },
+    alternates: {
+      canonical: '/news',
+      languages: {
+        'zh-CN': '/news',
+        'x-default': '/news',
+      },
+    },
+    openGraph: {
+      title,
+      description,
+      url: absoluteUrl('/news'),
+      siteName,
+      type: 'website',
+      locale: 'zh_CN',
+      images: shareImage ? [shareImage] : [],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: shareImage ? [shareImage] : [],
+    },
+  };
+}
+
+export default async function NewsPage() {
+  const [config, articles] = await Promise.all([getPublicSiteConfig(300), getLatestNewsForSeo()]);
+  const siteName = String(config?.basic?.site_name || 'APKScc').trim();
+
+  const collectionJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `${siteName} 游戏资讯`,
+    description: '游戏资讯、版本更新与活动公告列表',
+    inLanguage: 'zh-CN',
+    url: absoluteUrl('/news'),
+    isPartOf: {
+      '@type': 'WebSite',
+      name: siteName,
+      url: absoluteUrl('/'),
+    },
   };
 
-  const renderArticleCard = (article: NewsArticle, priorityImage: boolean = false) => {
-    // Ensure gid is used for the link
-    const articleLink = `/news/${article.id}`;
-    return (
-      <Card
-        key={article.id}
-        className="flex flex-col overflow-hidden hover:shadow-xl transition-shadow duration-300"
-      >
-        <CardHeader className="p-0">
-          <Link 
-            href={articleLink}
-            className="block relative group aspect-video"
-          >
-            <Image
-              src={article.imageUrl || 'https://placehold.co/600x400.png'} // Fallback image
-              alt={article.title}
-              fill
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
-              data-ai-hint={article.dataAiHint || 'news image'}
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              priority={priorityImage}
-            />
-          </Link>
-        </CardHeader>
-        <CardContent className="flex-grow flex flex-col p-4">
-          <Link href={articleLink} className="block">
-            <CardTitle className="mb-1.5 line-clamp-2 text-base font-semibold hover:text-primary transition-colors md:text-lg">{article.title}</CardTitle>
-          </Link>
-          <CardDescription className="text-muted-foreground flex-grow text-sm line-clamp-3">{article.excerpt || '暂无摘要'}</CardDescription>
-        </CardContent>
-        <CardFooter className="border-t mt-auto p-4">
-          <div className="flex justify-between items-center w-full text-xs text-muted-foreground">
-            <div className="flex items-center">
-              <CalendarDays size={14} className="mr-1.5" />
-              <span>{article.date}</span>
-            </div>
-            <div className="flex items-center">
-              <UserCircle size={14} className="mr-1.5" />
-              <span>{article.author}</span>
-            </div>
-          </div>
-        </CardFooter>
-      </Card>
-    );
+  const itemListJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `${siteName} 最新资讯列表`,
+    itemListOrder: 'https://schema.org/ItemListOrderDescending',
+    numberOfItems: articles.length,
+    itemListElement: articles.map((article, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      url: absoluteUrl(getArticleHref(article)),
+      name: String(article.name || '').trim() || '游戏资讯',
+      image: String(article.image_cover || '').trim() || undefined,
+      datePublished: String(article.release_at || '').trim() || undefined,
+    })),
   };
-
 
   return (
-    <div className="space-y-8 fade-in">
-      <section className="bg-card p-6 rounded-lg shadow">
-        <div className="flex items-center mb-4">
-          <Newspaper className="mr-3 h-7 w-7 text-primary" />
-          <h1 className="text-xl font-bold text-primary">游戏资讯</h1>
-        </div>
-        <p className="text-muted-foreground">获取最新游戏资讯、更新与深度内容。</p>
-      </section>
-
-      <section>
-        <form onSubmit={handleSearch} className="flex items-center gap-2 mb-8">
-            <div className="relative flex-grow">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input 
-                    type="search" 
-                    placeholder="搜索文章标题或摘要..." 
-                    className="h-10 pl-10 text-sm"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-            </div>
-            <Button type="submit" size="default" className="h-10 btn-interactive">搜索</Button>
-        </form>
-      </section>
-
-      {isLoading ? (
-        <div className="flex justify-center items-center py-20">
-          <Loader2 className="h-10 w-10 text-primary animate-spin" />
-        </div>
-      ) : articles.length > 0 ? (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {articles.map((article, index) => 
-              renderArticleCard(article, index < 4)
-            )}
-          </div>
-
-          {pagination && pagination.totalPages > 1 && (
-             <div className="flex justify-center items-center space-x-2 mt-10">
-               <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="btn-interactive"
-               >
-                 上一页
-               </Button>
-               <span className="text-sm text-muted-foreground">
-                 第 {currentPage} 页 / 共 {pagination.totalPages} 页
-               </span>
-               <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === pagination.totalPages || !pagination.hasMore}
-                className="btn-interactive"
-               >
-                 下一页
-               </Button>
-             </div>
-          )}
-        </>
-      ) : (
-            <p className="text-center text-muted-foreground py-8">没有找到相关资讯。</p>
-      )}
-    </div>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
+      />
+      {articles.length > 0 ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+        />
+      ) : null}
+      <NewsListView />
+    </>
   );
 }
-

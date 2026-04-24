@@ -156,6 +156,10 @@ export interface ApiArticle {
   view_counts?: number;
   like_counts?: number;
   addition_links?: string[];
+  updated_at?: string;
+  latest_at?: string;
+  status?: number;
+  is_deleted?: number | boolean;
 }
 
 export interface HomeData {
