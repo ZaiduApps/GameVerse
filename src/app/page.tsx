@@ -478,7 +478,7 @@ export default async function HomePage() {
                         {game.star.toFixed(1)}
                       </div>
                     )}
-                    <div className="relative mb-2 h-24 w-full overflow-hidden rounded-xl bg-[#e6e8ea]">
+                    <div className="relative mb-2 h-32 w-full overflow-hidden rounded-xl bg-[#e6e8ea]">
                       <Image
                         src={game.header_image || game.icon || FALLBACK_GAME_IMAGE}
                         alt={game.name}

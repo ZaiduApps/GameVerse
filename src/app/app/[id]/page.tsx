@@ -5,13 +5,14 @@ import GameDetailView from './GameDetailView';
 import { trackedApiFetch } from '@/lib/api';
 import { absoluteUrl } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
-import type { ApiRecommendedGame, GameDetailData, SiteConfig } from '@/types';
+import type { GameDetailData, SiteConfig } from '@/types';
 
 const DETAIL_REVALIDATE_SECONDS = 900;
-const RECOMMENDED_REVALIDATE_SECONDS = 1800;
 const TEMPLATE_TOKEN_PATTERN = /\{([a-z0-9_]+)\}/gi;
-const MAX_TITLE_LENGTH = 96;
+const MAX_TITLE_LENGTH = 72;
 const MAX_DESCRIPTION_LENGTH = 160;
+export const dynamic = 'force-static';
+export const revalidate = 900;
 
 function normalizeText(input?: string | null): string {
   return String(input || '')
@@ -112,20 +113,17 @@ async function getGameDetails(id: string): Promise<GameDetailData | null> {
   }
 }
 
-async function getRecommendedGames(pkg: string): Promise<ApiRecommendedGame[] | null> {
-  if (!pkg) return null;
-  try {
-    const res = await trackedApiFetch(`/game/recommendedApp?param=${pkg}`, {
-      cache: 'force-cache',
-      next: { revalidate: RECOMMENDED_REVALIDATE_SECONDS },
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json.code === 0 ? json.data : null;
-  } catch (error) {
-    console.error('Failed to fetch recommended games:', error);
-    return null;
-  }
+function buildInitialGameDataForHydration(gameData: GameDetailData): GameDetailData {
+  return {
+    app: {
+      ...gameData.app,
+      detail_images: Array.isArray(gameData.app.detail_images)
+        ? gameData.app.detail_images.slice(0, 5)
+        : [],
+      description: String(gameData.app.description || '').slice(0, 1200),
+    },
+    resources: Array.isArray(gameData.resources) ? gameData.resources : [],
+  };
 }
 
 export async function generateMetadata({
@@ -263,7 +261,6 @@ export default async function GameDetailPage({
     notFound();
   }
 
-  const initialRecommendedGames = await getRecommendedGames(initialGameData.app.pkg);
   const game = initialGameData.app;
   const canonicalPath = `/app/${encodeURIComponent(game.pkg || id)}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
@@ -336,7 +333,11 @@ export default async function GameDetailPage({
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(detailJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
-      <GameDetailView id={id} initialGameData={initialGameData} initialRecommendedGames={initialRecommendedGames} />
+      <GameDetailView
+        id={id}
+        initialGameData={buildInitialGameDataForHydration(initialGameData)}
+        initialDataMode="partial"
+      />
     </>
   );
 }

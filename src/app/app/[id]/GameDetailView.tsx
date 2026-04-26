@@ -41,6 +41,7 @@ interface GameDetailViewProps {
   id: string;
   initialGameData?: GameDetailData | null;
   initialRecommendedGames?: ApiRecommendedGame[] | null;
+  initialDataMode?: 'partial' | 'full';
 }
 
 const MAX_RECOMMENDED_GAMES = 5;
@@ -79,6 +80,33 @@ function cleanText(input?: string | null) {
     .replace(/<[^>]*>/g, '')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function toPlainTextWithBreaks(input?: string | null) {
+  const raw = String(input || '').replace(/\r\n?/g, '\n').trim();
+  if (!raw) return '';
+  return raw
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(?:p|div|section|article|blockquote|li|ul|ol|h[1-6])>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<[^>]*>/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function extractDescriptionExcerpt(input?: string | null, maxLength = 260) {
+  const normalized = toPlainTextWithBreaks(input);
+  if (!normalized) return '';
+
+  const firstSection = normalized
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .find(Boolean) || '';
+  if (firstSection.length <= maxLength) return firstSection;
+
+  return `${firstSection.slice(0, maxLength).trimEnd()}...`;
 }
 
 function escapeHtml(input: string) {
@@ -246,7 +274,12 @@ function ViewSkeleton() {
   );
 }
 
-export default function GameDetailView({ id, initialGameData, initialRecommendedGames }: GameDetailViewProps) {
+export default function GameDetailView({
+  id,
+  initialGameData,
+  initialRecommendedGames,
+  initialDataMode = 'full',
+}: GameDetailViewProps) {
   const { token, user } = useAuth();
   const { toast } = useToast();
 
@@ -261,6 +294,8 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [sort, setSort] = useState<'latest' | 'hot'>('latest');
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isHeroBackgroundError, setIsHeroBackgroundError] = useState(false);
+  const [isIconBackdropError, setIsIconBackdropError] = useState(false);
 
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [previewZoom, setPreviewZoom] = useState(1);
@@ -301,12 +336,16 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
   }, [screenshots]);
 
   const heroImage = game?.header_image || screenshots[0] || game?.icon || '';
+  const heroBackdropSrc = !isHeroBackgroundError
+    ? heroImage
+    : isIconBackdropError
+      ? ''
+      : String(game?.icon || '').trim();
+  const isUsingIconBackdrop = isHeroBackgroundError && !isIconBackdropError && Boolean(game?.icon);
   const rawGameDescription = String(game?.description || game?.summary || '');
-  const gameDescription = cleanText(rawGameDescription);
-  const shortDescription =
-    gameDescription.length > 260
-      ? `${gameDescription.slice(0, 260).replace(/\s+\S*$/, '')}...`
-      : gameDescription;
+  const gameDescription = toPlainTextWithBreaks(rawGameDescription);
+  const shortDescription = extractDescriptionExcerpt(rawGameDescription, 260);
+  const hasMoreDescription = gameDescription.length > shortDescription.length;
   const fullDescriptionHtml = formatDescriptionHtml(rawGameDescription);
   const shortDescriptionHtml = formatDescriptionHtml(shortDescription);
 
@@ -334,18 +373,29 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     let cancelled = false;
 
     async function loadDetails() {
-      if (initialGameData && (initialGameData.app.pkg === id || String(initialGameData.app._id) === id)) {
+      const hasInitialMatch = Boolean(
+        initialGameData && (initialGameData.app.pkg === id || String(initialGameData.app._id) === id),
+      );
+      if (hasInitialMatch && initialGameData) {
         setGameData(initialGameData);
         setRecommendedGames((initialRecommendedGames || []).slice(0, MAX_RECOMMENDED_GAMES));
         setIsLoading(false);
-        return;
+        if (
+          initialDataMode === 'full' &&
+          Array.isArray(initialRecommendedGames) &&
+          initialRecommendedGames.length > 0
+        ) {
+          return;
+        }
       }
 
-      setIsLoading(true);
+      if (!hasInitialMatch) {
+        setIsLoading(true);
+      }
       setHasError(false);
 
       try {
-        const detailRes = await trackedApiFetch(buildGameDetailsUrl(id), { cache: 'no-store' });
+        const detailRes = await trackedApiFetch(buildGameDetailsUrl(id), { cache: 'force-cache' });
         if (!detailRes.ok) throw new Error('details-request-failed');
 
         const detailJson = await detailRes.json();
@@ -357,7 +407,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
         const pkg = String(detailJson.data?.app?.pkg || '').trim();
         if (pkg) {
           const recRes = await trackedApiFetch(`/game/recommendedApp?param=${encodeURIComponent(pkg)}`, {
-            cache: 'no-store',
+            cache: 'force-cache',
           });
           if (recRes.ok) {
             const recJson = await recRes.json();
@@ -377,7 +427,12 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
     return () => {
       cancelled = true;
     };
-  }, [id, initialGameData, initialRecommendedGames]);
+  }, [id, initialDataMode, initialGameData, initialRecommendedGames]);
+
+  useEffect(() => {
+    setIsHeroBackgroundError(false);
+    setIsIconBackdropError(false);
+  }, [id, heroImage, game?.icon]);
 
   useEffect(() => {
     let cancelled = false;
@@ -609,12 +664,47 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
       )}
 
       <div className="pointer-events-none absolute left-0 top-0 z-0 hidden h-[870px] w-full lg:block">
-        {heroImage ? (
-          <Image src={heroImage} alt={`${game.name} 背景图`} fill priority className="object-cover object-center" sizes="100vw" />
+        {heroBackdropSrc ? (
+          <Image
+            src={heroBackdropSrc}
+            alt={`${game.name} 背景图`}
+            fill
+            priority
+            className={cn(
+              'object-cover object-center transition-all duration-500',
+              isUsingIconBackdrop && 'scale-110 blur-[10px] saturate-75',
+            )}
+            sizes="100vw"
+            onError={() => {
+              if (!isHeroBackgroundError) {
+                setIsHeroBackgroundError(true);
+                return;
+              }
+              setIsIconBackdropError(true);
+            }}
+          />
         ) : (
           <div className="h-full w-full bg-[#e6e8ea] dark:bg-[#121924]" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#f5f6f7]/82 to-[#f5f6f7] dark:from-[#05070c]/28 dark:via-[#080d14]/86 dark:to-[#080d14]" />
+        {isUsingIconBackdrop && (
+          <div className="absolute inset-0 bg-white/16 backdrop-blur-md dark:bg-black/20" />
+        )}
+        <div
+          className="absolute inset-0 dark:hidden"
+          style={{
+            background:
+              'radial-gradient(72% 86% at 0% 50%, rgba(15,23,32,0.34) 0%, rgba(15,23,32,0.16) 28%, rgba(15,23,32,0) 64%), radial-gradient(72% 86% at 100% 50%, rgba(15,23,32,0.34) 0%, rgba(15,23,32,0.16) 28%, rgba(15,23,32,0) 64%), radial-gradient(122% 86% at 50% 112%, rgba(15,23,32,0.4) 0%, rgba(15,23,32,0.2) 24%, rgba(15,23,32,0) 60%)',
+          }}
+        />
+        <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-[#f5f6f7] via-[#f5f6f7]/78 to-transparent dark:hidden" />
+        <div
+          className="absolute inset-0 hidden dark:block"
+          style={{
+            background:
+              'radial-gradient(68% 88% at 0% 50%, rgba(10,18,30,0.28) 0%, rgba(10,18,30,0.1) 34%, rgba(10,18,30,0) 68%), radial-gradient(68% 88% at 100% 50%, rgba(10,18,30,0.28) 0%, rgba(10,18,30,0.1) 34%, rgba(10,18,30,0) 68%), linear-gradient(180deg, rgba(2,6,12,0.10) 0%, rgba(6,12,20,0.26) 42%, rgba(8,13,20,0.52) 72%, rgba(8,13,20,0.82) 100%)',
+          }}
+        />
+        <div className="absolute inset-x-0 bottom-0 hidden h-[56%] bg-gradient-to-t from-[#080d14]/86 via-[#080d14]/58 to-transparent dark:block" />
       </div>
 
       <div className="fixed bottom-8 right-8 z-[60] hidden flex-col gap-3 lg:flex">
@@ -640,70 +730,73 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
       </div>
 
       <div className="relative z-10 hidden px-4 pb-20 sm:px-6 lg:block lg:px-16 2xl:px-20">
+        <div className="pointer-events-none absolute inset-x-0 top-0 hidden h-16 bg-gradient-to-b from-[#080d14]/72 via-[#080d14]/36 to-transparent dark:block" />
         <div className="mx-auto max-w-7xl">
           <section
             className={cn(
               'mb-8',
-              hasDetailAnnouncements ? 'pt-[136px]' : 'pt-[208px]',
+              hasDetailAnnouncements ? 'pt-[136px]' : 'pt-[40%]',
             )}
           >
-            <div className="flex items-end gap-10">
-              <div className="h-36 w-36 shrink-0 overflow-hidden rounded-2xl shadow-2xl xl:h-40 xl:w-40">
-                {game.icon ? (
-                  <Image src={game.icon} alt={`${game.name} icon`} width={160} height={160} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="h-full w-full bg-[#dadddf]" />
-                )}
-              </div>
-
-              <div className="flex min-w-0 flex-1 items-end justify-between gap-8 pb-4">
-                <div className="min-w-0 space-y-4">
-                  <div className="flex flex-wrap items-center gap-3">
-                    {tags.slice(0, 4).map((tag, index) => (
-                      <Badge
-                        key={`${tag}-${index}`}
-                        className={cn(
-                          'rounded-full border-none px-4 py-1.5 text-sm font-bold',
-                          index === 0 && 'bg-[#fdc003] text-[#604700]',
-                          index === 1 && 'bg-[#b3d4ff] text-[#004a7e]',
-                          index === 2 && 'bg-[#ff7767] text-[#4f0001]',
-                          index > 2 && 'bg-[#c8e6c9] text-[#2e7d32]',
-                        )}
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  <h2 className="line-clamp-2 text-3xl font-black leading-tight tracking-tight text-white [text-shadow:0_10px_28px_rgba(0,0,0,0.55)] xl:text-5xl">
-                    {game.name}
-                  </h2>
-
-                  <div className="flex flex-wrap gap-5 text-sm text-white/90 [text-shadow:0_3px_10px_rgba(0,0,0,0.45)]">
-                    <span className="inline-flex items-center gap-1">
-                      <Users className="h-4 w-4 text-[#005e9f]" />
-                      开发者：{game.developer || '未知'}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Star className="h-4 w-4 fill-[#fdc003] text-[#fdc003]" />
-                      评分：{normalizeScore(game.star)}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Download className="h-4 w-4 text-[#005e9f]" />
-                      {game.download_count_show || '50W+'} 下载
-                    </span>
-                  </div>
+            <div className="rounded-[2rem] bg-gradient-to-r from-black/60 via-black/35 to-black/10 p-6 shadow-[0_30px_60px_rgba(0,0,0,0.24)] backdrop-blur-[1.5px] dark:from-black/65 dark:via-black/45 dark:to-black/20 xl:p-8">
+              <div className="flex items-end gap-10">
+                <div className="h-36 w-36 shrink-0 overflow-hidden rounded-2xl shadow-2xl xl:h-40 xl:w-40">
+                  {game.icon ? (
+                    <Image src={game.icon} alt={`${game.name} icon`} width={160} height={160} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full bg-[#dadddf]" />
+                  )}
                 </div>
 
-                <div className="w-56">
-                  <GameDownloadDialog
-                    appId={game._id}
-                    pkg={game.pkg}
-                    resources={resources}
-                    downloadNotices={downloadNotices}
-                    triggerClassName="stitch-primary-btn h-12 w-full rounded-full border-none text-base font-bold text-white"
-                    triggerLabel="立即下载"
-                  />
+                <div className="flex min-w-0 flex-1 items-end justify-between gap-8 pb-4">
+                  <div className="min-w-0 space-y-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                      {tags.slice(0, 4).map((tag, index) => (
+                        <Badge
+                          key={`${tag}-${index}`}
+                          className={cn(
+                            'rounded-full border-none px-4 py-1.5 text-sm font-bold',
+                            index === 0 && 'bg-[#fdc003] text-[#604700]',
+                            index === 1 && 'bg-[#b3d4ff] text-[#004a7e]',
+                            index === 2 && 'bg-[#ff7767] text-[#4f0001]',
+                            index > 2 && 'bg-[#c8e6c9] text-[#2e7d32]',
+                          )}
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+
+                    <h2 className="line-clamp-2 text-3xl font-black leading-tight tracking-tight text-white [text-shadow:0_12px_30px_rgba(0,0,0,0.62)] xl:text-5xl">
+                      {game.name}
+                    </h2>
+
+                    <div className="flex flex-wrap gap-5 text-sm text-white/95 [text-shadow:0_3px_10px_rgba(0,0,0,0.45)]">
+                      <span className="inline-flex items-center gap-1">
+                        <Users className="h-4 w-4 text-white/80" />
+                        开发者：{game.developer || '未知'}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Star className="h-4 w-4 fill-[#fdc003] text-[#fdc003]" />
+                        评分：{normalizeScore(game.star)}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Download className="h-4 w-4 text-white/80" />
+                        {game.download_count_show || '50W+'} 下载
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="w-56">
+                    <GameDownloadDialog
+                      appId={game._id}
+                      pkg={game.pkg}
+                      resources={resources}
+                      downloadNotices={downloadNotices}
+                      triggerClassName="stitch-primary-btn h-12 w-full rounded-full border-none text-base font-bold text-white"
+                      triggerLabel="立即下载"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -801,7 +894,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                   </div>
                 </div>
 
-                {gameDescription.length > shortDescription.length && (
+                {hasMoreDescription && (
                   <button
                     type="button"
                     className="mt-8 inline-flex items-center gap-1 text-sm font-bold text-[#005e9f] hover:underline"
@@ -1072,12 +1165,33 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
 
       <div className="relative z-10 px-4 pb-32 pt-20 lg:hidden">
         <section className="relative h-[340px] overflow-hidden rounded-[2rem]">
-          {heroImage ? (
-            <Image src={heroImage} alt={`${game.name} 封面图`} fill sizes="100vw" className="object-cover" />
+          {heroBackdropSrc ? (
+            <Image
+              src={heroBackdropSrc}
+              alt={`${game.name} 封面图`}
+              fill
+              sizes="100vw"
+              className={cn(
+                'object-cover transition-all duration-500',
+                isUsingIconBackdrop && 'scale-110 blur-[8px] saturate-75',
+              )}
+              onError={() => {
+                if (!isHeroBackgroundError) {
+                  setIsHeroBackgroundError(true);
+                  return;
+                }
+                setIsIconBackdropError(true);
+              }}
+            />
           ) : (
             <div className="h-full w-full bg-[#e6e8ea] dark:bg-[#121924]" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#f5f6f7] via-transparent to-black/20 dark:from-[#080d14] dark:via-[#080d14]/30 dark:to-black/35" />
+          {isUsingIconBackdrop && (
+            <div className="absolute inset-0 bg-white/14 backdrop-blur-md dark:bg-black/20" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#f5f6f7] via-transparent to-black/20 dark:hidden" />
+          <div className="absolute inset-0 hidden bg-gradient-to-t from-[#080d14]/84 via-[#080d14]/42 to-transparent dark:block" />
+          <div className="absolute inset-x-0 bottom-0 hidden h-[40%] bg-gradient-to-t from-[#080d14]/68 via-[#080d14]/30 to-transparent dark:block" />
         </section>
 
         <section className="relative z-10 -mt-16 rounded-[2rem] border border-[#abadae]/10 bg-white p-6 shadow-sm dark:border-border/40 dark:bg-[#111824]">
@@ -1158,7 +1272,7 @@ export default function GameDetailView({ id, initialGameData, initialRecommended
                 : shortDescriptionHtml || '暂无介绍',
             }}
           />
-          {gameDescription.length > shortDescription.length && (
+          {hasMoreDescription && (
             <button
               type="button"
               className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#b71211]"
