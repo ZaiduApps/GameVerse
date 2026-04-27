@@ -466,7 +466,7 @@ export default async function HomePage() {
                 </Link>
               </div>
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-3.5">
-                {heavyweightGames.slice(0, 6).map((game) => (
+                {heavyweightGames.map((game) => (
                   <Link
                     key={game._id}
                     href={getGameHref(game)}
