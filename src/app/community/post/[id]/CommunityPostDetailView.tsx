@@ -30,7 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 const initialMockComments: CommunityCommentThread[] = [
   {
     id: 'comment1',
-    user: { name: '评论用户A', avatarUrl: 'https://placehold.co/40x40.png?text=C1', dataAiHint: 'user avatar' },
+    user: { name: '评论用户A', avatarUrl: '/favicon.ico', dataAiHint: 'user avatar' },
     timestamp: '2小时前',
     text: '内容很有帮助，感谢分享。',
     likeCount: 0,
@@ -41,7 +41,7 @@ const initialMockComments: CommunityCommentThread[] = [
   },
   {
     id: 'comment2',
-    user: { name: '用户B', avatarUrl: 'https://placehold.co/40x40.png?text=U2', dataAiHint: 'user avatar' },
+    user: { name: '用户B', avatarUrl: '/favicon.ico', dataAiHint: 'user avatar' },
     timestamp: '1小时前',
     text: '建议补充一下复现步骤。',
     likeCount: 0,
@@ -306,7 +306,7 @@ export default function CommunityPostDetailView({
       id: `tmp-${Date.now()}`,
       user: {
         name: user?.name || user?.username || 'Current User',
-        avatarUrl: user?.avatar || 'https://placehold.co/40x40.png?text=ME',
+        avatarUrl: user?.avatar || '/favicon.ico',
         dataAiHint: 'user avatar',
       },
       timestamp: '刚刚',
@@ -754,7 +754,7 @@ export default function CommunityPostDetailView({
       <CardContent className="space-y-4">
         <div className="flex items-start space-x-3">
           <Avatar className="mt-1">
-            <AvatarImage src="https://placehold.co/40x40.png?text=ME" alt="当前用户" />
+            <AvatarImage src="/favicon.ico" alt="当前用户" />
             <AvatarFallback>ME</AvatarFallback>
           </Avatar>
           <div className="flex-grow space-y-2">

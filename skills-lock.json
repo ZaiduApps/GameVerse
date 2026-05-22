@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "seo-audit": {
+      "source": "seo-skills/seo-audit-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "caa565467ec214667aec1840597b1d9491771b58e6cbbdb64a90aa7c69d53873"
+    }
+  }
+}

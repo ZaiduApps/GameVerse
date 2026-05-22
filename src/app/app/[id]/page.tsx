@@ -5,10 +5,9 @@ import GameDetailView from './GameDetailView';
 import { trackedApiFetch } from '@/lib/api';
 import { absoluteUrl } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
-import type { GameDetailData, SiteConfig } from '@/types';
+import type { ApiArticle, GameDetailData, SiteConfig } from '@/types';
 
 const DETAIL_REVALIDATE_SECONDS = 900;
-const TEMPLATE_TOKEN_PATTERN = /\{([a-z0-9_]+)\}/gi;
 const MAX_TITLE_LENGTH = 72;
 const MAX_DESCRIPTION_LENGTH = 160;
 export const dynamic = 'force-static';
@@ -42,14 +41,97 @@ function toSeoDateLabel(input?: string | null): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-function renderTemplate(template: string, variables: Record<string, string>): string {
-  return template
-    .replace(TEMPLATE_TOKEN_PATTERN, (_, rawKey: string) => {
-      const key = rawKey.toLowerCase();
-      return variables[key] ?? '';
-    })
-    .replace(/\s+/g, ' ')
-    .trim();
+function humanizeCategory(input?: string | null): string {
+  const value = normalizeText(input).toLowerCase();
+  if (!value) return '安卓应用';
+  if (value === 'game') return '安卓游戏';
+  if (value === 'app') return '安卓应用';
+  return normalizeText(input);
+}
+
+type RelatedNewsItem = {
+  id: string;
+  title: string;
+  excerpt: string;
+  date: string;
+};
+
+function extractNewsExcerpt(summary?: string | null, content?: string | null, maxLength = 120) {
+  const source = normalizeText(summary || content);
+  if (!source) return '查看这篇相关资讯的完整内容。';
+  if (source.length <= maxLength) return source;
+  return `${source.slice(0, maxLength).trim()}...`;
+}
+
+function formatNewsDate(input?: string | null) {
+  const date = new Date(input || '');
+  if (Number.isNaN(date.getTime())) return '最近更新';
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function toRelatedNewsItem(article: ApiArticle): RelatedNewsItem | null {
+  const id = String(article.gid || article._id || '').trim();
+  if (!id) return null;
+  return {
+    id,
+    title: normalizeText(article.name) || '游戏资讯',
+    excerpt: extractNewsExcerpt(article.summary, article.content),
+    date: formatNewsDate(article.release_at),
+  };
+}
+
+async function getRelatedNews(game: GameDetailData['app']): Promise<RelatedNewsItem[]> {
+  const queries = [game.name, ...(game.tags || []).slice(0, 3)]
+    .map((item) => normalizeText(item))
+    .filter(Boolean);
+  const seen = new Set<string>();
+  const results: RelatedNewsItem[] = [];
+
+  for (const query of queries) {
+    try {
+      const params = new URLSearchParams({ q: query, page: '1', pageSize: '6' });
+      const res = await trackedApiFetch(`/news/search?${params.toString()}`, {
+        cache: 'force-cache',
+        next: { revalidate: DETAIL_REVALIDATE_SECONDS },
+      });
+      if (!res.ok) continue;
+      const json = await res.json();
+      const list = Array.isArray(json?.data?.list) ? (json.data.list as ApiArticle[]) : [];
+      for (const item of list) {
+        const mapped = toRelatedNewsItem(item);
+        if (!mapped) continue;
+        if (seen.has(mapped.id)) continue;
+        seen.add(mapped.id);
+        results.push(mapped);
+        if (results.length >= 4) return results;
+      }
+    } catch {
+      // ignore and try the next query
+    }
+  }
+
+  try {
+    const res = await trackedApiFetch('/home', {
+      cache: 'force-cache',
+      next: { revalidate: DETAIL_REVALIDATE_SECONDS },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const list = Array.isArray(json?.data?.articles) ? (json.data.articles as ApiArticle[]) : [];
+      for (const item of list) {
+        const mapped = toRelatedNewsItem(item);
+        if (!mapped) continue;
+        if (seen.has(mapped.id)) continue;
+        seen.add(mapped.id);
+        results.push(mapped);
+        if (results.length >= 4) return results;
+      }
+    }
+  } catch {
+    // ignore fallback failure
+  }
+
+  return results;
 }
 
 function formatFileSize(bytes?: number | null): string | undefined {
@@ -60,10 +142,33 @@ function formatFileSize(bytes?: number | null): string | undefined {
   return `${value.toFixed(index === 0 ? 0 : 2)} ${units[index]}`;
 }
 
+function buildGameFaqEntries(game: GameDetailData['app']) {
+  const name = normalizeText(game.name) || '这款应用';
+  const version = normalizeText(game.version) || '最新版';
+  const region = normalizeText(game.metadata?.region) || 'Android';
+  const pkg = normalizeText(game.pkg) || '未提供';
+
+  return [
+    {
+      question: `${name} 当前推荐下载哪个版本？`,
+      answer: `${name} 当前详情页展示的推荐版本为 ${version}，下载前可优先核对更新时间、文件大小和下载渠道信息。`,
+    },
+    {
+      question: `${name} 适合什么设备安装？`,
+      answer: `${name} 面向 ${region} 设备用户，建议在安装前预留足够存储空间，并确认系统版本与网络环境稳定。`,
+    },
+    {
+      question: `${name} 安装失败时应该先检查什么？`,
+      answer: `如果 ${name} 安装失败，建议先检查安装包是否完整、设备存储空间是否充足，以及包名 ${pkg} 是否与已安装旧版本冲突。`,
+    },
+  ];
+}
+
 function buildKeywords(gameData: GameDetailData['app'], seoKeywordsRaw?: string): string[] {
   const candidates = [
     gameData.name,
     gameData.pkg,
+    gameData.metadata?.region,
     ...(gameData.tags || []),
     ...String(seoKeywordsRaw || '')
       .split(',')
@@ -146,10 +251,6 @@ export async function generateMetadata({
   const canonicalPath = `/app/${encodeURIComponent(game.pkg || id)}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
 
-  const appSeo = siteConfig?.app_seo || {
-    app_title_template: '{name} v{version}',
-    app_description_template: '{summary}',
-  };
   const basic = siteConfig?.basic || {
     site_name: 'APKScc',
     site_slogan: 'APKScc',
@@ -163,35 +264,34 @@ export async function generateMetadata({
     description: '',
   };
 
+  const siteName = normalizeText(basic.site_name) || 'APKScc';
+  const normalizedName = normalizeText(game.name);
+  const normalizedVersion = normalizeText(game.version);
   const normalizedSummary = normalizeText(game.summary || game.description);
   const normalizedDescription = normalizeText(game.description || game.summary);
+  const region = normalizeText(game.metadata?.region);
+  const category = humanizeCategory(game.type);
   const dateLabel = toSeoDateLabel(game.latest_at);
-  const templateVars: Record<string, string> = {
-    name: normalizeText(game.name),
-    version: normalizeText(game.version),
-    summary: normalizedSummary,
-    description: normalizedDescription,
-    site_name: normalizeText(basic.site_name),
-    site_slogan: normalizeText(basic.site_slogan),
-    title_suffix: normalizeText(seo.title_suffix),
-    date: dateLabel,
-    pkg: normalizeText(game.pkg),
-  };
 
-  let title = renderTemplate(appSeo.app_title_template || '{name} v{version}', templateVars);
-  if (!title) {
-    title = `${templateVars.name} v${templateVars.version}`.trim();
-  }
-  if (templateVars.title_suffix && !title.includes(templateVars.title_suffix)) {
-    title = `${title}${templateVars.title_suffix}`;
-  }
-  title = clampText(title, MAX_TITLE_LENGTH);
+  const titleSegments = [normalizedName];
+  if (region) titleSegments.push(region);
+  titleSegments.push('APK 下载');
+  if (normalizedVersion) titleSegments.push(`最新版本 ${normalizedVersion}`);
+  titleSegments.push(siteName);
+  const title = clampText(titleSegments.filter(Boolean).join(' | '), MAX_TITLE_LENGTH);
 
-  let description = renderTemplate(appSeo.app_description_template || '{summary}', templateVars);
-  if (!description) {
-    description = normalizedSummary || normalizedDescription || normalizeText(seo.description);
-  }
-  description = clampText(description, MAX_DESCRIPTION_LENGTH);
+  const description = clampText(
+    [
+      normalizedVersion ? `下载 ${normalizedName} 安卓最新版 ${normalizedVersion}。` : `下载 ${normalizedName} 安卓版。`,
+      normalizedSummary || normalizedDescription,
+      category ? `适合关注 ${category} 的用户。` : '',
+      normalizeText(game.developer) ? `开发者：${normalizeText(game.developer)}。` : '',
+      dateLabel ? `最近更新于 ${dateLabel}。` : '',
+    ]
+      .filter(Boolean)
+      .join(' ') || normalizeText(seo.description),
+    MAX_DESCRIPTION_LENGTH,
+  );
 
   const heroImage = game.header_image || game.icon || basic.share_image;
   const keywords = buildKeywords(game, seo.keywords);
@@ -268,9 +368,11 @@ export default async function GameDetailPage({
   const heroImage = game.header_image || game.icon || '';
   const description = normalizeText(game.summary || game.description);
 
+  const relatedNews = await getRelatedNews(game);
+
   const detailJsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'MobileApplication',
+    '@type': 'SoftwareApplication',
     name: game.name,
     applicationCategory: normalizeText(game.type) || 'GameApplication',
     operatingSystem: 'Android',
@@ -329,13 +431,28 @@ export default async function GameDetailPage({
     ],
   };
 
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: buildGameFaqEntries(game).map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer,
+      },
+    })),
+  };
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(detailJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <GameDetailView
         id={id}
         initialGameData={buildInitialGameDataForHydration(initialGameData)}
+        initialRelatedNews={relatedNews}
         initialDataMode="partial"
       />
     </>

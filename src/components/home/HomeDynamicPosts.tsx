@@ -198,7 +198,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
                           <>
                             <div className="absolute inset-0">
                               <Image
-                                src={post.app_info.icon || cover || 'https://placehold.co/64x64.png'}
+                                src={post.app_info.icon || cover || '/favicon.ico'}
                                 alt=""
                                 fill
                                 className="scale-150 object-cover blur-lg opacity-95 saturate-150"
@@ -211,7 +211,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
                         {(post.app_info.icon || cover) && (
                           <div className="relative z-10 h-5 w-5 overflow-hidden rounded-sm border border-white/40 bg-black/20">
                             <Image
-                              src={post.app_info.icon || cover || 'https://placehold.co/64x64.png'}
+                              src={post.app_info.icon || cover || '/favicon.ico'}
                               alt={post.app_info.name || post.app_info.pkg || '关联游戏'}
                               fill
                               className="object-cover"

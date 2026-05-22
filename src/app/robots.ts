@@ -9,9 +9,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
+      disallow: ['/api/', '/profile', '/messages', '/submit-resource'],
     },
     sitemap: `${siteUrl}/sitemap.xml`,
     host: siteUrl,
   };
 }
-

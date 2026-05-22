@@ -2,7 +2,7 @@ import { trackedApiFetch } from '@/lib/api';
 import { buildTrackingHeaders } from '@/lib/tracking-headers';
 import type { CommunityPost } from '@/types';
 
-const FALLBACK_AVATAR = 'https://placehold.co/40x40.png?text=U';
+const FALLBACK_AVATAR = '/favicon.ico';
 
 export interface CommunityTopicItem {
   _id: string;

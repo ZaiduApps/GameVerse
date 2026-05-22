@@ -262,7 +262,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                       <Input
                         id="login-email"
                         type="email"
-                        placeholder="you@example.com"
+                        placeholder="user@apks.cc"
                         className="pl-9"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -329,7 +329,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                   <Input
                     id="reg-email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder="user@apks.cc"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-9"

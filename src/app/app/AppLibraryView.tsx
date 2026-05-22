@@ -27,8 +27,8 @@ const DEFAULT_GAME_QUERY = 'com';
 const GAME_LIST_REQUEST_TIMEOUT_MS = 12000;
 const GAME_LIST_RETRY_ATTEMPTS = 3;
 const GAME_LIST_RETRY_DELAY_MS = 1200;
-const FALLBACK_ICON = 'https://placehold.co/96x96.png?text=Game';
-const FALLBACK_BANNER = 'https://placehold.co/640x360.png?text=ACBOX';
+const FALLBACK_ICON = '/favicon.ico';
+const FALLBACK_BANNER = '/favicon.ico';
 
 type SortMode = 'latest' | 'rating' | 'name';
 
@@ -217,7 +217,7 @@ function LibraryGameCard({ game }: { game: LibraryGame }) {
   );
 }
 
-export default function GamesPage() {
+export default function GamesPage({ initialKeyword = '' }: { initialKeyword?: string }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadingAttempt, setLoadingAttempt] = useState(1);
@@ -226,8 +226,8 @@ export default function GamesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loadError, setLoadError] = useState('');
   const [reloadToken, setReloadToken] = useState(0);
-  const [searchInput, setSearchInput] = useState('');
-  const [queryKeyword, setQueryKeyword] = useState('');
+  const [searchInput, setSearchInput] = useState(initialKeyword);
+  const [queryKeyword, setQueryKeyword] = useState(initialKeyword);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortMode, setSortMode] = useState<SortMode>('latest');
   const [onlyHighScore, setOnlyHighScore] = useState(false);
@@ -237,6 +237,11 @@ export default function GamesPage() {
     }, 400);
     return () => window.clearTimeout(timer);
   }, [searchInput]);
+
+  useEffect(() => {
+    setSearchInput(initialKeyword);
+    setQueryKeyword(initialKeyword);
+  }, [initialKeyword]);
 
   async function fetchGamePage(
     page: number,
@@ -480,11 +485,11 @@ export default function GamesPage() {
           ) : null}
         </aside>
 
-        <main className="min-w-0 flex-1 px-4 pb-20 lg:px-8">
+        <section className="min-w-0 flex-1 px-4 pb-20 lg:px-8">
           <section className="mb-10 mt-4">
             <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
               <div>
-                <h1 className="mb-2 text-[24px] font-black leading-[1.1] tracking-tight sm:text-[28px]">发现。游玩。热爱。</h1>
+                <h2 className="mb-2 text-[24px] font-black leading-[1.1] tracking-tight sm:text-[28px]">发现。游玩。热爱。</h2>
                 <p className="max-w-md text-zinc-500">
                   探索 ACBOX 精选的高品质二次元游戏，从开放世界到战术竞技，应有尽有。
                 </p>
@@ -604,7 +609,7 @@ export default function GamesPage() {
               已加载 {allGames.length} / {totalGames || allGames.length} 款 · 当前展示 {renderedGames.length} 款
             </p>
           </div>
-        </main>
+        </section>
       </div>
 
     </div>

@@ -9,7 +9,7 @@ import type { ReactNode } from 'react';
 import SearchOverlay from '@/components/layout/SearchOverlay';
 import type { ApiBanner } from '@/types';
 
-const FALLBACK_BANNER_IMAGE = 'https://placehold.co/1200x560/png';
+const FALLBACK_BANNER_IMAGE = '/favicon.ico';
 const AUTOPLAY_MS = 4500;
 
 function isExternalUrl(value: string): boolean {
@@ -334,6 +334,7 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
                   src={getBannerImage(previewItem)}
                   alt={previewItem.name || '预览图'}
                   fill
+                  loading="eager"
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 1200px"
                 />
@@ -357,6 +358,7 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
               alt={title}
               fill
               priority
+              fetchPriority="high"
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 1200px"
             />

@@ -253,10 +253,11 @@ export default function ProfilePage() {
 
         <div className="flex-1">
           <Tabs defaultValue="account" className="w-full">
-            <TabsList className="mb-6 grid w-full grid-cols-3">
+            <TabsList className="mb-6 grid w-full grid-cols-4">
               <TabsTrigger value="account">个人资料</TabsTrigger>
               <TabsTrigger value="edit">编辑信息</TabsTrigger>
               <TabsTrigger value="security">安全设置</TabsTrigger>
+              <TabsTrigger value="api-keys">API密钥</TabsTrigger>
             </TabsList>
 
             <TabsContent value="account">
@@ -462,6 +463,32 @@ export default function ProfilePage() {
                 <CardFooter className="mt-6 rounded-b-lg border-t bg-muted/30 text-xs text-muted-foreground">
                   修改密码后，建议在其他设备重新登录以确保账号安全。
                 </CardFooter>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="api-keys">
+              <Card className="border-primary/5 shadow-md">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <ShieldCheck className="h-5 w-5 text-primary" /> API 密钥
+                  </CardTitle>
+                  <CardDescription>
+                    创建并管理用于公开内容接口调用的 API 密钥。
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    API 密钥支持命名、过期时间和启停控制，发布后可用在外部服务调用发帖接口。
+                  </p>
+                  <Button
+                    className="btn-interactive"
+                    onClick={() => {
+                      router.push('/profile/api-keys');
+                    }}
+                  >
+                    前往 API 密钥管理
+                  </Button>
+                </CardContent>
               </Card>
             </TabsContent>
           </Tabs>

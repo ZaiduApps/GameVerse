@@ -1,6 +1,6 @@
 'use client';
 
-import type { ApiRecommendedGame, CardConfigItem, CommunityPost, GameDetailData } from '@/types';
+import type { ApiArticle, ApiRecommendedGame, CardConfigItem, CommunityPost, GameDetailData } from '@/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
@@ -41,7 +41,15 @@ interface GameDetailViewProps {
   id: string;
   initialGameData?: GameDetailData | null;
   initialRecommendedGames?: ApiRecommendedGame[] | null;
+  initialRelatedNews?: RelatedNewsItem[] | null;
   initialDataMode?: 'partial' | 'full';
+}
+
+interface RelatedNewsItem {
+  id: string;
+  title: string;
+  excerpt: string;
+  date: string;
 }
 
 const MAX_RECOMMENDED_GAMES = 5;
@@ -107,6 +115,14 @@ function extractDescriptionExcerpt(input?: string | null, maxLength = 260) {
   if (firstSection.length <= maxLength) return firstSection;
 
   return `${firstSection.slice(0, maxLength).trimEnd()}...`;
+}
+
+function extractSummary(summaryInput?: string | null, contentInput?: string | null, maxLength = 160) {
+  const preferred = toPlainTextWithBreaks(summaryInput);
+  const fallback = toPlainTextWithBreaks(contentInput);
+  const source = preferred || fallback || '暂无摘要';
+  if (source.length <= maxLength) return source;
+  return `${source.slice(0, maxLength).trim()}...`;
 }
 
 function escapeHtml(input: string) {
@@ -262,6 +278,76 @@ function resolveSupportItems(cardConfig: Record<string, CardConfigItem[] | undef
   return deduped.slice(0, 6);
 }
 
+function buildFaqItems(game: GameDetailData['app']) {
+  const name = String(game.name || '该应用').trim() || '该应用';
+  const version = String(game.version || '最新版').trim() || '最新版';
+  const packageName = String(game.pkg || '').trim() || '未提供';
+  const system = String(game.metadata?.region || 'Android').trim() || 'Android';
+
+  return [
+    {
+      question: `${name} 推荐下载哪个版本？`,
+      answer: `当前页面推荐版本为 ${version}。如果你更关注稳定性，建议优先查看页面中的更新时间、文件大小和下载渠道说明后再安装。`,
+    },
+    {
+      question: `${name} 对设备有什么要求？`,
+      answer: `${name} 面向 ${system} 设备提供下载。安装前建议预留可用存储空间，并确认系统环境支持对应安装包。`,
+    },
+    {
+      question: `${name} 安装失败怎么处理？`,
+      answer: `遇到安装失败时，可先检查存储空间、网络环境，以及包名 ${packageName} 是否与本机旧版本冲突，再重新下载安装。`,
+    },
+  ];
+}
+
+function buildInstallSteps(game: GameDetailData['app']) {
+  const name = String(game.name || '该应用').trim() || '该应用';
+  return [
+    `点击页面中的“立即下载”，优先选择更新日期较新的渠道资源。`,
+    `下载完成后，确认安装包大小与页面展示信息基本一致，再开始安装 ${name}。`,
+    '首次安装第三方 APK 时，请根据设备系统提示授权安装权限。',
+  ];
+}
+
+function buildRiskNotes(game: GameDetailData['app']) {
+  const packageName = String(game.pkg || '').trim() || '未知包名';
+  return [
+    `安装前请核对包名 ${packageName} 与目标应用是否一致，避免误装非目标版本。`,
+    '若设备已安装同名旧版本，建议先确认版本兼容性，再决定覆盖安装或重新安装。',
+    '如下载来源异常或安装后行为异常，请暂停使用并重新核对下载渠道。',
+  ];
+}
+
+function getPrimaryCategory(game?: GameDetailData['app'] | null, tags?: string[]) {
+  const tagList = Array.isArray(tags) ? tags : [];
+  const preferredTag = tagList.find((tag) => {
+    const value = String(tag || '').trim();
+    if (!value) return false;
+    if (value.startsWith('#')) return false;
+    if (/创收最高|热门免费|人气推荐/i.test(value)) return false;
+    return true;
+  });
+  return preferredTag || String(game?.type || '').trim() || '安卓游戏';
+}
+
+function formatNewsDate(value?: string | null) {
+  if (!value) return '最近更新';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '最近更新';
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function toRelatedNewsItem(article: ApiArticle): RelatedNewsItem | null {
+  const id = String(article.gid || article._id || '').trim();
+  if (!id) return null;
+  return {
+    id,
+    title: String(article.name || '游戏资讯').trim() || '游戏资讯',
+    excerpt: extractSummary(String(article.summary || ''), String(article.content || ''), 120),
+    date: formatNewsDate(article.release_at),
+  };
+}
+
 function ViewSkeleton() {
   return (
     <div className="space-y-6">
@@ -278,6 +364,7 @@ export default function GameDetailView({
   id,
   initialGameData,
   initialRecommendedGames,
+  initialRelatedNews,
   initialDataMode = 'full',
 }: GameDetailViewProps) {
   const { token, user } = useAuth();
@@ -288,6 +375,7 @@ export default function GameDetailView({
     (initialRecommendedGames || []).slice(0, MAX_RECOMMENDED_GAMES),
   );
   const [relatedPosts, setRelatedPosts] = useState<CommunityPost[]>([]);
+  const [relatedNews, setRelatedNews] = useState<RelatedNewsItem[]>((initialRelatedNews || []).slice(0, 4));
   const [isLoading, setIsLoading] = useState(!initialGameData);
   const [hasError, setHasError] = useState(false);
   const [isSubmittingUrge, setIsSubmittingUrge] = useState(false);
@@ -315,12 +403,16 @@ export default function GameDetailView({
   const cardConfig = (gameData?.cardConfig || {}) as Record<string, CardConfigItem[] | undefined>;
   const supportItems = useMemo(() => resolveSupportItems(cardConfig), [cardConfig]);
   const downloadNotices = (cardConfig.download_notice || []) as CardConfigItem[];
+  const faqItems = useMemo(() => buildFaqItems(gameData?.app || ({} as GameDetailData['app'])), [gameData?.app]);
+  const installSteps = useMemo(() => buildInstallSteps(gameData?.app || ({} as GameDetailData['app'])), [gameData?.app]);
+  const riskNotes = useMemo(() => buildRiskNotes(gameData?.app || ({} as GameDetailData['app'])), [gameData?.app]);
 
   const tags = useMemo(() => {
     const list = (game?.tags || []).filter(Boolean);
     if (list.length > 0) return list.slice(0, 8);
     return ['人气推荐', '角色扮演', '二次元', '回合制'];
   }, [game?.tags]);
+  const primaryCategory = useMemo(() => getPrimaryCategory(game, tags), [game, tags]);
 
   const screenshots = useMemo(() => {
     const list = (game?.detail_images || []).filter(Boolean);
@@ -457,6 +549,49 @@ export default function GameDetailView({
       cancelled = true;
     };
   }, [sort, game?._id, game?.pkg, game?.name]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRelatedNews() {
+      if (!game?.name) {
+        setRelatedNews([]);
+        return;
+      }
+
+      if (initialRelatedNews && initialRelatedNews.length > 0) {
+        setRelatedNews(initialRelatedNews.slice(0, 4));
+        return;
+      }
+
+      try {
+        const params = new URLSearchParams({
+          q: game.name,
+          page: '1',
+          pageSize: '4',
+        });
+        const res = await trackedApiFetch(`/news/search?${params.toString()}`, {
+          cache: 'force-cache',
+        });
+        if (!res.ok) throw new Error('related-news-fetch-failed');
+        const json = await res.json();
+        const list = Array.isArray(json?.data?.list) ? (json.data.list as ApiArticle[]) : [];
+        const mapped = list.map(toRelatedNewsItem).filter((item): item is RelatedNewsItem => Boolean(item));
+        if (!cancelled) {
+          setRelatedNews(mapped.slice(0, 4));
+        }
+      } catch {
+        if (!cancelled) {
+          setRelatedNews([]);
+        }
+      }
+    }
+
+    void loadRelatedNews();
+    return () => {
+      cancelled = true;
+    };
+  }, [game?.name, initialRelatedNews]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -711,6 +846,7 @@ export default function GameDetailView({
         <Button
           size="icon"
           variant="outline"
+          aria-label="分享当前游戏页面"
           className="h-12 w-12 rounded-full border-[#abadae]/30 bg-white/80 shadow-xl backdrop-blur-md transition-transform hover:scale-110 dark:border-border/50 dark:bg-card/90"
           onClick={handleShare}
         >
@@ -719,6 +855,7 @@ export default function GameDetailView({
         <Button
           size="icon"
           variant="outline"
+          aria-label={isFavorite ? '取消收藏当前游戏' : '收藏当前游戏'}
           className={cn(
             'h-12 w-12 rounded-full border-[#abadae]/30 bg-white/80 shadow-xl backdrop-blur-md transition-transform hover:scale-110 dark:border-border/50 dark:bg-card/90',
             isFavorite && 'border-[#b71211]/30 text-[#b71211]',
@@ -847,7 +984,7 @@ export default function GameDetailView({
             <Card className="rounded-[2rem] border-[#abadae]/10 bg-white/70 dark:border-border/45 dark:bg-card/70">
               <CardContent className="flex flex-col items-center justify-center gap-2 p-8 text-center">
                 <p className="text-sm text-[#595c5d]">游戏分类</p>
-                <p className="text-xl font-black">{tags[0] || game.type || 'RPG'}</p>
+                 <p className="text-xl font-black">{primaryCategory}</p>
               </CardContent>
             </Card>
             <Card className="rounded-[2rem] border-[#abadae]/10 bg-white/70 dark:border-border/45 dark:bg-card/70">
@@ -904,6 +1041,53 @@ export default function GameDetailView({
                     <ChevronRight className={cn('h-4 w-4 transition-transform', showFullDescription && 'rotate-90')} />
                   </button>
                 )}
+              </section>
+
+              <section className="grid gap-6 xl:grid-cols-2">
+                <Card className="rounded-[2rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75">
+                  <CardContent className="p-6">
+                    <h2 className="mb-4 text-xl font-bold">安装说明</h2>
+                    <ol className="space-y-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">
+                      {installSteps.map((item, index) => (
+                        <li key={`install-${index}`} className="flex gap-3">
+                          <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#005e9f] text-xs font-bold text-white">{index + 1}</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-[2rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75">
+                  <CardContent className="p-6">
+                    <h2 className="mb-4 text-xl font-bold">下载与使用风险提示</h2>
+                    <ul className="space-y-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">
+                      {riskNotes.map((item, index) => (
+                        <li key={`risk-${index}`} className="flex gap-3">
+                          <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-[#b71211]" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              </section>
+
+              <section>
+                <h2 className="mb-6 flex items-center gap-3 text-xl font-bold">
+                  <span className="h-8 w-2 rounded-full bg-[#2e7d32]" />
+                  常见问题 FAQ
+                </h2>
+                <div className="grid gap-4">
+                  {faqItems.map((item, index) => (
+                    <Card key={`faq-${index}`} className="rounded-[1.75rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75">
+                      <CardContent className="p-6">
+                        <h3 className="text-base font-bold text-[#2c2f30] dark:text-foreground">{item.question}</h3>
+                        <p className="mt-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">{item.answer}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </section>
 
               <section>
@@ -1028,6 +1212,34 @@ export default function GameDetailView({
                   )}
                 </div>
               </section>
+
+              <section>
+                <div className="mb-6 flex items-center justify-between">
+                  <h2 className="flex items-center gap-3 text-xl font-bold">
+                    <span className="h-8 w-2 rounded-full bg-[#2e7d32]" />
+                    相关资讯
+                  </h2>
+                  <Link href={game?.name ? `/news?q=${encodeURIComponent(game.name)}` : '/news'} className="inline-flex items-center gap-2 text-sm font-medium text-[#595c5d] transition-colors hover:text-[#b71211]">
+                    查看更多资讯
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {relatedNews.length > 0 ? (
+                    relatedNews.map((item) => (
+                      <Link key={`related-news-${item.id}`} href={`/news/${item.id}`} className="rounded-[1.75rem] border border-[#abadae]/10 bg-white/80 p-5 transition-colors hover:border-primary/30 hover:bg-white dark:border-border/45 dark:bg-card/75">
+                        <p className="text-base font-bold text-[#2c2f30] dark:text-foreground">{item.title}</p>
+                        <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">{item.excerpt}</p>
+                        <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#757778]">{item.date}</p>
+                      </Link>
+                    ))
+                  ) : (
+                    <Card className="rounded-[1.75rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75 md:col-span-2">
+                      <CardContent className="p-6 text-sm text-[#595c5d] dark:text-muted-foreground">暂时没有可展示的相关资讯，稍后可以从资讯频道继续查看该游戏的更新与活动动态。</CardContent>
+                    </Card>
+                  )}
+                </div>
+              </section>
             </div>
 
             <aside className="space-y-10">
@@ -1147,6 +1359,7 @@ export default function GameDetailView({
         <div className="flex items-center gap-3">
           <button
             type="button"
+            aria-label="返回上一页"
             className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-black/5"
             onClick={handleBack}
           >
@@ -1156,6 +1369,7 @@ export default function GameDetailView({
         </div>
         <button
           type="button"
+          aria-label="分享当前游戏页面"
           className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-black/5"
           onClick={handleShare}
         >
@@ -1242,7 +1456,7 @@ export default function GameDetailView({
           <Card className="border-[#abadae]/10 bg-white">
             <CardContent className="p-2 text-center">
               <p className="text-[9px] font-bold uppercase tracking-tight text-[#757778]">游戏类型</p>
-              <p className="mt-0.5 truncate text-[11px] font-black text-[#005e9f]">{tags[0] || 'RPG'}</p>
+              <p className="mt-0.5 truncate text-[11px] font-black text-[#005e9f]">{primaryCategory}</p>
             </CardContent>
           </Card>
           <Card className="border-[#abadae]/10 bg-white">
@@ -1284,6 +1498,53 @@ export default function GameDetailView({
           )}
         </section>
 
+        <section className="mt-10 grid gap-4">
+          <Card className="border-[#abadae]/10 bg-white">
+            <CardContent className="p-5">
+              <h2 className="text-lg font-black text-[#0f1720]">安装说明</h2>
+              <ol className="mt-4 space-y-3 text-sm leading-6 text-[#595c5d]">
+                {installSteps.map((item, index) => (
+                  <li key={`mobile-install-${index}`} className="flex gap-3">
+                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#005e9f] text-xs font-bold text-white">{index + 1}</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ol>
+            </CardContent>
+          </Card>
+
+          <Card className="border-[#abadae]/10 bg-white">
+            <CardContent className="p-5">
+              <h2 className="text-lg font-black text-[#0f1720]">风险提示</h2>
+              <ul className="mt-4 space-y-3 text-sm leading-6 text-[#595c5d]">
+                {riskNotes.map((item, index) => (
+                  <li key={`mobile-risk-${index}`} className="flex gap-3">
+                    <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-[#b71211]" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="mt-10">
+          <h2 className="mb-4 flex items-center gap-2 text-xl font-black">
+            <span className="h-6 w-1.5 rounded-full bg-[#2e7d32]" />
+            常见问题 FAQ
+          </h2>
+          <div className="space-y-4">
+            {faqItems.map((item, index) => (
+              <Card key={`mobile-faq-${index}`} className="border-[#abadae]/10 bg-white">
+                <CardContent className="p-5">
+                  <h3 className="text-base font-bold text-[#0f1720]">{item.question}</h3>
+                  <p className="mt-3 text-sm leading-6 text-[#595c5d]">{item.answer}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
         <section className="mt-10">
           <h2 className="mb-4 flex items-center gap-2 text-xl font-black">
             <span className="h-6 w-1.5 rounded-full bg-[#005e9f]" />
@@ -1300,6 +1561,33 @@ export default function GameDetailView({
                 <Image src={url} alt={`${game.name} 截图 ${index + 1}`} fill sizes="320px" className="object-cover" />
               </button>
             ))}
+          </div>
+        </section>
+
+        <section className="mt-10">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-xl font-black">
+              <span className="h-6 w-1.5 rounded-full bg-[#2e7d32]" />
+              相关资讯
+            </h2>
+            <Link href={game?.name ? `/news?q=${encodeURIComponent(game.name)}` : '/news'} className="text-xs font-bold text-[#005e9f]">
+              更多
+            </Link>
+          </div>
+          <div className="space-y-4">
+            {relatedNews.length > 0 ? (
+              relatedNews.slice(0, 3).map((item) => (
+                <Link key={`mobile-related-news-${item.id}`} href={`/news/${item.id}`} className="block rounded-2xl border-[#abadae]/10 bg-white p-4 shadow-sm">
+                  <p className="text-sm font-bold text-[#0f1720]">{item.title}</p>
+                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#595c5d]">{item.excerpt}</p>
+                  <p className="mt-3 text-[11px] font-semibold text-[#757778]">{item.date}</p>
+                </Link>
+              ))
+            ) : (
+              <Card className="border-[#abadae]/10 bg-white">
+                <CardContent className="p-4 text-sm text-[#595c5d]">暂无相关资讯，可前往资讯频道查看更多更新。</CardContent>
+              </Card>
+            )}
           </div>
         </section>
 
@@ -1418,6 +1706,7 @@ export default function GameDetailView({
           </Link>
           <button
             type="button"
+            aria-label={isFavorite ? '取消收藏当前游戏' : '收藏当前游戏'}
             className={cn(
               'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#595c5d] transition-colors hover:bg-black/5',
               isFavorite && 'text-[#b71211]',
@@ -1445,6 +1734,7 @@ export default function GameDetailView({
                   type="button"
                   size="icon"
                   variant="secondary"
+                  aria-label="缩小预览图片"
                   className="h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -1457,6 +1747,7 @@ export default function GameDetailView({
                   type="button"
                   size="icon"
                   variant="secondary"
+                  aria-label="放大预览图片"
                   className="h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -1469,6 +1760,7 @@ export default function GameDetailView({
                   type="button"
                   size="icon"
                   variant="secondary"
+                  aria-label="重置预览图片缩放"
                   className="h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -1482,6 +1774,7 @@ export default function GameDetailView({
                   type="button"
                   size="icon"
                   variant="secondary"
+                  aria-label="关闭图片预览"
                   className="h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25"
                   onClick={(event) => {
                     event.stopPropagation();

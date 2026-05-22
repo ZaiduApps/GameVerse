@@ -241,7 +241,7 @@ export default function CreatePostForm({ onPosted, selectedTopic }: CreatePostFo
         <div className="flex items-start space-x-3">
           <Avatar className="mt-1">
             <AvatarImage
-              src={user?.avatar || 'https://placehold.co/40x40.png?text=ME'}
+              src={user?.avatar || '/favicon.ico'}
               alt={user?.name || user?.username || '当前用户'}
               data-ai-hint="user avatar current"
             />

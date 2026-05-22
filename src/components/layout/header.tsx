@@ -16,6 +16,7 @@ import {
   User as UserIcon,
   Bell,
   Download,
+  KeyRound,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
@@ -180,6 +181,12 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                       <span>我的消息</span>
                     </Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile/api-keys">
+                      <KeyRound className="mr-2 h-4 w-4" />
+                      <span>API密钥</span>
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>退出登录</span>
@@ -276,6 +283,16 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                             >
                               <Bell size={18} />
                               我的消息
+                            </Link>
+                          </li>
+                          <li>
+                            <Link
+                              href="/profile/api-keys"
+                              className="w-full justify-start text-base font-medium text-foreground/80 hover:text-primary transition-colors px-2 py-2.5 rounded-md hover:bg-muted/50 flex items-center gap-2"
+                              onClick={() => setMobileMenuOpen(false)}
+                            >
+                              <KeyRound size={18} />
+                              API密钥
                             </Link>
                           </li>
                           <li>

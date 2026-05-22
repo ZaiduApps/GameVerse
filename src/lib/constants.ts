@@ -8,7 +8,7 @@ import {
 
 const generateMockScreenshots = (gameTitleHint: string, count: number = 5): Game['screenshots'] =>
   Array.from({ length: count }, (_, i) => ({
-    url: 'https://placehold.co/400x225.png',
+    url: '/favicon.ico',
     dataAiHint: `${gameTitleHint} gameplay ${i + 1}`,
   }));
 
@@ -19,7 +19,7 @@ export const MOCK_GAMES: Game[] = [
     title: '王者荣耀',
     shortDescription: '腾讯天美工作室推出的 MOBA 手游。',
     description: '经典 5V5 团队竞技手游，节奏快、对抗强。',
-    imageUrl: 'https://placehold.co/300x300.png',
+    imageUrl: '/favicon.ico',
     dataAiHint: 'moba king battle',
     category: 'MOBA',
     rating: 4.8,
@@ -39,7 +39,7 @@ export const MOCK_GAMES: Game[] = [
     title: 'PUBG MOBILE',
     shortDescription: '多人战术竞技吃鸡手游。',
     description: '百人同场竞技，强调战术、配合与生存能力。',
-    imageUrl: 'https://placehold.co/300x300.png',
+    imageUrl: '/favicon.ico',
     dataAiHint: 'pubg battle royale',
     category: '射击',
     rating: 4.7,
@@ -59,7 +59,7 @@ export const MOCK_GAMES: Game[] = [
     title: '原神',
     shortDescription: '开放世界冒险 RPG。',
     description: '探索提瓦特大陆，收集角色并体验沉浸式剧情。',
-    imageUrl: 'https://placehold.co/300x300.png',
+    imageUrl: '/favicon.ico',
     dataAiHint: 'anime open world rpg',
     category: 'RPG',
     rating: 4.9,
@@ -79,7 +79,7 @@ export const MOCK_GAMES: Game[] = [
     title: '崩坏：星穹铁道',
     shortDescription: '银河冒险回合制 RPG。',
     description: '乘坐星穹列车，探索不同文明与世界。',
-    imageUrl: 'https://placehold.co/300x300.png',
+    imageUrl: '/favicon.ico',
     dataAiHint: 'space rail anime rpg',
     category: '策略 RPG',
     rating: 4.8,
@@ -99,7 +99,7 @@ export const MOCK_GAMES: Game[] = [
     title: '地铁跑酷',
     shortDescription: '经典无尽跑酷游戏。',
     description: '节奏明快，适合碎片化时间游玩。',
-    imageUrl: 'https://placehold.co/300x300.png',
+    imageUrl: '/favicon.ico',
     dataAiHint: 'subway run game',
     category: '跑酷',
     rating: 4.5,
@@ -119,7 +119,7 @@ export const MOCK_GAMES: Game[] = [
     title: '幻兽帕鲁 Mobile',
     shortDescription: '热门开放世界生存游戏移动版。',
     description: '收集、建造与战斗，多人玩法丰富。',
-    imageUrl: 'https://placehold.co/300x300.png',
+    imageUrl: '/favicon.ico',
     dataAiHint: 'palworld mobile',
     category: '开放世界',
     tags: ['收集', '建造', '生存', '多人'],
@@ -147,7 +147,7 @@ export const MOCK_NEWS_ARTICLES: NewsArticle[] = MOCK_GAMES.slice(0, 5).flatMap(
       title,
       content,
       excerpt: createGlobalExcerpt(content, 140),
-      imageUrl: 'https://placehold.co/600x400.png',
+      imageUrl: '/favicon.ico',
       dataAiHint: `${game.dataAiHint || 'game'} news`,
       category: newsIndex === 0 ? '版本更新' : '攻略解析',
       date: `2026-03-${String(20 - (gameIndex + newsIndex)).padStart(2, '0')}`,
@@ -168,12 +168,12 @@ export const MOCK_FORUM_SECTIONS: ForumSection[] = [
   {
     id: 'pubg',
     name: 'PUBG MOBILE',
-    imageUrl: MOCK_GAMES.find((g) => g.pkg === 'com.tencent.ig')?.imageUrl || 'https://placehold.co/40x40.png',
+    imageUrl: MOCK_GAMES.find((g) => g.pkg === 'com.tencent.ig')?.imageUrl || '/favicon.ico',
     dataAiHint: 'pubg icon',
     href: '/community/pubg',
     type: 'game',
   },
-  { id: 'apex', name: 'Apex Legends', imageUrl: 'https://placehold.co/40x40.png', dataAiHint: 'apex', href: '/community/apex', type: 'game' },
+  { id: 'apex', name: 'Apex Legends', imageUrl: '/favicon.ico', dataAiHint: 'apex', href: '/community/apex', type: 'game' },
   { id: 'all-communities', name: '全部社区', icon: ChevronRight, href: '/community/all', type: 'action' },
 ];
 
@@ -182,7 +182,7 @@ export const MOCK_COMMUNITY_POSTS: CommunityPost[] = [
     id: 'post1',
     user: {
       name: '战术研究员',
-      avatarUrl: 'https://placehold.co/40x40.png',
+      avatarUrl: '/favicon.ico',
       dataAiHint: 'user avatar',
       level: 7,
       location: '江苏',
@@ -199,7 +199,7 @@ export const MOCK_COMMUNITY_POSTS: CommunityPost[] = [
     id: 'post2',
     user: {
       name: '原神旅行者',
-      avatarUrl: 'https://placehold.co/40x40.png',
+      avatarUrl: '/favicon.ico',
       dataAiHint: 'user avatar',
       level: 5,
       location: '上海',
@@ -208,7 +208,7 @@ export const MOCK_COMMUNITY_POSTS: CommunityPost[] = [
     source: '来自 Android',
     title: '深渊配队分享：低练度也能满星',
     content: '整理了几套低成本队伍，包含圣遗物词条与循环手法。',
-    imageUrl: 'https://placehold.co/600x300.png',
+    imageUrl: '/favicon.ico',
     imageAiHint: 'anime game scene',
     tags: ['原神', '深渊', '攻略'],
     category: '原神',
@@ -219,7 +219,7 @@ export const MOCK_COMMUNITY_POSTS: CommunityPost[] = [
     id: 'post3',
     user: {
       name: '星穹开拓者',
-      avatarUrl: 'https://placehold.co/40x40.png',
+      avatarUrl: '/favicon.ico',
       dataAiHint: 'user avatar',
       level: 6,
       location: '北京',

@@ -8,11 +8,18 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { CalendarDays, UserCircle, Newspaper, Search, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { trackedApiFetch } from '@/lib/api';
 
 const ITEMS_PER_PAGE = 20;
+
+function sanitizeImageUrl(input?: string): string {
+  const value = String(input || '').trim();
+  if (!value) return '';
+  if (/example\.com|placehold\.co/i.test(value)) return '';
+  return value;
+}
 
 interface PaginationState {
   total: number;
@@ -28,7 +35,7 @@ function transformApiArticle(apiArticle: ApiArticle): NewsArticle {
         title: apiArticle.name,
         content: apiArticle.content || '',
         excerpt: apiArticle.summary,
-        imageUrl: apiArticle.image_cover,
+        imageUrl: sanitizeImageUrl(apiArticle.image_cover),
         category: apiArticle.tags?.[0] || '资讯',
         date: apiArticle.release_at ? new Date(apiArticle.release_at).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : '未知日期',
         author: apiArticle.author || '匿名',
@@ -43,13 +50,27 @@ function transformApiArticle(apiArticle: ApiArticle): NewsArticle {
 }
 
 
-export default function NewsPage() {
-  const [articles, setArticles] = useState<NewsArticle[]>([]);
-  const [pagination, setPagination] = useState<PaginationState | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [submittedSearchTerm, setSubmittedSearchTerm] = useState('');
+interface NewsPageProps {
+  initialArticles?: ApiArticle[];
+  initialPagination?: PaginationState | null;
+  initialSearchTerm?: string;
+}
+
+export default function NewsPage({ initialArticles = [], initialPagination = null, initialSearchTerm = '' }: NewsPageProps) {
+  const initialMappedArticles = initialArticles.map(transformApiArticle);
+  const [articles, setArticles] = useState<NewsArticle[]>(initialMappedArticles);
+  const [pagination, setPagination] = useState<PaginationState | null>(initialPagination);
+  const [currentPage, setCurrentPage] = useState(initialPagination?.page || 1);
+  const [isLoading, setIsLoading] = useState(initialMappedArticles.length === 0);
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
+  const [submittedSearchTerm, setSubmittedSearchTerm] = useState(initialSearchTerm);
+  const shouldSkipInitialFetch = useRef(initialMappedArticles.length > 0 && currentPage === 1 && !initialSearchTerm);
+
+  useEffect(() => {
+    setSearchTerm(initialSearchTerm);
+    setSubmittedSearchTerm(initialSearchTerm);
+    setCurrentPage(1);
+  }, [initialSearchTerm]);
 
   const fetchArticles = useCallback(async (page: number, query: string) => {
     setIsLoading(true);
@@ -114,6 +135,10 @@ export default function NewsPage() {
   }, []);
 
   useEffect(() => {
+    if (shouldSkipInitialFetch.current && currentPage === 1 && !submittedSearchTerm) {
+      shouldSkipInitialFetch.current = false;
+      return;
+    }
     fetchArticles(currentPage, submittedSearchTerm);
   }, [currentPage, submittedSearchTerm, fetchArticles]);
 
@@ -143,9 +168,9 @@ export default function NewsPage() {
             href={articleLink}
             className="block relative group aspect-video"
           >
-            <Image
-              src={article.imageUrl || 'https://placehold.co/600x400.png'} // Fallback image
-              alt={article.title}
+              <Image
+               src={article.imageUrl || '/favicon.ico'}
+               alt={article.title}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
               data-ai-hint={article.dataAiHint || 'news image'}
@@ -182,7 +207,7 @@ export default function NewsPage() {
       <section className="bg-card p-6 rounded-lg shadow">
         <div className="flex items-center mb-4">
           <Newspaper className="mr-3 h-7 w-7 text-primary" />
-          <h1 className="text-xl font-bold text-primary">游戏资讯</h1>
+          <h2 className="text-xl font-bold text-primary">游戏资讯</h2>
         </div>
         <p className="text-muted-foreground">获取最新游戏资讯、更新与深度内容。</p>
       </section>
@@ -193,6 +218,7 @@ export default function NewsPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input 
                     type="search" 
+                    aria-label="搜索文章标题或摘要"
                     placeholder="搜索文章标题或摘要..." 
                     className="h-10 pl-10 text-sm"
                     value={searchTerm}

@@ -41,13 +41,44 @@ function getArticleModifiedTime(article?: ApiArticle | null): string | undefined
   return article.updated_at || article.latest_at || article.release_at;
 }
 
+function sanitizeImageUrl(input?: string | null): string {
+  const value = String(input || '').trim();
+  if (!value) return '';
+  if (/example\.com|placehold\.co/i.test(value)) return '';
+  return value;
+}
+
+function normalizeSourceLinks(links?: string[] | null): string[] {
+  if (!Array.isArray(links)) return [];
+  const deduped = new Set<string>();
+  for (const link of links) {
+    const value = String(link || '').trim();
+    if (!/^https?:\/\//i.test(value)) continue;
+    if (/example\.com|placehold\.co/i.test(value)) continue;
+    deduped.add(value);
+    if (deduped.size >= 4) break;
+  }
+  return Array.from(deduped);
+}
+
+function sanitizeTags(tags?: string[] | null): string[] {
+  if (!Array.isArray(tags)) return [];
+  return tags.map((tag) => String(tag || '').trim()).filter(Boolean).slice(0, 6);
+}
+
+function buildSourceLabel(article: NewsArticle) {
+  const links = normalizeSourceLinks(article.additionLinks);
+  if (links.length > 0) return '官方链接 / 延伸阅读';
+  return article.author && article.author !== '匿名' ? `作者 / 来源：${article.author}` : '编辑整理';
+}
+
 function transformApiArticle(apiArticle: ApiArticle): NewsArticle {
   return {
     id: getArticleId(apiArticle),
     title: apiArticle.name,
     content: apiArticle.content || '',
     excerpt: apiArticle.summary,
-    imageUrl: apiArticle.image_cover,
+    imageUrl: sanitizeImageUrl(apiArticle.image_cover),
     category: apiArticle.tags?.[0] || '资讯',
     date: parseDate(apiArticle.release_at)?.toLocaleDateString('zh-CN', {
       year: 'numeric',
@@ -55,13 +86,52 @@ function transformApiArticle(apiArticle: ApiArticle): NewsArticle {
       day: 'numeric',
     }) || '未知日期',
     author: apiArticle.author || '匿名',
-    tags: apiArticle.tags,
+    tags: sanitizeTags(apiArticle.tags),
     isTop: apiArticle.is_top,
     isRecommended: apiArticle.is_recommended,
     viewCount: apiArticle.view_counts,
     likeCount: apiArticle.like_counts,
-    additionLinks: apiArticle.addition_links,
+    additionLinks: normalizeSourceLinks(apiArticle.addition_links),
   };
+}
+
+async function getRelatedArticles(currentArticle: NewsArticle): Promise<NewsArticle[]> {
+  const currentTags = new Set((currentArticle.tags || []).map((tag) => tag.toLowerCase()));
+  const fallbackRelated = MOCK_NEWS_ARTICLES.filter((item) => item.id !== currentArticle.id)
+    .map((item) => ({
+      ...item,
+      imageUrl: sanitizeImageUrl(item.imageUrl),
+      tags: sanitizeTags(item.tags),
+      additionLinks: normalizeSourceLinks(item.additionLinks),
+    }))
+    .sort((a, b) => {
+      const aScore = (a.tags || []).filter((tag) => currentTags.has(tag.toLowerCase())).length;
+      const bScore = (b.tags || []).filter((tag) => currentTags.has(tag.toLowerCase())).length;
+      return bScore - aScore;
+    })
+    .slice(0, 3);
+
+  try {
+    const res = await trackedApiFetch('/home', {
+      cache: 'force-cache',
+      next: { revalidate: 900 },
+    });
+    if (!res.ok) return fallbackRelated;
+    const json = await res.json();
+    const rawArticles = Array.isArray(json?.data?.articles) ? (json.data.articles as ApiArticle[]) : [];
+    const related = rawArticles
+      .map(transformApiArticle)
+      .filter((item) => item.id && item.id !== currentArticle.id)
+      .sort((a, b) => {
+        const aScore = (a.tags || []).filter((tag) => currentTags.has(tag.toLowerCase())).length;
+        const bScore = (b.tags || []).filter((tag) => currentTags.has(tag.toLowerCase())).length;
+        return bScore - aScore;
+      })
+      .slice(0, 3);
+    return related.length > 0 ? related : fallbackRelated;
+  } catch {
+    return fallbackRelated;
+  }
 }
 
 async function getNewsArticleApi(id: string): Promise<ApiArticle | null> {
@@ -180,6 +250,10 @@ export default async function NewsArticlePage({
   const canonicalUrl = absoluteUrl(canonicalPath);
   const articleDescription = clamp(stripHtml(article.excerpt || article.content), 260);
   const articleImage = String(article.imageUrl || config?.basic?.share_image || '').trim();
+  const relatedArticles = await getRelatedArticles(article as NewsArticle);
+  const sourceLinks = normalizeSourceLinks(article.additionLinks);
+  const sourceLabel = buildSourceLabel(article as NewsArticle);
+  const relatedGameHref = article.tags?.[0] ? `/app?q=${encodeURIComponent(article.tags[0])}` : '/app';
 
   const newsJsonLd = {
     '@context': 'https://schema.org',
@@ -240,7 +314,13 @@ export default async function NewsArticlePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
-      <NewsArticleView article={article as NewsArticle} />
+      <NewsArticleView
+        article={article as NewsArticle}
+        relatedArticles={relatedArticles}
+        sourceLinks={sourceLinks}
+        sourceLabel={sourceLabel}
+        relatedGameHref={relatedGameHref}
+      />
     </>
   );
 }

@@ -79,23 +79,29 @@ async function getTopGamesForSeo(): Promise<ApiGame[]> {
   }
 }
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}): Promise<Metadata> {
   const config = await getPublicSiteConfig(300);
+  const params = await searchParams;
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
   const title = `${siteName} 游戏库 - 热门安卓游戏与应用下载`;
   const description =
     '浏览 APKScc 游戏库，发现热门国际服与精品安卓应用。支持按分类、评分和关键词快速查找，一键直达下载页。';
   const shareImage = String(config?.basic?.share_image || '').trim();
+  const hasQuery = Boolean(String(params?.q || '').trim());
 
   return {
     title: { absolute: title },
     description,
     robots: {
-      index: true,
-      follow: true,
+      index: !hasQuery,
+      follow: !hasQuery,
       googleBot: {
-        index: true,
-        follow: true,
+        index: !hasQuery,
+        follow: !hasQuery,
         'max-image-preview': 'large',
         'max-snippet': -1,
         'max-video-preview': -1,
@@ -126,9 +132,33 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function GamesPage() {
+const APP_TOPIC_CLUSTERS = [
+  {
+    title: '国际服手游推荐',
+    description: '适合关注海外服、国际区版本和跨区体验的玩家，快速发现近期讨论度较高的热门作品。',
+    href: '/app?q=国际服',
+  },
+  {
+    title: '二次元手游合集',
+    description: '围绕角色养成、剧情冒险和视觉风格整理，适合偏好二次元题材的用户继续深入筛选。',
+    href: '/app?q=二次元',
+  },
+  {
+    title: 'MMO 与多人联机',
+    description: '聚焦大型多人在线、组队开荒和长期养成玩法，适合作为高黏性题材的搜索入口。',
+    href: '/app?q=MMO',
+  },
+];
+
+export default async function GamesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
   const [config, games] = await Promise.all([getPublicSiteConfig(300), getTopGamesForSeo()]);
+  const params = await searchParams;
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
+  const initialKeyword = String(params?.q || '').trim();
 
   const collectionJsonLd = {
     '@context': 'https://schema.org',
@@ -171,7 +201,21 @@ export default async function GamesPage() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
         />
       ) : null}
-      <AppLibraryView />
+      <section className="mb-8 rounded-2xl border bg-card p-6 shadow-sm">
+        <h1 className="text-2xl font-black text-foreground">{siteName} 游戏库</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
+          这里汇总热门安卓游戏、国际服作品和高热度应用入口。你可以把它当作站内的主题导航页，先看题材方向，再进入详情页核对版本、截图、安装说明与社区讨论。
+        </p>
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
+          {APP_TOPIC_CLUSTERS.map((item) => (
+            <a key={item.title} href={item.href} className="rounded-xl border bg-background/60 p-4 transition-colors hover:border-primary/40 hover:bg-primary/5">
+              <p className="font-semibold text-foreground">{item.title}</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.description}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+      <AppLibraryView initialKeyword={initialKeyword} />
     </>
   );
 }

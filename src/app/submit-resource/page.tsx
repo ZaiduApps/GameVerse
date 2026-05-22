@@ -247,7 +247,7 @@ export default function SubmitResourcePage() {
                       <FormItem>
                         <FormLabel>资源来源地址（选填）</FormLabel>
                         <FormControl>
-                          <Input placeholder="例如：https://example.com/game-info" {...field} />
+                          <Input placeholder="例如：https://apks.cc/news/game-update" {...field} />
                         </FormControl>
                         <FormDescription>
                           可提供资源官网、介绍页或其它参考信息链接。
@@ -348,7 +348,7 @@ export default function SubmitResourcePage() {
                       <FormItem>
                         <FormLabel>资源下载地址 *</FormLabel>
                         <FormControl>
-                          <Input placeholder="https://example.com/download/myresource.apk" {...field} />
+                          <Input placeholder="https://download.apks.cc/files/myresource.apk" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

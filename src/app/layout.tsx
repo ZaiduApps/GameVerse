@@ -41,8 +41,16 @@ export async function generateMetadata(): Promise<Metadata> {
 
   if (!config) {
     return {
-      title: 'APKScc',
-      description: 'Failed to load site configuration.',
+      metadataBase: new URL(getSiteUrl()),
+      title: {
+        default: 'APKScc - 安卓游戏与应用下载平台',
+        template: '%s | APKScc',
+      },
+      description: 'APKScc 提供热门安卓游戏、应用下载、排行榜与游戏资讯。',
+      robots: {
+        index: true,
+        follow: true,
+      },
     };
   }
 

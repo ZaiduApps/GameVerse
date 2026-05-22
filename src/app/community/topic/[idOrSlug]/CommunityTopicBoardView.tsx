@@ -34,7 +34,7 @@ interface CommunityTopicBoardViewProps {
   idOrSlug: string;
 }
 
-const FALLBACK_TOPIC_ICON = 'https://placehold.co/96x96.png?text=%23';
+const FALLBACK_TOPIC_ICON = '/favicon.ico';
 
 function extractAnnouncementText(post: CommunityPost): string {
   const source = String(post.title || post.content || '').trim();

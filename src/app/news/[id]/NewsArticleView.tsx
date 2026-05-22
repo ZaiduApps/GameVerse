@@ -45,7 +45,7 @@ const initialMockComments: MockComment[] = [
     id: 'c2',
     username: '游戏玩家',
     avatarFallback: '游',
-    avatarUrl: 'https://placehold.co/40x40.png?text=Y',
+    avatarUrl: '/favicon.ico',
     timestamp: '3 小时前',
     text: '感谢分享，期待更多内容。',
   },
@@ -53,9 +53,13 @@ const initialMockComments: MockComment[] = [
 
 interface NewsArticleViewProps {
   article: NewsArticle;
+  relatedArticles: NewsArticle[];
+  sourceLinks: string[];
+  sourceLabel: string;
+  relatedGameHref: string;
 }
 
-export default function NewsArticleView({ article }: NewsArticleViewProps) {
+export default function NewsArticleView({ article, relatedArticles, sourceLinks, sourceLabel, relatedGameHref }: NewsArticleViewProps) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -92,7 +96,7 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
         id: `c${prev.length + 1}`,
         username: '当前用户',
         avatarFallback: '我',
-        avatarUrl: 'https://placehold.co/40x40.png?text=ME',
+        avatarUrl: '/favicon.ico',
         timestamp: '刚刚',
         text,
       },
@@ -143,6 +147,9 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
               <CalendarDays size={16} className="mr-1.5" />
               <span>{article.date}</span>
             </div>
+            <div className="flex items-center">
+              <span>{sourceLabel}</span>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2 mb-6">
@@ -155,11 +162,50 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
 
           <Separator className="mb-6" />
 
+          {article.excerpt ? (
+            <div className="mb-6 rounded-xl border bg-muted/35 p-4 text-sm leading-6 text-muted-foreground">
+              <strong className="mr-2 text-foreground">摘要：</strong>
+              {article.excerpt}
+            </div>
+          ) : null}
+
           <div
             className="prose prose-sm max-w-none dark:prose-invert md:prose-base"
             onClick={handleMarkdownContainerClick}
             dangerouslySetInnerHTML={{ __html: renderMarkdown(article.content) }}
           />
+
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">来源与延伸阅读</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <p>{sourceLabel}</p>
+                {sourceLinks.length > 0 ? (
+                  sourceLinks.map((link) => (
+                    <a key={link} href={link} target="_blank" rel="noopener noreferrer" className="block truncate text-primary hover:underline">
+                      {link}
+                    </a>
+                  ))
+                ) : (
+                  <p>当前页面未附带外部来源链接，建议结合正文时间与标签继续查看站内相关文章。</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">相关游戏入口</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <p>如果你想继续查看与本文相关的游戏、版本更新或下载入口，可以前往游戏库继续筛选。</p>
+                <Link href={relatedGameHref} className="inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90">
+                  查看相关游戏
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
         </CardContent>
 
         <CardFooter className="p-4 border-t">
@@ -212,6 +258,24 @@ export default function NewsArticleView({ article }: NewsArticleViewProps) {
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>相关文章</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {relatedArticles.length > 0 ? (
+            relatedArticles.map((item) => (
+              <Link key={item.id} href={`/news/${item.id}`} className="block rounded-xl border p-4 transition-colors hover:border-primary/40 hover:bg-muted/30">
+                <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{item.excerpt || '查看这篇相关资讯的完整内容。'}</p>
+              </Link>
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground">暂时没有可展示的相关文章。</p>
+          )}
         </CardContent>
       </Card>
 
