@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 
 import Header from '@/components/layout/header';
@@ -18,8 +18,36 @@ interface AppShellProps {
 
 export default function AppShell({ children, siteName, logoUrl, siteConfig }: AppShellProps) {
   const pathname = usePathname();
+  const lastReportedRef = useRef<string>('');
   const isStandaloneDownloadPage = pathname === '/download/app' || pathname.startsWith('/download/app/');
   const isGameDetailPage = pathname.startsWith('/app/');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!pathname) return;
+
+    const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
+    const canonicalUrl = `${window.location.origin}${normalizedPath}`;
+    if (lastReportedRef.current === canonicalUrl) return;
+    lastReportedRef.current = canonicalUrl;
+
+    const payload = JSON.stringify({ url: canonicalUrl });
+
+    try {
+      if (navigator.sendBeacon) {
+        const blob = new Blob([payload], { type: 'application/json' });
+        const ok = navigator.sendBeacon('/api/seo/baidu/push', blob);
+        if (ok) return;
+      }
+    } catch {}
+
+    void fetch('/api/seo/baidu/push', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: payload,
+      keepalive: true,
+    }).catch(() => {});
+  }, [pathname]);
 
   return (
     <>
