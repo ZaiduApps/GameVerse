@@ -24,16 +24,26 @@ const isAcboxUrl = (value: string): boolean => /^acbox:\/\//i.test(value.trim())
 const isAppDeepLink = (value: string): boolean =>
   /^(acbox|uu-mobile):\/\//i.test(value.trim());
 
-const preprocessHtmlImageAsMarkdown = (raw: string): string =>
-  raw
-    .replace(
-      /<p[^>]*class=["']defined-image["'][^>]*>\s*<img[^>]*src=["']([^"']+)["'][^>]*>\s*<\/p>/gi,
-      (_m, src) => `![](${src})`,
-    )
-    .replace(
-      /<img[^>]*src=["']([^"']+)["'][^>]*>/gi,
-      (_m, src) => `![](${src})`,
-    );
+const preprocessHtmlImageAsMarkdown = (raw: string): string => {
+  let result = raw.replace(
+    /<p[^>]*class=["']defined-image["'][^>]*>\s*<img([^>]*)>\s*<\/p>/gi,
+    (_m, imgAttrs) => {
+      const src = imgAttrs.match(/src=["']([^"']+)["']/i)?.[1] || '';
+      const alt = imgAttrs.match(/alt=["']([^"']*)["']/i)?.[1] || '';
+      return `![${alt}](${src})`;
+    },
+  );
+  result = result.replace(
+    /<img([^>]*)>/gi,
+    (_m, imgAttrs) => {
+      const src = imgAttrs.match(/src=["']([^"']+)["']/i)?.[1] || '';
+      const alt = imgAttrs.match(/alt=["']([^"']*)["']/i)?.[1] || '';
+      if (!src) return _m;
+      return `![${alt}](${src})`;
+    },
+  );
+  return result;
+};
 
 const preprocessCodeLinkAsQuote = (raw: string): string =>
   raw.replace(
@@ -79,7 +89,8 @@ const renderSafeImage = (alt: string, urlRaw: string): string => {
   if (!isHttpsUrl(url)) {
     return `<span class="text-muted-foreground">[图片链接已拦截: ${url}]</span>`;
   }
-  return `<img alt="${alt}" src="${url}" class="rounded-lg my-4 max-w-full h-auto" />`;
+  const safeAlt = (alt || '').trim() || '内容配图';
+  return `<img alt="${safeAlt}" src="${url}" class="rounded-lg my-4 max-w-full h-auto" />`;
 };
 
 export const renderMarkdown = (input: unknown): { __html: string } => {

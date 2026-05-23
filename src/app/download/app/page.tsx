@@ -213,17 +213,17 @@ export default async function DownloadAppPage() {
               <div className="flex -space-x-4">
                 <img
                   className="w-11 h-11 rounded-full border-4 border-white shadow-sm"
-                  alt="avatar 1"
+                  alt="社区活跃用户头像"
                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqvk_J9GGvAodmXGLedgvBF_toJkvAKZ3_JtwjP8_Uvy_ian80MXJ1gixf4D11bLFguDREgY8AeiEjQdP4EsDAiK_hvNB4YFe2qMLz9IZPbfa42iqMFjp-2bzBuwCh3uVWO_UwM6Gtl_Pk8MKGMgydb51Ac0dH2N1XXVrpbcMCr244CT4cEWjorXq0oovUPoJk8-m_jc1LRKa66VVr2dHNaMlvgstqQtWJfLxZYQzveaJZqdnqgQ38s3XQLYmwWr74HPfEivRy_4hL"
                 />
                 <img
                   className="w-11 h-11 rounded-full border-4 border-white shadow-sm"
-                  alt="avatar 2"
+                  alt="社区活跃用户头像"
                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuCel95FTxxKC_OcWSVr0deuzEn9gKuIrpI2msBXHZeKLR8wMgsXFemczoGWSege0tXzIL0KbzxYsuLjCAVUIh3PGN8CUruXmob8XF_Ni6kVctf9XgpQJKInczAY6wa3EFw0Xyz1QRuJD8U6YaVrtpJdB63lG7E1s_JQje-CBHQjTK1WWq7Sef3HzR6-EDCZ5Maz0cBrSCEq9ga8_e8NIh5UI5CPTOX41h1PfOAO3BrN960qlHic0YrM1J7k5EcslmWkPwNXDbB5WGWE"
                 />
                 <img
                   className="w-11 h-11 rounded-full border-4 border-white shadow-sm"
-                  alt="avatar 3"
+                  alt="社区活跃用户头像"
                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuDW0hSzRI2tajFPYToYUY1tPpLqaMm7PJf_mHNirICrbBGrPw4zJ1bZ9gCgrYDIS_7HHj1DYxGWzOlV6KoyhQ12o_IdB4Wxyqa2VWX2s97DzOOxJcsrAGxMp6RtefTmP1HajAMX6USFH54Ag2y-wVLAEpwUJB9QVk6F1WEGQeVcwh3k6yATEjTRS2FroAYOBlDiIxhXbmnmrbJb3_ULnmXhRMv9Ubj0NnRy0HKmD7pzRbJd14f2ijC-6M01PkVFKHEmlSaVQHCkJMWA"
                 />
               </div>
@@ -237,7 +237,7 @@ export default async function DownloadAppPage() {
               <div className="bg-gray-900 rounded-[3.5rem] p-3 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)] overflow-hidden aspect-[9/19.5]">
                 <img
                   className="w-full h-full object-cover rounded-[3rem]"
-                  alt="phone preview"
+                  alt={`${siteName} 应用界面截图预览`}
                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJWYiZJPWbjf_xZV22GKjO9x3xQQnsCESXhsX5eWFhdKMVFQvVR7ThPFqu-Xi-JgDJzfHoTKjIgZ149kZm74ybWcN1zbiUz93oP_3J4RDQH-v3xa_Oci4ojiJHOjb1sjBBlNxxocIfqofW1zgE8je0pRyk9fCsqTwdvJ3ZPnOYcU1lrGVNMAI_cAzvPB23X6JFkjkzhje2VofJJAzAS_Iej-RQDFP7taGGuRxbtYOIzj8dFtgB1MMWmqaR73Zo7LCOq-zDxdqhdz7f"
                 />
               </div>
@@ -325,7 +325,7 @@ export default async function DownloadAppPage() {
               <div className="flex items-center gap-4">
                 <img
                   className="w-14 h-14 rounded-full ring-4 ring-white shadow-md"
-                  alt="user avatar"
+                  alt="玩家 云川喵子 头像"
                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8wMxygPKyYwZ5_Sjib3WfbYtoEgOAAgzdyyzOq70yjEcVn3HEMvfmW1lvLHSLKvmXcNNNS0ywIOZKH7CwptH4y5AnmYPyF9PngyVRjmQd37CVmWEWBDcBqnbV8QFllpEa8o4Huh2HA9iFr8baiCm1gVoO35IkClznoS_Opdxe1Q_6UcwzIzsi1Qd3OE4IEInltBVFEtBuXVXv7odtGC-mASKSbIHDZDO3EHZl-IdYtsCIBl5f6GomXDuEVcR_6tb_n14VzBguhbSd"
                 />
                 <div>
@@ -366,7 +366,7 @@ export default async function DownloadAppPage() {
               <div className="relative rounded-3xl overflow-hidden group">
                 <img
                   className="w-full h-40 object-cover transition-transform duration-500 group-hover:scale-110"
-                  alt="community event"
+                  alt="社区活动照片"
                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuBb8lgWU3mfvYMAtfB9qs00NjA0T9SOkeksBb2yAfgW-cnYJqudcitweeq4jCN0XcHUd5BhDaY1txGS0wIX8tsJ-40nCV56crsNJ_erOMU4X_v2EDOUfJ-1g7DpsZyFeOIJrS-dJmI89z4EMZc6ZQFrSfJRoGTxjribMYI4xGFQozjuEKgZuqleuL-jcp9zE5ZVHV-weS80NhRyc8yQ-EUPkOEhZDEnrFC5rVAOjC_hbDOZu6Q4Keu7XzIKDQMCwX1wpain0768TzDI"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
