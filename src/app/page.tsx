@@ -3,12 +3,9 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import {
   Apple,
-  ChevronLeft,
-  ChevronRight,
   Download,
   Flame,
   MessageCircle,
-  Newspaper,
   QrCode,
   Sparkles,
   Smartphone,
@@ -19,8 +16,11 @@ import {
 } from 'lucide-react';
 
 import GameAnnouncements from '@/components/game-announcements';
+import HomeDynamicPosts from '@/components/home/HomeDynamicPosts';
 import HomeHeroCarousel from '@/components/home/HomeHeroCarousel';
+import HomeNewsListReplica from '@/components/home/HomeNewsListReplica';
 import HomeQuickSearchCard from '@/components/home/HomeQuickSearchCard';
+import RecentUpdatesSection from '@/components/home/RecentUpdatesSection';
 import { getClientLandingAppData, type ClientLandingAppData } from '@/lib/client-landing';
 import type { Announcement, ApiAlbum, ApiArticle, ApiBanner, ApiDynamicPost, ApiGame, HomeData } from '@/types';
 import { trackedApiFetch } from '@/lib/api';
@@ -69,13 +69,6 @@ function getGameHref(game: ApiGame): string {
 
 function isExternalUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
-}
-
-function sanitizeImageUrl(value?: string | null): string {
-  const normalized = String(value || '').trim();
-  if (!normalized) return '';
-  if (/example\.com|placehold\.co/i.test(normalized)) return '';
-  return normalized;
 }
 
 function isSeoSafeAnnouncementText(value?: string | null): boolean {
@@ -132,6 +125,23 @@ function takeAlbum(albums: ApiAlbum[], matcher: (album: ApiAlbum) => boolean): A
 function matchByTitle(album: ApiAlbum, keywords: string[]): boolean {
   const title = (album.title || '').replace(/\s+/g, '');
   return keywords.some((keyword) => title.includes(keyword));
+}
+
+function clampText(value: string | null | undefined, maxChars: number): string {
+  const normalized = String(value || '').trim();
+  if (!normalized) return '';
+  const chars = Array.from(normalized);
+  if (chars.length <= maxChars) return normalized;
+  return `${chars.slice(0, maxChars).join('')}...`;
+}
+
+function formatDeviceLabel(value: string | null | undefined): string {
+  const normalized = String(value || '').trim();
+  if (!normalized) return '';
+  if (/android/i.test(normalized)) return 'Android';
+  if (/ios|iphone|ipad/i.test(normalized)) return 'iOS';
+  if (/pc|windows|win/i.test(normalized)) return 'PC';
+  return normalized;
 }
 
 interface CombinedHomeData {
@@ -237,12 +247,14 @@ async function fetchHomeDataWithRetry(
 async function getHomeAndNewsData(): Promise<CombinedHomeData> {
   try {
     const dynamicCount = Math.min(20, Math.max(1, toNumber(process.env.HOME_DYNAMIC_COUNT, 8)));
+    const newsCount = Math.min(12, Math.max(1, toNumber(process.env.HOME_NEWS_COUNT, 6)));
     const platform = process.env.NEXT_PUBLIC_CLIENT_PLATFORM || process.env.CLIENT_PLATFORM || 'web';
     const region = process.env.NEXT_PUBLIC_CLIENT_REGION || process.env.CLIENT_REGION || '';
     const clientVersion = process.env.NEXT_PUBLIC_CLIENT_VERSION || process.env.CLIENT_VERSION || '';
 
     const params = new URLSearchParams();
     params.set('dynamic_count', String(dynamicCount));
+    params.set('news_count', String(newsCount));
     if (platform) params.set('platform', platform);
     if (region) params.set('region', region);
     if (clientVersion) params.set('client_version', clientVersion);
@@ -355,9 +367,17 @@ export default async function HomePage() {
   const safeNewsItems = (Array.isArray(newsData) ? newsData : []).filter(
     (item): item is ApiArticle => Boolean(item && (item._id || item.gid)),
   );
-  const safeDynamicPosts = (Array.isArray(dynamicPosts) ? dynamicPosts : []).filter(
-    (post): post is ApiDynamicPost => Boolean(post && post._id && isSeoSafeDynamicPost(post)),
-  );
+  const safeDynamicPosts = (Array.isArray(dynamicPosts) ? dynamicPosts : [])
+    .filter(
+      (post): post is ApiDynamicPost => Boolean(post && post._id && isSeoSafeDynamicPost(post)),
+    )
+    .sort((a, b) => {
+      const timeA = Date.parse(String(a.publish_at || a.last_commented_at || ''));
+      const timeB = Date.parse(String(b.publish_at || b.last_commented_at || ''));
+      const valueA = Number.isFinite(timeA) ? timeA : -1;
+      const valueB = Number.isFinite(timeB) ? timeB : -1;
+      return valueB - valueA;
+    });
 
   const heavyweightAlbum =
     takeAlbum(allAlbums, (album) => matchByTitle(album, ['重磅推荐'])) ??
@@ -430,35 +450,35 @@ export default async function HomePage() {
         <div className="grid w-full grid-cols-1 gap-5 sm:grid-cols-2 lg:h-full lg:w-1/4 lg:grid-cols-1 lg:gap-6">
           <HomeQuickSearchCard />
 
-          <section className="flex flex-col justify-between rounded-[22px] border-t-4 border-[#005e9f] bg-white p-5 shadow-[0_14px_28px_rgba(12,15,16,0.08)]">
+          <section className="flex flex-col justify-between rounded-[22px] border-t-4 border-[#005e9f] bg-white p-5 shadow-[0_14px_28px_rgba(12,15,16,0.08)] dark:border-[#2d8fd3] dark:bg-[#111824] dark:shadow-[0_14px_28px_rgba(0,0,0,0.4)]">
             <div>
               <div className="flex items-center justify-between gap-2">
-                <h3 className="flex items-center gap-2 text-lg font-black text-[#2c2f30]">
-                  <Smartphone className="h-4 w-4 text-[#005e9f]" />
+                <h3 className="flex items-center gap-2 text-lg font-black text-[#2c2f30] dark:text-[#edf2fb]">
+                  <Smartphone className="h-4 w-4 text-[#005e9f] dark:text-[#7fc1ff]" />
                   ACBOX 客户端下载
                 </h3>
-                <span className="rounded-full bg-[#eff1f2] px-2 py-0.5 text-[10px] font-bold text-[#595c5d]">
+                <span className="rounded-full bg-[#eff1f2] px-2 py-0.5 text-[10px] font-bold text-[#595c5d] dark:bg-[#223043] dark:text-[#9ca6b8]">
                   {downloadVersion ? `v${downloadVersion}` : '最新版'}
                 </span>
               </div>
               <div className="mt-3 flex items-center gap-3">
-                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-[#e0e3e4] bg-white p-1.5 shadow-sm">
+                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-[#e0e3e4] bg-white p-1.5 shadow-sm dark:border-[#2a3442] dark:bg-[#0f1723]">
                   {downloadQrCodeDataUrl ? (
                     <img src={downloadQrCodeDataUrl} alt="ACBOX 下载二维码" className="h-full w-full rounded-lg object-contain" />
                   ) : (
-                    <QrCode className="h-9 w-9 text-[#757778]" />
+                    <QrCode className="h-9 w-9 text-[#757778] dark:text-[#9ca6b8]" />
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <p className="flex items-center gap-1 text-xs font-bold text-[#005e9f]">
+                  <p className="flex items-center gap-1 text-xs font-bold text-[#005e9f] dark:text-[#7fc1ff]">
                     <Zap className="h-3.5 w-3.5" />
                     更流畅体验
                   </p>
-                  <p className="flex items-center gap-1 text-xs font-bold text-[#755700]">
+                  <p className="flex items-center gap-1 text-xs font-bold text-[#755700] dark:text-[#f4c97a]">
                     <Sparkles className="h-3.5 w-3.5" />
                     独家签到特权
                   </p>
-                  {downloadSize && <p className="text-[11px] font-semibold text-[#595c5d]">安装包大小：{downloadSize}</p>}
+                  {downloadSize && <p className="text-[11px] font-semibold text-[#595c5d] dark:text-[#9ca6b8]">安装包大小：{downloadSize}</p>}
                 </div>
               </div>
             </div>
@@ -487,7 +507,7 @@ export default async function HomePage() {
                   href={iosDownloadHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#e0e3e4] py-2.5 text-sm font-bold text-[#2c2f30] transition-colors hover:bg-[#d1d5d7]"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#e0e3e4] py-2.5 text-sm font-bold text-[#2c2f30] transition-colors hover:bg-[#d1d5d7] dark:bg-[#223043] dark:text-[#edf2fb] dark:hover:bg-[#2a3b52]"
                 >
                   <Apple className="h-4 w-4" />
                   iOS 下载
@@ -495,7 +515,7 @@ export default async function HomePage() {
               ) : (
                 <Link
                   href={iosDownloadHref}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#e0e3e4] py-2.5 text-sm font-bold text-[#2c2f30] transition-colors hover:bg-[#d1d5d7]"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#e0e3e4] py-2.5 text-sm font-bold text-[#2c2f30] transition-colors hover:bg-[#d1d5d7] dark:bg-[#223043] dark:text-[#edf2fb] dark:hover:bg-[#2a3b52]"
                 >
                   <Apple className="h-4 w-4" />
                   iOS 下载
@@ -518,7 +538,7 @@ export default async function HomePage() {
                     {heavyweightAlbum.title || '重磅推荐'}
                     <Star className="h-5 w-5 fill-[#b71211] text-[#b71211]" />
                   </h3>
-                  <p className="mt-1 text-sm font-medium text-[#595c5d]">编辑精选必玩佳作</p>
+                  <p className="mt-1 text-sm font-medium text-[#595c5d] dark:text-[#9ca6b8]">编辑精选必玩佳作</p>
                 </div>
                 <Link href="/app?sort=popular" className="text-sm font-bold text-[#005e9f] hover:underline">
                   查看全部
@@ -529,7 +549,7 @@ export default async function HomePage() {
                   <Link
                     key={game._id}
                     href={getGameHref(game)}
-                    className="group relative flex h-full w-full flex-col rounded-[18px] bg-white p-2 shadow-[0_8px_18px_rgba(12,15,16,0.08)] transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_24px_rgba(12,15,16,0.12)]"
+                    className="group relative flex h-full w-full flex-col rounded-[18px] bg-white p-2 shadow-[0_8px_18px_rgba(12,15,16,0.08)] transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_24px_rgba(12,15,16,0.12)] dark:bg-[#111824] dark:shadow-[0_8px_18px_rgba(0,0,0,0.35)] dark:hover:shadow-[0_14px_24px_rgba(0,0,0,0.45)]"
                   >
                     {typeof game.star === 'number' && game.star > 0 && (
                       <div className="absolute right-2 top-2 z-20 inline-flex items-center gap-1 rounded-full bg-black/65 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur">
@@ -537,7 +557,7 @@ export default async function HomePage() {
                         {game.star.toFixed(1)}
                       </div>
                     )}
-                    <div className="relative mb-2 h-32 w-full overflow-hidden rounded-xl bg-[#e6e8ea]">
+                    <div className="relative mb-2 h-32 w-full overflow-hidden rounded-xl bg-[#e6e8ea] dark:bg-[#1a2433]">
                       <Image
                         src={game.header_image || game.icon || FALLBACK_GAME_IMAGE}
                         alt={game.name}
@@ -549,12 +569,12 @@ export default async function HomePage() {
                     <div className="flex items-center gap-1.5">
                       <h4 className="min-w-0 flex-1 truncate text-sm font-black">{game.name}</h4>
                       {game.metadata?.region && (
-                        <span className="inline-flex rounded-md bg-[#eff1f2] px-1 py-0.5 text-[10px] font-bold text-[#595c5d]">
+                        <span className="inline-flex rounded-md bg-[#eff1f2] px-1 py-0.5 text-[10px] font-bold text-[#595c5d] dark:bg-[#223043] dark:text-[#9ca6b8]">
                           {game.metadata.region}
                         </span>
                       )}
                     </div>
-                    <p className="mt-1 line-clamp-1 text-[11px] text-[#595c5d]">{game.summary || game.tags?.[0] || '精品推荐'}</p>
+                    <p className="mt-1 line-clamp-1 text-[11px] text-[#595c5d] dark:text-[#9ca6b8]">{game.summary || game.tags?.[0] || '精品推荐'}</p>
                     <span className="mt-1.5 inline-flex w-full items-center justify-center rounded-full bg-[#b3d4ff] py-1 text-[11px] font-black text-[#004a7e] transition-colors group-hover:bg-[#005e9f] group-hover:text-white">
                       下载
                     </span>
@@ -565,80 +585,82 @@ export default async function HomePage() {
           )}
 
           {recentAlbum && recentGames.length > 0 && (
-            <section className="rounded-[26px] bg-[#eff1f2] p-5 sm:p-7">
-              <div className="mb-5 flex items-center justify-between">
-                <h3 className="text-xl font-black tracking-tight">{recentAlbum.title || '最近更新'}</h3>
-                <div className="hidden items-center gap-2 sm:flex">
-                  <button className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#595c5d] shadow-sm">
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <button className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#595c5d] shadow-sm">
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {recentGames.slice(0, 9).map((game) => (
-                  <Link
-                    key={game._id}
-                    href={getGameHref(game)}
-                    className="flex min-h-[72px] items-center gap-3 rounded-full bg-white px-2.5 py-2 shadow-sm transition-transform hover:-translate-y-0.5"
-                  >
-                    <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-[#dadddf]">
-                      <Image
-                        src={game.icon || FALLBACK_GAME_IMAGE}
-                        alt={game.name}
-                        fill
-                        className="object-cover"
-                        sizes="48px"
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-black">{game.name}</p>
-                      <span className="inline-flex rounded-full bg-[#f5f6f7] px-2 py-0.5 text-[10px] font-bold text-[#595c5d]">
-                        {game.tags?.[0] || '版本更新'}
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
+            <RecentUpdatesSection
+              title={recentAlbum.title || '最近更新'}
+              games={recentGames}
+              fallbackImage={FALLBACK_GAME_IMAGE}
+            />
           )}
 
           {preregAlbum && preregGames.length > 0 && (
             <section>
               <h3 className="mb-5 text-xl font-black tracking-tight">{preregAlbum.title || '事前登录'}</h3>
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {preregGames.slice(0, 4).map((game, index) => (
+                  (() => {
+                    const region = String(game.metadata?.region || '').trim();
+                    const score = typeof game.star === 'number' ? game.star : Number(game.star || 0);
+                    const hasScore = Number.isFinite(score) && score > 0;
+                    const deviceLabels = Array.from(
+                      new Set((Array.isArray(game.metadata?.deviceList) ? game.metadata.deviceList : []).map((item) => formatDeviceLabel(item)).filter(Boolean)),
+                    ).slice(0, 2);
+                    const hasMetrics = hasScore || deviceLabels.length > 0;
+
+                    return (
                   <Link
                     key={game._id}
                     href={getGameHref(game)}
-                    className="group flex flex-col gap-4 rounded-[22px] bg-[#eff1f2] p-4 transition-colors hover:bg-[#e6e8ea] sm:flex-row sm:items-center sm:justify-between"
+                      className="group flex h-full flex-col justify-between gap-4 rounded-[22px] bg-[#eff1f2] p-4 transition-colors hover:bg-[#e6e8ea] dark:bg-[#162132] dark:hover:bg-[#1c2b40] sm:h-full sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl bg-[#dadddf]">
+                      <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl bg-[#dadddf] dark:bg-[#223043]">
                         <Image
-                          src={game.header_image || game.icon || FALLBACK_GAME_IMAGE}
+                          src={game.icon || FALLBACK_GAME_IMAGE}
                           alt={game.name}
                           fill
                           className="object-cover"
                           sizes="80px"
                         />
                       </div>
-                      <div className="min-w-0">
-                        <h4 className="truncate text-lg font-black">{game.name}</h4>
-                        <p className="mt-1 line-clamp-1 text-sm font-medium text-[#595c5d]">{game.summary || '预约开启中'}</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {(game.tags || []).slice(0, 2).map((tag) => (
-                            <span key={`${game._id}-${tag}`} className="rounded-md bg-[#dadddf] px-2 py-1 text-[10px] font-bold text-[#595c5d]">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="min-w-0 flex-1 truncate text-lg font-black" title={game.name}>{clampText(game.name, 16)}</h4>
+                          {region && (
+                            <span className="inline-flex shrink-0 rounded-md bg-[#dadddf] px-1.5 py-0.5 text-[10px] font-bold text-[#595c5d] dark:bg-[#2a3b52] dark:text-[#9ca6b8]">
+                              {region}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 line-clamp-1 text-sm font-medium text-[#595c5d] dark:text-[#9ca6b8]">{game.summary || '预约开启中'}</p>
+                        {hasMetrics && (
+                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-[#595c5d] dark:text-[#9ca6b8]">
+                            {hasScore && (
+                              <span className="inline-flex items-center gap-1">
+                                <Star className="h-3.5 w-3.5 fill-[#fdc003] text-[#fdc003]" />
+                                {score.toFixed(1)}
+                              </span>
+                            )}
+                            {deviceLabels.length > 0 && (
+                              <span className="inline-flex items-center gap-1">
+                                <Smartphone className="h-3.5 w-3.5 text-[#005e9f]" />
+                                {deviceLabels.join(' / ')}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {(game.tags || []).length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {(game.tags || []).slice(0, 3).map((tag) => (
+                            <span key={`${game._id}-${tag}`} className="rounded-md bg-[#dadddf] px-2 py-1 text-[10px] font-bold text-[#595c5d] dark:bg-[#2a3b52] dark:text-[#9ca6b8]">
                               {tag}
                             </span>
                           ))}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <span
-                      className={`inline-flex items-center justify-center rounded-full px-6 py-2 text-sm font-bold text-white transition-transform group-hover:scale-[1.03] ${
+                      className={`inline-flex shrink-0 whitespace-nowrap items-center justify-center rounded-full px-6 py-2 text-sm font-bold leading-none text-white transition-transform group-hover:scale-[1.03] ${
                         index % 2 === 0
                           ? 'bg-gradient-to-br from-[#b71211] to-[#ff7767]'
                           : 'bg-gradient-to-br from-[#005e9f] to-[#2d8fd3]'
@@ -647,6 +669,8 @@ export default async function HomePage() {
                       预约
                     </span>
                   </Link>
+                    );
+                  })()
                 ))}
               </div>
             </section>
@@ -661,7 +685,7 @@ export default async function HomePage() {
                 <div className="mb-5 flex items-end justify-between">
                   <div>
                     <h3 className="text-xl font-black tracking-tight">{album.title || '推荐专辑'}</h3>
-                    {album.subtitle && <p className="mt-1 text-sm text-[#595c5d]">{album.subtitle}</p>}
+                    {album.subtitle && <p className="mt-1 text-sm text-[#595c5d] dark:text-[#9ca6b8]">{album.subtitle}</p>}
                   </div>
                   <Link href="/app" className="text-sm font-bold text-[#005e9f] hover:underline">
                     查看更多
@@ -672,9 +696,9 @@ export default async function HomePage() {
                     <Link
                       key={game._id}
                       href={getGameHref(game)}
-                      className="rounded-2xl bg-white p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                      className="rounded-2xl bg-white p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-[#111824] dark:shadow-[0_6px_14px_rgba(0,0,0,0.35)]"
                     >
-                      <div className="relative mb-2.5 aspect-square overflow-hidden rounded-xl bg-[#e6e8ea]">
+                      <div className="relative mb-2.5 aspect-square overflow-hidden rounded-xl bg-[#e6e8ea] dark:bg-[#1a2433]">
                         <Image
                           src={game.icon || FALLBACK_GAME_IMAGE}
                           alt={game.name}
@@ -684,7 +708,7 @@ export default async function HomePage() {
                         />
                       </div>
                       <p className="line-clamp-1 text-sm font-black">{game.name}</p>
-                      <p className="mt-1 line-clamp-1 text-xs text-[#595c5d]">{game.tags?.[0] || game.summary || '热门推荐'}</p>
+                      <p className="mt-1 line-clamp-1 text-xs text-[#595c5d] dark:text-[#9ca6b8]">{game.tags?.[0] || game.summary || '热门推荐'}</p>
                     </Link>
                   ))}
                 </div>
@@ -693,8 +717,8 @@ export default async function HomePage() {
           })}
 
           {safeDynamicPosts.length > 0 && (
-            <section>
-              <div className="mb-5 flex items-end justify-between">
+            <section className="rounded-[22px] border border-[#e0e3e4] bg-white p-4 shadow-[0_8px_22px_rgba(12,15,16,0.06)] sm:p-5">
+              <div className="mb-4 flex items-end justify-between">
                 <div>
                   <h3 className="flex items-center gap-2 text-xl font-black tracking-tight sm:text-2xl">
                     社区动态
@@ -706,111 +730,19 @@ export default async function HomePage() {
                   去社区
                 </Link>
               </div>
-              <div className="grid grid-cols-1 gap-4">
-                {safeDynamicPosts.slice(0, 4).map((post) => (
-                  <Link
-                    key={post._id}
-                    href={`/community/post/${post._id}`}
-                    className="rounded-[22px] bg-[#eff1f2] p-4 shadow-sm transition-colors hover:bg-white"
-                  >
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className="relative h-10 w-10 overflow-hidden rounded-full border border-[#ff7767]/30">
-                        <Image
-                          src={sanitizeImageUrl(post.author_avatar) || FALLBACK_AVATAR}
-                          alt={post.author_name || '用户'}
-                          fill
-                          className="object-cover"
-                          sizes="40px"
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-black">{post.author_name || '匿名用户'}</p>
-                        <p className="text-[11px] text-[#757778]">{formatRelativeTime(post.publish_at || post.last_commented_at)}</p>
-                      </div>
-                      {post.app_info?.name && (
-                        <span className="rounded-full border border-[#b71211]/25 px-3 py-1 text-[10px] font-bold text-[#b71211]">
-                          {post.app_info.name}
-                        </span>
-                      )}
-                    </div>
-                    <p className="line-clamp-2 text-sm text-[#2c2f30]">{post.summary || post.title || '分享了一条社区动态'}</p>
-                    {sanitizeImageUrl(post.cover) && (
-                      <div className="relative mt-3 h-36 overflow-hidden rounded-xl">
-                        <Image src={sanitizeImageUrl(post.cover)} alt={post.title || '动态封面'} fill className="object-cover" sizes="800px" />
-                      </div>
-                    )}
-                    <div className="mt-3 flex items-center gap-5 text-xs font-bold text-[#595c5d]">
-                      <span>点赞 {post.like_count || 0}</span>
-                      <span>评论 {post.comment_count || 0}</span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+              <HomeDynamicPosts posts={safeDynamicPosts.slice(0, 8)} />
             </section>
           )}
 
-          {safeNewsItems.length > 0 && (
-            <section>
-              <div className="mb-5 flex items-end justify-between">
-                <div>
-                  <h3 className="flex items-center gap-2 text-xl font-black tracking-tight sm:text-2xl">
-                    游戏资讯
-                    <Newspaper className="h-5 w-5 text-[#b71211]" />
-                  </h3>
-                  <p className="mt-1 text-sm font-medium text-[#595c5d]">发现次元世界的精彩瞬间</p>
-                </div>
-                <Link href="/news" className="text-sm font-bold text-[#005e9f] hover:underline">
-                  查看更多
-                </Link>
-              </div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-                {safeNewsItems.slice(0, 4).map((article, index) => {
-                  const coverA = sanitizeImageUrl(article.image_cover) || FALLBACK_GAME_IMAGE;
-                  const coverB =
-                    sanitizeImageUrl(safeNewsItems[index + 1]?.image_cover) ||
-                    sanitizeImageUrl(bannerItems[index % Math.max(1, bannerItems.length)]?.url_image) ||
-                    coverA;
-                  const articleHref = article._id || article.gid ? `/news/${article._id || article.gid}` : '/news';
-                  return (
-                    <article key={article._id || article.gid || index} className="overflow-hidden rounded-[22px] border border-[#e0e3e4] bg-white shadow-sm">
-                      <div className="grid grid-cols-2 gap-1 p-1">
-                        <div className="relative aspect-square overflow-hidden rounded-l-[18px]">
-                          <Image src={coverA} alt={article.name} fill className="object-cover" sizes="420px" />
-                        </div>
-                        <div className="relative aspect-square overflow-hidden rounded-r-[18px]">
-                          <Image src={coverB} alt="" fill className="object-cover" sizes="420px" />
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        <div className="mb-2 flex items-center gap-2 text-[11px] text-[#757778]">
-                          <span>{article.author || '编辑部'}</span>
-                          <span>·</span>
-                          <span>{formatDate(article.release_at)}</span>
-                        </div>
-                        <h4 className="line-clamp-2 text-base font-black">{article.name}</h4>
-                        <p className="mt-2 line-clamp-2 text-sm text-[#595c5d]">{article.summary || '点击查看资讯详情'}</p>
-                        <div className="mt-3 flex items-center justify-between text-xs font-bold text-[#595c5d]">
-                          <span>点赞 {article.like_counts || 0}</span>
-                          <Link href={articleHref} className="text-[#005e9f] hover:underline">
-                            查看详情
-                          </Link>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-          )}
         </div>
 
         <aside className="space-y-8 xl:col-span-4">
           {rankingAlbum && rankingGames.length > 0 && (
-            <section className="rounded-[22px] bg-white p-5 shadow-[0_8px_24px_rgba(12,15,16,0.08)] sm:p-6">
+            <section className="rounded-[22px] bg-white p-5 shadow-[0_8px_24px_rgba(12,15,16,0.08)] dark:bg-[#111824] dark:shadow-[0_8px_24px_rgba(0,0,0,0.4)] sm:p-6">
               <div className="mb-6 flex items-center justify-between">
                 <h3 className="text-xl font-black tracking-tight">{rankingAlbum.title || '热门游戏'}</h3>
-                <div className="rounded-full bg-[#eff1f2] p-1 text-[10px] font-bold text-[#595c5d]">
-                  <span className="rounded-full bg-white px-3 py-1">总榜</span>
+                <div className="rounded-full bg-[#eff1f2] p-1 text-[10px] font-bold text-[#595c5d] dark:bg-[#223043] dark:text-[#9ca6b8]">
+                  <span className="rounded-full bg-white px-3 py-1 dark:bg-[#111824]">总榜</span>
                   <span className="px-3 py-1">新作</span>
                 </div>
               </div>
@@ -824,7 +756,7 @@ export default async function HomePage() {
                     >
                       {String(index + 1).padStart(2, '0')}
                     </span>
-                    <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-xl bg-[#eff1f2]">
+                    <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-xl bg-[#eff1f2] dark:bg-[#223043]">
                       <Image
                         src={game.icon || FALLBACK_GAME_IMAGE}
                         alt={game.name}
@@ -835,7 +767,7 @@ export default async function HomePage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-black group-hover:text-[#b71211]">{game.name}</p>
-                      <p className="truncate text-xs text-[#595c5d]">
+                      <p className="truncate text-xs text-[#595c5d] dark:text-[#9ca6b8]">
                         {game.tags?.[0] || '热门'} · {typeof game.star === 'number' && game.star > 0 ? `${game.star.toFixed(1)}分` : '玩家推荐'}
                       </p>
                     </div>
@@ -845,7 +777,7 @@ export default async function HomePage() {
               </div>
               <Link
                 href="/rankings"
-                className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-[#eff1f2] py-2 text-sm font-semibold text-[#595c5d] transition-colors hover:bg-[#e0e3e4]"
+                className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-[#eff1f2] py-2 text-sm font-semibold text-[#595c5d] transition-colors hover:bg-[#e0e3e4] dark:bg-[#223043] dark:text-[#9ca6b8] dark:hover:bg-[#2a3b52]"
               >
                 查看完整榜单
               </Link>
@@ -915,6 +847,16 @@ export default async function HomePage() {
           ) : null}
         </aside>
       </div>
+
+      {safeNewsItems.length > 0 && (
+        <HomeNewsListReplica
+          title="社区动态"
+          subtitle="发现次元世界的玩家讨论与一线反馈"
+          moreHref="/community"
+          articles={safeNewsItems}
+          fallbackImage={FALLBACK_GAME_IMAGE}
+        />
+      )}
     </div>
   );
 }

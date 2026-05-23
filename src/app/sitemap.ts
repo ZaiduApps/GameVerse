@@ -11,12 +11,12 @@ type GameSitemapItem = {
   is_deleted?: number | boolean;
 };
 
-type NewsSitemapItem = {
+type ContentPostSitemapItem = {
   _id?: string;
-  gid?: string;
-  release_at?: string;
+  post_type?: string;
+  publish_at?: string;
   updated_at?: string;
-  latest_at?: string;
+  last_commented_at?: string;
   status?: number;
   is_deleted?: number | boolean;
 };
@@ -28,7 +28,7 @@ type PagedList<T> = {
   pageSize?: number;
 };
 
-const FALLBACK_STATIC_PATHS = ['/', '/app', '/community', '/news', '/rankings'];
+const FALLBACK_STATIC_PATHS = ['/', '/app', '/community', '/rankings'];
 const SITEMAP_PAGE_SIZE = 500;
 const SITEMAP_MAX_PAGES = 200;
 const NEWS_SITEMAP_MAX_PAGES = 80;
@@ -98,17 +98,18 @@ function toGameEntry(item: GameSitemapItem): MetadataRoute.Sitemap[number] | nul
   };
 }
 
-function toNewsEntry(item: NewsSitemapItem): MetadataRoute.Sitemap[number] | null {
-  const id = String(item?.gid || item?._id || '').trim();
+function toCommunityPostEntry(item: ContentPostSitemapItem): MetadataRoute.Sitemap[number] | null {
+  const id = String(item?._id || '').trim();
   if (!id) return null;
 
   const isDeleted = item?.is_deleted === true || Number(item?.is_deleted || 0) === 1;
   if (isDeleted) return null;
   if (item?.status !== undefined && Number(item.status) !== 1) return null;
+  if (item?.post_type && String(item.post_type) !== 'news') return null;
 
-  const lastmod = parseDate(item.updated_at) || parseDate(item.latest_at) || parseDate(item.release_at);
+  const lastmod = parseDate(item.updated_at) || parseDate(item.last_commented_at) || parseDate(item.publish_at);
   return {
-    url: absoluteUrl(`/news/${encodeURIComponent(id)}`),
+    url: absoluteUrl(`/community/post/${encodeURIComponent(id)}`),
     lastModified: lastmod,
     changeFrequency: 'daily',
     priority: 0.6,
@@ -162,20 +163,22 @@ async function fetchGamesFromListFallback(): Promise<MetadataRoute.Sitemap[numbe
   return result;
 }
 
-async function fetchNewsFromSearchEndpoint(): Promise<MetadataRoute.Sitemap[number][]> {
+async function fetchCommunityPostsFromFeed(): Promise<MetadataRoute.Sitemap[number][]> {
   const result: MetadataRoute.Sitemap[number][] = [];
   const seen = new Set<string>();
 
   for (let page = 1; page <= NEWS_SITEMAP_MAX_PAGES; page += 1) {
-    const json = await fetchJson(`/news/search?q=&page=${page}&pageSize=${SITEMAP_PAGE_SIZE}`);
+    const json = await fetchJson(
+      `/content/feed?page=${page}&pageSize=${SITEMAP_PAGE_SIZE}&post_type=news&sort=latest&view=card`,
+    );
     if (!json || (json.code !== 0 && json.code !== undefined)) break;
 
-    const { list, total, pageSize } = normalizeListData<NewsSitemapItem>(json);
+    const { list, total, pageSize } = normalizeListData<ContentPostSitemapItem>(json);
     const safeList = Array.isArray(list) ? list : [];
     if (safeList.length === 0) break;
 
     for (const item of safeList) {
-      const entry = toNewsEntry(item);
+      const entry = toCommunityPostEntry(item);
       if (!entry) continue;
       if (seen.has(entry.url)) continue;
       seen.add(entry.url);
@@ -184,26 +187,6 @@ async function fetchNewsFromSearchEndpoint(): Promise<MetadataRoute.Sitemap[numb
 
     if (total && page * (pageSize || SITEMAP_PAGE_SIZE) >= total) break;
     if (safeList.length < SITEMAP_PAGE_SIZE) break;
-  }
-
-  return result;
-}
-
-async function fetchNewsFromHomeFallback(): Promise<MetadataRoute.Sitemap[number][]> {
-  const json = await fetchJson('/home');
-  if (!json || (json.code !== 0 && json.code !== undefined)) return [];
-
-  const data = json?.data;
-  const list = Array.isArray(data?.articles) ? (data.articles as NewsSitemapItem[]) : [];
-  const result: MetadataRoute.Sitemap[number][] = [];
-  const seen = new Set<string>();
-
-  for (const item of list) {
-    const entry = toNewsEntry(item);
-    if (!entry) continue;
-    if (seen.has(entry.url)) continue;
-    seen.add(entry.url);
-    result.push(entry);
   }
 
   return result;
@@ -219,10 +202,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const gameEntries = await fetchGamesFromSeoEndpoint();
-  const newsEntries = await fetchNewsFromSearchEndpoint();
+  const communityPostEntries = await fetchCommunityPostsFromFeed();
 
   const safeGameEntries = gameEntries.length > 0 ? gameEntries : await fetchGamesFromListFallback();
-  const safeNewsEntries = newsEntries.length > 0 ? newsEntries : await fetchNewsFromHomeFallback();
 
-  return [...staticEntries, ...safeGameEntries, ...safeNewsEntries];
+  return [...staticEntries, ...safeGameEntries, ...communityPostEntries];
 }

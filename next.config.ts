@@ -19,6 +19,25 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/news',
+        destination: '/community',
+        permanent: true,
+      },
+      {
+        source: '/news/:id',
+        destination: '/community/post/:id',
+        permanent: true,
+      },
+      {
+        source: '/news/:path*',
+        destination: '/community',
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [
       {

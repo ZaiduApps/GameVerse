@@ -9,6 +9,7 @@ export interface CommunityTopicItem {
   name: string;
   slug: string;
   type?: 'event' | 'game' | 'general';
+  is_official?: boolean;
   app_id?: null | string;
   description?: string;
   icon?: string;
@@ -45,7 +46,9 @@ export interface ApiCommunityPost {
   summary?: string;
   content?: string;
   cover?: string;
+  display_cover?: string;
   media_urls?: string[];
+  preview_images?: string[];
   source?: string;
   author_name?: string;
   author_avatar?: string;
@@ -148,6 +151,17 @@ function parseApiResponseMessage(json: any, fallback: string) {
   return message || fallback;
 }
 
+function normalizeTopicItem(input: CommunityTopicItem | null | undefined): CommunityTopicItem {
+  const item = input || ({} as CommunityTopicItem);
+  return {
+    ...item,
+    _id: String(item._id || '').trim(),
+    name: String(item.name || '').trim(),
+    slug: String(item.slug || '').trim(),
+    is_official: Boolean(item.is_official),
+  };
+}
+
 function formatTimestamp(value?: string): string {
   if (!value) return '刚刚';
   const date = new Date(value);
@@ -203,11 +217,12 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
   const rawSummary = String(item.summary || '').trim();
   const content = rawContent || rawSummary || '暂无内容';
   const summary = extractSummary(rawSummary, rawContent);
-  const firstImage =
-    item.cover ||
-    item.media_urls?.[0] ||
-    extractFirstImageFromText(rawContent) ||
-    undefined;
+  const firstImage = (item.display_cover || item.cover || item.media_urls?.[0] || extractFirstImageFromText(rawContent)) || undefined;
+  const previewImages = Array.isArray(item.preview_images) && item.preview_images.length > 0
+    ? item.preview_images.slice(0, 9)
+    : Array.isArray(item.media_urls) && item.media_urls.length > 0
+      ? item.media_urls.slice(0, 9)
+      : firstImage ? [firstImage] : [];
   const topicNames = [
     item.topic_info?.name,
     ...((item.topic_infos || []).map((topic) => topic?.name) || []),
@@ -249,6 +264,7 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
     content,
     imageUrl: firstImage,
     imageAiHint: firstImage ? 'community post image' : undefined,
+    previewImages,
     tags: uniqueTags.slice(0, 4),
     topicIds,
     topicNames: uniqueTopicNames,
@@ -417,6 +433,7 @@ export async function getCommunityFeed(
     page: String(page),
     pageSize: String(pageSize),
     sort,
+    view: 'card',
   });
   const topicId = String(options?.topicId || '').trim();
   if (topicId) query.set('topic_id', topicId);
@@ -504,6 +521,7 @@ export async function getCommunityPostsByGame(
     ['page', '1'],
     ['pageSize', String(pageSize)],
     ['sort', options.sort],
+    ['view', 'card'],
   ];
 
   const queryCandidates: URLSearchParams[] = [];
@@ -633,7 +651,7 @@ export async function getCommunityTopics(params: TopicListParams = {}): Promise<
   }>(`/content/topics/public?${query.toString()}`);
 
   return {
-    list: Array.isArray(data?.list) ? data!.list! : [],
+    list: Array.isArray(data?.list) ? data!.list!.map((item) => normalizeTopicItem(item)) : [],
     total: Number(data?.total || 0),
     page: Number(data?.page || params.page || 1),
     pageSize: Number(data?.pageSize || params.pageSize || 20),
@@ -643,7 +661,8 @@ export async function getCommunityTopics(params: TopicListParams = {}): Promise<
 export async function getCommunityTopicDetail(idOrSlug: string): Promise<CommunityTopicItem | null> {
   const target = String(idOrSlug || '').trim();
   if (!target) return null;
-  return await getApiData<CommunityTopicItem>(`/content/topics/public/${encodeURIComponent(target)}`);
+  const topic = await getApiData<CommunityTopicItem>(`/content/topics/public/${encodeURIComponent(target)}`);
+  return topic ? normalizeTopicItem(topic) : null;
 }
 
 export async function getCommunityTopicSuggestions(params: {
@@ -663,7 +682,7 @@ export async function getCommunityTopicSuggestions(params: {
   const data = await getApiData<{ list?: CommunityTopicItem[] }>(
     `/content/topics/suggest?${query.toString()}`,
   );
-  return Array.isArray(data?.list) ? data!.list! : [];
+  return Array.isArray(data?.list) ? data!.list!.map((item) => normalizeTopicItem(item)) : [];
 }
 
 export async function quickCreateCommunityTopic(params: {
@@ -720,7 +739,7 @@ export async function quickCreateCommunityTopic(params: {
     return {
       ok: true,
       created: Boolean(json?.data?.created),
-      topic: (json?.data?.topic as CommunityTopicItem) || null,
+      topic: json?.data?.topic ? normalizeTopicItem(json.data.topic as CommunityTopicItem) : null,
       message: parseApiResponseMessage(json, '操作成功'),
     };
   } catch {
@@ -816,7 +835,9 @@ export async function getMyFollowedTopics(params: {
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json?.code !== 0) return [];
-    return Array.isArray(json?.data?.list) ? (json.data.list as CommunityTopicItem[]) : [];
+    return Array.isArray(json?.data?.list)
+      ? (json.data.list as CommunityTopicItem[]).map((item) => normalizeTopicItem(item))
+      : [];
   } catch {
     return [];
   }

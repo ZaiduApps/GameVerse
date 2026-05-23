@@ -5,7 +5,8 @@ import GameDetailView from './GameDetailView';
 import { trackedApiFetch } from '@/lib/api';
 import { absoluteUrl } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
-import type { ApiArticle, GameDetailData, SiteConfig } from '@/types';
+import { getCommunityPostsByGame } from '@/lib/community-api';
+import type { CommunityPost, GameDetailData, SiteConfig } from '@/types';
 
 const DETAIL_REVALIDATE_SECONDS = 900;
 const MAX_TITLE_LENGTH = 72;
@@ -69,69 +70,37 @@ function formatNewsDate(input?: string | null) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-function toRelatedNewsItem(article: ApiArticle): RelatedNewsItem | null {
-  const id = String(article.gid || article._id || '').trim();
+function toRelatedNewsItem(post: CommunityPost): RelatedNewsItem | null {
+  const id = String(post.id || '').trim();
   if (!id) return null;
+
+  const title = normalizeText(post.title || post.summary) || '社区帖子';
+  const source = normalizeText(post.summary || post.content);
+
   return {
     id,
-    title: normalizeText(article.name) || '游戏资讯',
-    excerpt: extractNewsExcerpt(article.summary, article.content),
-    date: formatNewsDate(article.release_at),
+    title,
+    excerpt: extractNewsExcerpt(source, post.content),
+    date: formatNewsDate(post.timestamp),
   };
 }
 
 async function getRelatedNews(game: GameDetailData['app']): Promise<RelatedNewsItem[]> {
-  const queries = [game.name, ...(game.tags || []).slice(0, 3)]
-    .map((item) => normalizeText(item))
-    .filter(Boolean);
-  const seen = new Set<string>();
-  const results: RelatedNewsItem[] = [];
-
-  for (const query of queries) {
-    try {
-      const params = new URLSearchParams({ q: query, page: '1', pageSize: '6' });
-      const res = await trackedApiFetch(`/news/search?${params.toString()}`, {
-        cache: 'force-cache',
-        next: { revalidate: DETAIL_REVALIDATE_SECONDS },
-      });
-      if (!res.ok) continue;
-      const json = await res.json();
-      const list = Array.isArray(json?.data?.list) ? (json.data.list as ApiArticle[]) : [];
-      for (const item of list) {
-        const mapped = toRelatedNewsItem(item);
-        if (!mapped) continue;
-        if (seen.has(mapped.id)) continue;
-        seen.add(mapped.id);
-        results.push(mapped);
-        if (results.length >= 4) return results;
-      }
-    } catch {
-      // ignore and try the next query
-    }
-  }
-
   try {
-    const res = await trackedApiFetch('/home', {
-      cache: 'force-cache',
-      next: { revalidate: DETAIL_REVALIDATE_SECONDS },
+    const posts = await getCommunityPostsByGame({
+      sort: 'latest',
+      pageSize: 8,
+      appId: game._id,
+      pkg: game.pkg,
+      gameName: game.name,
     });
-    if (res.ok) {
-      const json = await res.json();
-      const list = Array.isArray(json?.data?.articles) ? (json.data.articles as ApiArticle[]) : [];
-      for (const item of list) {
-        const mapped = toRelatedNewsItem(item);
-        if (!mapped) continue;
-        if (seen.has(mapped.id)) continue;
-        seen.add(mapped.id);
-        results.push(mapped);
-        if (results.length >= 4) return results;
-      }
-    }
+    return posts
+      .map(toRelatedNewsItem)
+      .filter((item): item is RelatedNewsItem => Boolean(item))
+      .slice(0, 4);
   } catch {
-    // ignore fallback failure
+    return [];
   }
-
-  return results;
 }
 
 function formatFileSize(bytes?: number | null): string | undefined {

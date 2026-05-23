@@ -39,6 +39,19 @@ type UserApiKeyCreateResult = {
   created_at: null | string;
 };
 
+function getFriendlyApiKeyError(message?: string): string {
+  const text = String(message || '').trim().toLowerCase();
+  if (!text) return '请稍后重试';
+  if (text.includes('invalid auth context')) return '登录态异常，请重新登录后重试';
+  if (text.includes('invalid user id')) return '账号信息异常，请重新登录后重试';
+  if (text.includes('user not found')) return '账号不存在或已失效，请重新登录';
+  if (text.includes('invalid api key id')) return '密钥标识无效，请刷新列表后重试';
+  if (text.includes('api key not found')) return '密钥不存在或已被吊销，请刷新列表';
+  if (text.includes('invalid expires_at')) return '过期时间格式无效';
+  if (text.includes('expires_at must be in future')) return '过期时间必须晚于当前时间';
+  return String(message || '请稍后重试');
+}
+
 function formatTime(input?: null | string) {
   if (!input) return '-';
   const date = new Date(input);
@@ -105,6 +118,17 @@ export default function ProfileApiKeysPage() {
       toast({ variant: 'destructive', title: '请输入密钥名称' });
       return;
     }
+
+    let normalizedExpiresAt: string | undefined;
+    if (expiresAt) {
+      const parsed = new Date(expiresAt);
+      if (!Number.isFinite(parsed.getTime())) {
+        toast({ variant: 'destructive', title: '过期时间格式无效' });
+        return;
+      }
+      normalizedExpiresAt = parsed.toISOString();
+    }
+
     setSubmitting(true);
     try {
       const res = await trackedApiFetch('/users/api-keys', {
@@ -115,7 +139,7 @@ export default function ProfileApiKeysPage() {
         },
         body: JSON.stringify({
           name: name.trim(),
-          expires_at: expiresAt || undefined,
+          expires_at: normalizedExpiresAt,
         }),
       });
       const json: ApiResponse<UserApiKeyCreateResult> = await res.json();
@@ -127,7 +151,7 @@ export default function ProfileApiKeysPage() {
         await loadKeys();
         return;
       }
-      toast({ variant: 'destructive', title: '创建失败', description: json.message || '请稍后重试' });
+      toast({ variant: 'destructive', title: '创建失败', description: getFriendlyApiKeyError(json.message) });
     } catch {
       toast({ variant: 'destructive', title: '网络错误', description: '请检查网络连接' });
     } finally {
@@ -159,7 +183,7 @@ export default function ProfileApiKeysPage() {
         setSecretModalOpen(true);
         return;
       }
-      toast({ variant: 'destructive', title: '查看失败', description: json.message || '请稍后重试' });
+      toast({ variant: 'destructive', title: '查看失败', description: getFriendlyApiKeyError(json.message) });
     } catch {
       toast({ variant: 'destructive', title: '网络错误', description: '请检查网络连接' });
     }
@@ -183,7 +207,7 @@ export default function ProfileApiKeysPage() {
         await loadKeys();
         return;
       }
-      toast({ variant: 'destructive', title: '操作失败', description: json.message || '请稍后重试' });
+      toast({ variant: 'destructive', title: '操作失败', description: getFriendlyApiKeyError(json.message) });
     } catch {
       toast({ variant: 'destructive', title: '网络错误', description: '请检查网络连接' });
     }
@@ -204,7 +228,7 @@ export default function ProfileApiKeysPage() {
         await loadKeys();
         return;
       }
-      toast({ variant: 'destructive', title: '吊销失败', description: json.message || '请稍后重试' });
+      toast({ variant: 'destructive', title: '吊销失败', description: getFriendlyApiKeyError(json.message) });
     } catch {
       toast({ variant: 'destructive', title: '网络错误', description: '请检查网络连接' });
     }
@@ -391,4 +415,3 @@ export default function ProfileApiKeysPage() {
     </div>
   );
 }
-

@@ -268,7 +268,7 @@ export default function NewsArticleView({ article, relatedArticles, sourceLinks,
         <CardContent className="space-y-4">
           {relatedArticles.length > 0 ? (
             relatedArticles.map((item) => (
-              <Link key={item.id} href={`/news/${item.id}`} className="block rounded-xl border p-4 transition-colors hover:border-primary/40 hover:bg-muted/30">
+              <Link key={item.id} href={`/community/post/${item.id}`} className="block rounded-xl border p-4 transition-colors hover:border-primary/40 hover:bg-muted/30">
                 <p className="text-sm font-semibold text-foreground">{item.title}</p>
                 <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{item.excerpt || '查看这篇相关资讯的完整内容。'}</p>
               </Link>
@@ -282,7 +282,7 @@ export default function NewsArticleView({ article, relatedArticles, sourceLinks,
       <AppDownloadGuideDialog open={appGuideOpen} onOpenChange={setAppGuideOpen} />
 
       <div className="pt-2">
-        <Link href="/news" className="text-sm text-primary hover:underline">
+        <Link href="/community" className="text-sm text-primary hover:underline">
           返回资讯列表
         </Link>
       </div>

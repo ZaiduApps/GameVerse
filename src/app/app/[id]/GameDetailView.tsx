@@ -1,6 +1,6 @@
 'use client';
 
-import type { ApiArticle, ApiRecommendedGame, CardConfigItem, CommunityPost, GameDetailData } from '@/types';
+import type { ApiRecommendedGame, CardConfigItem, CommunityPost, GameDetailData } from '@/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
@@ -216,6 +216,14 @@ function normalizeScore(raw?: number | string | null, fallback = 9.2) {
   return value.toFixed(1);
 }
 
+function isPreregGameLike(game?: GameDetailData['app'] | null): boolean {
+  if (!game) return false;
+  const typeText = String(game.type || '').toLowerCase();
+  if (/pre[-_ ]?reg|预约|事前|预注册/.test(typeText)) return true;
+  const tagText = (Array.isArray(game.tags) ? game.tags : []).join(' ').toLowerCase();
+  return /pre[-_ ]?reg|预约|事前|预注册|即将上线|coming soon/.test(tagText);
+}
+
 function safeHref(path?: string, fallback = '#') {
   const value = String(path || '').trim();
   return value || fallback;
@@ -337,14 +345,19 @@ function formatNewsDate(value?: string | null) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-function toRelatedNewsItem(article: ApiArticle): RelatedNewsItem | null {
-  const id = String(article.gid || article._id || '').trim();
+function toRelatedNewsItem(post: CommunityPost): RelatedNewsItem | null {
+  const id = String(post.id || '').trim();
   if (!id) return null;
+
+  const title = String(post.title || post.summary || '社区帖子').trim() || '社区帖子';
+  const source = String(post.summary || post.content || '').trim();
+  const excerpt = source.length > 120 ? `${source.slice(0, 120).trim()}...` : source;
+
   return {
     id,
-    title: String(article.name || '游戏资讯').trim() || '游戏资讯',
-    excerpt: extractSummary(String(article.summary || ''), String(article.content || ''), 120),
-    date: formatNewsDate(article.release_at),
+    title,
+    excerpt: excerpt || '查看这篇相关社区帖的完整内容。',
+    date: formatNewsDate(post.timestamp),
   };
 }
 
@@ -390,6 +403,7 @@ export default function GameDetailView({
   const [previewOffset, setPreviewOffset] = useState({ x: 0, y: 0 });
   const [isPreviewImageError, setIsPreviewImageError] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isReminderEnabled, setIsReminderEnabled] = useState(false);
   const dragStateRef = useRef<DragState>({
     dragging: false,
     startX: 0,
@@ -413,6 +427,7 @@ export default function GameDetailView({
     return ['人气推荐', '角色扮演', '二次元', '回合制'];
   }, [game?.tags]);
   const primaryCategory = useMemo(() => getPrimaryCategory(game, tags), [game, tags]);
+  const isPreregGame = useMemo(() => isPreregGameLike(game), [game]);
 
   const screenshots = useMemo(() => {
     const list = (game?.detail_images || []).filter(Boolean);
@@ -527,6 +542,24 @@ export default function GameDetailView({
   }, [id, heroImage, game?.icon]);
 
   useEffect(() => {
+    if (typeof window === 'undefined' || !game) {
+      setIsReminderEnabled(false);
+      return;
+    }
+    const reminderKey = game._id || game.pkg;
+    if (!reminderKey) {
+      setIsReminderEnabled(false);
+      return;
+    }
+    try {
+      const storedValue = window.localStorage.getItem(`game-remind:${reminderKey}`);
+      setIsReminderEnabled(storedValue === '1');
+    } catch {
+      setIsReminderEnabled(false);
+    }
+  }, [game?._id, game?.pkg]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadRelatedPosts() {
@@ -565,17 +598,13 @@ export default function GameDetailView({
       }
 
       try {
-        const params = new URLSearchParams({
-          q: game.name,
-          page: '1',
-          pageSize: '4',
+        const list = await getCommunityPostsByGame({
+          sort: 'latest',
+          pageSize: 8,
+          appId: game._id,
+          pkg: game.pkg,
+          gameName: game.name,
         });
-        const res = await trackedApiFetch(`/news/search?${params.toString()}`, {
-          cache: 'force-cache',
-        });
-        if (!res.ok) throw new Error('related-news-fetch-failed');
-        const json = await res.json();
-        const list = Array.isArray(json?.data?.list) ? (json.data.list as ApiArticle[]) : [];
         const mapped = list.map(toRelatedNewsItem).filter((item): item is RelatedNewsItem => Boolean(item));
         if (!cancelled) {
           setRelatedNews(mapped.slice(0, 4));
@@ -693,6 +722,23 @@ export default function GameDetailView({
       setIsSubmittingUrge(false);
     }
   }, [game, isSubmittingUrge, token, user?.name, user?.username, toast]);
+
+  const handleReminderToggle = useCallback(() => {
+    if (!game) return;
+    const reminderKey = game._id || game.pkg;
+    if (!reminderKey) return;
+    const next = !isReminderEnabled;
+    setIsReminderEnabled(next);
+    try {
+      window.localStorage.setItem(`game-remind:${reminderKey}`, next ? '1' : '0');
+    } catch {
+      // ignore storage write failures
+    }
+    toast({
+      title: next ? '已开启上线提醒' : '已取消上线提醒',
+      description: next ? '游戏上线后可在消息中心查看提醒。' : '你可以随时再次开启提醒。',
+    });
+  }, [game, isReminderEnabled, toast]);
 
   const setZoom = useCallback((value: number) => {
     const clamped = Math.min(3, Math.max(1, Number(value.toFixed(2))));
@@ -924,15 +970,33 @@ export default function GameDetailView({
                     </div>
                   </div>
 
-                  <div className="w-56">
-                    <GameDownloadDialog
-                      appId={game._id}
-                      pkg={game.pkg}
-                      resources={resources}
-                      downloadNotices={downloadNotices}
-                      triggerClassName="stitch-primary-btn h-12 w-full rounded-full border-none text-base font-bold text-white"
-                      triggerLabel="立即下载"
-                    />
+                  <div className={cn('w-56', isPreregGame && 'w-[440px]')}>
+                    <div className={cn('flex items-center', isPreregGame ? 'gap-3' : '')}>
+                      {isPreregGame && (
+                        <Button
+                          type="button"
+                          onClick={handleReminderToggle}
+                          className={cn(
+                            'h-12 shrink-0 whitespace-nowrap rounded-full border border-[#b71211] bg-transparent px-5 text-base font-bold leading-none text-[#b71211] transition-colors hover:bg-[#b71211]/8',
+                            isReminderEnabled && 'bg-[#b71211] text-white hover:bg-[#9f1110]',
+                          )}
+                        >
+                          <BellRing className="mr-2 h-4 w-4" />
+                          {isReminderEnabled ? '已提醒' : '上线提醒'}
+                        </Button>
+                      )}
+                      <GameDownloadDialog
+                        appId={game._id}
+                        pkg={game.pkg}
+                        resources={resources}
+                        downloadNotices={downloadNotices}
+                        triggerClassName={cn(
+                          'stitch-primary-btn h-12 w-full rounded-full border-none text-base font-bold text-white',
+                          isPreregGame && 'flex-1',
+                        )}
+                        triggerLabel="立即下载"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1217,17 +1281,17 @@ export default function GameDetailView({
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="flex items-center gap-3 text-xl font-bold">
                     <span className="h-8 w-2 rounded-full bg-[#2e7d32]" />
-                    相关资讯
+                    相关帖子
                   </h2>
-                  <Link href={game?.name ? `/news?q=${encodeURIComponent(game.name)}` : '/news'} className="inline-flex items-center gap-2 text-sm font-medium text-[#595c5d] transition-colors hover:text-[#b71211]">
-                    查看更多资讯
+                  <Link href="/community" className="inline-flex items-center gap-2 text-sm font-medium text-[#595c5d] transition-colors hover:text-[#b71211]">
+                    查看更多帖子
                     <ChevronRight className="h-4 w-4" />
                   </Link>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   {relatedNews.length > 0 ? (
                     relatedNews.map((item) => (
-                      <Link key={`related-news-${item.id}`} href={`/news/${item.id}`} className="rounded-[1.75rem] border border-[#abadae]/10 bg-white/80 p-5 transition-colors hover:border-primary/30 hover:bg-white dark:border-border/45 dark:bg-card/75">
+                      <Link key={`related-news-${item.id}`} href={`/community/post/${item.id}`} className="rounded-[1.75rem] border border-[#abadae]/10 bg-white/80 p-5 transition-colors hover:border-primary/30 hover:bg-white dark:border-border/45 dark:bg-card/75">
                         <p className="text-base font-bold text-[#2c2f30] dark:text-foreground">{item.title}</p>
                         <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">{item.excerpt}</p>
                         <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#757778]">{item.date}</p>
@@ -1235,7 +1299,7 @@ export default function GameDetailView({
                     ))
                   ) : (
                     <Card className="rounded-[1.75rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75 md:col-span-2">
-                      <CardContent className="p-6 text-sm text-[#595c5d] dark:text-muted-foreground">暂时没有可展示的相关资讯，稍后可以从资讯频道继续查看该游戏的更新与活动动态。</CardContent>
+                      <CardContent className="p-6 text-sm text-[#595c5d] dark:text-muted-foreground">暂时没有可展示的相关帖子，稍后可以从社区继续查看该游戏的更新与活动动态。</CardContent>
                     </Card>
                   )}
                 </div>
@@ -1568,16 +1632,16 @@ export default function GameDetailView({
           <div className="mb-4 flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-xl font-black">
               <span className="h-6 w-1.5 rounded-full bg-[#2e7d32]" />
-              相关资讯
+              相关帖子
             </h2>
-            <Link href={game?.name ? `/news?q=${encodeURIComponent(game.name)}` : '/news'} className="text-xs font-bold text-[#005e9f]">
+            <Link href="/community" className="text-xs font-bold text-[#005e9f]">
               更多
             </Link>
           </div>
           <div className="space-y-4">
             {relatedNews.length > 0 ? (
               relatedNews.slice(0, 3).map((item) => (
-                <Link key={`mobile-related-news-${item.id}`} href={`/news/${item.id}`} className="block rounded-2xl border-[#abadae]/10 bg-white p-4 shadow-sm">
+                <Link key={`mobile-related-news-${item.id}`} href={`/community/post/${item.id}`} className="block rounded-2xl border-[#abadae]/10 bg-white p-4 shadow-sm">
                   <p className="text-sm font-bold text-[#0f1720]">{item.title}</p>
                   <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#595c5d]">{item.excerpt}</p>
                   <p className="mt-3 text-[11px] font-semibold text-[#757778]">{item.date}</p>
@@ -1585,7 +1649,7 @@ export default function GameDetailView({
               ))
             ) : (
               <Card className="border-[#abadae]/10 bg-white">
-                <CardContent className="p-4 text-sm text-[#595c5d]">暂无相关资讯，可前往资讯频道查看更多更新。</CardContent>
+                <CardContent className="p-4 text-sm text-[#595c5d]">暂无相关帖子，可前往社区查看更多更新。</CardContent>
               </Card>
             )}
           </div>
@@ -1715,12 +1779,28 @@ export default function GameDetailView({
           >
             <Heart className={cn('h-5 w-5', isFavorite && 'fill-current')} />
           </button>
+          {isPreregGame && (
+            <Button
+              type="button"
+              onClick={handleReminderToggle}
+              className={cn(
+                'h-12 shrink-0 whitespace-nowrap rounded-full border border-[#b71211] bg-transparent px-4 text-sm font-bold leading-none text-[#b71211] transition-colors hover:bg-[#b71211]/8',
+                isReminderEnabled && 'bg-[#b71211] text-white hover:bg-[#9f1110]',
+              )}
+            >
+              <BellRing className="mr-1.5 h-4 w-4" />
+              {isReminderEnabled ? '已提醒' : '上线提醒'}
+            </Button>
+          )}
           <GameDownloadDialog
             appId={game._id}
             pkg={game.pkg}
             resources={resources}
             downloadNotices={downloadNotices}
-            triggerClassName="stitch-primary-btn h-12 w-full rounded-full border-none text-sm font-bold text-white"
+            triggerClassName={cn(
+              'stitch-primary-btn h-12 w-full rounded-full border-none text-sm font-bold text-white',
+              isPreregGame && 'flex-1',
+            )}
             triggerLabel="立即下载"
           />
         </div>

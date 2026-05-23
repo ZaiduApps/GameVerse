@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 import CommunityPostCard from '@/components/community/CommunityPostCard';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -28,7 +29,7 @@ import {
   unfollowTopic,
 } from '@/lib/community-api';
 import type { CommunityPost } from '@/types';
-import { ArrowLeft, Hash, Loader2, Megaphone, Share2, Users } from 'lucide-react';
+import { ArrowLeft, Hash, Loader2, Megaphone, PenSquare, Share2, Users } from 'lucide-react';
 
 interface CommunityTopicBoardViewProps {
   idOrSlug: string;
@@ -51,6 +52,7 @@ export default function CommunityTopicBoardView({
   idOrSlug,
 }: CommunityTopicBoardViewProps) {
   const FEED_PAGE_SIZE = 10;
+  const router = useRouter();
   const { isAuthenticated, token } = useAuth();
   const { toast } = useToast();
 
@@ -231,6 +233,19 @@ export default function CommunityTopicBoardView({
     }
   }, [toast, topicSharePath]);
 
+  const handleCreatePost = useCallback(() => {
+    if (!topicId) return;
+    if (!isAuthenticated) {
+      toast({
+        title: '需要登录',
+        description: '请先登录后再发布帖子',
+        variant: 'destructive',
+      });
+      return;
+    }
+    router.push(`/community?topic=${encodeURIComponent(topicId)}&compose=1`);
+  }, [isAuthenticated, router, toast, topicId]);
+
   useEffect(() => {
     void loadTopicBoard({ latestPage: 1, hotPage: 1 });
   }, [loadTopicBoard]);
@@ -378,7 +393,8 @@ export default function CommunityTopicBoardView({
     );
   }
 
-  const topicIcon = topic?.icon || topic?.app_info?.icon || FALLBACK_TOPIC_ICON;
+  const topicIcon = topic?.app_info?.icon || topic?.icon || FALLBACK_TOPIC_ICON;
+  const topicBackdrop = topic?.cover || topic?.app_info?.icon || topic?.icon || '';
   const moderators = Array.isArray(topic?.moderator_infos)
     ? topic!.moderator_infos!
     : [];
@@ -396,22 +412,37 @@ export default function CommunityTopicBoardView({
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <section className="space-y-4">
-          <Card>
-            <CardHeader className="pb-4">
+          <Card className="group relative overflow-hidden rounded-xl border border-border/35 bg-card text-card-foreground shadow-[0_14px_40px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-[0_18px_48px_rgba(15,23,42,0.12)]">
+            {topicBackdrop ? (
+              <>
+                <Image
+                  src={topicBackdrop}
+                  alt={topic?.name || 'topic cover'}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 960px"
+                />
+                <div className="absolute inset-0 bg-background/65 backdrop-blur-xl" />
+              </>
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-background" />
+            )}
+
+            <CardHeader className="relative z-10 pb-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
                   <Image
                     src={topicIcon}
                     alt={topic?.name || 'topic'}
-                    width={68}
-                    height={68}
-                    className="rounded-lg border object-cover"
+                    width={72}
+                    height={72}
+                    className="rounded-xl border border-white/45 object-cover shadow-sm"
                   />
                   <div className="min-w-0">
                     <CardTitle className="line-clamp-2 text-xl">
                       #{topic?.name || '话题'}
                     </CardTitle>
-                    <CardDescription className="mt-1 line-clamp-3">
+                    <CardDescription className="mt-1 line-clamp-3 text-foreground/70">
                       {topic?.description?.trim() || '该话题暂无简介。'}
                     </CardDescription>
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -431,7 +462,17 @@ export default function CommunityTopicBoardView({
                   </div>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="min-w-[124px]"
+                    disabled={!topicId}
+                    onClick={handleCreatePost}
+                  >
+                    <PenSquare className="mr-1.5 h-4 w-4" />
+                    发布帖子
+                  </Button>
                   <Button
                     type="button"
                     variant={followed ? 'outline' : 'default'}

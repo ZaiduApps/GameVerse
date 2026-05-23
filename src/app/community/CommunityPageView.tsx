@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import CommunityInfoPanel from '@/components/community/CommunityInfoPanel';
 import CommunityPostCard from '@/components/community/CommunityPostCard';
@@ -57,7 +57,9 @@ function CommunityLoadingSkeleton() {
 
 export default function CommunityPage() {
   const FEED_PAGE_SIZE = 10;
+  const HOT_TOPICS_LIMIT = 10;
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isAuthenticated, token, user } = useAuth();
   const { toast } = useToast();
 
@@ -76,6 +78,8 @@ export default function CommunityPage() {
   const [hotPageSize, setHotPageSize] = useState(FEED_PAGE_SIZE);
   const [activeFeedTab, setActiveFeedTab] = useState<'latest' | 'hot'>('latest');
   const [topicsLoading, setTopicsLoading] = useState(false);
+  const [showAllFollowedTopics, setShowAllFollowedTopics] = useState(false);
+  const [composeFocusPending, setComposeFocusPending] = useState(false);
   const [moderationAnnouncement, setModerationAnnouncement] = useState('');
   const [moderationPinnedPostId, setModerationPinnedPostId] = useState('');
   const [moderationIsLocked, setModerationIsLocked] = useState(false);
@@ -100,6 +104,50 @@ export default function CommunityPage() {
     () => Boolean(selectedTopicId && followedTopicIds.includes(selectedTopicId)),
     [followedTopicIds, selectedTopicId],
   );
+
+  const { followedTopics, officialTopics, hotTopics } = useMemo(() => {
+    const topicMap = new Map<string, CommunityTopicItem>();
+    for (const item of topicList) {
+      const id = String(item?._id || '').trim();
+      if (!id) continue;
+      if (!topicMap.has(id)) {
+        topicMap.set(id, item);
+        continue;
+      }
+      const prev = topicMap.get(id)!;
+      const prevScore = Number(prev.heat_score || 0);
+      const currScore = Number(item.heat_score || 0);
+      if (currScore >= prevScore) topicMap.set(id, item);
+    }
+
+    const deduped = Array.from(topicMap.values());
+    const followedSet = new Set(followedTopicIds.map((id) => String(id || '').trim()).filter(Boolean));
+
+    const followed = deduped
+      .filter((topic) => followedSet.has(String(topic._id || '').trim()))
+      .sort((a, b) => Number(b.heat_score || 0) - Number(a.heat_score || 0));
+
+    const official = deduped
+      .filter((topic) => Boolean(topic.is_official))
+      .sort((a, b) => Number(b.heat_score || 0) - Number(a.heat_score || 0));
+
+    const hot = deduped
+      .filter((topic) => {
+        const id = String(topic._id || '').trim();
+        if (!id) return false;
+        if (followedSet.has(id)) return false;
+        if (topic.is_official) return false;
+        return true;
+      })
+      .sort((a, b) => Number(b.heat_score || 0) - Number(a.heat_score || 0))
+      .slice(0, HOT_TOPICS_LIMIT);
+
+    return {
+      followedTopics: followed,
+      officialTopics: official,
+      hotTopics: hot,
+    };
+  }, [HOT_TOPICS_LIMIT, topicList, followedTopicIds]);
 
   const resetModerationForm = useCallback((topic: CommunityTopicItem | null) => {
     setModerationAnnouncement(String(topic?.announcement || ''));
@@ -408,6 +456,22 @@ export default function CommunityPage() {
   }, [loadMyFollowedTopics]);
 
   useEffect(() => {
+    const topicQuery = String(searchParams.get('topic') || '').trim();
+    if (!topicQuery || topicList.length === 0) return;
+    const matched = topicList.find((item) => String(item?._id || '').trim() === topicQuery) || null;
+    if (!matched) return;
+    setSelectedTopic(matched);
+
+    const shouldCompose = String(searchParams.get('compose') || '').trim() === '1';
+    if (shouldCompose) {
+      setComposeFocusPending(true);
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+  }, [searchParams, topicList]);
+
+  useEffect(() => {
     void loadCommunityFeeds(true, selectedTopicId || undefined, { latestPage: 1, hotPage: 1 });
     if (selectedTopicId) {
       void syncTopicFollowStatus(selectedTopicId);
@@ -552,18 +616,28 @@ export default function CommunityPage() {
       <div className="flex flex-col lg:flex-row lg:gap-x-6">
         <div className="mb-6 hidden w-full lg:mb-0 lg:block lg:w-1/4 xl:w-1/5">
           <CommunitySidebar
-            topics={topicList}
+            hotTopics={hotTopics}
+            officialTopics={officialTopics}
+            followedTopics={followedTopics}
             loading={topicsLoading}
             selectedTopicId={selectedTopicId}
             followedTopicIds={followedTopicIds}
             followLoadingTopicId={followLoadingTopicId}
             onToggleFollow={handleToggleFollow}
             onSelectTopic={handleSelectTopic}
+            followedCollapsedCount={6}
+            showAllFollowed={showAllFollowedTopics}
+            onToggleFollowedExpand={() => setShowAllFollowedTopics((prev) => !prev)}
           />
         </div>
 
         <div className="w-full lg:min-w-0 lg:w-1/2 xl:flex-grow">
-          <CreatePostForm onPosted={handlePosted} selectedTopic={selectedTopic} />
+          <CreatePostForm
+            onPosted={handlePosted}
+            selectedTopic={selectedTopic}
+            shouldAutoFocus={composeFocusPending}
+            onAutoFocusHandled={() => setComposeFocusPending(false)}
+          />
 
           {selectedTopic && (
             <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm">

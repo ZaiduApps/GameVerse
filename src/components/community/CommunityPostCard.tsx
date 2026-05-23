@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MessageSquare, ThumbsUp, MoreHorizontal, Bookmark, Share2 } from 'lucide-react';
+import { MessageSquare, ThumbsUp, MoreHorizontal, Bookmark, Share2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -93,6 +93,66 @@ function toPostExcerpt(post: CommunityPost, maxLength = 140): string {
   return plain.length > maxLength ? `${plain.slice(0, maxLength).trim()}...` : plain;
 }
 
+interface MultiCellLayout {
+  aspectClass: string;
+  rowSpan?: boolean;
+  orderFirst?: boolean;
+}
+
+function resolveMultiImageLayout(
+  count: number,
+  getCat: (index: number) => string | null | undefined,
+): MultiCellLayout[] {
+  const result: MultiCellLayout[] = Array.from({ length: count }, () => ({ aspectClass: '' }));
+
+  if (count === 2) {
+    const c0 = getCat(0);
+    const c1 = getCat(1);
+    const bothPortrait = c0 === 'portrait' && c1 === 'portrait';
+    const anyWide = (c0 === 'wide' || c0 === 'ultraWide') || (c1 === 'wide' || c1 === 'ultraWide');
+    const a = bothPortrait ? 'aspect-[3/4]' : anyWide ? 'aspect-video' : 'aspect-[4/3]';
+    result[0].aspectClass = a;
+    result[1].aspectClass = a;
+    return result;
+  }
+
+  if (count === 3) {
+    const cats = [getCat(0), getCat(1), getCat(2)];
+    const known: number[] = [];
+    for (let i = 0; i < 3; i++) if (cats[i]) known.push(i);
+    let heroIdx = 0;
+    if (known.length > 0) {
+      let bestScore = -1;
+      for (const idx of known) {
+        const sc = cats[idx] === 'ultraWide' ? 3 : cats[idx] === 'wide' ? 2 : cats[idx] === 'normal' ? 1 : 0;
+        if (sc > bestScore) { bestScore = sc; heroIdx = idx; }
+      }
+    }
+    const heroWide = cats[heroIdx] === 'ultraWide' || cats[heroIdx] === 'wide';
+    for (let i = 0; i < 3; i++) {
+      if (i === heroIdx) {
+        result[i].aspectClass = heroWide ? 'aspect-video' : 'aspect-[4/3]';
+        result[i].rowSpan = true;
+        result[i].orderFirst = true;
+      } else {
+        result[i].aspectClass = 'aspect-[4/3]';
+      }
+    }
+    return result;
+  }
+
+  if (count === 4) {
+    const portraitCount = [getCat(0), getCat(1), getCat(2), getCat(3)].filter(c => c === 'portrait').length;
+    const wideCount = [getCat(0), getCat(1), getCat(2), getCat(3)].filter(c => c === 'wide' || c === 'ultraWide').length;
+    const a = portraitCount >= 3 ? 'aspect-[3/4]' : wideCount >= 2 ? 'aspect-video' : 'aspect-[4/3]';
+    for (let i = 0; i < 4; i++) result[i].aspectClass = a;
+    return result;
+  }
+
+  for (let i = 0; i < count; i++) result[i].aspectClass = 'aspect-square';
+  return result;
+}
+
 export default function CommunityPostCard({
   post,
   index = 0,
@@ -103,8 +163,6 @@ export default function CommunityPostCard({
 }: CommunityPostCardProps) {
   const router = useRouter();
   const { token, isAuthenticated } = useAuth();
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const [isImageError, setIsImageError] = useState(false);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(Math.max(0, Number(post.likesCount || 0)));
   const [likePending, setLikePending] = useState(false);
@@ -114,6 +172,15 @@ export default function CommunityPostCard({
   const likeBurstTimerRef = useRef<number | null>(null);
   const { toast } = useToast();
   const excerpt = toPostExcerpt(post);
+  const [previewState, setPreviewState] = useState<{
+    images: string[];
+    index: number;
+  } | null>(null);
+  const [aspectCat, setAspectCat] = useState<Record<string, string>>({});
+  const [imageAspectMap, setImageAspectMap] = useState<Record<string, string>>({});
+  const touchStartX = useRef<number | null>(null);
+
+  const allImages = post.previewImages?.filter(Boolean) || (post.imageUrl ? [post.imageUrl] : []);
   const relatedApp = post.relatedApp;
   const relatedAppHref = relatedApp?.pkg ? `/app/${relatedApp.pkg}` : undefined;
   const relatedAppPrimaryTag =
@@ -175,6 +242,21 @@ export default function CommunityPostCard({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!previewState) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPreviewState(null);
+      if (event.key === 'ArrowLeft') setPreviewState((prev) =>
+        prev ? { ...prev, index: (prev.index - 1 + prev.images.length) % prev.images.length } : null,
+      );
+      if (event.key === 'ArrowRight') setPreviewState((prev) =>
+        prev ? { ...prev, index: (prev.index + 1) % prev.images.length } : null,
+      );
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [previewState]);
 
   const triggerLikeBurst = () => {
     setShowLikeBurst(false);
@@ -370,30 +452,104 @@ export default function CommunityPostCard({
             {excerpt}
           </p>
         </Link>
-        {post.imageUrl && (
-          <Link
-            href={`/community/post/${post.id}`}
-            className="relative block h-36 w-52 overflow-hidden rounded-lg bg-muted sm:h-40 sm:w-56"
-          >
-            {!isImageLoaded && !isImageError && <div className="absolute inset-0 animate-pulse bg-muted/70" />}
-            {!isImageError ? (
-              <Image
-                src={post.imageUrl}
-                alt={post.title || 'Post image'}
-                fill
-                className={cn('object-cover transition-opacity duration-300', isImageLoaded ? 'opacity-100' : 'opacity-0')}
-                data-ai-hint={post.imageAiHint || 'community post image'}
-                priority={index === 0}
-                loading={index === 0 ? 'eager' : 'lazy'}
-                onLoad={() => setIsImageLoaded(true)}
-                onError={() => setIsImageError(true)}
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
-                图片失败
-              </div>
-            )}
-          </Link>
+        {allImages.length > 0 && (
+          <div className={cn(
+            'mr-auto',
+            allImages.length === 1
+              ? (aspectCat[post.id] === 'ultraWide' || aspectCat[post.id] === 'wide' ? 'max-w-[420px]' : 'max-w-[560px]')
+              : 'max-w-[560px]',
+          )}>
+            {(() => {
+              const isSingle = allImages.length === 1;
+              const multiLayout = isSingle ? null : resolveMultiImageLayout(
+                allImages.length,
+                (idx) => imageAspectMap[`${post.id}-${idx}`] || null,
+              );
+              return (
+                <div
+                  className={
+                    isSingle
+                      ? cn('relative overflow-hidden rounded-lg bg-muted w-full',
+                        aspectCat[post.id] === 'ultraWide' || aspectCat[post.id] === 'wide' ? 'aspect-video' :
+                        aspectCat[post.id] === 'normal' ? 'aspect-[4/3]' :
+                        aspectCat[post.id] === 'portrait' ? 'aspect-[3/4]' :
+                        'aspect-[4/3]')
+                      : cn('gap-2',
+                        allImages.length === 3 ? 'grid grid-cols-2' :
+                        allImages.length <= 4 ? 'grid grid-cols-2' :
+                        'grid grid-cols-3 gap-1.5')
+                  }
+                >
+                  {allImages.slice(0, 9).map((img, imageIndex) => {
+                    const overflowCount = allImages.length - 9;
+                    const isLastVisible = imageIndex === 8 && overflowCount > 0;
+                    const key = `${post.id}-${imageIndex}`;
+                    const cat = isSingle ? (aspectCat[post.id] || 'normal') : (imageAspectMap[key] || null);
+                    const cell = isSingle ? null : multiLayout?.[imageIndex];
+                    const aspectClass = isSingle ? '' : (
+                      cell?.aspectClass || 'aspect-[4/3]'
+                    );
+                    const spanClass = cell?.rowSpan ? 'row-span-2' : '';
+                    const orderClass = cell?.orderFirst ? 'order-first' : '';
+                    return isSingle ? (
+                      <Link
+                        key={`${post.id}-img-${imageIndex}`}
+                        href={`/community/post/${post.id}`}
+                        className="absolute inset-0 block"
+                      >
+                        <Image
+                          src={img}
+                          alt={post.title || 'Post image'}
+                          fill
+                          className="object-cover"
+                          data-ai-hint={post.imageAiHint || 'community post image'}
+                          priority={post.id === '0'}
+                          loading="eager"
+                          onLoadingComplete={(imgEl) => {
+                            const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+                            if (!Number.isFinite(ratio)) return;
+                            const c = ratio >= 1.9 ? 'ultraWide' : ratio >= 1.45 ? 'wide' : ratio >= 0.9 ? 'normal' : 'portrait';
+                            setAspectCat(prev => prev[post.id] === c ? prev : { ...prev, [post.id]: c });
+                          }}
+                        />
+                      </Link>
+                    ) : (
+                      <button
+                        key={`${post.id}-img-${imageIndex}`}
+                        type="button"
+                        onClick={() => setPreviewState({ images: allImages, index: imageIndex })}
+                        className={cn(
+                          'relative overflow-hidden rounded-lg bg-muted transition-[filter] hover:brightness-[0.98]',
+                          aspectClass,
+                          spanClass,
+                          orderClass,
+                        )}
+                      >
+                        <Image
+                          src={img}
+                          alt={post.title || '图片'}
+                          fill
+                          className="object-cover"
+                          sizes="220px"
+                          onLoadingComplete={(imgEl) => {
+                            const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+                            if (!Number.isFinite(ratio)) return;
+                            const c = ratio >= 1.9 ? 'ultraWide' : ratio >= 1.45 ? 'wide' : ratio >= 0.9 ? 'normal' : 'portrait';
+                            setImageAspectMap(prev => prev[key] === c ? prev : { ...prev, [key]: c });
+                          }}
+                        />
+                        {isLastVisible && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/45 text-sm font-semibold text-white">
+                            +{overflowCount}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
         )}
         {relatedApp ? (
           <div className="relative mt-1 overflow-hidden rounded-lg border border-black/10 shadow-sm">
@@ -491,6 +647,83 @@ export default function CommunityPostCard({
           <Share2 size={18} className="mr-1.5" /> 分享
         </Button>
       </CardFooter>
+      {previewState && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 px-3"
+          onClick={() => setPreviewState(null)}
+          role="dialog"
+          aria-modal="true"
+          tabIndex={-1}
+        >
+          <button
+            type="button"
+            className="absolute right-4 top-4 rounded-full bg-white/15 p-2 text-white hover:bg-white/25"
+            onClick={() => setPreviewState(null)}
+            aria-label="关闭预览"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          {previewState.images.length > 1 && (
+            <button
+              type="button"
+              className="absolute left-4 rounded-full bg-white/15 p-2 text-white hover:bg-white/25"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewState((prev) =>
+                  prev
+                    ? { ...prev, index: (prev.index - 1 + prev.images.length) % prev.images.length }
+                    : null,
+                );
+              }}
+              aria-label="上一张"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          )}
+          <div
+            className="relative h-[72vh] w-full max-w-5xl"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => { touchStartX.current = e.clientX; }}
+            onPointerUp={(e) => {
+              if (touchStartX.current === null || previewState.images.length <= 1) return;
+              const delta = e.clientX - touchStartX.current;
+              if (delta > 40) setPreviewState((prev) =>
+                prev ? { ...prev, index: (prev.index - 1 + prev.images.length) % prev.images.length } : null,
+              );
+              if (delta < -40) setPreviewState((prev) =>
+                prev ? { ...prev, index: (prev.index + 1) % prev.images.length } : null,
+              );
+              touchStartX.current = null;
+            }}
+          >
+            <Image
+              src={previewState.images[previewState.index]}
+              alt="预览图片"
+              fill
+              className="object-contain"
+              sizes="95vw"
+            />
+          </div>
+          {previewState.images.length > 1 && (
+            <button
+              type="button"
+              className="absolute right-4 rounded-full bg-white/15 p-2 text-white hover:bg-white/25"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewState((prev) =>
+                  prev ? { ...prev, index: (prev.index + 1) % prev.images.length } : null,
+                );
+              }}
+              aria-label="下一张"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          )}
+          <div className="absolute bottom-4 rounded-full bg-black/45 px-3 py-1 text-xs text-white">
+            {previewState.index + 1} / {previewState.images.length}
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

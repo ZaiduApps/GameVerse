@@ -69,8 +69,9 @@ export interface CommunityPost {
   title?: string;
   summary?: string;
   content: string;
-  imageUrl?: string; // Optional image in the post
+  imageUrl?: string; // Primary display image (from display_cover or fallback)
   imageAiHint?: string;
+  previewImages?: string[]; // Multi-image preview (max 3 for card, up to 9 for full)
   tags?: string[];
   topicIds?: string[];
   topicNames?: string[];
@@ -122,6 +123,11 @@ export interface ApiGame {
   icon: string;
   header_image: string;
   tags: string[];
+  version?: string;
+  latest_at?: string;
+  file_size?: number | null;
+  file_size_text?: string;
+  download_count_show?: string;
   metadata: {
     en: string;
     chs: string;
@@ -175,11 +181,20 @@ export interface ApiDynamicPost {
   post_type?: string;
   title?: string;
   summary?: string;
+  content?: string;
+  body?: string;
   cover?: string;
+  display_cover?: string;
+  image_url?: string;
+  imageUrl?: string;
+  media_urls?: string[];
+  preview_images?: string[];
+  images?: Array<string | { url: string }>;
   publish_at?: string;
   last_commented_at?: string;
   like_count?: number;
   comment_count?: number;
+  view_count?: number;
   author_name?: string;
   author_avatar?: string;
   app_id?: string;

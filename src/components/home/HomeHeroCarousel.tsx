@@ -37,16 +37,19 @@ function toInternalPath(value: string): string {
 
 function toNewsHref(value: string): string {
   const cleaned = String(value || '').trim();
-  if (!cleaned) return '/news';
+  if (!cleaned) return '/community';
   if (isExternalUrl(cleaned)) return cleaned;
   const normalized = cleaned.replace(/^\/+/, '');
-  if (/^news(\/|$|\?)/i.test(normalized)) return `/${normalized}`;
-  if (/^articles?(\/|$|\?)/i.test(normalized)) return `/${normalized.replace(/^articles?/i, 'news')}`;
+  if (/^community\/post\//i.test(normalized)) return `/${normalized}`;
+  if (/^news(\/|$|\?)/i.test(normalized) || /^articles?(\/|$|\?)/i.test(normalized)) {
+    const tail = normalized.split('/').filter(Boolean).pop();
+    return tail ? `/community/post/${tail}` : '/community';
+  }
   if (cleaned.startsWith('/')) {
     const tail = normalized.split('/').filter(Boolean).pop();
-    return tail ? `/news/${tail}` : '/news';
+    return tail ? `/community/post/${tail}` : '/community';
   }
-  return `/news/${normalized}`;
+  return `/community/post/${normalized}`;
 }
 
 function toGameHref(banner: ApiBanner, rawLink: string): string {

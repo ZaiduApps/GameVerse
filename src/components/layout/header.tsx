@@ -12,11 +12,11 @@ import {
   Home,
   Library,
   BarChart3,
-  Newspaper,
   User as UserIcon,
   Bell,
   Download,
   KeyRound,
+  ChevronDown,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
@@ -40,13 +40,12 @@ import { useAuth } from '@/context/auth-context';
 import { apiUrl, trackedApiFetch } from '@/lib/api';
 
 const navItems = [
-  { href: '/download/app', label: '盒子', icon: Download },
-  { href: '/', label: '首页', icon: Home },
-  { href: '/app', label: '游戏库', icon: Library },
-  { href: '/rankings', label: '排行榜', icon: BarChart3 },
-  { href: '/news', label: '资讯', icon: Newspaper },
-  { href: '/community', label: '社区', icon: CommunityIcon },
-  { href: '/submit-resource', label: '资源投稿', icon: UploadCloud },
+  { href: '/', label: '首页', icon: Home, priority: 'primary' as const },
+  { href: '/app', label: '游戏库', icon: Library, priority: 'primary' as const },
+  { href: '/rankings', label: '排行榜', icon: BarChart3, priority: 'primary' as const },
+  { href: '/community', label: '社区', icon: CommunityIcon, priority: 'primary' as const },
+  { href: '/download/app', label: '盒子', icon: Download, priority: 'secondary' as const },
+  { href: '/submit-resource', label: '资源投稿', icon: UploadCloud, priority: 'secondary' as const },
 ];
 
 interface HeaderProps {
@@ -100,6 +99,10 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
     };
   }, [isAuthenticated, token, pathname]);
 
+  const secondaryNavActive = navItems
+    .filter((i) => i.priority === 'secondary')
+    .some((i) => isNavItemActive(i.href));
+
   return (
     <>
       <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -109,13 +112,58 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
               {logoUrl ? <Image src={logoUrl} alt={siteName} width={28} height={28} /> : <Gamepad2 size={28} />}
               <span className="text-lg font-bold sm:text-xl tracking-wide">{siteName}</span>
             </Link>
+            {/* Tablet nav: primary items + "更多" dropdown */}
+            <nav className="hidden md:flex lg:hidden items-center gap-1">
+              {navItems.filter((i) => i.priority === 'primary').map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={`inline-flex items-center justify-start gap-1 rounded-full px-2.5 py-1.5 text-sm font-semibold transition-colors ${
+                    isNavItemActive(item.href)
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-foreground/80 hover:bg-muted/60 hover:text-primary'
+                  }`}
+                >
+                  {item.icon && <item.icon size={14} />}
+                  {item.label}
+                </Link>
+              ))}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`inline-flex items-center gap-0.5 rounded-full px-2.5 py-1.5 text-sm font-semibold h-auto transition-colors ${
+                      secondaryNavActive
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-foreground/80 hover:bg-muted/60 hover:text-primary'
+                    }`}
+                  >
+                    更多
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[140px]">
+                  {navItems.filter((i) => i.priority === 'secondary').map((item) => (
+                    <DropdownMenuItem key={item.label} asChild>
+                      <Link href={item.href} className="flex items-center gap-2">
+                        <item.icon size={16} />
+                        {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </nav>
+
+            {/* Desktop nav: all items */}
             <nav className="hidden lg:flex items-center justify-start">
-              <ul className="flex items-center justify-start space-x-6 text-left">
+              <ul className="flex items-center justify-start lg:space-x-1 xl:space-x-3 text-left">
                 {navItems.map((item) => (
                   <li key={item.label}>
                     <Link
                       href={item.href}
-                      className={`inline-flex items-center justify-start gap-1.5 rounded-full px-3 py-2 text-left text-sm font-semibold transition-colors ${
+                      className={`inline-flex items-center justify-start gap-1.5 rounded-full lg:px-2 xl:px-3 py-2 text-sm font-semibold transition-colors ${
                         isNavItemActive(item.href)
                           ? 'bg-primary text-primary-foreground shadow-sm'
                           : 'text-foreground/80 hover:bg-muted/60 hover:text-primary'
@@ -131,10 +179,33 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="relative hidden md:block">
+            {/* Search: icon at md-lg, short text at lg, full text at xl+ */}
+            <div className="relative hidden md:flex lg:hidden">
               <Button
                 variant="outline"
-                className="h-9 w-40 justify-start rounded-xl border border-border/20 bg-card/90 pl-3 pr-4 py-2 text-sm text-foreground/65 shadow-sm transition-colors hover:bg-primary/8 hover:text-foreground hover:border-primary/15 lg:w-56"
+                size="icon"
+                className="h-9 w-9 rounded-xl border border-border/20 bg-card/90 shadow-sm transition-colors hover:bg-primary/8 hover:text-foreground hover:border-primary/15"
+                onClick={() => setSearchOverlayOpen(true)}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="relative hidden lg:flex xl:hidden">
+              <Button
+                variant="outline"
+                className="h-9 w-28 justify-start rounded-xl border border-border/20 bg-card/90 pl-3 pr-4 py-2 text-sm text-foreground/65 shadow-sm transition-colors hover:bg-primary/8 hover:text-foreground hover:border-primary/15"
+                onClick={() => setSearchOverlayOpen(true)}
+              >
+                <Search className="mr-2 h-4 w-4" />
+                搜索
+              </Button>
+            </div>
+
+            <div className="relative hidden xl:flex">
+              <Button
+                variant="outline"
+                className="h-9 w-56 justify-start rounded-xl border border-border/20 bg-card/90 pl-3 pr-4 py-2 text-sm text-foreground/65 shadow-sm transition-colors hover:bg-primary/8 hover:text-foreground hover:border-primary/15"
                 onClick={() => setSearchOverlayOpen(true)}
               >
                 <Search className="mr-2 h-4 w-4" />

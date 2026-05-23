@@ -21,6 +21,8 @@ import { HashIcon, Loader2, PlusCircle, Send, X } from 'lucide-react';
 interface CreatePostFormProps {
   onPosted?: () => void;
   selectedTopic?: CommunityTopicItem | null;
+  shouldAutoFocus?: boolean;
+  onAutoFocusHandled?: () => void;
 }
 
 const MAX_TOPIC_NAME_LENGTH = 24;
@@ -54,7 +56,12 @@ function upsertTopic(
   return [...list, item];
 }
 
-export default function CreatePostForm({ onPosted, selectedTopic }: CreatePostFormProps) {
+export default function CreatePostForm({
+  onPosted,
+  selectedTopic,
+  shouldAutoFocus = false,
+  onAutoFocusHandled,
+}: CreatePostFormProps) {
   const { user, token, isAuthenticated } = useAuth();
   const { toast } = useToast();
 
@@ -93,6 +100,16 @@ export default function CreatePostForm({ onPosted, selectedTopic }: CreatePostFo
     if (!selectedTopic?._id) return;
     setSelectedTopics((prev) => upsertTopic(prev, selectedTopic));
   }, [selectedTopic]);
+
+  useEffect(() => {
+    if (!shouldAutoFocus) return;
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      const end = textareaRef.current?.value.length || 0;
+      textareaRef.current?.setSelectionRange(end, end);
+      onAutoFocusHandled?.();
+    });
+  }, [onAutoFocusHandled, shouldAutoFocus]);
 
   useEffect(() => {
     let active = true;

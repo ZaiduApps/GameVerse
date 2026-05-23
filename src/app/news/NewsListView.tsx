@@ -14,6 +14,45 @@ import { trackedApiFetch } from '@/lib/api';
 
 const ITEMS_PER_PAGE = 20;
 
+interface ContentNewsItem {
+  _id?: string;
+  gid?: string;
+  title?: string;
+  summary?: string;
+  content?: string;
+  cover?: string;
+  publish_at?: string;
+  source?: string;
+  author_name?: string;
+  tags?: string[];
+  is_top?: boolean;
+  is_recommended?: boolean;
+  view_count?: number;
+  like_count?: number;
+}
+
+function toApiArticle(item: ContentNewsItem): ApiArticle {
+  return {
+    _id: String(item._id || '').trim(),
+    gid: String(item.gid || '').trim() || undefined,
+    name: String(item.title || '').trim(),
+    summary: String(item.summary || '').trim(),
+    content: String(item.content || '').trim(),
+    image_cover: String(item.cover || '').trim(),
+    release_at: String(item.publish_at || '').trim(),
+    source: String(item.source || '').trim(),
+    author: String(item.author_name || '').trim(),
+    tags: Array.isArray(item.tags) ? item.tags.map((tag) => String(tag || '').trim()).filter(Boolean) : [],
+    is_top: Boolean(item.is_top),
+    is_recommended: Boolean(item.is_recommended),
+    view_counts: Number(item.view_count || 0),
+    like_counts: Number(item.like_count || 0),
+    addition_links: [],
+    status: 1,
+    is_deleted: false,
+  };
+}
+
 function sanitizeImageUrl(input?: string): string {
   const value = String(input || '').trim();
   if (!value) return '';
@@ -62,9 +101,12 @@ export default function NewsPage({ initialArticles = [], initialPagination = nul
   const [pagination, setPagination] = useState<PaginationState | null>(initialPagination);
   const [currentPage, setCurrentPage] = useState(initialPagination?.page || 1);
   const [isLoading, setIsLoading] = useState(initialMappedArticles.length === 0);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm);
   const [submittedSearchTerm, setSubmittedSearchTerm] = useState(initialSearchTerm);
   const shouldSkipInitialFetch = useRef(initialMappedArticles.length > 0 && currentPage === 1 && !initialSearchTerm);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const lastAutoLoadAtRef = useRef(0);
 
   useEffect(() => {
     setSearchTerm(initialSearchTerm);
@@ -72,18 +114,29 @@ export default function NewsPage({ initialArticles = [], initialPagination = nul
     setCurrentPage(1);
   }, [initialSearchTerm]);
 
-  const fetchArticles = useCallback(async (page: number, query: string) => {
-    setIsLoading(true);
+  const fetchArticles = useCallback(async (page: number, query: string, append: boolean) => {
+    if (append) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoading(true);
+    }
     try {
       if (query) {
-        const res = await trackedApiFetch(
-          `/news/search?q=${encodeURIComponent(query)}&page=${page}&pageSize=${ITEMS_PER_PAGE}`,
-        );
+        const params = new URLSearchParams({
+          q: query,
+          page: String(page),
+          pageSize: String(ITEMS_PER_PAGE),
+          post_type: 'news',
+          sort: 'latest',
+          view: 'card',
+        });
+        const res = await trackedApiFetch(`/content/feed?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
-          if (data.code === 0 && data.data) {
-            const transformedArticles = data.data.list.map(transformApiArticle);
-            setArticles(transformedArticles);
+          if (data.code === 0 && data.data && Array.isArray(data.data.list)) {
+            const transformedArticles = (data.data.list as ContentNewsItem[])
+              .map((item) => transformApiArticle(toApiArticle(item)));
+            setArticles((prev) => append ? [...prev, ...transformedArticles] : transformedArticles);
             setPagination({
               total: data.data.total || transformedArticles.length,
               page: data.data.page || page,
@@ -102,24 +155,35 @@ export default function NewsPage({ initialArticles = [], initialPagination = nul
           setPagination(null);
         }
       } else {
-      const res = await trackedApiFetch('/home', { cache: 'no-store' });
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(ITEMS_PER_PAGE),
+        post_type: 'news',
+        sort: 'latest',
+        view: 'card',
+      });
+      const res = await trackedApiFetch(`/content/feed?${params.toString()}`, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
-          const rawArticles = Array.isArray(data?.data?.articles) ? data.data.articles : [];
-          const transformedArticles = rawArticles.map(transformApiArticle);
-          const total = transformedArticles.length;
-          const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
-          const safePage = Math.min(Math.max(1, page), totalPages);
-          const start = (safePage - 1) * ITEMS_PER_PAGE;
-          const end = start + ITEMS_PER_PAGE;
-          setArticles(transformedArticles.slice(start, end));
-          setPagination({
-            total,
-            page: safePage,
-            pageSize: ITEMS_PER_PAGE,
-            totalPages,
-            hasMore: safePage < totalPages,
-          });
+          if (data?.code === 0 && data?.data && Array.isArray(data.data.list)) {
+            const rawArticles = data.data.list as ContentNewsItem[];
+            const transformedArticles = rawArticles.map((item) => transformApiArticle(toApiArticle(item)));
+            setArticles((prev) => append ? [...prev, ...transformedArticles] : transformedArticles);
+            const total = Math.max(Number(data.data.total || transformedArticles.length), transformedArticles.length);
+            const pageSize = Math.max(1, Number(data.data.pageSize || ITEMS_PER_PAGE));
+            const current = Math.max(1, Number(data.data.page || page));
+            const totalPages = Math.max(1, Number(data.data.totalPages || Math.ceil(total / pageSize)));
+            setPagination({
+              total,
+              page: current,
+              pageSize,
+              totalPages,
+              hasMore: typeof data.data.hasMore === 'boolean' ? data.data.hasMore : current < totalPages,
+            });
+          } else {
+            setArticles([]);
+            setPagination(null);
+          }
         } else {
           setArticles([]);
           setPagination(null);
@@ -127,10 +191,16 @@ export default function NewsPage({ initialArticles = [], initialPagination = nul
       }
     } catch (error) {
       console.error("Failed to fetch articles:", error);
-      setArticles([]);
-      setPagination(null);
+      if (!append) {
+        setArticles([]);
+        setPagination(null);
+      }
     } finally {
-      setIsLoading(false);
+      if (append) {
+        setIsLoadingMore(false);
+      } else {
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -139,25 +209,51 @@ export default function NewsPage({ initialArticles = [], initialPagination = nul
       shouldSkipInitialFetch.current = false;
       return;
     }
-    fetchArticles(currentPage, submittedSearchTerm);
+    fetchArticles(currentPage, submittedSearchTerm, currentPage > 1);
   }, [currentPage, submittedSearchTerm, fetchArticles]);
+
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+    if (isLoading || isLoadingMore) return;
+    if (!pagination?.hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0];
+        if (!first?.isIntersecting) return;
+        const now = Date.now();
+        if (now - lastAutoLoadAtRef.current < 500) return;
+        lastAutoLoadAtRef.current = now;
+        setCurrentPage((prev) => {
+          const next = prev + 1;
+          if (pagination && next > pagination.totalPages) return prev;
+          return next;
+        });
+      },
+      { rootMargin: '240px 0px' },
+    );
+
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [isLoading, isLoadingMore, pagination]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    setArticles([]);
+    setPagination(null);
     setCurrentPage(1); // Reset to first page for new search
     setSubmittedSearchTerm(searchTerm);
   }
   
-  const handlePageChange = (newPage: number) => {
-    if (newPage > 0 && (!pagination || newPage <= pagination.totalPages)) {
-      setCurrentPage(newPage);
-      window.scrollTo(0, 0); // Scroll to top on page change
-    }
+  const handleLoadMore = () => {
+    if (isLoading || isLoadingMore || !pagination?.hasMore) return;
+    const nextPage = currentPage + 1;
+    if (pagination && nextPage > pagination.totalPages) return;
+    setCurrentPage(nextPage);
   };
 
   const renderArticleCard = (article: NewsArticle, priorityImage: boolean = false) => {
-    // Ensure gid is used for the link
-    const articleLink = `/news/${article.id}`;
+    const articleLink = article.id ? `/community/post/${article.id}` : '/community';
     return (
       <Card
         key={article.id}
@@ -207,9 +303,9 @@ export default function NewsPage({ initialArticles = [], initialPagination = nul
       <section className="bg-card p-6 rounded-lg shadow">
         <div className="flex items-center mb-4">
           <Newspaper className="mr-3 h-7 w-7 text-primary" />
-          <h2 className="text-xl font-bold text-primary">游戏资讯</h2>
+          <h2 className="text-xl font-bold text-primary">社区动态</h2>
         </div>
-        <p className="text-muted-foreground">获取最新游戏资讯、更新与深度内容。</p>
+        <p className="text-muted-foreground">获取最新社区帖子、更新与深度讨论内容。</p>
       </section>
 
       <section>
@@ -241,34 +337,35 @@ export default function NewsPage({ initialArticles = [], initialPagination = nul
             )}
           </div>
 
-          {pagination && pagination.totalPages > 1 && (
-             <div className="flex justify-center items-center space-x-2 mt-10">
-               <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="btn-interactive"
-               >
-                 上一页
-               </Button>
-               <span className="text-sm text-muted-foreground">
-                 第 {currentPage} 页 / 共 {pagination.totalPages} 页
-               </span>
-               <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === pagination.totalPages || !pagination.hasMore}
-                className="btn-interactive"
-               >
-                 下一页
-               </Button>
-             </div>
-          )}
+          {pagination ? (
+            <div className="mt-10 flex flex-col items-center gap-3">
+              <span className="text-sm text-muted-foreground">
+                已加载 {articles.length} / {pagination.total} 条
+              </span>
+              {pagination.hasMore ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="btn-interactive"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                      加载中...
+                    </>
+                  ) : '加载更多'}
+                </Button>
+              ) : (
+                <span className="text-xs text-muted-foreground">已显示全部资讯</span>
+              )}
+              <div ref={loadMoreRef} className="h-2 w-full" />
+            </div>
+          ) : null}
         </>
       ) : (
-            <p className="text-center text-muted-foreground py-8">没有找到相关资讯。</p>
+            <p className="text-center text-muted-foreground py-8">没有找到相关社区帖子。</p>
       )}
     </div>
   );
