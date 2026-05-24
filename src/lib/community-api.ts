@@ -42,6 +42,8 @@ export interface CommunityTopicItem {
 
 export interface ApiCommunityPost {
   _id?: string;
+  author_id?: string;
+  author_type?: string;
   title?: string;
   summary?: string;
   content?: string;
@@ -250,6 +252,8 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
 
   return {
     id: String(item._id || ''),
+    authorId: String(item.author_id || '').trim() || undefined,
+    authorType: String(item.author_type || '').trim() || undefined,
     user: {
       name: item.author_name?.trim() || '匿名用户',
       avatarUrl: item.author_avatar?.trim() || FALLBACK_AVATAR,
@@ -443,9 +447,37 @@ export async function getCommunityFeed(
   const pagination = data?.pagination || {};
   const rawList = Array.isArray(data?.list) ? data.list : [];
   const list = rawList.map(toCommunityPost).filter((item) => Boolean(item.id));
-  const total = Number(data?.total ?? pagination.total ?? 0);
-  const currentPage = Number(data?.page ?? pagination.page ?? page);
-  const currentPageSize = Number(data?.pageSize ?? pagination.pageSize ?? pageSize);
+  const total = Number(
+    data?.total ??
+      (data as any)?.total_count ??
+      pagination.total ??
+      0,
+  );
+  const rawCurrentPage = Number(
+    data?.page ??
+      (data as any)?.current ??
+      (data as any)?.pageNo ??
+      (data as any)?.page_num ??
+      pagination.page ??
+      page,
+  );
+  const rawCurrentPageSize = Number(
+    data?.pageSize ??
+      (data as any)?.size ??
+      (data as any)?.limit ??
+      pagination.pageSize ??
+      pageSize,
+  );
+  const currentPage = (() => {
+    if (!Number.isFinite(rawCurrentPage) || rawCurrentPage < 0) return page;
+    if (rawCurrentPage === 0 && page >= 1) return 1;
+    if (rawCurrentPage === page - 1 && page > 1) return page;
+    return rawCurrentPage;
+  })();
+  const currentPageSize =
+    Number.isFinite(rawCurrentPageSize) && rawCurrentPageSize > 0
+      ? rawCurrentPageSize
+      : pageSize;
   const hasMoreByFlag =
     typeof data?.hasMore === 'boolean'
       ? data.hasMore
@@ -1027,6 +1059,150 @@ export async function moderatorDeleteTopicPost(params: {
     };
   } catch {
     return { ok: false, message: '删除失败，请稍后重试' };
+  }
+}
+
+export async function deleteMyCommunityPost(params: {
+  token: string;
+  postId: string;
+}): Promise<{ ok: boolean; message: string }> {
+  const token = String(params.token || '').trim();
+  const postId = String(params.postId || '').trim();
+  if (!token || !postId) {
+    return { ok: false, message: '参数不完整' };
+  }
+
+  try {
+    const res = await trackedApiFetch(`/content/my/posts/${postId}`, {
+      method: 'DELETE',
+      headers: {
+        ...buildTrackingHeaders(),
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json?.code !== 0) {
+      return {
+        ok: false,
+        message: parseApiResponseMessage(json, '删除失败'),
+      };
+    }
+    return {
+      ok: true,
+      message: parseApiResponseMessage(json, '删除成功'),
+    };
+  } catch {
+    return { ok: false, message: '删除失败，请稍后重试' };
+  }
+}
+
+export async function setMyCommunityPostStatus(params: {
+  token: string;
+  postId: string;
+  status: 0 | 1;
+}): Promise<{ ok: boolean; message: string }> {
+  const token = String(params.token || '').trim();
+  const postId = String(params.postId || '').trim();
+  const status = params.status === 0 ? 0 : 1;
+  if (!token || !postId) {
+    return { ok: false, message: '参数不完整' };
+  }
+
+  try {
+    const res = await trackedApiFetch(`/content/my/posts/${postId}/status`, {
+      method: 'PATCH',
+      headers: {
+        ...buildTrackingHeaders(),
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json?.code !== 0) {
+      return {
+        ok: false,
+        message: parseApiResponseMessage(json, '状态更新失败'),
+      };
+    }
+    return {
+      ok: true,
+      message: parseApiResponseMessage(json, status === 0 ? '已隐藏' : '已显示'),
+    };
+  } catch {
+    return { ok: false, message: '状态更新失败，请稍后重试' };
+  }
+}
+
+export async function adminDeleteCommunityPost(params: {
+  token: string;
+  postId: string;
+}): Promise<{ ok: boolean; message: string }> {
+  const token = String(params.token || '').trim();
+  const postId = String(params.postId || '').trim();
+  if (!token || !postId) {
+    return { ok: false, message: '参数不完整' };
+  }
+
+  try {
+    const res = await trackedApiFetch(`/content/admin/${postId}`, {
+      method: 'DELETE',
+      headers: {
+        ...buildTrackingHeaders(),
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json?.code !== 0) {
+      return {
+        ok: false,
+        message: parseApiResponseMessage(json, '删除失败'),
+      };
+    }
+    return {
+      ok: true,
+      message: parseApiResponseMessage(json, '删除成功'),
+    };
+  } catch {
+    return { ok: false, message: '删除失败，请稍后重试' };
+  }
+}
+
+export async function adminSetCommunityPostStatus(params: {
+  token: string;
+  postId: string;
+  status: 0 | 1;
+}): Promise<{ ok: boolean; message: string }> {
+  const token = String(params.token || '').trim();
+  const postId = String(params.postId || '').trim();
+  const status = params.status === 0 ? 0 : 1;
+  if (!token || !postId) {
+    return { ok: false, message: '参数不完整' };
+  }
+
+  try {
+    const res = await trackedApiFetch(`/content/admin/${postId}/status`, {
+      method: 'PATCH',
+      headers: {
+        ...buildTrackingHeaders(),
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json?.code !== 0) {
+      return {
+        ok: false,
+        message: parseApiResponseMessage(json, '状态更新失败'),
+      };
+    }
+    return {
+      ok: true,
+      message: parseApiResponseMessage(json, status === 0 ? '已隐藏' : '已显示'),
+    };
+  } catch {
+    return { ok: false, message: '状态更新失败，请稍后重试' };
   }
 }
 

@@ -57,6 +57,8 @@ export interface ForumSection {
 
 export interface CommunityPost {
   id:string;
+  authorId?: string;
+  authorType?: string;
   user: {
     name: string;
     avatarUrl: string;

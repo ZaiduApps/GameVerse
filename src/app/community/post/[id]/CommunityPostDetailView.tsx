@@ -1162,9 +1162,9 @@ export default function CommunityPostDetailView({
               {post.title && <h1 className="mt-3 text-base font-bold md:text-lg">{post.title}</h1>}
             </CardHeader>
 
-            <CardContent className="p-4 pt-2 space-y-3">
+            <CardContent className="p-4 pt-2 space-y-4 sm:space-y-5">
               <article
-                className="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-foreground/90 leading-relaxed"
+                className="prose prose-sm sm:prose-base dark:prose-invert max-w-[760px] mx-auto px-1 sm:px-2 text-foreground/90 leading-relaxed"
                 dangerouslySetInnerHTML={renderMarkdown(post.content)}
                 onClick={handleMarkdownContainerClick}
               />
@@ -1180,7 +1180,7 @@ export default function CommunityPostDetailView({
               )}
 
               {post.imageUrl && (
-                <div className="rounded-lg overflow-hidden aspect-video relative bg-muted mt-4">
+                <div className="mx-auto mt-5 w-full max-w-[680px] rounded-lg overflow-hidden aspect-video relative bg-muted">
                   {!detailImageError ? (
                     <Image
                       key={imageRetry}

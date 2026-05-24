@@ -29,6 +29,7 @@ import {
   Smartphone,
   User as UserIcon,
 } from 'lucide-react';
+import ProfileDashboard from './ProfileDashboard';
 
 export default function ProfilePage() {
   const { user: authUser, token, isAuthenticated, isLoading: isAuthLoading, logout, login } = useAuth();
@@ -253,12 +254,17 @@ export default function ProfilePage() {
 
         <div className="flex-1">
           <Tabs defaultValue="account" className="w-full">
-            <TabsList className="mb-6 grid w-full grid-cols-4">
+            <TabsList className="mb-6 grid w-full grid-cols-5">
+              <TabsTrigger value="dashboard">个人中心</TabsTrigger>
               <TabsTrigger value="account">个人资料</TabsTrigger>
               <TabsTrigger value="edit">编辑信息</TabsTrigger>
               <TabsTrigger value="security">安全设置</TabsTrigger>
               <TabsTrigger value="api-keys">API密钥</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="dashboard">
+              <ProfileDashboard token={token || ''} />
+            </TabsContent>
 
             <TabsContent value="account">
               <Card className="border-primary/5 shadow-md">

@@ -36,12 +36,12 @@ export default function AppShell({ children, siteName, logoUrl, siteConfig }: Ap
     try {
       if (navigator.sendBeacon) {
         const blob = new Blob([payload], { type: 'application/json' });
-        const ok = navigator.sendBeacon('/api/seo/baidu/push', blob);
+        const ok = navigator.sendBeacon('/api/seo/push', blob);
         if (ok) return;
       }
     } catch {}
 
-    void fetch('/api/seo/baidu/push', {
+    void fetch('/api/seo/push', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: payload,

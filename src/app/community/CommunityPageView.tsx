@@ -18,6 +18,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import {
+  adminDeleteCommunityPost,
+  adminSetCommunityPostStatus,
+  deleteMyCommunityPost,
   followTopic,
   getCommunityFeed,
   getCommunityTopics,
@@ -26,6 +29,7 @@ import {
   moderatorDeleteTopicPost,
   moderatorSetTopicPostStatus,
   moderatorUpdateTopic,
+  setMyCommunityPostStatus,
   unfollowTopic,
   type CommunityTopicItem,
 } from '@/lib/community-api';
@@ -89,8 +93,23 @@ export default function CommunityPage() {
 
   const requestIdRef = useRef(0);
 
+  const getPostListSignature = useCallback((posts: CommunityPost[]) => {
+    return posts.map((item) => String(item.id || '').trim()).filter(Boolean).join('|');
+  }, []);
+
   const selectedTopicId = useMemo(() => String(selectedTopic?._id || '').trim(), [selectedTopic]);
   const currentUserId = useMemo(() => String(user?._id || '').trim(), [user]);
+  const isAdminUser = useMemo(() => {
+    const roles = Array.isArray(user?.roles) ? user.roles : [];
+    return roles.some((role) => {
+      if (typeof role === 'string') {
+        const code = role.trim().toLowerCase();
+        return code === 'admin' || code === 'super_admin';
+      }
+      const code = String(role?.code || role?.name || '').trim().toLowerCase();
+      return code === 'admin' || code === 'super_admin';
+    });
+  }, [user?.roles]);
   const canModerateSelectedTopic = useMemo(() => {
     if (!selectedTopicId || !currentUserId) return false;
     const moderatorIds = Array.isArray(selectedTopic?.moderator_ids)
@@ -188,6 +207,16 @@ export default function CommunityPage() {
     setHotPosts((prev) => prev.filter((item) => String(item.id || '').trim() !== safePostId));
   }, []);
 
+  const resolveModerationTopicId = useCallback((post: CommunityPost) => {
+    const candidates = [
+      selectedTopicId,
+      ...(Array.isArray(post.topicIds) ? post.topicIds : []),
+    ]
+      .map((id) => String(id || '').trim())
+      .filter(Boolean);
+    return candidates[0] || '';
+  }, [selectedTopicId]);
+
   const patchTopicFollowersCount = useCallback((topicId: string, followersCount: number) => {
     const safeTopicId = String(topicId || '').trim();
     if (!safeTopicId) return;
@@ -266,7 +295,12 @@ export default function CommunityPage() {
         latestPage?: number;
         hotPage?: number;
       },
-    ) => {
+    ): Promise<{
+      latestPage: number;
+      hotPage: number;
+      latestSignature: string;
+      hotSignature: string;
+    } | null> => {
       const requestId = ++requestIdRef.current;
       if (showLoading) setIsLoading(true);
       const targetLatestPage = Math.max(1, Number(options?.latestPage || latestPage || 1));
@@ -277,7 +311,7 @@ export default function CommunityPage() {
         getCommunityFeed('hot', { page: targetHotPage, pageSize: FEED_PAGE_SIZE, topicId }),
       ]);
 
-      if (requestId !== requestIdRef.current) return;
+      if (requestId !== requestIdRef.current) return null;
 
       setLatestPosts(latest.list);
       setHotPosts(hot.list);
@@ -288,6 +322,13 @@ export default function CommunityPage() {
       setLatestPageSize(latest.pageSize);
       setHotPageSize(hot.pageSize);
       setIsLoading(false);
+
+      return {
+        latestPage: latest.page,
+        hotPage: hot.page,
+        latestSignature: latest.list.map((item) => String(item.id || '').trim()).filter(Boolean).join('|'),
+        hotSignature: hot.list.map((item) => String(item.id || '').trim()).filter(Boolean).join('|'),
+      };
     },
     [FEED_PAGE_SIZE, hotPage, latestPage],
   );
@@ -380,26 +421,46 @@ export default function CommunityPage() {
     token,
   ]);
 
-  const handleModeratorOfflinePost = useCallback(async (post: CommunityPost) => {
-    const topicId = selectedTopicId;
+  const handleHidePost = useCallback(async (post: CommunityPost) => {
+    const topicId = resolveModerationTopicId(post);
     const postId = String(post?.id || '').trim();
-    if (!topicId || !postId || !token) return;
+    const isOwner = Boolean(
+      currentUserId &&
+      String(post.authorId || '').trim() === currentUserId &&
+      String(post.authorType || '').trim().toLowerCase() === 'user',
+    );
+    const canUseTopicModeration = Boolean(topicId && isAdminUser);
+    const canUseAdminApi = Boolean(isAdminUser && !canUseTopicModeration);
+    const canUseMyPostApi = isOwner && !isAdminUser;
+    if (!postId || !token || (!canUseTopicModeration && !canUseAdminApi && !canUseMyPostApi)) return;
 
-    const ok = window.confirm('确认下线该帖子？下线后将不再在社区流中展示。');
+    const ok = window.confirm('确认隐藏该帖子？隐藏后将不再在社区流中展示。');
     if (!ok) return;
 
     setModerationPostId(postId);
-    const result = await moderatorSetTopicPostStatus({
-      token,
-      topicId,
-      postId,
-      status: 0,
-    });
+    const result = canUseTopicModeration
+      ? await moderatorSetTopicPostStatus({
+          token,
+          topicId: topicId!,
+          postId,
+          status: 0,
+        })
+      : canUseAdminApi
+      ? await adminSetCommunityPostStatus({
+          token,
+          postId,
+          status: 0,
+        })
+      : await setMyCommunityPostStatus({
+          token,
+          postId,
+          status: 0,
+        });
     setModerationPostId('');
 
     if (!result.ok) {
       toast({
-        title: '下线失败',
+        title: '隐藏失败',
         description: result.message,
         variant: 'destructive',
       });
@@ -408,26 +469,44 @@ export default function CommunityPage() {
 
     removePostFromFeeds(postId);
     toast({
-      title: '已下线',
+      title: '已隐藏',
       description: result.message,
     });
-    void loadCommunityFeeds(false, topicId);
-  }, [loadCommunityFeeds, removePostFromFeeds, selectedTopicId, toast, token]);
+    void loadCommunityFeeds(false, selectedTopicId || undefined);
+  }, [currentUserId, isAdminUser, loadCommunityFeeds, removePostFromFeeds, resolveModerationTopicId, selectedTopicId, toast, token]);
 
-  const handleModeratorDeletePost = useCallback(async (post: CommunityPost) => {
-    const topicId = selectedTopicId;
+  const handleDeletePost = useCallback(async (post: CommunityPost) => {
+    const topicId = resolveModerationTopicId(post);
     const postId = String(post?.id || '').trim();
-    if (!topicId || !postId || !token) return;
+    const isOwner = Boolean(
+      currentUserId &&
+      String(post.authorId || '').trim() === currentUserId &&
+      String(post.authorType || '').trim().toLowerCase() === 'user',
+    );
+    const canUseTopicModeration = Boolean(topicId && isAdminUser);
+    const canUseAdminApi = Boolean(isAdminUser && !canUseTopicModeration);
+    const canUseMyPostApi = isOwner && !isAdminUser;
+    if (!postId || !token || (!canUseTopicModeration && !canUseAdminApi && !canUseMyPostApi)) return;
 
     const ok = window.confirm('确认删除该帖子？此操作会软删除并从列表移除。');
     if (!ok) return;
 
     setModerationPostId(postId);
-    const result = await moderatorDeleteTopicPost({
-      token,
-      topicId,
-      postId,
-    });
+    const result = canUseTopicModeration
+      ? await moderatorDeleteTopicPost({
+          token,
+          topicId: topicId!,
+          postId,
+        })
+      : canUseAdminApi
+      ? await adminDeleteCommunityPost({
+          token,
+          postId,
+        })
+      : await deleteMyCommunityPost({
+          token,
+          postId,
+        });
     setModerationPostId('');
 
     if (!result.ok) {
@@ -444,8 +523,8 @@ export default function CommunityPage() {
       title: '删除成功',
       description: result.message,
     });
-    void loadCommunityFeeds(false, topicId);
-  }, [loadCommunityFeeds, removePostFromFeeds, selectedTopicId, toast, token]);
+    void loadCommunityFeeds(false, selectedTopicId || undefined);
+  }, [currentUserId, isAdminUser, loadCommunityFeeds, removePostFromFeeds, resolveModerationTopicId, selectedTopicId, toast, token]);
 
   useEffect(() => {
     void loadTopics();
@@ -535,13 +614,35 @@ export default function CommunityPage() {
       const normalizedPage = Math.max(1, targetPage);
       if (targetTab === 'latest') {
         if (normalizedPage === latestPage) return;
-        void loadCommunityFeeds(true, selectedTopicId || undefined, { latestPage: normalizedPage, hotPage });
+        const previousSignature = getPostListSignature(latestPosts);
+        void (async () => {
+          const result = await loadCommunityFeeds(true, selectedTopicId || undefined, { latestPage: normalizedPage, hotPage });
+          if (!result) return;
+          if (result.latestPage < normalizedPage && result.latestSignature === previousSignature) {
+            toast({
+              title: '分页未生效',
+              description: '接口返回页码未前进，请检查后端分页协议。',
+              variant: 'destructive',
+            });
+          }
+        })();
         return;
       }
       if (normalizedPage === hotPage) return;
-      void loadCommunityFeeds(true, selectedTopicId || undefined, { latestPage, hotPage: normalizedPage });
+      const previousSignature = getPostListSignature(hotPosts);
+      void (async () => {
+        const result = await loadCommunityFeeds(true, selectedTopicId || undefined, { latestPage, hotPage: normalizedPage });
+        if (!result) return;
+        if (result.hotPage < normalizedPage && result.hotSignature === previousSignature) {
+          toast({
+            title: '分页未生效',
+            description: '接口返回页码未前进，请检查后端分页协议。',
+            variant: 'destructive',
+          });
+        }
+      })();
     },
-    [hotPage, latestPage, loadCommunityFeeds, selectedTopicId],
+    [getPostListSignature, hotPage, hotPosts, latestPage, latestPosts, loadCommunityFeeds, selectedTopicId, toast],
   );
 
   const renderPostList = (
@@ -571,17 +672,23 @@ export default function CommunityPage() {
 
     return (
       <div className="space-y-4">
-        {posts.map((post, index) => (
-          <CommunityPostCard
-            key={post.id}
-            post={post}
-            index={index}
-            canModerate={Boolean(selectedTopicId && canModerateSelectedTopic)}
-            moderationBusy={moderationPostId === String(post.id || '').trim()}
-            onModerateOffline={handleModeratorOfflinePost}
-            onModerateDelete={handleModeratorDeletePost}
-          />
-        ))}
+        {posts.map((post, index) => {
+          const postAuthorId = String(post.authorId || '').trim();
+          const postAuthorType = String(post.authorType || '').trim().toLowerCase();
+          const isOwner = Boolean(currentUserId && postAuthorId && postAuthorId === currentUserId && postAuthorType === 'user');
+          const canManage = Boolean(isOwner || isAdminUser);
+          return (
+            <CommunityPostCard
+              key={post.id}
+              post={post}
+              index={index}
+              canManage={canManage}
+              moderationBusy={moderationPostId === String(post.id || '').trim()}
+              onHide={handleHidePost}
+              onDelete={handleDeletePost}
+            />
+          );
+        })}
         <div className="flex items-center justify-between rounded-md border bg-card px-3 py-2 text-xs text-muted-foreground sm:text-sm">
           <span>
             第 {options.page} / {options.totalPages} 页 · 共 {options.total} 条

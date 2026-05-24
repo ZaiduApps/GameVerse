@@ -90,7 +90,7 @@ const renderSafeImage = (alt: string, urlRaw: string): string => {
     return `<span class="text-muted-foreground">[图片链接已拦截: ${url}]</span>`;
   }
   const safeAlt = (alt || '').trim() || '内容配图';
-  return `<img alt="${safeAlt}" src="${url}" class="rounded-lg my-4 max-w-full h-auto" />`;
+  return `<img alt="${safeAlt}" src="${url}" class="block mx-auto w-full max-w-[600px] max-h-[44vh] sm:max-h-[52vh] h-auto rounded-lg my-5 sm:my-7" />`;
 };
 
 export const renderMarkdown = (input: unknown): { __html: string } => {

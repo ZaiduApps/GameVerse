@@ -2,6 +2,7 @@
 
 import type { CommunityPost } from '@/types';
 import Image from 'next/image';
+import { createPortal } from 'react-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -26,10 +27,10 @@ import { useRouter } from 'next/navigation';
 interface CommunityPostCardProps {
   post: CommunityPost;
   index?: number;
-  canModerate?: boolean;
+  canManage?: boolean;
   moderationBusy?: boolean;
-  onModerateDelete?: (post: CommunityPost) => void;
-  onModerateOffline?: (post: CommunityPost) => void;
+  onDelete?: (post: CommunityPost) => void;
+  onHide?: (post: CommunityPost) => void;
 }
 
 const BOOKMARK_STORAGE_KEY = 'community:bookmarked-posts:v1';
@@ -153,13 +154,17 @@ function resolveMultiImageLayout(
   return result;
 }
 
+function isWideCategory(category: string | null | undefined): boolean {
+  return category === 'wide' || category === 'ultraWide';
+}
+
 export default function CommunityPostCard({
   post,
   index = 0,
-  canModerate = false,
+  canManage = false,
   moderationBusy = false,
-  onModerateDelete,
-  onModerateOffline,
+  onDelete,
+  onHide,
 }: CommunityPostCardProps) {
   const router = useRouter();
   const { token, isAuthenticated } = useAuth();
@@ -256,6 +261,16 @@ export default function CommunityPostCard({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
+  }, [previewState]);
+
+  useEffect(() => {
+    if (!previewState || typeof document === 'undefined') return;
+    const { body } = document;
+    const previousOverflow = body.style.overflow;
+    body.style.overflow = 'hidden';
+    return () => {
+      body.style.overflow = previousOverflow;
+    };
   }, [previewState]);
 
   const triggerLikeBurst = () => {
@@ -419,21 +434,21 @@ export default function CommunityPostCard({
                 <Link href={`/community/post/${post.id}`}>查看详情</Link>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => void handleCopyPostId()}>复制 ID</DropdownMenuItem>
-              {canModerate ? (
+              {canManage ? (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     disabled={moderationBusy}
-                    onClick={() => onModerateOffline?.(post)}
+                    onClick={() => onHide?.(post)}
                   >
-                    下线帖子
+                    隐藏
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={moderationBusy}
-                    onClick={() => onModerateDelete?.(post)}
+                    onClick={() => onDelete?.(post)}
                     className="text-red-600 focus:text-red-600"
                   >
-                    删除帖子
+                    删除
                   </DropdownMenuItem>
                 </>
               ) : null}
@@ -461,14 +476,20 @@ export default function CommunityPostCard({
           )}>
             {(() => {
               const isSingle = allImages.length === 1;
+              const firstImageCategory = imageAspectMap[`${post.id}-0`] || null;
+              const useFeaturedThreeLayout = allImages.length === 3 && isWideCategory(firstImageCategory);
               const multiLayout = isSingle ? null : resolveMultiImageLayout(
                 allImages.length,
                 (idx) => imageAspectMap[`${post.id}-${idx}`] || null,
               );
+              const visibleImages = useFeaturedThreeLayout ? allImages.slice(0, 1) : allImages.slice(0, 9);
+              const featuredSideImages = useFeaturedThreeLayout ? allImages.slice(1, 3) : [];
               return (
                 <div
-                  className={
-                    isSingle
+                  className={cn(
+                    useFeaturedThreeLayout
+                      ? 'flex flex-col gap-2'
+                      : isSingle
                       ? cn('relative overflow-hidden rounded-lg bg-muted w-full',
                         aspectCat[post.id] === 'ultraWide' || aspectCat[post.id] === 'wide' ? 'aspect-video' :
                         aspectCat[post.id] === 'normal' ? 'aspect-[4/3]' :
@@ -477,10 +498,10 @@ export default function CommunityPostCard({
                       : cn('gap-2',
                         allImages.length === 3 ? 'grid grid-cols-2' :
                         allImages.length <= 4 ? 'grid grid-cols-2' :
-                        'grid grid-cols-3 gap-1.5')
-                  }
+                        'grid grid-cols-3 gap-1.5'),
+                  )}
                 >
-                  {allImages.slice(0, 9).map((img, imageIndex) => {
+                  {visibleImages.map((img, imageIndex) => {
                     const overflowCount = allImages.length - 9;
                     const isLastVisible = imageIndex === 8 && overflowCount > 0;
                     const key = `${post.id}-${imageIndex}`;
@@ -491,6 +512,7 @@ export default function CommunityPostCard({
                     );
                     const spanClass = cell?.rowSpan ? 'row-span-2' : '';
                     const orderClass = cell?.orderFirst ? 'order-first' : '';
+                    const isFeaturedHero = useFeaturedThreeLayout && imageIndex === 0;
                     return isSingle ? (
                       <Link
                         key={`${post.id}-img-${imageIndex}`}
@@ -520,7 +542,7 @@ export default function CommunityPostCard({
                         onClick={() => setPreviewState({ images: allImages, index: imageIndex })}
                         className={cn(
                           'relative overflow-hidden rounded-lg bg-muted transition-[filter] hover:brightness-[0.98]',
-                          aspectClass,
+                          isFeaturedHero ? 'aspect-video w-full' : aspectClass,
                           spanClass,
                           orderClass,
                         )}
@@ -546,6 +568,36 @@ export default function CommunityPostCard({
                       </button>
                     );
                   })}
+                  {useFeaturedThreeLayout ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {featuredSideImages.map((img, sideIndex) => {
+                        const imageIndex = sideIndex + 1;
+                        const key = `${post.id}-${imageIndex}`;
+                        return (
+                          <button
+                            key={`${post.id}-img-featured-${imageIndex}`}
+                            type="button"
+                            onClick={() => setPreviewState({ images: allImages, index: imageIndex })}
+                            className="relative aspect-square overflow-hidden rounded-lg bg-muted transition-[filter] hover:brightness-[0.98]"
+                          >
+                            <Image
+                              src={img}
+                              alt={post.title || '图片'}
+                              fill
+                              className="object-cover"
+                              sizes="220px"
+                              onLoadingComplete={(imgEl) => {
+                                const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+                                if (!Number.isFinite(ratio)) return;
+                                const c = ratio >= 1.9 ? 'ultraWide' : ratio >= 1.45 ? 'wide' : ratio >= 0.9 ? 'normal' : 'portrait';
+                                setImageAspectMap(prev => prev[key] === c ? prev : { ...prev, [key]: c });
+                              }}
+                            />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
                 </div>
               );
             })()}
@@ -647,7 +699,7 @@ export default function CommunityPostCard({
           <Share2 size={18} className="mr-1.5" /> 分享
         </Button>
       </CardFooter>
-      {previewState && (
+      {previewState && typeof document !== 'undefined' ? createPortal(
         <div
           className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 px-3"
           onClick={() => setPreviewState(null)}
@@ -722,8 +774,9 @@ export default function CommunityPostCard({
           <div className="absolute bottom-4 rounded-full bg-black/45 px-3 py-1 text-xs text-white">
             {previewState.index + 1} / {previewState.images.length}
           </div>
-        </div>
-      )}
+        </div>,
+        document.body,
+      ) : null}
     </Card>
   );
 }

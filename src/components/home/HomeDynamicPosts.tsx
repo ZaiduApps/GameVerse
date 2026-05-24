@@ -280,6 +280,10 @@ function resolveMultiImageLayout(
   return result;
 }
 
+function isWideCategory(category: string | null | undefined): boolean {
+  return category === 'wide' || category === 'ultraWide';
+}
+
 export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
   const { token, isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -477,18 +481,23 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
               )}>
                 {(() => {
                   const isSingle = images.length === 1;
+                  const firstImageCategory = imageAspectMap[`${postId}-0`] || null;
+                  const useFeaturedThreeLayout = images.length === 3 && isWideCategory(firstImageCategory);
                   const multiLayout = isSingle ? null : resolveMultiImageLayout(
                     images.length,
                     (idx) => imageAspectMap[`${postId}-${idx}`] || null,
                   );
+                  const visibleImages = useFeaturedThreeLayout ? images.slice(0, 1) : images.slice(0, 9);
+                  const featuredSideImages = useFeaturedThreeLayout ? images.slice(1, 3) : [];
                   return (
                     <div className={cn(
+                      useFeaturedThreeLayout ? 'flex flex-col gap-2' :
                       isSingle ? 'grid grid-cols-1 gap-2' :
                       images.length === 3 ? 'grid grid-cols-2 gap-2' :
                       images.length <= 4 ? 'grid grid-cols-2 gap-2' :
                       'grid grid-cols-3 gap-1.5',
                     )}>
-                      {images.slice(0, 9).map((img, imageIndex) => {
+                      {visibleImages.map((img, imageIndex) => {
                         const overflowCount = images.length - 9;
                         const isLastVisible = imageIndex === 8 && overflowCount > 0;
                         const key = `${postId}-${imageIndex}`;
@@ -504,6 +513,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
                         );
                         const spanClass = cell?.rowSpan ? 'row-span-2' : '';
                         const orderClass = cell?.orderFirst ? 'order-first' : '';
+                        const isFeaturedHero = useFeaturedThreeLayout && imageIndex === 0;
                         return (
                           <button
                             key={`${postId}-img-${imageIndex}`}
@@ -511,6 +521,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
                             onClick={() => setPreviewState({ postId, index: imageIndex })}
                             className={cn(
                               'relative overflow-hidden rounded-lg text-left transition-[filter] hover:brightness-[0.98]',
+                              isFeaturedHero ? 'aspect-video w-full' :
                               isSingle ? `${aspectClass} w-full` : aspectClass,
                               spanClass,
                               orderClass,
@@ -541,6 +552,36 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
                           </button>
                         );
                       })}
+                      {useFeaturedThreeLayout ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          {featuredSideImages.map((img, sideIndex) => {
+                            const imageIndex = sideIndex + 1;
+                            const key = `${postId}-${imageIndex}`;
+                            return (
+                              <button
+                                key={`${postId}-img-featured-${imageIndex}`}
+                                type="button"
+                                onClick={() => setPreviewState({ postId, index: imageIndex })}
+                                className="relative aspect-square overflow-hidden rounded-lg text-left transition-[filter] hover:brightness-[0.98]"
+                              >
+                                <Image
+                                  src={img || cover || '/favicon.ico'}
+                                  alt={post.title || post.summary || '动态图片'}
+                                  fill
+                                  className="object-cover"
+                                  sizes="220px"
+                                  onLoadingComplete={(imgEl) => {
+                                    const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
+                                    if (!Number.isFinite(ratio)) return;
+                                    const c = ratio >= 1.9 ? 'ultraWide' : ratio >= 1.45 ? 'wide' : ratio >= 0.9 ? 'normal' : 'portrait';
+                                    setImageAspectMap(prev => prev[key] === c ? prev : { ...prev, [key]: c });
+                                  }}
+                                />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })()}

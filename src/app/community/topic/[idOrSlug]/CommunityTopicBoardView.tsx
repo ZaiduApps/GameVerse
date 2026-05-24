@@ -21,9 +21,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import {
+  deleteMyCommunityPost,
   followTopic,
   getCommunityFeed,
   getCommunityTopicDetail,
+  moderatorDeleteTopicPost,
+  moderatorSetTopicPostStatus,
+  setMyCommunityPostStatus,
   getTopicFollowStatus,
   type CommunityTopicItem,
   unfollowTopic,
@@ -53,7 +57,7 @@ export default function CommunityTopicBoardView({
 }: CommunityTopicBoardViewProps) {
   const FEED_PAGE_SIZE = 10;
   const router = useRouter();
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
   const { toast } = useToast();
 
   const [topic, setTopic] = useState<CommunityTopicItem | null>(null);
@@ -69,12 +73,32 @@ export default function CommunityTopicBoardView({
   const [loading, setLoading] = useState(true);
   const [followed, setFollowed] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
+  const [moderationPostId, setModerationPostId] = useState('');
 
   const safeIdOrSlug = useMemo(
     () => decodeURIComponent(String(idOrSlug || '').trim()),
     [idOrSlug],
   );
   const topicId = useMemo(() => String(topic?._id || '').trim(), [topic]);
+  const currentUserId = useMemo(() => String(user?._id || '').trim(), [user]);
+  const isAdminUser = useMemo(() => {
+    const roles = Array.isArray(user?.roles) ? user.roles : [];
+    return roles.some((role) => {
+      if (typeof role === 'string') {
+        const code = role.trim().toLowerCase();
+        return code === 'admin' || code === 'super_admin';
+      }
+      const code = String(role?.code || role?.name || '').trim().toLowerCase();
+      return code === 'admin' || code === 'super_admin';
+    });
+  }, [user?.roles]);
+  const canModerateTopic = useMemo(() => {
+    if (!topicId || !currentUserId) return false;
+    const moderatorIds = Array.isArray(topic?.moderator_ids)
+      ? topic.moderator_ids.map((id) => String(id || '').trim()).filter(Boolean)
+      : [];
+    return moderatorIds.includes(currentUserId);
+  }, [currentUserId, topic?.moderator_ids, topicId]);
   const topicSharePath = useMemo(() => {
     const target = String(topic?.slug || topic?._id || '').trim();
     if (!target) return '/community';
@@ -246,6 +270,72 @@ export default function CommunityTopicBoardView({
     router.push(`/community?topic=${encodeURIComponent(topicId)}&compose=1`);
   }, [isAuthenticated, router, toast, topicId]);
 
+  const handleHidePost = useCallback(async (post: CommunityPost) => {
+    const postId = String(post?.id || '').trim();
+    const postAuthorId = String(post?.authorId || '').trim();
+    const postAuthorType = String(post?.authorType || '').trim().toLowerCase();
+    const isOwner = Boolean(currentUserId && postAuthorId && postAuthorId === currentUserId && postAuthorType === 'user');
+    const canUseTopicModeration = Boolean(topicId && (canModerateTopic || isAdminUser));
+    const canUseMyPostApi = isOwner;
+    if (!postId || !token || (!canUseTopicModeration && !canUseMyPostApi)) return;
+
+    const confirmed = window.confirm('确认隐藏该帖子？隐藏后将不再在社区流中展示。');
+    if (!confirmed) return;
+
+    setModerationPostId(postId);
+    const result = canUseTopicModeration
+      ? await moderatorSetTopicPostStatus({ token, topicId: topicId!, postId, status: 0 })
+      : await setMyCommunityPostStatus({ token, postId, status: 0 });
+    setModerationPostId('');
+
+    if (!result.ok) {
+      toast({
+        title: '隐藏失败',
+        description: result.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLatestPosts((prev) => prev.filter((item) => String(item.id || '').trim() !== postId));
+    setHotPosts((prev) => prev.filter((item) => String(item.id || '').trim() !== postId));
+    toast({ title: '已隐藏', description: result.message });
+    void loadTopicBoard();
+  }, [canModerateTopic, currentUserId, isAdminUser, loadTopicBoard, token, toast, topicId]);
+
+  const handleDeletePost = useCallback(async (post: CommunityPost) => {
+    const postId = String(post?.id || '').trim();
+    const postAuthorId = String(post?.authorId || '').trim();
+    const postAuthorType = String(post?.authorType || '').trim().toLowerCase();
+    const isOwner = Boolean(currentUserId && postAuthorId && postAuthorId === currentUserId && postAuthorType === 'user');
+    const canUseTopicModeration = Boolean(topicId && (canModerateTopic || isAdminUser));
+    const canUseMyPostApi = isOwner;
+    if (!postId || !token || (!canUseTopicModeration && !canUseMyPostApi)) return;
+
+    const confirmed = window.confirm('确认删除该帖子？此操作会软删除并从列表移除。');
+    if (!confirmed) return;
+
+    setModerationPostId(postId);
+    const result = canUseTopicModeration
+      ? await moderatorDeleteTopicPost({ token, topicId: topicId!, postId })
+      : await deleteMyCommunityPost({ token, postId });
+    setModerationPostId('');
+
+    if (!result.ok) {
+      toast({
+        title: '删除失败',
+        description: result.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLatestPosts((prev) => prev.filter((item) => String(item.id || '').trim() !== postId));
+    setHotPosts((prev) => prev.filter((item) => String(item.id || '').trim() !== postId));
+    toast({ title: '删除成功', description: result.message });
+    void loadTopicBoard();
+  }, [canModerateTopic, currentUserId, isAdminUser, loadTopicBoard, token, toast, topicId]);
+
   useEffect(() => {
     void loadTopicBoard({ latestPage: 1, hotPage: 1 });
   }, [loadTopicBoard]);
@@ -335,9 +425,23 @@ export default function CommunityTopicBoardView({
         ) : null}
 
         {regularPosts.length ? (
-          regularPosts.map((post, index) => (
-            <CommunityPostCard key={post.id} post={post} index={index} />
-          ))
+          regularPosts.map((post, index) => {
+            const postAuthorId = String(post.authorId || '').trim();
+            const postAuthorType = String(post.authorType || '').trim().toLowerCase();
+            const isOwner = Boolean(currentUserId && postAuthorId && postAuthorId === currentUserId && postAuthorType === 'user');
+            const canManage = Boolean(isOwner || isAdminUser || canModerateTopic);
+            return (
+              <CommunityPostCard
+                key={post.id}
+                post={post}
+                index={index}
+                canManage={canManage}
+                moderationBusy={moderationPostId === String(post.id || '').trim()}
+                onHide={handleHidePost}
+                onDelete={handleDeletePost}
+              />
+            );
+          })
         ) : (
           <div className="rounded-lg border bg-card py-14 text-center text-sm text-muted-foreground">
             当前仅有公告帖子，暂无普通帖子。
