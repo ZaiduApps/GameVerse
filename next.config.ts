@@ -73,7 +73,9 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    unoptimized: false,
+    // Production: bypass Next image optimizer for unstable third-party image origins.
+    // This avoids 504 timeout noise from /_next/image upstream fetch.
+    unoptimized: !isDevRuntime,
     // 使用通配符允许所有 HTTPS 和 HTTP 的图片域名
     remotePatterns: [
       {
