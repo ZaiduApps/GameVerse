@@ -12,6 +12,8 @@ import {
 } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityPostsByGame } from '@/lib/community-api';
+import { getGameReviewSummary } from '@/lib/game-review-api';
+import { normalizeToFiveStar } from '@/lib/game-rating';
 import type { CommunityPost, GameDetailData, SiteConfig } from '@/types';
 
 const DETAIL_REVALIDATE_SECONDS = 900;
@@ -344,11 +346,25 @@ export default async function GameDetailPage({
   const game = initialGameData.app;
   const canonicalPath = `/app/${encodeURIComponent(game.pkg || id)}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
-  const ratingCount = Math.max(1, Number(String(game.download_count_show || '').replace(/\D/g, '')) || 1);
   const heroImage = resolveGameSeoImage(game, getSiteShareImageUrl());
   const description = normalizeText(game.summary || game.description);
 
-  const relatedNews = await getRelatedNews(game);
+  const fallbackRatingCount = Math.max(1, Number(String(game.download_count_show || '').replace(/\D/g, '')) || 1);
+  const [relatedNews, reviewSummary] = await Promise.all([
+    getRelatedNews(game),
+    getGameReviewSummary({
+      appId: game._id,
+      pkg: game.pkg,
+      gameName: game.name,
+      manualScore: game.star,
+    }).catch(() => null),
+  ]);
+  const ratingCount = Math.max(1, Number(reviewSummary?.ratingCount || 0) || fallbackRatingCount);
+  const ratingValue = Number(
+    reviewSummary?.displayScore ??
+      normalizeToFiveStar(game.star) ??
+      4.2,
+  );
 
   const detailJsonLd = {
     '@context': 'https://schema.org',
@@ -377,10 +393,10 @@ export default async function GameDetailPage({
       priceCurrency: 'CNY',
       availability: 'https://schema.org/InStock',
     },
-    aggregateRating: game.star
+    aggregateRating: ratingValue > 0
       ? {
           '@type': 'AggregateRating',
-          ratingValue: Number(game.star),
+          ratingValue,
           ratingCount,
         }
       : undefined,

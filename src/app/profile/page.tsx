@@ -12,8 +12,15 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { trackedApiFetch } from '@/lib/api';
+import {
+  getGameReviewAdminEmailSwitch,
+  getGameReviewEmailPreference,
+  updateGameReviewAdminEmailSwitch,
+  updateGameReviewEmailPreference,
+} from '@/lib/game-review-api';
 import type { ApiResponse, User } from '@/types';
 import {
   Calendar,
@@ -25,12 +32,26 @@ import {
   LogOut,
   MapPin,
   PencilLine,
+  Settings2,
   ShieldCheck,
   Smartphone,
   User as UserIcon,
 } from 'lucide-react';
 import ProfileDashboard from './ProfileDashboard';
 import CenterAuthRequired from './center/CenterAuthRequired';
+
+function hasAdminRole(roles: User['roles'] | undefined): boolean {
+  if (!Array.isArray(roles)) return false;
+  return roles.some((role) => {
+    if (typeof role === 'string') {
+      return /(admin|administrator|super|ops|moderator|manage)/i.test(role);
+    }
+    if (!role || typeof role !== 'object') return false;
+    const code = String((role as { code?: unknown }).code || '').trim();
+    const name = String((role as { name?: unknown }).name || '').trim();
+    return /(admin|administrator|super|ops|moderator|manage)/i.test(`${code} ${name}`);
+  });
+}
 
 export default function ProfilePage() {
   const { user: authUser, token, isAuthenticated, isLoading: isAuthLoading, logout, login } = useAuth();
@@ -53,6 +74,11 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [emailNotifyEnabled, setEmailNotifyEnabled] = useState(false);
+  const [isSavingEmailNotify, setIsSavingEmailNotify] = useState(false);
+  const [adminEmailSwitchEnabled, setAdminEmailSwitchEnabled] = useState(true);
+  const [isSavingAdminEmailSwitch, setIsSavingAdminEmailSwitch] = useState(false);
+  const isAdminUser = hasAdminRole(profile?.roles || authUser?.roles);
 
   useEffect(() => {
     const fetchDetailedProfile = async () => {
@@ -91,6 +117,28 @@ export default function ProfilePage() {
       setIsFetchingProfile(false);
     }
   }, [authUser, isAuthLoading, isAuthenticated, toast, token]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadNotificationSettings = async () => {
+      if (!token || !isAuthenticated) return;
+      const [userPref, adminSwitch] = await Promise.all([
+        getGameReviewEmailPreference(token),
+        isAdminUser
+          ? getGameReviewAdminEmailSwitch(token)
+          : Promise.resolve({ enabled: true, source: 'local' as const }),
+      ]);
+      if (cancelled) return;
+      setEmailNotifyEnabled(Boolean(userPref.enabled));
+      setAdminEmailSwitchEnabled(adminSwitch.enabled === null ? true : Boolean(adminSwitch.enabled));
+    };
+
+    void loadNotificationSettings();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdminUser, isAuthenticated, token]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,6 +217,44 @@ export default function ProfilePage() {
       toast({ variant: 'destructive', title: '网络请求失败' });
     } finally {
       setIsChangingPassword(false);
+    }
+  };
+
+  const handleToggleEmailNotify = async (checked: boolean) => {
+    if (!token || !isAuthenticated) return;
+    setIsSavingEmailNotify(true);
+    try {
+      const result = await updateGameReviewEmailPreference({
+        token,
+        enabled: checked,
+      });
+      if (!result.ok) {
+        toast({ variant: 'destructive', title: '保存失败', description: result.message || '请稍后重试' });
+        return;
+      }
+      setEmailNotifyEnabled(result.enabled);
+      toast({ title: checked ? '已开启邮件提醒' : '已关闭邮件提醒', description: result.message });
+    } finally {
+      setIsSavingEmailNotify(false);
+    }
+  };
+
+  const handleToggleAdminEmailSwitch = async (checked: boolean) => {
+    if (!token || !isAuthenticated || !isAdminUser) return;
+    setIsSavingAdminEmailSwitch(true);
+    try {
+      const result = await updateGameReviewAdminEmailSwitch({
+        token,
+        enabled: checked,
+      });
+      if (!result.ok) {
+        toast({ variant: 'destructive', title: '保存失败', description: result.message || '请稍后重试' });
+        return;
+      }
+      setAdminEmailSwitchEnabled(result.enabled);
+      toast({ title: checked ? '已开启全站邮件提醒' : '已关闭全站邮件提醒', description: result.message });
+    } finally {
+      setIsSavingAdminEmailSwitch(false);
     }
   };
 
@@ -269,11 +355,12 @@ export default function ProfilePage() {
 
         <div className="flex-1">
           <Tabs defaultValue="account" className="w-full">
-            <TabsList className="mb-6 grid w-full grid-cols-5">
+            <TabsList className="mb-6 grid w-full grid-cols-6">
               <TabsTrigger value="dashboard">个人中心</TabsTrigger>
               <TabsTrigger value="account">个人资料</TabsTrigger>
               <TabsTrigger value="edit">编辑信息</TabsTrigger>
               <TabsTrigger value="security">安全设置</TabsTrigger>
+              <TabsTrigger value="notifications">通知设置</TabsTrigger>
               <TabsTrigger value="api-keys">API密钥</TabsTrigger>
             </TabsList>
 
@@ -484,6 +571,63 @@ export default function ProfilePage() {
                 <CardFooter className="mt-6 rounded-b-lg border-t bg-muted/30 text-xs text-muted-foreground">
                   修改密码后，建议在其他设备重新登录以确保账号安全。
                 </CardFooter>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="notifications">
+              <Card className="border-primary/5 shadow-md">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Settings2 className="h-5 w-5 text-primary" /> 通知设置
+                  </CardTitle>
+                  <CardDescription>
+                    管理游戏评论回复邮件提醒与后台总开关。
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="rounded-xl border border-border/70 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-medium">评论被回复时邮件提醒我</p>
+                        <p className="text-sm text-muted-foreground">
+                          发布游戏评论后，其他用户回复你的评论时发送邮件通知。
+                        </p>
+                      </div>
+                      <Switch
+                        checked={adminEmailSwitchEnabled && emailNotifyEnabled}
+                        disabled={!adminEmailSwitchEnabled || isSavingEmailNotify}
+                        onCheckedChange={(checked) => {
+                          void handleToggleEmailNotify(Boolean(checked));
+                        }}
+                      />
+                    </div>
+                    {!adminEmailSwitchEnabled ? (
+                      <p className="mt-3 text-xs text-amber-600">
+                        管理员当前已关闭全站邮件提醒，个人开关暂不可用。
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {isAdminUser ? (
+                    <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-medium">管理员：全站游戏评论邮件提醒</p>
+                          <p className="text-sm text-muted-foreground">
+                            关闭后，全体用户评论回复邮件通知都会暂停。
+                          </p>
+                        </div>
+                        <Switch
+                          checked={adminEmailSwitchEnabled}
+                          disabled={isSavingAdminEmailSwitch}
+                          onCheckedChange={(checked) => {
+                            void handleToggleAdminEmailSwitch(Boolean(checked));
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                </CardContent>
               </Card>
             </TabsContent>
 

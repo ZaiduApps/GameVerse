@@ -31,6 +31,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import GameAnnouncements from '@/components/game-announcements';
 import GameDownloadDialog from '@/components/game-download-dialog';
+import GameReviewPanel from '@/components/game-detail/GameReviewPanel';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { trackedApiFetch } from '@/lib/api';
@@ -452,6 +453,7 @@ export default function GameDetailView({
   const [previewOffset, setPreviewOffset] = useState({ x: 0, y: 0 });
   const [isPreviewImageError, setIsPreviewImageError] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
   const [tagStylePalettes, setTagStylePalettes] = useState(TAG_STYLE_PALETTES);
   const [screenshotAspectMap, setScreenshotAspectMap] = useState<Record<string, ScreenshotAspectKind>>({});
   const [isReminderEnabled, setIsReminderEnabled] = useState(false);
@@ -694,6 +696,17 @@ export default function GameDetailView({
     setIsMounted(true);
     return () => setIsMounted(false);
   }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    const media = window.matchMedia('(min-width: 1024px)');
+    const apply = () => setIsDesktopViewport(media.matches);
+    apply();
+    media.addEventListener('change', apply);
+    return () => {
+      media.removeEventListener('change', apply);
+    };
+  }, [isMounted]);
 
   useEffect(() => {
     if (!isMounted) return;
@@ -1510,42 +1523,10 @@ export default function GameDetailView({
                 </div>
               </section>
 
-              <section className="rounded-[2rem] border border-[#abadae]/10 bg-white p-8">
-                <h2 className="mb-6 text-xl font-bold">玩家评论区</h2>
-                <div className="space-y-5">
-                  {relatedPosts.length > 0 ? (
-                    relatedPosts.slice(0, 4).map((post) => (
-                      <div key={`comment-${post.id}`} className="space-y-3 border-b border-[#abadae]/15 pb-5 last:border-b-0 last:pb-0">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9">
-                            <AvatarImage src={post.user.avatarUrl} alt={post.user.name} />
-                            <AvatarFallback>{post.user.name.slice(0, 1)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-bold">{post.user.name}</p>
-                            <p className="text-xs text-[#595c5d]">{post.timestamp}</p>
-                          </div>
-                        </div>
-                        <p className="line-clamp-2 text-sm text-[#595c5d]">{getPostPreviewText(post, 120, '暂无内容')}</p>
-                        <div className="flex items-center gap-5 text-xs text-[#595c5d]">
-                          <span className="inline-flex items-center gap-1">
-                            <ThumbsUp className="h-3.5 w-3.5" />
-                            {formatCompactCount(post.likesCount)}
-                          </span>
-                          <span className="inline-flex items-center gap-1">
-                            <MessageSquare className="h-3.5 w-3.5" />
-                            {formatCompactCount(post.commentsCount)}
-                          </span>
-                          <Link href={safeHref(post.id ? `/community/post/${post.id}` : '/community')} className="ml-auto text-xs font-bold text-[#005e9f] hover:underline">
-                            去评论
-                          </Link>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-[#595c5d]">暂无关联评论内容。</p>
-                  )}
-                </div>
+              <section>
+                {isMounted && isDesktopViewport ? (
+                  <GameReviewPanel game={game} />
+                ) : null}
               </section>
 
               <section>
@@ -1849,6 +1830,12 @@ export default function GameDetailView({
               </Card>
             )}
           </div>
+        </section>
+
+        <section className="mt-10">
+          {isMounted && !isDesktopViewport ? (
+            <GameReviewPanel game={game} compact />
+          ) : null}
         </section>
 
         <section className="mt-10">
