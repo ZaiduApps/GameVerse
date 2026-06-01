@@ -4,7 +4,7 @@ import type { ApiRecommendedGame, CardConfigItem, CommunityPost, GameDetailData 
 import Image from 'next/image';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent, type WheelEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent, type SyntheticEvent, type WheelEvent } from 'react';
 import {
   ArrowLeft,
   BellRing,
@@ -35,6 +35,7 @@ import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { trackedApiFetch } from '@/lib/api';
 import { getCommunityPostsByGame } from '@/lib/community-api';
+import { buildFeedbackCommonFields, submitFeedbackTicket } from '@/lib/feedback';
 import { cn } from '@/lib/utils';
 
 interface GameDetailViewProps {
@@ -64,6 +65,8 @@ type DragState = {
   baseX: number;
   baseY: number;
 };
+
+type ScreenshotAspectKind = 'portrait' | 'landscape' | 'square' | 'unknown';
 
 function buildGameDetailsUrl(param: string) {
   const query = new URLSearchParams();
@@ -256,6 +259,26 @@ function normalizePreviewUrl(input?: string | null) {
   }
 }
 
+function getScreenshotAspectKindFromRatio(ratio?: number | null): ScreenshotAspectKind {
+  if (!ratio || !Number.isFinite(ratio) || ratio <= 0) return 'unknown';
+  if (ratio < 0.9) return 'portrait';
+  if (ratio < 1.2) return 'square';
+  return 'landscape';
+}
+
+function inferScreenshotAspectFromUrl(input?: string | null): ScreenshotAspectKind {
+  const raw = String(input || '').trim();
+  if (!raw) return 'unknown';
+  const match = raw.match(/(\d{2,5})[xX](\d{2,5})/);
+  if (!match) return 'unknown';
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return 'unknown';
+  }
+  return getScreenshotAspectKindFromRatio(width / height);
+}
+
 function resolveSupportItems(cardConfig: Record<string, CardConfigItem[] | undefined>) {
   const priorityKeys = ['contact', 'partner', 'top', 'middle', 'bottom'];
   const items: CardConfigItem[] = [];
@@ -326,6 +349,24 @@ function buildRiskNotes(game: GameDetailData['app']) {
   ];
 }
 
+const TAG_STYLE_PALETTES = [
+  'border-[#fdc003]/35 bg-[#fff7d6] text-[#6f4c00] shadow-[0_10px_24px_rgba(253,192,3,0.14)]',
+  'border-[#7fb3ff]/35 bg-[#eaf3ff] text-[#0d4e8f] shadow-[0_10px_24px_rgba(127,179,255,0.18)]',
+  'border-[#ff8f82]/35 bg-[#fff0ed] text-[#8f2018] shadow-[0_10px_24px_rgba(255,119,103,0.16)]',
+  'border-[#83d3af]/35 bg-[#ecfbf4] text-[#166247] shadow-[0_10px_24px_rgba(131,211,175,0.16)]',
+  'border-[#c7a6ff]/35 bg-[#f5efff] text-[#59358c] shadow-[0_10px_24px_rgba(199,166,255,0.16)]',
+  'border-[#8fd7df]/35 bg-[#edf9fb] text-[#155f69] shadow-[0_10px_24px_rgba(143,215,223,0.16)]',
+];
+
+function shuffleArray<T>(list: T[]) {
+  const next = [...list];
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const target = Math.floor(Math.random() * (index + 1));
+    [next[index], next[target]] = [next[target], next[index]];
+  }
+  return next;
+}
+
 function getPrimaryCategory(game?: GameDetailData['app'] | null, tags?: string[]) {
   const tagList = Array.isArray(tags) ? tags : [];
   const preferredTag = tagList.find((tag) => {
@@ -336,6 +377,14 @@ function getPrimaryCategory(game?: GameDetailData['app'] | null, tags?: string[]
     return true;
   });
   return preferredTag || String(game?.type || '').trim() || '安卓游戏';
+}
+
+function buildTagFilterHref(tag: string) {
+  const safeTag = String(tag || '').trim();
+  if (!safeTag) return '/app';
+  const params = new URLSearchParams();
+  params.set('category', safeTag);
+  return `/app?${params.toString()}`;
 }
 
 function formatNewsDate(value?: string | null) {
@@ -403,6 +452,8 @@ export default function GameDetailView({
   const [previewOffset, setPreviewOffset] = useState({ x: 0, y: 0 });
   const [isPreviewImageError, setIsPreviewImageError] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [tagStylePalettes, setTagStylePalettes] = useState(TAG_STYLE_PALETTES);
+  const [screenshotAspectMap, setScreenshotAspectMap] = useState<Record<string, ScreenshotAspectKind>>({});
   const [isReminderEnabled, setIsReminderEnabled] = useState(false);
   const dragStateRef = useRef<DragState>({
     dragging: false,
@@ -413,6 +464,7 @@ export default function GameDetailView({
   });
 
   const game = gameData?.app;
+  const gameName = game?.name || '游戏';
   const resources = gameData?.resources || [];
   const cardConfig = (gameData?.cardConfig || {}) as Record<string, CardConfigItem[] | undefined>;
   const supportItems = useMemo(() => resolveSupportItems(cardConfig), [cardConfig]);
@@ -422,10 +474,19 @@ export default function GameDetailView({
   const riskNotes = useMemo(() => buildRiskNotes(gameData?.app || ({} as GameDetailData['app'])), [gameData?.app]);
 
   const tags = useMemo(() => {
-    const list = (game?.tags || []).filter(Boolean);
-    if (list.length > 0) return list.slice(0, 8);
-    return ['人气推荐', '角色扮演', '二次元', '回合制'];
-  }, [game?.tags]);
+    const list = Array.isArray(game?.tags)
+      ? game.tags
+          .map((item) => String(item || '').trim())
+          .filter(Boolean)
+      : [];
+    if (list.length > 0) return Array.from(new Set(list)).slice(0, 8);
+    const fallback = [
+      String(game?.type || '').trim(),
+      String(game?.metadata?.region || '').trim(),
+    ].filter(Boolean);
+    if (fallback.length > 0) return Array.from(new Set(fallback)).slice(0, 4);
+    return ['安卓游戏'];
+  }, [game?.metadata?.region, game?.tags, game?.type]);
   const primaryCategory = useMemo(() => getPrimaryCategory(game, tags), [game, tags]);
   const isPreregGame = useMemo(() => isPreregGameLike(game), [game]);
 
@@ -441,6 +502,13 @@ export default function GameDetailView({
     if (normalized.length > 0) return normalized;
     return screenshots;
   }, [screenshots]);
+  const inferredScreenshotAspectMap = useMemo(
+    () =>
+      Object.fromEntries(
+        previewScreenshots.map((url) => [url, inferScreenshotAspectFromUrl(url)]),
+      ) as Record<string, ScreenshotAspectKind>,
+    [previewScreenshots],
+  );
 
   const heroImage = game?.header_image || screenshots[0] || game?.icon || '';
   const heroBackdropSrc = !isHeroBackgroundError
@@ -628,6 +696,11 @@ export default function GameDetailView({
   }, []);
 
   useEffect(() => {
+    if (!isMounted) return;
+    setTagStylePalettes(shuffleArray(TAG_STYLE_PALETTES));
+  }, [isMounted, tags]);
+
+  useEffect(() => {
     if (previewIndex === null) return;
     setPreviewZoom(1);
     setPreviewOffset({ x: 0, y: 0 });
@@ -702,18 +775,26 @@ export default function GameDetailView({
 
     setIsSubmittingUrge(true);
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers.Authorization = `Bearer ${token}`;
-
-      await trackedApiFetch('/feedbacks', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
+      const common = buildFeedbackCommonFields(
+        user || undefined,
+        typeof window !== 'undefined' ? window.location.href : '',
+      );
+      await submitFeedbackTicket(
+        {
           type: 'missing',
           title: '求添加资源反馈',
-          description: `缺少资源：${game.name}\n游戏包名：${game.pkg || '未提供'}\n当前版本：${game.version || '未提供'}\n提交用户：${user?.name || user?.username || '游客'}`,
-        }),
-      });
+          description: [
+            `缺少资源：${game.name}`,
+            `游戏包名：${game.pkg || '未提供'}`,
+            `当前版本：${game.version || '未提供'}`,
+            `提交用户：${common.nickname || '游客'}`,
+            `联系方式：${common.contact || '未提供'}`,
+            '提交入口：Web /app/[id] 详情页催更',
+          ].join('\n'),
+          ...common,
+        },
+        token,
+      );
 
       toast({ title: '催更已提交', description: '工单已提交，请等待处理。' });
     } catch {
@@ -721,7 +802,7 @@ export default function GameDetailView({
     } finally {
       setIsSubmittingUrge(false);
     }
-  }, [game, isSubmittingUrge, token, user?.name, user?.username, toast]);
+  }, [game, isSubmittingUrge, token, user, toast]);
 
   const handleReminderToggle = useCallback(() => {
     if (!game) return;
@@ -808,6 +889,145 @@ export default function GameDetailView({
     setPreviewIndex((current) => (current === null ? null : (current + 1) % previewScreenshots.length));
     setIsPreviewImageError(false);
   }, [canPreviewNavigate, previewScreenshots.length]);
+
+  const activeTagStylePalettes = tagStylePalettes.length > 0 ? tagStylePalettes : TAG_STYLE_PALETTES;
+
+  const renderTagSection = (isMobile = false) => (
+    <section className={cn(isMobile && 'mt-10')}>
+      <h2 className={cn('mb-4 flex items-center gap-2 font-black', isMobile ? 'text-xl' : 'mb-6 gap-3 text-xl font-bold')}>
+        <span className={cn('rounded-full bg-[#fdc003]', isMobile ? 'h-6 w-1.5' : 'h-8 w-2')} />
+        游戏标签
+      </h2>
+      <Card className={cn(
+        'border-[#abadae]/10 bg-white/85 backdrop-blur-sm dark:border-border/45 dark:bg-card/80',
+        isMobile ? 'shadow-[0_18px_40px_rgba(15,23,32,0.06)]' : 'rounded-[2rem] shadow-[0_24px_60px_rgba(15,23,32,0.08)]',
+      )}>
+        <CardContent className={cn(isMobile ? 'p-5' : 'p-6')}>
+          <div className="flex flex-wrap gap-3">
+            {tags.map((tag, index) => (
+              <Link
+                key={`${tag}-${index}`}
+                href={buildTagFilterHref(tag)}
+                className={cn(
+                  'inline-flex items-center rounded-full border px-4 py-2 text-sm font-bold',
+                  'transform-gpu will-change-transform transition-all duration-300 ease-out motion-reduce:transform-none motion-reduce:transition-none',
+                  '[@media(hover:hover)]:hover:-translate-y-1 [@media(hover:hover)]:hover:scale-[1.06] [@media(hover:hover)]:hover:shadow-[0_16px_36px_rgba(15,23,32,0.14)]',
+                  isMounted ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-70',
+                  activeTagStylePalettes[index % activeTagStylePalettes.length],
+                )}
+                style={{ transitionDelay: `${index * 45}ms` }}
+              >
+                {tag}
+              </Link>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </section>
+  );
+
+  const renderFaqIntro = (isMobile = false) => (
+    <div className={cn('grid', isMobile ? 'mb-4 gap-4' : 'mb-6 gap-6 xl:grid-cols-2')}>
+      <Card className={cn(
+        'border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75',
+        isMobile ? '' : 'rounded-[2rem]',
+      )}>
+        <CardContent className={cn(isMobile ? 'p-5' : 'p-6')}>
+          <h3 className={cn('font-black text-[#0f1720] dark:text-foreground', isMobile ? 'text-lg' : 'text-xl font-bold')}>安装说明</h3>
+          <ol className={cn('mt-4 space-y-3 leading-6 text-[#595c5d] dark:text-muted-foreground', isMobile ? 'text-sm' : 'text-sm')}>
+            {installSteps.map((item, index) => (
+              <li key={`${isMobile ? 'mobile-' : ''}install-${index}`} className="flex gap-3">
+                <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#005e9f] text-xs font-bold text-white">{index + 1}</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ol>
+        </CardContent>
+      </Card>
+
+      <Card className={cn(
+        'border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75',
+        isMobile ? '' : 'rounded-[2rem]',
+      )}>
+        <CardContent className={cn(isMobile ? 'p-5' : 'p-6')}>
+          <h3 className={cn('font-black text-[#0f1720] dark:text-foreground', isMobile ? 'text-lg' : 'text-xl font-bold')}>下载与使用风险提示</h3>
+          <ul className="mt-4 space-y-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">
+            {riskNotes.map((item, index) => (
+              <li key={`${isMobile ? 'mobile-' : ''}risk-${index}`} className="flex gap-3">
+                <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-[#b71211]" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const getScreenshotAspect = useCallback(
+    (url: string): ScreenshotAspectKind => screenshotAspectMap[url] || inferredScreenshotAspectMap[url] || 'landscape',
+    [inferredScreenshotAspectMap, screenshotAspectMap],
+  );
+
+  const getScreenshotCardClassName = useCallback((kind: ScreenshotAspectKind, isMobile = false) => {
+    if (isMobile) {
+      if (kind === 'portrait') return 'w-[172px] aspect-[9/16]';
+      if (kind === 'square') return 'w-[184px] aspect-square';
+      return 'w-[280px] aspect-[16/9]';
+    }
+    if (kind === 'portrait') return 'w-[236px] aspect-[9/16]';
+    if (kind === 'square') return 'w-[280px] aspect-square';
+    return 'w-[420px] aspect-[16/9]';
+  }, []);
+
+  const getScreenshotSizes = useCallback((kind: ScreenshotAspectKind, isMobile = false) => {
+    if (isMobile) {
+      if (kind === 'portrait') return '172px';
+      if (kind === 'square') return '184px';
+      return '280px';
+    }
+    if (kind === 'portrait') return '236px';
+    if (kind === 'square') return '280px';
+    return '420px';
+  }, []);
+
+  const handleScreenshotLoad = useCallback((url: string, event: SyntheticEvent<HTMLImageElement>) => {
+    const image = event.currentTarget;
+    const kind = getScreenshotAspectKindFromRatio(image.naturalWidth / image.naturalHeight);
+    if (kind === 'unknown') return;
+    setScreenshotAspectMap((current) => (current[url] === kind ? current : { ...current, [url]: kind }));
+  }, []);
+
+  const renderScreenshotGallery = (isMobile = false) => (
+    <div className={cn('scrollbar-hide flex gap-4 overflow-x-auto', isMobile ? 'snap-x pb-2' : 'items-end pb-6')}>
+      {previewScreenshots.map((url, index) => {
+        const aspectKind = getScreenshotAspect(url);
+        return (
+          <button
+            type="button"
+            key={`${isMobile ? 'mobile-shot' : url}-${index}`}
+            className={cn(
+              'group relative shrink-0 snap-center overflow-hidden bg-[#dadddf] shadow-[0_18px_36px_rgba(15,23,32,0.08)] transition-transform duration-300',
+              '[@media(hover:hover)]:hover:-translate-y-1',
+              isMobile ? 'rounded-2xl' : 'rounded-[1.5rem] bg-white/60 dark:bg-card/60',
+              getScreenshotCardClassName(aspectKind, isMobile),
+            )}
+            onClick={() => setPreviewIndex(index)}
+          >
+            <Image
+              src={url}
+              alt={`${gameName} 截图 ${index + 1}`}
+              fill
+              priority={index === 0}
+              sizes={getScreenshotSizes(aspectKind, isMobile)}
+              className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+              onLoad={(event) => handleScreenshotLoad(url, event)}
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
 
   if (isLoading) return <ViewSkeleton />;
 
@@ -1081,20 +1301,6 @@ export default function GameDetailView({
                   }}
                 />
 
-                <div className="mt-8">
-                  <h3 className="mb-4 text-sm font-bold uppercase tracking-widest text-[#595c5d]">游戏标签</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {tags.map((tag, idx) => (
-                      <span
-                        key={`${tag}-${idx}`}
-                        className="rounded-full border border-[#abadae]/30 bg-white/75 px-5 py-2 text-sm font-bold text-[#2c2f30] dark:border-border/50 dark:bg-card/75 dark:text-foreground"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
                 {hasMoreDescription && (
                   <button
                     type="button"
@@ -1107,53 +1313,6 @@ export default function GameDetailView({
                 )}
               </section>
 
-              <section className="grid gap-6 xl:grid-cols-2">
-                <Card className="rounded-[2rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75">
-                  <CardContent className="p-6">
-                    <h2 className="mb-4 text-xl font-bold">安装说明</h2>
-                    <ol className="space-y-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">
-                      {installSteps.map((item, index) => (
-                        <li key={`install-${index}`} className="flex gap-3">
-                          <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#005e9f] text-xs font-bold text-white">{index + 1}</span>
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  </CardContent>
-                </Card>
-
-                <Card className="rounded-[2rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75">
-                  <CardContent className="p-6">
-                    <h2 className="mb-4 text-xl font-bold">下载与使用风险提示</h2>
-                    <ul className="space-y-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">
-                      {riskNotes.map((item, index) => (
-                        <li key={`risk-${index}`} className="flex gap-3">
-                          <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-[#b71211]" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              </section>
-
-              <section>
-                <h2 className="mb-6 flex items-center gap-3 text-xl font-bold">
-                  <span className="h-8 w-2 rounded-full bg-[#2e7d32]" />
-                  常见问题 FAQ
-                </h2>
-                <div className="grid gap-4">
-                  {faqItems.map((item, index) => (
-                    <Card key={`faq-${index}`} className="rounded-[1.75rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75">
-                      <CardContent className="p-6">
-                        <h3 className="text-base font-bold text-[#2c2f30] dark:text-foreground">{item.question}</h3>
-                        <p className="mt-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">{item.answer}</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </section>
-
               <section>
                 <div className="mb-6 flex items-center justify-between">
                   <h2 className="flex items-center gap-3 text-xl font-bold">
@@ -1162,22 +1321,25 @@ export default function GameDetailView({
                   </h2>
                   <span className="text-sm font-bold text-[#005e9f]">点击查看大图</span>
                 </div>
-                <div className="scrollbar-hide flex gap-4 overflow-x-auto pb-6">
-                  {previewScreenshots.map((url, index) => (
-                    <button
-                      type="button"
-                      key={`${url}-${index}`}
-                      className="group relative aspect-[16/9] min-w-[360px] overflow-hidden rounded-[1.5rem] bg-white/60 dark:bg-card/60"
-                      onClick={() => setPreviewIndex(index)}
-                    >
-                      <Image
-                        src={url}
-                        alt={`${game.name} 截图 ${index + 1}`}
-                        fill
-                        sizes="420px"
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    </button>
+                {renderScreenshotGallery()}
+              </section>
+
+              {renderTagSection()}
+
+              <section>
+                <h2 className="mb-6 flex items-center gap-3 text-xl font-bold">
+                  <span className="h-8 w-2 rounded-full bg-[#2e7d32]" />
+                  常见问题 FAQ
+                </h2>
+                {renderFaqIntro()}
+                <div className="grid gap-4">
+                  {faqItems.map((item, index) => (
+                    <Card key={`faq-${index}`} className="rounded-[1.75rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75">
+                      <CardContent className="p-6">
+                        <h3 className="text-base font-bold text-[#2c2f30] dark:text-foreground">{item.question}</h3>
+                        <p className="mt-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">{item.answer}</p>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               </section>
@@ -1562,41 +1724,22 @@ export default function GameDetailView({
           )}
         </section>
 
-        <section className="mt-10 grid gap-4">
-          <Card className="border-[#abadae]/10 bg-white">
-            <CardContent className="p-5">
-              <h2 className="text-lg font-black text-[#0f1720]">安装说明</h2>
-              <ol className="mt-4 space-y-3 text-sm leading-6 text-[#595c5d]">
-                {installSteps.map((item, index) => (
-                  <li key={`mobile-install-${index}`} className="flex gap-3">
-                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#005e9f] text-xs font-bold text-white">{index + 1}</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ol>
-            </CardContent>
-          </Card>
-
-          <Card className="border-[#abadae]/10 bg-white">
-            <CardContent className="p-5">
-              <h2 className="text-lg font-black text-[#0f1720]">风险提示</h2>
-              <ul className="mt-4 space-y-3 text-sm leading-6 text-[#595c5d]">
-                {riskNotes.map((item, index) => (
-                  <li key={`mobile-risk-${index}`} className="flex gap-3">
-                    <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-[#b71211]" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+        <section className="mt-10">
+          <h2 className="mb-4 flex items-center gap-2 text-xl font-black">
+            <span className="h-6 w-1.5 rounded-full bg-[#005e9f]" />
+            精彩截图
+          </h2>
+          {renderScreenshotGallery(true)}
         </section>
+
+        {renderTagSection(true)}
 
         <section className="mt-10">
           <h2 className="mb-4 flex items-center gap-2 text-xl font-black">
             <span className="h-6 w-1.5 rounded-full bg-[#2e7d32]" />
             常见问题 FAQ
           </h2>
+          {renderFaqIntro(true)}
           <div className="space-y-4">
             {faqItems.map((item, index) => (
               <Card key={`mobile-faq-${index}`} className="border-[#abadae]/10 bg-white">
@@ -1605,25 +1748,6 @@ export default function GameDetailView({
                   <p className="mt-3 text-sm leading-6 text-[#595c5d]">{item.answer}</p>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        </section>
-
-        <section className="mt-10">
-          <h2 className="mb-4 flex items-center gap-2 text-xl font-black">
-            <span className="h-6 w-1.5 rounded-full bg-[#005e9f]" />
-            精彩截图
-          </h2>
-          <div className="scrollbar-hide flex snap-x gap-4 overflow-x-auto">
-            {previewScreenshots.map((url, index) => (
-              <button
-                type="button"
-                key={`mobile-shot-${url}-${index}`}
-                className="relative h-44 w-80 shrink-0 snap-center overflow-hidden rounded-2xl bg-[#dadddf]"
-                onClick={() => setPreviewIndex(index)}
-              >
-                <Image src={url} alt={`${game.name} 截图 ${index + 1}`} fill sizes="320px" className="object-cover" />
-              </button>
             ))}
           </div>
         </section>

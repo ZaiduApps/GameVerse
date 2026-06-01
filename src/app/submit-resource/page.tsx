@@ -5,7 +5,7 @@ import { useFieldArray, useForm } from 'react-hook-form';
 import * as z from 'zod';
 
 import { useAuth } from '@/context/auth-context';
-import { apiUrl, trackedApiFetch } from '@/lib/api';
+import { buildFeedbackCommonFields, submitFeedbackTicket } from '@/lib/feedback';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -94,41 +94,8 @@ export default function SubmitResourcePage() {
       name: 'imageUrls',
     });
 
-  const buildCommonFeedbackFields = () => {
-    const displayName = user?.name || user?.username || '游客';
-    const contact = user?.email || user?.phone || '';
-    return {
-      user_id: user?._id || '',
-      nickname: displayName,
-      contact,
-      clientType: 'Web',
-      clientVersion: process.env.NEXT_PUBLIC_CLIENT_VERSION || '',
-      osVersion: typeof navigator !== 'undefined' ? navigator.userAgent : '',
-      deviceModel: typeof navigator !== 'undefined' ? navigator.platform : '',
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
-    };
-  };
-
-  const submitFeedback = async (payload: Record<string, unknown>) => {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (token) headers.Authorization = `Bearer ${token}`;
-
-      const res = await trackedApiFetch('/feedbacks', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload),
-    });
-
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || json?.code !== 0) {
-      throw new Error(json?.message || `HTTP ${res.status}`);
-    }
-  };
-
   const onRequestSubmit = async (data: RequestResourceFormValues) => {
-    const common = buildCommonFeedbackFields();
+    const common = buildFeedbackCommonFields(user || undefined, data.sourceUrl || '');
     const payload = {
       type: 'missing',
       title: '求添加资源反馈',
@@ -139,12 +106,11 @@ export default function SubmitResourcePage() {
         `提交用户：${common.nickname || '游客'}`,
         `联系方式：${common.contact || '未提供'}`,
       ].join('\n'),
-      ref_url: data.sourceUrl || '',
       ...common,
     };
 
     try {
-      await submitFeedback(payload);
+      await submitFeedbackTicket(payload, token);
       toast({
         title: '请求已提交',
         description: '已按反馈工单提交，感谢你的建议。',
@@ -160,7 +126,7 @@ export default function SubmitResourcePage() {
   };
 
   const onAuthorSubmit = async (data: AuthorSubmissionFormValues) => {
-    const common = buildCommonFeedbackFields();
+    const common = buildFeedbackCommonFields(user || undefined, data.downloadUrl);
     const imageUrls = (data.imageUrls || [])
       .map((item) => item?.value?.trim())
       .filter(Boolean);
@@ -181,12 +147,11 @@ export default function SubmitResourcePage() {
         `联系方式：${common.contact || '未提供'}`,
       ].join('\n'),
       images: imageUrls,
-      ref_url: data.downloadUrl,
       ...common,
     };
 
     try {
-      await submitFeedback(payload);
+      await submitFeedbackTicket(payload, token);
       toast({
         title: '投稿已提交',
         description: '已按反馈工单提交，等待审核处理。',
