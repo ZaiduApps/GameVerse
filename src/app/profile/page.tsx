@@ -30,6 +30,7 @@ import {
   User as UserIcon,
 } from 'lucide-react';
 import ProfileDashboard from './ProfileDashboard';
+import CenterAuthRequired from './center/CenterAuthRequired';
 
 export default function ProfilePage() {
   const { user: authUser, token, isAuthenticated, isLoading: isAuthLoading, logout, login } = useAuth();
@@ -54,11 +55,6 @@ export default function ProfilePage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   useEffect(() => {
-    if (!isAuthLoading && !isAuthenticated) {
-      router.push('/');
-      return;
-    }
-
     const fetchDetailedProfile = async () => {
       if (!token) return;
       setIsFetchingProfile(true);
@@ -94,7 +90,7 @@ export default function ProfilePage() {
       setProfile(authUser);
       setIsFetchingProfile(false);
     }
-  }, [authUser, isAuthLoading, isAuthenticated, router, toast, token]);
+  }, [authUser, isAuthLoading, isAuthenticated, toast, token]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,7 +185,26 @@ export default function ProfilePage() {
     }
   };
 
-  if (isAuthLoading || isFetchingProfile || !profile) {
+  if (isAuthLoading) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="text-muted-foreground">正在加载个人资料...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <CenterAuthRequired
+        title="个人资料"
+        description="管理你的个人资料、安全设置与个人中心数据。"
+        containerClassName="max-w-5xl"
+      />
+    );
+  }
+
+  if (isFetchingProfile || !profile) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />

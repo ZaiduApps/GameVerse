@@ -10,6 +10,7 @@ import {
   quickCreateCommunityTopic,
   type CommunityTopicItem,
 } from '@/lib/community-api';
+import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,8 +20,29 @@ import { Textarea } from '@/components/ui/textarea';
 import { HashIcon, Loader2, PlusCircle, Send, X } from 'lucide-react';
 
 interface CreatePostFormProps {
+  forcedAppId?: string;
+  initialContent?: string;
+  initialTitle?: string;
+  initialTopics?: CommunityTopicItem[];
+  mode?: 'create' | 'edit';
+  onCancel?: () => void;
   onPosted?: () => void;
+  onSubmitPost?: (payload: {
+    appId?: string;
+    content: string;
+    source: string;
+    title?: string;
+    topicIds?: string[];
+    topicNames?: string[];
+  }) => Promise<{
+    message: string;
+    ok: boolean;
+    postId?: string;
+  }>;
   selectedTopic?: CommunityTopicItem | null;
+  submitLabel?: string;
+  submittingLabel?: string;
+  surface?: 'card' | 'plain';
   shouldAutoFocus?: boolean;
   onAutoFocusHandled?: () => void;
 }
@@ -56,20 +78,49 @@ function upsertTopic(
   return [...list, item];
 }
 
+function normalizeTopicList(input: CommunityTopicItem[] | undefined): CommunityTopicItem[] {
+  const result: CommunityTopicItem[] = [];
+  for (const topic of input || []) {
+    const id = String(topic?._id || '').trim();
+    if (!id) continue;
+    if (result.some((item) => String(item._id || '').trim() === id)) continue;
+    result.push({
+      ...topic,
+      _id: id,
+      app_id: String(topic?.app_id || '').trim() || undefined,
+      name: String(topic?.name || '').trim() || id,
+      slug: String(topic?.slug || '').trim() || id,
+    });
+  }
+  return result;
+}
+
 export default function CreatePostForm({
+  forcedAppId,
+  initialContent = '',
+  initialTitle = '',
+  initialTopics,
+  mode = 'create',
+  onCancel,
   onPosted,
+  onSubmitPost,
   selectedTopic,
+  submitLabel,
+  submittingLabel,
+  surface = 'card',
   shouldAutoFocus = false,
   onAutoFocusHandled,
 }: CreatePostFormProps) {
   const { user, token, isAuthenticated } = useAuth();
   const { toast } = useToast();
 
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [cursor, setCursor] = useState(0);
+  const [title, setTitle] = useState(() => String(initialTitle || ''));
+  const [content, setContent] = useState(() => String(initialContent || ''));
+  const [cursor, setCursor] = useState(() => String(initialContent || '').length);
 
-  const [selectedTopics, setSelectedTopics] = useState<CommunityTopicItem[]>([]);
+  const [selectedTopics, setSelectedTopics] = useState<CommunityTopicItem[]>(
+    () => normalizeTopicList(initialTopics),
+  );
   const [topicSuggestions, setTopicSuggestions] = useState<CommunityTopicItem[]>([]);
   const [isSuggestingTopic, setIsSuggestingTopic] = useState(false);
   const [isCreatingTopic, setIsCreatingTopic] = useState(false);
@@ -78,6 +129,8 @@ export default function CreatePostForm({
 
   const hashtagKeyword = useMemo(() => detectCurrentHashtag(content, cursor), [content, cursor]);
   const resolvedAppId = useMemo(() => {
+    const fixedAppId = String(forcedAppId || '').trim();
+    if (fixedAppId) return fixedAppId;
     const selectedAppId = String(selectedTopic?.app_id || '').trim();
     if (selectedAppId) return selectedAppId;
     for (const topic of selectedTopics) {
@@ -85,7 +138,7 @@ export default function CreatePostForm({
       if (topicAppId) return topicAppId;
     }
     return '';
-  }, [selectedTopic, selectedTopics]);
+  }, [forcedAppId, selectedTopic, selectedTopics]);
 
   const setTextareaCursor = (nextCursor: number) => {
     const safeCursor = Math.max(0, nextCursor);
@@ -223,8 +276,21 @@ export default function CreatePostForm({
       ]),
     );
 
-    const result = await createCommunityPost({
-      token,
+    const submitPost = onSubmitPost
+      ? onSubmitPost
+      : async (payload: {
+          appId?: string;
+          content: string;
+          source: string;
+          title?: string;
+          topicIds?: string[];
+          topicNames?: string[];
+        }) =>
+          await createCommunityPost({
+            token,
+            ...payload,
+          });
+    const result = await submitPost({
       title: String(title || '').trim() || undefined,
       content: trimmedContent,
       topicIds: selectedTopics
@@ -237,24 +303,36 @@ export default function CreatePostForm({
     setIsSubmitting(false);
 
     if (!result.ok) {
-      toast({ title: '发布失败', description: result.message, variant: 'destructive' });
+      toast({
+        title: mode === 'edit' ? '保存失败' : '发布失败',
+        description: result.message,
+        variant: 'destructive',
+      });
       return;
     }
 
-    setTitle('');
-    setContent('');
-    setTopicSuggestions([]);
-    setSelectedTopics(selectedTopic?._id ? [selectedTopic] : []);
+    if (mode === 'create') {
+      setTitle('');
+      setContent('');
+      setTopicSuggestions([]);
+      setSelectedTopics(selectedTopic?._id ? [selectedTopic] : []);
+    }
 
-    toast({ title: '发布成功', description: result.message || '帖子已提交' });
+    toast({
+      title: mode === 'edit' ? '保存成功' : '发布成功',
+      description: result.message || (mode === 'edit' ? '帖子已更新' : '帖子已提交'),
+    });
     onPosted?.();
   }
 
   const suggestionVisible = hashtagKeyword.length > 0;
+  const submitText = isSubmitting
+    ? submittingLabel || (mode === 'edit' ? '保存中...' : '发布中...')
+    : submitLabel || (mode === 'edit' ? '保存修改' : '发布');
 
-  return (
-    <Card className="shadow-sm">
-      <CardContent className="space-y-3 p-4">
+  const contentNode = (
+    <>
+      <div className={surface === 'card' ? 'space-y-3 p-4' : 'space-y-3'}>
         <div className="flex items-start space-x-3">
           <Avatar className="mt-1">
             <AvatarImage
@@ -352,24 +430,53 @@ export default function CreatePostForm({
             )}
           </div>
         </div>
-      </CardContent>
+      </div>
 
-      <CardFooter className="flex items-center justify-between px-4 pb-3 pt-0">
+      <div
+        className={cn(
+          'flex items-center justify-between gap-3',
+          surface === 'card' ? 'px-4 pb-3 pt-0' : 'border-t pt-3',
+        )}
+      >
         <div className="flex items-center text-xs text-muted-foreground">
           <HashIcon className="mr-1 h-3.5 w-3.5" />
           输入 # 即可搜索和关联话题
         </div>
 
-        <Button
-          size="sm"
-          onClick={handleSubmitPost}
-          disabled={!content.trim() || isSubmitting}
-          className="btn-interactive h-8"
-        >
-          {isSubmitting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Send className="mr-1.5 h-4 w-4" />}
-          发布
-        </Button>
-      </CardFooter>
+        <div className="flex items-center gap-2">
+          {onCancel ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={onCancel}
+              disabled={isSubmitting}
+              className="h-8"
+            >
+              取消
+            </Button>
+          ) : null}
+          <Button
+            size="sm"
+            onClick={handleSubmitPost}
+            disabled={!content.trim() || isSubmitting}
+            className="btn-interactive h-8"
+          >
+            {isSubmitting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Send className="mr-1.5 h-4 w-4" />}
+            {submitText}
+          </Button>
+        </div>
+      </div>
+    </>
+  );
+
+  if (surface === 'plain') {
+    return <div className="space-y-3">{contentNode}</div>;
+  }
+
+  return (
+    <Card className="shadow-sm">
+      <CardContent className="p-0">{contentNode}</CardContent>
     </Card>
   );
 }

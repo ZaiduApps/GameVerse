@@ -3,7 +3,13 @@ import { notFound } from 'next/navigation';
 
 import GameDetailView from './GameDetailView';
 import { trackedApiFetch } from '@/lib/api';
-import { absoluteUrl } from '@/lib/seo';
+import {
+  absoluteUrl,
+  getSiteShareImageUrl,
+  hasSeoMarkupNoise,
+  resolveGameSeoImage,
+  sanitizeSeoText,
+} from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityPostsByGame } from '@/lib/community-api';
 import type { CommunityPost, GameDetailData, SiteConfig } from '@/types';
@@ -58,7 +64,13 @@ type RelatedNewsItem = {
 };
 
 function extractNewsExcerpt(summary?: string | null, content?: string | null, maxLength = 120) {
-  const source = normalizeText(summary || content);
+  const summaryText = sanitizeSeoText(summary);
+  const contentText = sanitizeSeoText(content);
+  const source =
+    (!summaryText ||
+    (hasSeoMarkupNoise(summary) && contentText.length > summaryText.length)
+      ? contentText || summaryText
+      : summaryText || contentText);
   if (!source) return '查看这篇相关资讯的完整内容。';
   if (source.length <= maxLength) return source;
   return `${source.slice(0, maxLength).trim()}...`;
@@ -74,13 +86,12 @@ function toRelatedNewsItem(post: CommunityPost): RelatedNewsItem | null {
   const id = String(post.id || '').trim();
   if (!id) return null;
 
-  const title = normalizeText(post.title || post.summary) || '社区帖子';
-  const source = normalizeText(post.summary || post.content);
+  const title = sanitizeSeoText(post.title || post.summary) || '社区帖子';
 
   return {
     id,
     title,
-    excerpt: extractNewsExcerpt(source, post.content),
+    excerpt: extractNewsExcerpt(post.summary, post.content),
     date: formatNewsDate(post.timestamp),
   };
 }
@@ -262,7 +273,7 @@ export async function generateMetadata({
     MAX_DESCRIPTION_LENGTH,
   );
 
-  const heroImage = game.header_image || game.icon || basic.share_image;
+  const heroImage = resolveGameSeoImage(game, basic.share_image);
   const keywords = buildKeywords(game, seo.keywords);
 
   return {
@@ -334,7 +345,7 @@ export default async function GameDetailPage({
   const canonicalPath = `/app/${encodeURIComponent(game.pkg || id)}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
   const ratingCount = Math.max(1, Number(String(game.download_count_show || '').replace(/\D/g, '')) || 1);
-  const heroImage = game.header_image || game.icon || '';
+  const heroImage = resolveGameSeoImage(game, getSiteShareImageUrl());
   const description = normalizeText(game.summary || game.description);
 
   const relatedNews = await getRelatedNews(game);

@@ -9,16 +9,8 @@ import {
   getCommunityPostById,
   type CommunityCommentThread,
 } from '@/lib/community-api';
-import { absoluteUrl } from '@/lib/seo';
+import { absoluteUrl, hasSeoMarkupNoise, sanitizeSeoText } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
-
-function stripHtml(input?: string | null): string {
-  return String(input || '')
-    .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 function clamp(input: string, max: number): string {
   if (input.length <= max) return input;
@@ -26,13 +18,20 @@ function clamp(input: string, max: number): string {
 }
 
 function buildPostTitle(post: CommunityPost, siteName: string): string {
-  const core = String(post.title || post.summary || '社区帖子').trim() || '社区帖子';
+  const core =
+    sanitizeSeoText(post.title || post.summary || '社区帖子') || '社区帖子';
   return clamp(`${core} | ${siteName} 社区`, 90);
 }
 
 function buildPostDescription(post: CommunityPost): string {
-  const source = String(post.summary || post.content || '查看社区帖子详情').trim();
-  return clamp(stripHtml(source), 180);
+  const summary = sanitizeSeoText(post.summary);
+  const content = sanitizeSeoText(post.content);
+  const source =
+    (!summary ||
+    (hasSeoMarkupNoise(post.summary) && content.length > summary.length)
+      ? content || summary
+      : summary || content) || '查看社区帖子详情';
+  return clamp(source, 180);
 }
 
 function getPostImage(post: CommunityPost, fallbackImage: string): string {
@@ -136,7 +135,12 @@ export default async function CommunityPostPage({
   const articleJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
-    headline: String((post as CommunityPost).title || (post as CommunityPost).summary || '社区帖子').trim(),
+    headline:
+      sanitizeSeoText(
+        (post as CommunityPost).title ||
+          (post as CommunityPost).summary ||
+          '社区帖子',
+      ) || '社区帖子',
     description: postDescription || undefined,
     image: postImage ? [postImage] : undefined,
     mainEntityOfPage: canonicalUrl,
@@ -192,7 +196,12 @@ export default async function CommunityPostPage({
       {
         '@type': 'ListItem',
         position: 3,
-        name: String((post as CommunityPost).title || (post as CommunityPost).summary || '帖子详情').trim(),
+        name:
+          sanitizeSeoText(
+            (post as CommunityPost).title ||
+              (post as CommunityPost).summary ||
+              '帖子详情',
+          ) || '帖子详情',
         item: canonicalUrl,
       },
     ],

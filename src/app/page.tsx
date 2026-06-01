@@ -21,6 +21,7 @@ import HomeHeroCarousel from '@/components/home/HomeHeroCarousel';
 import HomeNewsListReplica from '@/components/home/HomeNewsListReplica';
 import HomeQuickSearchCard from '@/components/home/HomeQuickSearchCard';
 import RecentUpdatesSection from '@/components/home/RecentUpdatesSection';
+import { getAlbumHref } from '@/lib/albums';
 import { getClientLandingAppData, type ClientLandingAppData } from '@/lib/client-landing';
 import type { Announcement, ApiAlbum, ApiArticle, ApiBanner, ApiDynamicPost, ApiGame, HomeData } from '@/types';
 import { trackedApiFetch } from '@/lib/api';
@@ -540,7 +541,7 @@ export default async function HomePage() {
                   </h3>
                   <p className="mt-1 text-sm font-medium text-[#595c5d] dark:text-[#9ca6b8]">编辑精选必玩佳作</p>
                 </div>
-                <Link href="/app?sort=popular" className="text-sm font-bold text-[#005e9f] hover:underline">
+                <Link href={getAlbumHref(heavyweightAlbum)} className="text-sm font-bold text-[#005e9f] hover:underline">
                   查看全部
                 </Link>
               </div>
@@ -589,12 +590,18 @@ export default async function HomePage() {
               title={recentAlbum.title || '最近更新'}
               games={recentGames}
               fallbackImage={FALLBACK_GAME_IMAGE}
+              viewAllHref={getAlbumHref(recentAlbum)}
             />
           )}
 
           {preregAlbum && preregGames.length > 0 && (
             <section>
-              <h3 className="mb-5 text-xl font-black tracking-tight">{preregAlbum.title || '事前登录'}</h3>
+              <div className="mb-5 flex items-end justify-between gap-3">
+                <h3 className="text-xl font-black tracking-tight">{preregAlbum.title || '事前登录'}</h3>
+                <Link href={getAlbumHref(preregAlbum)} className="text-sm font-bold text-[#005e9f] hover:underline">
+                  查看全部
+                </Link>
+              </div>
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {preregGames.slice(0, 4).map((game, index) => (
                   (() => {
@@ -687,8 +694,8 @@ export default async function HomePage() {
                     <h3 className="text-xl font-black tracking-tight">{album.title || '推荐专辑'}</h3>
                     {album.subtitle && <p className="mt-1 text-sm text-[#595c5d] dark:text-[#9ca6b8]">{album.subtitle}</p>}
                   </div>
-                  <Link href="/app" className="text-sm font-bold text-[#005e9f] hover:underline">
-                    查看更多
+                  <Link href={getAlbumHref(album)} className="text-sm font-bold text-[#005e9f] hover:underline">
+                    查看全部
                   </Link>
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -739,11 +746,16 @@ export default async function HomePage() {
         <aside className="space-y-8 xl:col-span-4">
           {rankingAlbum && rankingGames.length > 0 && (
             <section className="rounded-[22px] bg-white p-5 shadow-[0_8px_24px_rgba(12,15,16,0.08)] dark:bg-[#111824] dark:shadow-[0_8px_24px_rgba(0,0,0,0.4)] sm:p-6">
-              <div className="mb-6 flex items-center justify-between">
+              <div className="mb-6 flex items-start justify-between gap-3">
                 <h3 className="text-xl font-black tracking-tight">{rankingAlbum.title || '热门游戏'}</h3>
-                <div className="rounded-full bg-[#eff1f2] p-1 text-[10px] font-bold text-[#595c5d] dark:bg-[#223043] dark:text-[#9ca6b8]">
-                  <span className="rounded-full bg-white px-3 py-1 dark:bg-[#111824]">总榜</span>
-                  <span className="px-3 py-1">新作</span>
+                <div className="flex flex-col items-end gap-2">
+                  <Link href={getAlbumHref(rankingAlbum)} className="text-sm font-bold text-[#005e9f] hover:underline">
+                    查看全部
+                  </Link>
+                  <div className="rounded-full bg-[#eff1f2] p-1 text-[10px] font-bold text-[#595c5d] dark:bg-[#223043] dark:text-[#9ca6b8]">
+                    <span className="rounded-full bg-white px-3 py-1 dark:bg-[#111824]">总榜</span>
+                    <span className="px-3 py-1">新作</span>
+                  </div>
                 </div>
               </div>
               <div className="space-y-4">
@@ -786,10 +798,15 @@ export default async function HomePage() {
 
           {toolsAlbum && toolGames.length > 0 && (
             <section className="rounded-[22px] bg-[#e6e8ea] p-5 sm:p-6">
-              <h3 className="mb-5 flex items-center gap-2 text-lg font-black">
-                {toolsAlbum.title || '效率工具'}
-                <Wrench className="h-5 w-5 text-[#005e9f]" />
-              </h3>
+              <div className="mb-5 flex items-end justify-between gap-3">
+                <h3 className="flex items-center gap-2 text-lg font-black">
+                  {toolsAlbum.title || '效率工具'}
+                  <Wrench className="h-5 w-5 text-[#005e9f]" />
+                </h3>
+                <Link href={getAlbumHref(toolsAlbum)} className="text-sm font-bold text-[#005e9f] hover:underline">
+                  查看全部
+                </Link>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 {toolGames.slice(0, 6).map((game) => (
                   <Link

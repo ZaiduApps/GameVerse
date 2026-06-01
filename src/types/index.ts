@@ -97,12 +97,14 @@ export interface CommunityPost {
 export interface SearchResult {
     id: string;
     title: string;
-    type: 'game' | 'article' | 'post';
+    type: 'game' | 'article' | 'post' | 'topic';
     category: string;
     imageUrl: string;
     rating?: number;
     pkg?: string;
     region?: string;
+    href?: string;
+    subtitle?: string;
 }
 
 // API Types
@@ -123,6 +125,7 @@ export interface ApiGame {
   summary: string;
   star: number;
   icon: string;
+  seo_image?: string;
   header_image: string;
   tags: string[];
   version?: string;
@@ -140,11 +143,32 @@ export interface ApiGame {
   }
 }
 
+export interface ApiAlbumMetadata {
+  match?: Record<string, unknown>;
+  sort?: Record<string, 1 | -1>;
+  limit?: number;
+  [key: string]: unknown;
+}
+
 export interface ApiAlbum {
   _id: string;
   title: string;
   subtitle: string;
-  style: 'Grid' | 'Box' | 'Pre' | string; // Grid: NewRelease, Box: Popular, Pre: Prereg
+  description?: string;
+  cover?: string;
+  icon?: string;
+  style: 'Grid' | 'Box' | 'Pre' | 'List' | string; // Grid: NewRelease, Box: Popular, Pre: Prereg
+  mode?: 'manual' | 'auto' | string;
+  tags?: string[];
+  sort?: number;
+  is_home?: boolean;
+  is_active?: boolean;
+  app_ids?: string[];
+  metadata?: ApiAlbumMetadata | null;
+  start_at?: string;
+  end_at?: string;
+  created_at?: string;
+  updated_at?: string;
   games: ApiGame[];
 }
 
@@ -228,6 +252,7 @@ export interface ApiGameDetail {
   download_count_show: string;
   star: number;
   icon: string;
+  seo_image?: string;
   detail_images: string[];
   header_image: string;
   developer: string;

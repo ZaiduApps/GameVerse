@@ -51,6 +51,8 @@ interface RecentUpdatesSectionProps {
   title: string;
   games: ApiGame[];
   fallbackImage: string;
+  viewAllHref?: string;
+  viewAllText?: string;
 }
 
 function getGameHref(game: ApiGame): string {
@@ -63,6 +65,8 @@ export default function RecentUpdatesSection({
   title,
   games,
   fallbackImage,
+  viewAllHref,
+  viewAllText = '查看全部',
 }: RecentUpdatesSectionProps) {
   const [desktopPage, setDesktopPage] = useState(0);
   const [mobilePage, setMobilePage] = useState(0);
@@ -151,8 +155,15 @@ export default function RecentUpdatesSection({
 
   return (
     <section className="rounded-[26px] bg-[#eff1f2] p-5 dark:bg-[#111824] sm:p-7">
-      <div className="mb-5 flex items-center justify-between">
-        <h3 className="text-xl font-black tracking-tight dark:text-[#edf2fb]">{title || '最近更新'}</h3>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h3 className="text-xl font-black tracking-tight dark:text-[#edf2fb]">{title || '最近更新'}</h3>
+          {viewAllHref ? (
+            <Link href={viewAllHref} className="text-sm font-bold text-[#005e9f] hover:underline">
+              {viewAllText}
+            </Link>
+          ) : null}
+        </div>
         <div className="flex items-center gap-2">
           <button
             type="button"

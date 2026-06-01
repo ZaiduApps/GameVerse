@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Copy, Eye, KeyRound, Loader2, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 
@@ -16,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { trackedApiFetch } from '@/lib/api';
 import type { ApiResponse } from '@/types';
 import { useAuth } from '@/context/auth-context';
+import CenterAuthRequired from '../center/CenterAuthRequired';
 
 type ApiKeyStatus = 'active' | 'disabled' | 'revoked';
 
@@ -100,8 +100,21 @@ function createIdempotencyKeySample() {
   return `post-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function buildPublishCurlWithKey(apiKey: string, idempotencyKey: string) {
+  return `curl -X POST "http://127.0.0.1:9527/open/content/posts" \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: ${apiKey}" \\
+  -H "Idempotency-Key: ${idempotencyKey}" \\
+  -d '{
+    "post_type": "post",
+    "title": "今日更新进度",
+    "content": "正文内容",
+    "summary": "30 秒速览今日更新",
+    "topic_id": "69d22fa1a75bd91bed8f9731"
+  }'`;
+}
+
 export default function ProfileApiKeysPage() {
-  const router = useRouter();
   const { token, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
 
@@ -194,6 +207,7 @@ export default function ProfileApiKeysPage() {
     () => list.filter((item) => item.status !== 'revoked').length,
     [list],
   );
+  const reachedKeyLimit = activeCount >= 5;
 
   const publishCurlExample = `curl -X POST "http://127.0.0.1:9527/open/content/posts" \\
   -H "Content-Type: application/json" \\
@@ -338,7 +352,8 @@ export default function ProfileApiKeysPage() {
 原因：/open/content/posts 的 DTO 未声明这些字段，且服务端启用了 whitelist 校验。`;
 
   const publishErrorExamples = `401 API_KEY_UNAUTHORIZED
-  - X-API-Key 缺失、无效、过期或被禁用
+  - 常见原因：X-API-Key 缺失、无效、过期或被禁用
+  - 认证头支持：优先 X-API-Key；兼容 Authorization: Bearer ak_live_... 或 Authorization: ApiKey ak_live_...
 
 403 API_KEY_FORBIDDEN
   - API Key 缺少 content:write 能力
@@ -405,14 +420,28 @@ export default function ProfileApiKeysPage() {
 }`;
 
   useEffect(() => {
-    if (!isAuthLoading && !isAuthenticated) {
-      router.push('/');
-      return;
-    }
     if (isAuthenticated && token) {
       void loadKeys();
     }
-  }, [isAuthLoading, isAuthenticated, router, token]);
+  }, [isAuthLoading, isAuthenticated, token]);
+
+  if (isAuthLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <CenterAuthRequired
+        title="API 密钥"
+        description="管理用于开放接口发布内容的个人 API 密钥。"
+        containerClassName="max-w-6xl"
+      />
+    );
+  }
 
   async function loadKeys() {
     if (!token) return;
@@ -436,6 +465,10 @@ export default function ProfileApiKeysPage() {
 
   async function createKey() {
     if (!token) return;
+    if (reachedKeyLimit) {
+      toast({ variant: 'destructive', title: '已达到 5 个密钥上限', description: '请先吊销不再使用的密钥后再创建。' });
+      return;
+    }
     if (!name.trim()) {
       toast({ variant: 'destructive', title: '请输入密钥名称' });
       return;
@@ -461,6 +494,8 @@ export default function ProfileApiKeysPage() {
         },
         body: JSON.stringify({
           name: name.trim(),
+          key_type: 'content_user',
+          capabilities: ['content:write'],
           expires_at: normalizedExpiresAt,
         }),
       });
@@ -651,7 +686,7 @@ export default function ProfileApiKeysPage() {
             API 密钥管理
           </CardTitle>
           <CardDescription>
-            使用 API 密钥调用公开内容接口。当前已创建 {activeCount}/5 个密钥。
+            使用 API 密钥调用公开内容接口。当前已创建 {activeCount}/5 个内容发布密钥。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -662,7 +697,7 @@ export default function ProfileApiKeysPage() {
                 id="api-key-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="例如：自动发帖服务"
+                placeholder="例如：自动发帖服务（content:write）"
                 maxLength={60}
               />
             </div>
@@ -679,7 +714,7 @@ export default function ProfileApiKeysPage() {
               <Button
                 className="w-full md:w-auto"
                 onClick={createKey}
-                disabled={submitting}
+                disabled={submitting || reachedKeyLimit}
               >
                 {submitting ? (
                   <>
@@ -689,7 +724,7 @@ export default function ProfileApiKeysPage() {
                 ) : (
                   <>
                     <Plus className="mr-2 h-4 w-4" />
-                    新建密钥
+                    {reachedKeyLimit ? '已达上限（5/5）' : '新建发布密钥'}
                   </>
                 )}
               </Button>
@@ -697,7 +732,9 @@ export default function ProfileApiKeysPage() {
           </div>
         </CardContent>
         <CardFooter className="text-xs text-muted-foreground">
-          创建成功后只展示一次明文，建议立即保存。
+          {reachedKeyLimit
+            ? '已达到 5 个密钥上限，需先吊销不再使用的密钥后才能继续创建。'
+            : '创建的是内容发布密钥（content:write）。创建成功后只展示一次明文，建议立即保存。'}
         </CardFooter>
       </Card>
 
@@ -720,6 +757,9 @@ export default function ProfileApiKeysPage() {
                 <p className="font-medium">接口：POST /open/content/posts</p>
                 <p className="mt-1 text-muted-foreground">
                   必填请求头：X-API-Key、Idempotency-Key。每次新请求必须更换 Idempotency-Key，建议格式：post-时间戳-随机串。
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  认证头建议优先使用 X-API-Key。兼容写法：Authorization: Bearer ak_live_... 或 Authorization: ApiKey ak_live_...。
                 </p>
                 <p className="mt-1 text-muted-foreground">
                   作者身份由 API Key 所属用户自动绑定，后端会按密钥 owner 写入作者信息。
@@ -1137,6 +1177,9 @@ export default function ProfileApiKeysPage() {
             <div className="break-all rounded border bg-muted/30 px-3 py-2 font-mono text-sm">
               {secretPayload.key || '-'}
             </div>
+            <p className="text-xs text-muted-foreground">
+              可直接复制下方命令进行发布测试。命令仅在复制时使用当前明文密钥，不会替换页面上的占位示例。
+            </p>
           </div>
           <DialogFooter>
             <Button
@@ -1146,6 +1189,18 @@ export default function ProfileApiKeysPage() {
               }}
             >
               关闭
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                void copyText(
+                  buildPublishCurlWithKey(secretPayload.key, createIdempotencyKeySample()),
+                  '发布 cURL 已复制',
+                );
+              }}
+            >
+              <Copy className="mr-2 h-4 w-4" />
+              复制可直接发布的 cURL
             </Button>
             <Button
               onClick={() => {

@@ -124,15 +124,26 @@ export default function ProfileDashboard({ token }: { token: string }) {
           getMyReservationGames({ token, page: 1, pageSize: 6 }),
         ]);
         if (!mounted) return;
-        setPostItems(postsRes.list || []);
-        setPostTotal(Number(postsRes.total || 0));
-        setPostPage(Number(postsRes.page || 1));
+        if (postsRes.ok) {
+          setPostItems(postsRes.list || []);
+          setPostTotal(Number(postsRes.total || 0));
+          setPostPage(Number(postsRes.page || 1));
+        }
         setFollowedTopics(topicsRes.list || []);
         setTopicTotal(Number(topicsRes.total || 0));
         setTopicPage(Number(topicsRes.page || 1));
-        setReservationGames(reservationsRes.list || []);
-        setReservationTotal(Number(reservationsRes.total || 0));
-        setReservationPage(Number(reservationsRes.page || 1));
+        if (reservationsRes.ok) {
+          setReservationGames(reservationsRes.list || []);
+          setReservationTotal(Number(reservationsRes.total || 0));
+          setReservationPage(Number(reservationsRes.page || 1));
+        }
+        const errorMessages = [postsRes, reservationsRes]
+          .filter((result) => !result.ok)
+          .map((result) => String(result.message || '').trim())
+          .filter(Boolean);
+        if (errorMessages.length > 0) {
+          setErrorText(errorMessages.join(' '));
+        }
       } catch {
         if (!mounted) return;
         setErrorText('个人中心数据加载失败，请稍后重试。');
@@ -232,6 +243,14 @@ export default function ProfileDashboard({ token }: { token: string }) {
     setLoadingMorePosts(true);
     try {
       const res = await getMyDashboardPosts({ token, page: nextPage, pageSize: 6 });
+      if (!res.ok) {
+        toast({
+          title: '加载更多动态失败',
+          description: res.message || '动态列表加载失败，请稍后重试',
+          variant: 'destructive',
+        });
+        return;
+      }
       setPostItems((prev) => [...prev, ...res.list]);
       setPostPage(nextPage);
       setPostTotal(Number(res.total || postTotal));
@@ -260,6 +279,14 @@ export default function ProfileDashboard({ token }: { token: string }) {
     setLoadingMoreReservations(true);
     try {
       const res = await getMyReservationGames({ token, page: nextPage, pageSize: 6 });
+      if (!res.ok) {
+        toast({
+          title: '加载更多预约失败',
+          description: res.message || '预约列表加载失败，请稍后重试',
+          variant: 'destructive',
+        });
+        return;
+      }
       setReservationGames((prev) => [...prev, ...res.list]);
       setReservationPage(nextPage);
       setReservationTotal(Number(res.total || reservationTotal));

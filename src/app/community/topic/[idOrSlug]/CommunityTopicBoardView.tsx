@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -17,26 +17,52 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import {
-  deleteMyCommunityPost,
+  adminDeleteCommunityPost,
+  adminSetCommunityPostStatus,
   followTopic,
+  deleteMyCommunityPost,
+  type CommunityFeedResult,
   getCommunityFeed,
   getCommunityTopicDetail,
+  getTopicFollowStatus,
   moderatorDeleteTopicPost,
   moderatorSetTopicPostStatus,
+  moderatorUpdateTopic,
   setMyCommunityPostStatus,
-  getTopicFollowStatus,
   type CommunityTopicItem,
   unfollowTopic,
 } from '@/lib/community-api';
 import type { CommunityPost } from '@/types';
-import { ArrowLeft, Hash, Loader2, Megaphone, PenSquare, Share2, Users } from 'lucide-react';
+import { ArrowLeft, Hash, Loader2, Megaphone, MoreHorizontal, PenSquare, Share2, Users } from 'lucide-react';
 
 interface CommunityTopicBoardViewProps {
   idOrSlug: string;
+  initialData?: {
+    topic: CommunityTopicItem;
+    latestFeed: CommunityFeedResult;
+    hotFeed: CommunityFeedResult;
+  } | null;
 }
 
 const FALLBACK_TOPIC_ICON = '/favicon.ico';
@@ -52,28 +78,64 @@ function extractAnnouncementText(post: CommunityPost): string {
   return normalized.length > 54 ? `${normalized.slice(0, 54)}...` : normalized;
 }
 
+async function copyTextToClipboard(value: string) {
+  if (!value) return false;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+    const input = document.createElement('input');
+    input.value = value;
+    document.body.appendChild(input);
+    input.select();
+    const copied = document.execCommand('copy');
+    document.body.removeChild(input);
+    return copied;
+  } catch {
+    return false;
+  }
+}
+
 export default function CommunityTopicBoardView({
   idOrSlug,
+  initialData,
 }: CommunityTopicBoardViewProps) {
   const FEED_PAGE_SIZE = 10;
+  const hasInitialData = Boolean(initialData?.topic?._id);
   const router = useRouter();
   const { isAuthenticated, token, user } = useAuth();
   const { toast } = useToast();
 
-  const [topic, setTopic] = useState<CommunityTopicItem | null>(null);
-  const [latestPosts, setLatestPosts] = useState<CommunityPost[]>([]);
-  const [hotPosts, setHotPosts] = useState<CommunityPost[]>([]);
-  const [latestPage, setLatestPage] = useState(1);
-  const [hotPage, setHotPage] = useState(1);
-  const [latestTotal, setLatestTotal] = useState(0);
-  const [hotTotal, setHotTotal] = useState(0);
-  const [latestPageSize, setLatestPageSize] = useState(FEED_PAGE_SIZE);
-  const [hotPageSize, setHotPageSize] = useState(FEED_PAGE_SIZE);
+  const [topic, setTopic] = useState<CommunityTopicItem | null>(() => initialData?.topic || null);
+  const [latestPosts, setLatestPosts] = useState<CommunityPost[]>(() => initialData?.latestFeed.list || []);
+  const [hotPosts, setHotPosts] = useState<CommunityPost[]>(() => initialData?.hotFeed.list || []);
+  const [latestPage, setLatestPage] = useState(() => Math.max(1, Number(initialData?.latestFeed.page || 1)));
+  const [hotPage, setHotPage] = useState(() => Math.max(1, Number(initialData?.hotFeed.page || 1)));
+  const [latestTotal, setLatestTotal] = useState(() => Math.max(0, Number(initialData?.latestFeed.total || 0)));
+  const [hotTotal, setHotTotal] = useState(() => Math.max(0, Number(initialData?.hotFeed.total || 0)));
+  const [latestPageSize, setLatestPageSize] = useState(() => Math.max(1, Number(initialData?.latestFeed.pageSize || FEED_PAGE_SIZE)));
+  const [hotPageSize, setHotPageSize] = useState(() => Math.max(1, Number(initialData?.hotFeed.pageSize || FEED_PAGE_SIZE)));
+  const [latestHasMore, setLatestHasMore] = useState(() => Boolean(initialData?.latestFeed.hasMore));
+  const [hotHasMore, setHotHasMore] = useState(() => Boolean(initialData?.hotFeed.hasMore));
+  const [latestLoadingMore, setLatestLoadingMore] = useState(false);
+  const [hotLoadingMore, setHotLoadingMore] = useState(false);
   const [activeFeedTab, setActiveFeedTab] = useState<'latest' | 'hot'>('latest');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!hasInitialData);
   const [followed, setFollowed] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
   const [moderationPostId, setModerationPostId] = useState('');
+  const [moderationAnnouncement, setModerationAnnouncement] = useState('');
+  const [moderationPinnedPostId, setModerationPinnedPostId] = useState('');
+  const [moderationIsLocked, setModerationIsLocked] = useState(false);
+  const [moderationIsRecommended, setModerationIsRecommended] = useState(false);
+  const [moderationSaving, setModerationSaving] = useState(false);
+  const [moderatorDialogOpen, setModeratorDialogOpen] = useState(false);
+  const [topicIconFailed, setTopicIconFailed] = useState(false);
+  const [topicBackdropFailed, setTopicBackdropFailed] = useState(false);
+  const shouldSkipInitialLoadRef = useRef(hasInitialData);
+  const latestLoadMoreAnchorRef = useRef<HTMLDivElement | null>(null);
+  const hotLoadMoreAnchorRef = useRef<HTMLDivElement | null>(null);
 
   const safeIdOrSlug = useMemo(
     () => decodeURIComponent(String(idOrSlug || '').trim()),
@@ -104,6 +166,10 @@ export default function CommunityTopicBoardView({
     if (!target) return '/community';
     return `/community/topic/${encodeURIComponent(target)}`;
   }, [topic]);
+  const canModerateTopicSettings = useMemo(
+    () => Boolean(topicId && (canModerateTopic || isAdminUser)),
+    [canModerateTopic, isAdminUser, topicId],
+  );
 
   const buildAnnouncementPosts = useCallback(
     (posts: CommunityPost[]) => {
@@ -151,8 +217,8 @@ export default function CommunityTopicBoardView({
     }
 
     const safeTopicId = String(topicDetail._id || '').trim();
-    const targetLatestPage = Math.max(1, Number(options?.latestPage || latestPage || 1));
-    const targetHotPage = Math.max(1, Number(options?.hotPage || hotPage || 1));
+    const targetLatestPage = Math.max(1, Number(options?.latestPage || 1));
+    const targetHotPage = Math.max(1, Number(options?.hotPage || 1));
     const [latest, hot] = await Promise.all([
       getCommunityFeed('latest', { topicId: safeTopicId, page: targetLatestPage, pageSize: FEED_PAGE_SIZE }),
       getCommunityFeed('hot', { topicId: safeTopicId, page: targetHotPage, pageSize: FEED_PAGE_SIZE }),
@@ -167,8 +233,67 @@ export default function CommunityTopicBoardView({
     setHotTotal(hot.total);
     setLatestPageSize(latest.pageSize);
     setHotPageSize(hot.pageSize);
+    setLatestHasMore(Boolean(latest.hasMore));
+    setHotHasMore(Boolean(hot.hasMore));
     setLoading(false);
-  }, [FEED_PAGE_SIZE, hotPage, latestPage, safeIdOrSlug]);
+  }, [FEED_PAGE_SIZE, safeIdOrSlug]);
+
+  const loadMoreByTab = useCallback(async (targetTab: 'latest' | 'hot') => {
+    if (loading || !topicId) return;
+
+    if (targetTab === 'latest') {
+      if (latestLoadingMore || !latestHasMore) return;
+      const nextPage = Math.max(1, latestPage + 1);
+      setLatestLoadingMore(true);
+      const result = await getCommunityFeed('latest', { topicId, page: nextPage, pageSize: FEED_PAGE_SIZE });
+      setLatestLoadingMore(false);
+      if (result.page < nextPage) {
+        toast({ title: '加载失败', description: '接口返回页码未前进，请稍后重试。', variant: 'destructive' });
+        return;
+      }
+      setLatestPosts((prev) => {
+        const seen = new Set(prev.map((item) => String(item.id || '').trim()).filter(Boolean));
+        const merged = [...prev];
+        for (const item of result.list) {
+          const id = String(item.id || '').trim();
+          if (!id || seen.has(id)) continue;
+          seen.add(id);
+          merged.push(item);
+        }
+        return merged;
+      });
+      setLatestPage(result.page);
+      setLatestTotal(result.total);
+      setLatestPageSize(result.pageSize);
+      setLatestHasMore(Boolean(result.hasMore));
+      return;
+    }
+
+    if (hotLoadingMore || !hotHasMore) return;
+    const nextPage = Math.max(1, hotPage + 1);
+    setHotLoadingMore(true);
+    const result = await getCommunityFeed('hot', { topicId, page: nextPage, pageSize: FEED_PAGE_SIZE });
+    setHotLoadingMore(false);
+    if (result.page < nextPage) {
+      toast({ title: '加载失败', description: '接口返回页码未前进，请稍后重试。', variant: 'destructive' });
+      return;
+    }
+    setHotPosts((prev) => {
+      const seen = new Set(prev.map((item) => String(item.id || '').trim()).filter(Boolean));
+      const merged = [...prev];
+      for (const item of result.list) {
+        const id = String(item.id || '').trim();
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        merged.push(item);
+      }
+      return merged;
+    });
+    setHotPage(result.page);
+    setHotTotal(result.total);
+    setHotPageSize(result.pageSize);
+    setHotHasMore(Boolean(result.hasMore));
+  }, [FEED_PAGE_SIZE, hotHasMore, hotLoadingMore, hotPage, latestHasMore, latestLoadingMore, latestPage, loading, toast, topicId]);
 
   const syncFollowStatus = useCallback(async () => {
     if (!isAuthenticated || !token || !topicId) {
@@ -234,16 +359,8 @@ export default function CommunityTopicBoardView({
         : topicSharePath;
 
     try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(shareUrl);
-      } else {
-        const input = document.createElement('input');
-        input.value = shareUrl;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
-      }
+      const copied = await copyTextToClipboard(shareUrl);
+      if (!copied) throw new Error('copy failed');
       toast({
         title: '复制成功',
         description: '话题链接已复制，可直接分享。',
@@ -256,6 +373,23 @@ export default function CommunityTopicBoardView({
       });
     }
   }, [toast, topicSharePath]);
+
+  const handleCopyTopicId = useCallback(async () => {
+    if (!topicId) return;
+    const copied = await copyTextToClipboard(topicId);
+    if (copied) {
+      toast({
+        title: '复制成功',
+        description: '话题 ID 已复制。',
+      });
+      return;
+    }
+    toast({
+      title: '复制失败',
+      description: '请稍后重试',
+      variant: 'destructive',
+    });
+  }, [toast, topicId]);
 
   const handleCreatePost = useCallback(() => {
     if (!topicId) return;
@@ -275,9 +409,10 @@ export default function CommunityTopicBoardView({
     const postAuthorId = String(post?.authorId || '').trim();
     const postAuthorType = String(post?.authorType || '').trim().toLowerCase();
     const isOwner = Boolean(currentUserId && postAuthorId && postAuthorId === currentUserId && postAuthorType === 'user');
-    const canUseTopicModeration = Boolean(topicId && (canModerateTopic || isAdminUser));
-    const canUseMyPostApi = isOwner;
-    if (!postId || !token || (!canUseTopicModeration && !canUseMyPostApi)) return;
+    const canUseTopicModeration = Boolean(topicId && canModerateTopic);
+    const canUseAdminApi = Boolean(isAdminUser && !canUseTopicModeration);
+    const canUseMyPostApi = isOwner && !isAdminUser;
+    if (!postId || !token || (!canUseTopicModeration && !canUseAdminApi && !canUseMyPostApi)) return;
 
     const confirmed = window.confirm('确认隐藏该帖子？隐藏后将不再在社区流中展示。');
     if (!confirmed) return;
@@ -285,6 +420,8 @@ export default function CommunityTopicBoardView({
     setModerationPostId(postId);
     const result = canUseTopicModeration
       ? await moderatorSetTopicPostStatus({ token, topicId: topicId!, postId, status: 0 })
+      : canUseAdminApi
+      ? await adminSetCommunityPostStatus({ token, postId, status: 0 })
       : await setMyCommunityPostStatus({ token, postId, status: 0 });
     setModerationPostId('');
 
@@ -308,9 +445,10 @@ export default function CommunityTopicBoardView({
     const postAuthorId = String(post?.authorId || '').trim();
     const postAuthorType = String(post?.authorType || '').trim().toLowerCase();
     const isOwner = Boolean(currentUserId && postAuthorId && postAuthorId === currentUserId && postAuthorType === 'user');
-    const canUseTopicModeration = Boolean(topicId && (canModerateTopic || isAdminUser));
-    const canUseMyPostApi = isOwner;
-    if (!postId || !token || (!canUseTopicModeration && !canUseMyPostApi)) return;
+    const canUseTopicModeration = Boolean(topicId && canModerateTopic);
+    const canUseAdminApi = Boolean(isAdminUser && !canUseTopicModeration);
+    const canUseMyPostApi = isOwner && !isAdminUser;
+    if (!postId || !token || (!canUseTopicModeration && !canUseAdminApi && !canUseMyPostApi)) return;
 
     const confirmed = window.confirm('确认删除该帖子？此操作会软删除并从列表移除。');
     if (!confirmed) return;
@@ -318,6 +456,8 @@ export default function CommunityTopicBoardView({
     setModerationPostId(postId);
     const result = canUseTopicModeration
       ? await moderatorDeleteTopicPost({ token, topicId: topicId!, postId })
+      : canUseAdminApi
+      ? await adminDeleteCommunityPost({ token, postId })
       : await deleteMyCommunityPost({ token, postId });
     setModerationPostId('');
 
@@ -336,7 +476,49 @@ export default function CommunityTopicBoardView({
     void loadTopicBoard();
   }, [canModerateTopic, currentUserId, isAdminUser, loadTopicBoard, token, toast, topicId]);
 
+  const handleModeratorSave = useCallback(async () => {
+    if (!canModerateTopicSettings || !token || !topicId) return;
+
+    setModerationSaving(true);
+    const result = await moderatorUpdateTopic({
+      token,
+      topicId,
+      patch: {
+        announcement: moderationAnnouncement,
+        is_locked: moderationIsLocked,
+        is_recommended: moderationIsRecommended,
+        pinned_post_id: moderationPinnedPostId.trim() || null,
+      },
+    });
+    setModerationSaving(false);
+
+    if (!result.ok || !result.topic) {
+      toast({
+        title: '保存失败',
+        description: result.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setTopic((prev) => {
+      if (!prev) return result.topic;
+      return {
+        ...prev,
+        ...result.topic,
+      };
+    });
+    toast({
+      title: '保存成功',
+      description: result.message,
+    });
+  }, [canModerateTopicSettings, moderationAnnouncement, moderationIsLocked, moderationIsRecommended, moderationPinnedPostId, toast, token, topicId]);
+
   useEffect(() => {
+    if (shouldSkipInitialLoadRef.current) {
+      shouldSkipInitialLoadRef.current = false;
+      return;
+    }
     void loadTopicBoard({ latestPage: 1, hotPage: 1 });
   }, [loadTopicBoard]);
 
@@ -344,30 +526,40 @@ export default function CommunityTopicBoardView({
     void syncFollowStatus();
   }, [syncFollowStatus]);
 
-  const latestTotalPages = Math.max(1, Math.ceil(latestTotal / Math.max(1, latestPageSize)));
-  const hotTotalPages = Math.max(1, Math.ceil(hotTotal / Math.max(1, hotPageSize)));
+  useEffect(() => {
+    setModerationAnnouncement(String(topic?.announcement || ''));
+    setModerationPinnedPostId(String(topic?.pinned_post_id || ''));
+    setModerationIsLocked(Boolean(topic?.is_locked));
+    setModerationIsRecommended(Boolean(topic?.is_recommended));
+  }, [topic?._id, topic?.announcement, topic?.pinned_post_id, topic?.is_locked, topic?.is_recommended]);
 
-  const handlePageChange = useCallback(
-    (targetTab: 'latest' | 'hot', targetPage: number) => {
-      const normalizedPage = Math.max(1, targetPage);
-      if (targetTab === 'latest') {
-        if (normalizedPage === latestPage) return;
-        void loadTopicBoard({ latestPage: normalizedPage, hotPage });
-        return;
-      }
-      if (normalizedPage === hotPage) return;
-      void loadTopicBoard({ latestPage, hotPage: normalizedPage });
-    },
-    [hotPage, latestPage, loadTopicBoard],
-  );
+  useEffect(() => {
+    setTopicIconFailed(false);
+    setTopicBackdropFailed(false);
+  }, [topic?.app_info?.icon, topic?.cover, topic?.icon, topic?._id]);
+
+  useEffect(() => {
+    const target = activeFeedTab === 'hot' ? hotLoadMoreAnchorRef.current : latestLoadMoreAnchorRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry?.isIntersecting) return;
+        void loadMoreByTab(activeFeedTab);
+      },
+      { rootMargin: '320px 0px' },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [activeFeedTab, loadMoreByTab]);
 
   const renderPostStream = (
     posts: CommunityPost[],
     options: {
       tab: 'latest' | 'hot';
-      page: number;
-      totalPages: number;
-      total: number;
+      hasMore: boolean;
+      loadingMore: boolean;
+      anchorRef: React.RefObject<HTMLDivElement>;
     },
   ) => {
     if (loading) {
@@ -447,30 +639,29 @@ export default function CommunityTopicBoardView({
             当前仅有公告帖子，暂无普通帖子。
           </div>
         )}
-        <div className="flex items-center justify-between rounded-md border bg-card px-3 py-2 text-xs text-muted-foreground sm:text-sm">
-          <span>
-            第 {options.page} / {options.totalPages} 页 · 共 {options.total} 条
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={loading || options.page <= 1}
-              onClick={() => handlePageChange(options.tab, options.page - 1)}
-            >
-              上一页
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={loading || options.page >= options.totalPages}
-              onClick={() => handlePageChange(options.tab, options.page + 1)}
-            >
-              下一页
-            </Button>
+        <div className="rounded-md border bg-card px-3 py-3 text-xs text-muted-foreground sm:text-sm">
+          <div className="flex items-center justify-between">
+            <span>已加载 {posts.length} 条</span>
+            {options.loadingMore ? (
+              <span className="inline-flex items-center gap-1"><Loader2 className="h-3.5 w-3.5 animate-spin" />加载中</span>
+            ) : null}
           </div>
+          <div ref={options.anchorRef} className="h-1 w-full" />
+          {options.hasMore ? (
+            <div className="mt-2 flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={loading || options.loadingMore}
+                onClick={() => void loadMoreByTab(options.tab)}
+              >
+                {options.loadingMore ? '加载中...' : '加载更多'}
+              </Button>
+            </div>
+          ) : (
+            <p className="mt-2 text-right text-[11px] text-muted-foreground">没有更多内容了</p>
+          )}
         </div>
       </div>
     );
@@ -497,11 +688,17 @@ export default function CommunityTopicBoardView({
     );
   }
 
-  const topicIcon = topic?.app_info?.icon || topic?.icon || FALLBACK_TOPIC_ICON;
-  const topicBackdrop = topic?.cover || topic?.app_info?.icon || topic?.icon || '';
+  const topicIcon = topicIconFailed
+    ? FALLBACK_TOPIC_ICON
+    : topic?.app_info?.icon || topic?.icon || FALLBACK_TOPIC_ICON;
+  const topicBackdrop = topicBackdropFailed
+    ? ''
+    : topic?.cover || topic?.app_info?.icon || topic?.icon || '';
   const moderators = Array.isArray(topic?.moderator_infos)
     ? topic!.moderator_infos!
     : [];
+  const previewModerators = moderators.slice(0, 2);
+  const hasModerators = moderators.length > 0;
 
   return (
     <div className="container mx-auto px-2 py-4 sm:px-4 sm:py-6 lg:py-8">
@@ -525,6 +722,7 @@ export default function CommunityTopicBoardView({
                   fill
                   className="object-cover"
                   sizes="(max-width: 1024px) 100vw, 960px"
+                  onError={() => setTopicBackdropFailed(true)}
                 />
                 <div className="absolute inset-0 bg-background/65 backdrop-blur-xl" />
               </>
@@ -541,6 +739,7 @@ export default function CommunityTopicBoardView({
                     width={72}
                     height={72}
                     className="rounded-xl border border-white/45 object-cover shadow-sm"
+                    onError={() => setTopicIconFailed(true)}
                   />
                   <div className="min-w-0">
                     <CardTitle className="line-clamp-2 text-xl">
@@ -562,6 +761,53 @@ export default function CommunityTopicBoardView({
                       {topic?.is_locked ? (
                         <Badge variant="secondary">已锁定</Badge>
                       ) : null}
+                    </div>
+                    <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground lg:hidden">
+                      <Users className="h-3.5 w-3.5 shrink-0" />
+                      <span className="shrink-0">版主：</span>
+                      {hasModerators ? (
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <div className="flex items-center -space-x-2">
+                            {previewModerators.map((moderator) => {
+                              const moderatorName = String(moderator?.name || moderator?.username || '版主').trim();
+                              const avatar = String(moderator?.avatar || '').trim();
+                              return (
+                                <Avatar
+                                  key={`topic-mobile-moderator-${String(moderator?._id || moderatorName)}`}
+                                  className="h-5 w-5 border border-background"
+                                >
+                                  <AvatarImage src={avatar} alt={moderatorName} />
+                                  <AvatarFallback className="text-[10px]">
+                                    {moderatorName.slice(0, 2)}
+                                  </AvatarFallback>
+                                </Avatar>
+                              );
+                            })}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-xs leading-none"
+                            onClick={() => setModeratorDialogOpen(true)}
+                          >
+                            更多&gt;&gt;
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <span className="truncate">暂未设置</span>
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-xs leading-none"
+                            onClick={() => setModeratorDialogOpen(true)}
+                          >
+                            更多&gt;&gt;
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -612,6 +858,87 @@ export default function CommunityTopicBoardView({
             </Card>
           ) : null}
 
+          {canModerateTopicSettings ? (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">话题治理面板</CardTitle>
+                <CardDescription>版主和管理员可直接调整公告、锁定、推荐与置顶设置。</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                    <div>
+                      <Label htmlFor="topic-lock" className="text-sm">锁定话题</Label>
+                      <p className="text-xs text-muted-foreground">锁定后，普通用户不可在此话题发帖。</p>
+                    </div>
+                    <Switch
+                      id="topic-lock"
+                      checked={moderationIsLocked}
+                      onCheckedChange={setModerationIsLocked}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                    <div>
+                      <Label htmlFor="topic-recommend" className="text-sm">推荐话题</Label>
+                      <p className="text-xs text-muted-foreground">推荐后，话题可在前端优先曝光。</p>
+                    </div>
+                    <Switch
+                      id="topic-recommend"
+                      checked={moderationIsRecommended}
+                      onCheckedChange={setModerationIsRecommended}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="topic-announcement">话题公告</Label>
+                  <Textarea
+                    id="topic-announcement"
+                    placeholder="输入公告内容，展示在话题顶部。"
+                    rows={3}
+                    maxLength={300}
+                    value={moderationAnnouncement}
+                    onChange={(event) => setModerationAnnouncement(event.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="topic-pinned-post-id">置顶帖子 ID（可选）</Label>
+                  <Input
+                    id="topic-pinned-post-id"
+                    placeholder="填写帖子 ID，留空表示取消置顶"
+                    value={moderationPinnedPostId}
+                    onChange={(event) => setModerationPinnedPostId(event.target.value)}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={moderationSaving}
+                    onClick={() => {
+                      setModerationAnnouncement(String(topic?.announcement || ''));
+                      setModerationPinnedPostId(String(topic?.pinned_post_id || ''));
+                      setModerationIsLocked(Boolean(topic?.is_locked));
+                      setModerationIsRecommended(Boolean(topic?.is_recommended));
+                    }}
+                  >
+                    重置
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={moderationSaving}
+                    onClick={() => void handleModeratorSave()}
+                  >
+                    {moderationSaving ? '保存中...' : '保存治理设置'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+
           <Tabs
             value={activeFeedTab}
             onValueChange={(value) => setActiveFeedTab(value === 'hot' ? 'hot' : 'latest')}
@@ -623,33 +950,58 @@ export default function CommunityTopicBoardView({
             <TabsContent value="latest">
               {renderPostStream(latestPosts, {
                 tab: 'latest',
-                page: latestPage,
-                totalPages: latestTotalPages,
-                total: latestTotal,
+                hasMore: latestHasMore,
+                loadingMore: latestLoadingMore,
+                anchorRef: latestLoadMoreAnchorRef,
               })}
             </TabsContent>
             <TabsContent value="hot">
               {renderPostStream(hotPosts, {
                 tab: 'hot',
-                page: hotPage,
-                totalPages: hotTotalPages,
-                total: hotTotal,
+                hasMore: hotHasMore,
+                loadingMore: hotLoadingMore,
+                anchorRef: hotLoadMoreAnchorRef,
               })}
             </TabsContent>
           </Tabs>
         </section>
 
-        <aside className="space-y-4">
+        <aside className="hidden space-y-4 lg:block">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center text-base">
-                <Users className="mr-2 h-4 w-4" />
-                版主团队
-              </CardTitle>
-              <CardDescription>负责本话题管理与内容治理。</CardDescription>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="flex items-center text-base">
+                    <Users className="mr-2 h-4 w-4" />
+                    版主团队
+                  </CardTitle>
+                  <CardDescription>负责本话题管理与内容治理。</CardDescription>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="mt-[-4px] h-8 w-8 shrink-0 text-muted-foreground/70"
+                      aria-label="话题操作"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      disabled={!topicId}
+                      onClick={() => void handleCopyTopicId()}
+                    >
+                      复制话题 ID
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {moderators.length ? (
+              {hasModerators ? (
                 moderators.map((moderator) => {
                   const moderatorName = String(
                     moderator?.name || moderator?.username || '版主',
@@ -689,6 +1041,67 @@ export default function CommunityTopicBoardView({
           </Card>
         </aside>
       </div>
+
+      <Dialog open={moderatorDialogOpen} onOpenChange={setModeratorDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center text-base">
+              <Users className="mr-2 h-4 w-4" />
+              版主团队
+            </DialogTitle>
+            <DialogDescription>负责本话题管理与内容治理。</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!topicId}
+                onClick={() => void handleCopyTopicId()}
+              >
+                复制话题 ID
+              </Button>
+            </div>
+            {hasModerators ? (
+              moderators.map((moderator) => {
+                const moderatorName = String(
+                  moderator?.name || moderator?.username || '版主',
+                ).trim();
+                const moderatorUsername = String(
+                  moderator?.username || '',
+                ).trim();
+                const avatar = String(moderator?.avatar || '').trim();
+                return (
+                  <div
+                    key={`topic-dialog-moderator-${String(moderator?._id || moderatorName)}`}
+                    className="flex items-center gap-3 rounded-md border px-3 py-2"
+                  >
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={avatar} alt={moderatorName} />
+                      <AvatarFallback>
+                        {moderatorName.slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="line-clamp-1 text-sm font-medium">
+                        {moderatorName}
+                      </p>
+                      {moderatorUsername ? (
+                        <p className="line-clamp-1 text-xs text-muted-foreground">
+                          @{moderatorUsername}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-sm text-muted-foreground">暂未设置版主。</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

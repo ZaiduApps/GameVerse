@@ -13,6 +13,7 @@ import { followTopicById, getMyFollowedGameTopics, unfollowTopicById } from '@/l
 import type { CommunityTopicItem } from '@/lib/community-api';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
+import CenterAuthRequired from '../CenterAuthRequired';
 import CenterPageHeader from '../CenterPageHeader';
 
 export default function ProfileCenterTopicsPage() {
@@ -32,10 +33,6 @@ export default function ProfileCenterTopicsPage() {
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    if (!isAuthLoading && !isAuthenticated) {
-      router.push('/');
-      return;
-    }
     async function load() {
       if (!token) return;
       setLoading(true);
@@ -51,7 +48,7 @@ export default function ProfileCenterTopicsPage() {
     if (isAuthenticated && token) {
       void load();
     }
-  }, [isAuthLoading, isAuthenticated, router, searchParams, token]);
+  }, [isAuthLoading, isAuthenticated, searchParams, token]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -129,7 +126,21 @@ export default function ProfileCenterTopicsPage() {
     });
   }
 
-  if (isAuthLoading || loading) {
+  if (isAuthLoading) {
+    return <div className="flex min-h-[40vh] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <CenterAuthRequired
+        title="我关注的游戏社区"
+        description="管理你关注的话题社区与关联游戏。"
+        containerClassName="max-w-4xl"
+      />
+    );
+  }
+
+  if (loading) {
     return <div className="flex min-h-[40vh] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
 

@@ -1,5 +1,6 @@
 const DEVICE_ID_KEY = 'tracking_device_id';
 const SESSION_ID_KEY = 'tracking_session_id';
+const trackingMemoryStore = new Map<string, string>();
 
 function randId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -9,13 +10,23 @@ function getOrCreateStorageValue(key: string, prefix: string): string {
   if (typeof window === 'undefined') {
     return `${prefix}-server`;
   }
-  const existing = localStorage.getItem(key);
-  if (existing) {
-    return existing;
+  const memoryCached = trackingMemoryStore.get(key);
+  try {
+    const existing = localStorage.getItem(key);
+    if (existing) {
+      trackingMemoryStore.set(key, existing);
+      return existing;
+    }
+    const created = randId(prefix);
+    localStorage.setItem(key, created);
+    trackingMemoryStore.set(key, created);
+    return created;
+  } catch {
+    if (memoryCached) return memoryCached;
+    const created = randId(prefix);
+    trackingMemoryStore.set(key, created);
+    return created;
   }
-  const created = randId(prefix);
-  localStorage.setItem(key, created);
-  return created;
 }
 
 export function buildTrackingHeaders(
@@ -25,10 +36,14 @@ export function buildTrackingHeaders(
     process.env.NEXT_PUBLIC_APP_VERSION ||
     process.env.NEXT_PUBLIC_GIT_SHA ||
     'web';
+  const channelCode =
+    process.env.NEXT_PUBLIC_TRACKING_CHANNEL_CODE ||
+    'gameverse_web';
 
   const headers: Record<string, string> = {
     'x-client-platform': 'web',
     'x-app-version': appVersion,
+    'x-channel-code': channelCode,
     'x-device-id': getOrCreateStorageValue(DEVICE_ID_KEY, 'web'),
     'x-session-id': getOrCreateStorageValue(SESSION_ID_KEY, 'sess'),
     'x-request-id': randId('req'),

@@ -24,6 +24,130 @@ const isAcboxUrl = (value: string): boolean => /^acbox:\/\//i.test(value.trim())
 const isAppDeepLink = (value: string): boolean =>
   /^(acbox|uu-mobile):\/\//i.test(value.trim());
 
+interface RenderMarkdownOptions {
+  blockedLinkHosts?: string[];
+  preset?: "default" | "detail";
+  injectHeadingAnchors?: boolean;
+}
+
+export interface MarkdownHeadingItem {
+  id: string;
+  text: string;
+  level: number;
+  source: "heading" | "inferred";
+}
+
+export interface RenderedMarkdownDocument {
+  html: string;
+  headings: MarkdownHeadingItem[];
+}
+
+type MarkdownClassPreset = "default" | "detail";
+
+interface MarkdownClassSet {
+  h1: string;
+  h2: string;
+  h3: string;
+  h4: string;
+  paragraph: string;
+  unorderedList: string;
+  unorderedListItem: string;
+  orderedList: string;
+  orderedListItem: string;
+  blockquote: string;
+  quoteH1: string;
+  quoteH2: string;
+  quoteH3: string;
+  quoteH4: string;
+  hr: string;
+  link: string;
+  appLink: string;
+  blockedLink: string;
+  invalidLink: string;
+  codeBlock: string;
+  inlineCode: string;
+  tableWrap: string;
+  table: string;
+  tableRow: string;
+  tableHeaderCell: string;
+  tableBodyCell: string;
+  image: string;
+}
+
+const MARKDOWN_CLASS_SETS: Record<MarkdownClassPreset, MarkdownClassSet> = {
+  default: {
+    h1: "text-3xl font-bold my-5 border-b pb-3",
+    h2: "text-2xl font-bold my-4 border-b pb-2",
+    h3: "text-xl font-semibold my-3",
+    h4: "text-lg font-semibold my-2",
+    paragraph: "my-2",
+    unorderedList: "list-disc list-inside my-2 space-y-1",
+    unorderedListItem: "",
+    orderedList: "list-decimal list-inside my-2 space-y-1",
+    orderedListItem: "",
+    blockquote: "border-l-4 border-primary bg-primary/10 pl-4 py-2 my-4 rounded-r-md text-foreground/90",
+    quoteH1: "text-3xl font-bold my-1",
+    quoteH2: "text-2xl font-bold my-1",
+    quoteH3: "text-xl font-semibold my-1",
+    quoteH4: "text-lg font-semibold my-1",
+    hr: "my-6",
+    link: "text-primary hover:underline",
+    appLink: "text-primary hover:underline",
+    blockedLink: "text-foreground/90",
+    invalidLink: "text-muted-foreground",
+    codeBlock: "bg-muted p-3 rounded-md text-sm my-4 overflow-x-auto",
+    inlineCode: "bg-muted px-1.5 py-1 rounded-sm text-sm",
+    tableWrap: "overflow-x-auto my-4",
+    table: "w-full text-left border-collapse",
+    tableRow: "",
+    tableHeaderCell: "border p-2 bg-muted font-semibold",
+    tableBodyCell: "border p-2",
+    image: "block mx-auto w-full max-w-[600px] max-h-[44vh] sm:max-h-[52vh] h-auto rounded-lg my-5 sm:my-7",
+  },
+  detail: {
+    h1: "mt-8 mb-5 text-3xl font-semibold tracking-[0.01em] text-foreground sm:text-[2rem]",
+    h2: "relative mt-8 mb-5 overflow-hidden rounded-xl bg-gradient-to-r from-primary/[0.12] via-accent/[0.05] to-transparent px-4 py-3 pl-6 text-2xl font-semibold text-foreground sm:px-5 sm:pl-7 sm:text-[1.7rem] before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1 before:rounded-full before:bg-primary/75 before:content-['']",
+    h3: "relative mt-6 mb-4 overflow-hidden rounded-lg bg-muted/45 px-3.5 py-2.5 pl-5 text-xl font-semibold text-foreground sm:text-[1.35rem] before:absolute before:left-0 before:top-2.5 before:bottom-2.5 before:w-[3px] before:rounded-full before:bg-accent/70 before:content-['']",
+    h4: "relative mt-5 mb-3 overflow-hidden rounded-md bg-primary/[0.05] px-3 py-2 pl-5 text-lg font-semibold text-foreground/95 sm:text-[1.12rem] before:absolute before:left-2 before:top-1/2 before:h-4 before:w-[2px] before:-translate-y-1/2 before:rounded-full before:bg-primary/65 before:content-['']",
+    paragraph: "my-3 leading-8 text-foreground/90",
+    unorderedList: "my-4 list-none space-y-3 pl-0",
+    unorderedListItem: "relative overflow-hidden rounded-lg bg-gradient-to-r from-primary/[0.08] via-accent/[0.04] to-transparent px-4 py-3 pl-6 leading-7 text-foreground/90 before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:rounded-full before:bg-primary/55 before:content-[''] after:absolute after:left-2.5 after:top-[1.2rem] after:h-1.5 after:w-1.5 after:rounded-full after:bg-primary/80 after:content-['']",
+    orderedList: "my-4 list-decimal space-y-2 pl-6 leading-8 text-foreground/90 marker:font-semibold marker:text-primary/75",
+    orderedListItem: "pl-1",
+    blockquote: "relative my-5 overflow-hidden rounded-r-xl bg-gradient-to-r from-accent/[0.08] via-muted/55 to-transparent px-4 py-3 pl-5 leading-7 text-foreground/85 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1 before:rounded-full before:bg-accent/65 before:content-['']",
+    quoteH1: "text-2xl font-semibold text-foreground",
+    quoteH2: "text-xl font-semibold text-foreground",
+    quoteH3: "text-lg font-semibold text-foreground",
+    quoteH4: "text-base font-semibold text-foreground",
+    hr: "my-8 h-px rounded-full bg-gradient-to-r from-transparent via-primary/25 to-transparent",
+    link: "text-primary underline decoration-primary/45 underline-offset-4 transition-colors hover:text-primary/80",
+    appLink: "text-primary underline decoration-primary/45 underline-offset-4 transition-colors hover:text-primary/80",
+    blockedLink: "text-foreground/90",
+    invalidLink: "text-muted-foreground",
+    codeBlock: "my-5 overflow-x-auto rounded-lg bg-muted/70 px-4 py-3 text-[13px] leading-6 text-foreground/90",
+    inlineCode: "rounded bg-muted/80 px-1.5 py-[2px] text-[0.9em] text-foreground",
+    tableWrap: "my-5 overflow-x-auto",
+    table: "w-full min-w-[420px] text-left text-sm text-foreground/90",
+    tableRow: "odd:bg-muted/[0.16]",
+    tableHeaderCell: "bg-muted/65 px-3 py-2.5 font-semibold text-foreground",
+    tableBodyCell: "px-3 py-2.5 align-top",
+    image: "my-7 block h-auto max-h-[48vh] w-full max-w-[680px] rounded-xl bg-muted/20 object-contain sm:my-9 sm:max-h-[56vh]",
+  },
+};
+
+const resolveMarkdownClassSet = (
+  preset?: MarkdownClassPreset,
+): MarkdownClassSet =>
+  MARKDOWN_CLASS_SETS[preset === "detail" ? "detail" : "default"];
+
+const parseHostname = (url: string): string => {
+  try {
+    return new URL(url).hostname.trim().toLowerCase();
+  } catch {
+    return "";
+  }
+};
+
 const preprocessHtmlImageAsMarkdown = (raw: string): string => {
   let result = raw.replace(
     /<p[^>]*class=["']defined-image["'][^>]*>\s*<img([^>]*)>\s*<\/p>/gi,
@@ -44,6 +168,20 @@ const preprocessHtmlImageAsMarkdown = (raw: string): string => {
   );
   return result;
 };
+
+const preprocessHtmlHeadings = (raw: string): string =>
+  raw.replace(
+    /<h([1-4])[^>]*>([\s\S]*?)<\/h\1>/gi,
+    (_m, level, inner) => {
+      const text = String(inner || "")
+        .replace(/<br\s*\/?>/gi, " ")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!text) return "";
+      return `${"#".repeat(Number(level))} ${text}`;
+    },
+  );
 
 const preprocessCodeLinkAsQuote = (raw: string): string =>
   raw.replace(
@@ -73,77 +211,135 @@ const preprocessPartingLine = (raw: string): string =>
     },
   );
 
-const renderSafeLink = (label: string, urlRaw: string): string => {
+const renderSafeLink = (
+  label: string,
+  urlRaw: string,
+  blockedHosts: ReadonlySet<string>,
+  classSet: MarkdownClassSet,
+): string => {
   const url = urlRaw.trim();
   if (isHttpsUrl(url)) {
-    return `<a href="${url}" class="text-primary hover:underline" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    const host = parseHostname(url);
+    if (host && blockedHosts.has(host)) {
+      return `<span class="${classSet.blockedLink}">${label}</span>`;
+    }
+    return `<a href="${url}" class="${classSet.link}" target="_blank" rel="noopener noreferrer">${label}</a>`;
   }
   if (isAppDeepLink(url)) {
-    return `<a href="#" data-app-link="${url}" class="text-primary hover:underline">${label}</a>`;
+    return `<a href="#" data-app-link="${url}" class="${classSet.appLink}">${label}</a>`;
   }
-  return `<span class="text-muted-foreground">${label} (${url})</span>`;
+  return `<span class="${classSet.invalidLink}">${label} (${url})</span>`;
 };
 
-const renderSafeImage = (alt: string, urlRaw: string): string => {
+const renderSafeImage = (
+  alt: string,
+  urlRaw: string,
+  classSet: MarkdownClassSet,
+): string => {
   const url = urlRaw.trim();
   if (!isHttpsUrl(url)) {
-    return `<span class="text-muted-foreground">[图片链接已拦截: ${url}]</span>`;
+    return `<span class="${classSet.invalidLink}">[图片链接已拦截: ${url}]</span>`;
   }
   const safeAlt = (alt || '').trim() || '内容配图';
-  return `<img alt="${safeAlt}" src="${url}" class="block mx-auto w-full max-w-[600px] max-h-[44vh] sm:max-h-[52vh] h-auto rounded-lg my-5 sm:my-7" />`;
+  return `<img alt="${safeAlt}" src="${url}" class="${classSet.image}" />`;
 };
 
-export const renderMarkdown = (input: unknown): { __html: string } => {
+const stripHtmlTags = (value: string): string =>
+  String(value || "")
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const renderListItem = (content: string, className: string): string =>
+  className ? `<li class="${className}">${content}</li>` : `<li>${content}</li>`;
+
+const resolveHeadingAttrs = (
+  rawAttrs: string,
+  headingId: string,
+  injectHeadingAnchors: boolean,
+): string => {
+  let nextAttrs = rawAttrs
+    .replace(/\sdata-toc-source="[^"]*"/g, "")
+    .replace(/\sid="[^"]*"/g, "");
+
+  if (!injectHeadingAnchors) return nextAttrs;
+
+  if (/class="/.test(nextAttrs)) {
+    nextAttrs = nextAttrs.replace(
+      /class="([^"]*)"/,
+      (_m, className) => `class="${String(className || "").trim()} scroll-mt-24"`,
+    );
+  } else {
+    nextAttrs += ' class="scroll-mt-24"';
+  }
+
+  nextAttrs += ` id="${headingId}"`;
+  return nextAttrs;
+};
+
+export const buildRenderedMarkdownDocument = (
+  input: unknown,
+  options?: RenderMarkdownOptions,
+): RenderedMarkdownDocument => {
   try {
+    const classSet = resolveMarkdownClassSet(options?.preset);
+    const blockedHosts = new Set(
+      (options?.blockedLinkHosts || [])
+        .map((host) => String(host || "").trim().toLowerCase())
+        .filter(Boolean),
+    );
     const raw = normalizeMarkdownInput(input);
-    if (!raw.trim()) return { __html: "" };
+    if (!raw.trim()) return { html: "", headings: [] };
 
     const preprocessed = preprocessPartingLine(
       preprocessCodeLinkAsQuote(
-        preprocessHtmlImageAsMarkdown(raw.replace(/\r\n?/g, "\n")),
+        preprocessHtmlHeadings(
+          preprocessHtmlImageAsMarkdown(raw.replace(/\r\n?/g, "\n")),
+        ),
       ),
     );
 
     let html = escapeHtml(preprocessed)
-      .replace(/^#### (.*$)/gim, '<h4 class="text-lg font-semibold my-2">$1</h4>')
-      .replace(/^### (.*$)/gim, '<h3 class="text-xl font-semibold my-3">$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold my-4 border-b pb-2">$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1 class="text-3xl font-bold my-5 border-b pb-3">$1</h1>')
-      .replace(/!\[([^\]]*)\]\(([^)]+)\)/gim, (_m, alt, src) => renderSafeImage(alt, src))
+      .replace(/^#### (.*$)/gim, `<h4 data-toc-source="heading" class="${classSet.h4}">$1</h4>`)
+      .replace(/^### (.*$)/gim, `<h3 data-toc-source="heading" class="${classSet.h3}">$1</h3>`)
+      .replace(/^## (.*$)/gim, `<h2 data-toc-source="heading" class="${classSet.h2}">$1</h2>`)
+      .replace(/^# (.*$)/gim, `<h1 data-toc-source="heading" class="${classSet.h1}">$1</h1>`)
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/gim, (_m, alt, src) => renderSafeImage(alt, src, classSet))
       .replace(/\*\*(.*?)\*\*/gim, "<strong>$1</strong>")
       .replace(/\*(.*?)\*/gim, "<em>$1</em>")
       .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, (_m, label, target) => {
         const rawTarget = String(target || '').trim();
         const urlOnly = rawTarget.split(/\s+/)[0] || rawTarget;
-        return renderSafeLink(label, urlOnly);
+        return renderSafeLink(label, urlOnly, blockedHosts, classSet);
       })
       .replace(
         /```([a-zA-Z0-9_-]+)?\n([\s\S]*?)```/gim,
         (_m, lang, code) =>
-          `<pre class="bg-muted p-3 rounded-md text-sm my-4 overflow-x-auto"><code${lang ? ` class="language-${lang}"` : ""}>${code}</code></pre>`,
+          `<pre class="${classSet.codeBlock}"><code${lang ? ` class="language-${lang}"` : ""}>${code}</code></pre>`,
       )
-      .replace(/`([^`]+)`/gim, '<code class="bg-muted px-1.5 py-1 rounded-sm text-sm">$1</code>')
+      .replace(/`([^`]+)`/gim, `<code class="${classSet.inlineCode}">$1</code>`)
       .replace(
         /^&gt;\s*#### (.*$)/gim,
-        '<blockquote class="border-l-4 border-primary bg-primary/10 pl-4 py-2 my-4 rounded-r-md text-foreground/90"><h4 class="text-lg font-semibold my-1">$1</h4></blockquote>',
+        `<blockquote class="${classSet.blockquote}"><h4 data-toc-source="heading" class="${classSet.quoteH4}">$1</h4></blockquote>`,
       )
       .replace(
         /^&gt;\s*### (.*$)/gim,
-        '<blockquote class="border-l-4 border-primary bg-primary/10 pl-4 py-2 my-4 rounded-r-md text-foreground/90"><h3 class="text-xl font-semibold my-1">$1</h3></blockquote>',
+        `<blockquote class="${classSet.blockquote}"><h3 data-toc-source="heading" class="${classSet.quoteH3}">$1</h3></blockquote>`,
       )
       .replace(
         /^&gt;\s*## (.*$)/gim,
-        '<blockquote class="border-l-4 border-primary bg-primary/10 pl-4 py-2 my-4 rounded-r-md text-foreground/90"><h2 class="text-2xl font-bold my-1">$1</h2></blockquote>',
+        `<blockquote class="${classSet.blockquote}"><h2 data-toc-source="heading" class="${classSet.quoteH2}">$1</h2></blockquote>`,
       )
       .replace(
         /^&gt;\s*# (.*$)/gim,
-        '<blockquote class="border-l-4 border-primary bg-primary/10 pl-4 py-2 my-4 rounded-r-md text-foreground/90"><h1 class="text-3xl font-bold my-1">$1</h1></blockquote>',
+        `<blockquote class="${classSet.blockquote}"><h1 data-toc-source="heading" class="${classSet.quoteH1}">$1</h1></blockquote>`,
       )
       .replace(
         /^&gt; (.*$)/gim,
-        '<blockquote class="border-l-4 border-primary bg-primary/10 pl-4 py-2 my-4 rounded-r-md text-foreground/90">$1</blockquote>',
+        `<blockquote class="${classSet.blockquote}">$1</blockquote>`,
       )
-      .replace(/^---$/gim, '<hr class="my-6" />');
+      .replace(/^---$/gim, `<hr class="${classSet.hr}" />`);
 
     const tableRegex = /\|(.+)\|\n\|( *[-:]+ *\|)+([\s\S]*?)(?=\n\n|$)/g;
     html = html.replace(tableRegex, (match) => {
@@ -151,18 +347,20 @@ export const renderMarkdown = (input: unknown): { __html: string } => {
       const headerCells = rows[0].split("|").map((h) => h.trim()).filter(Boolean);
 
       let tableHtml =
-        '<div class="overflow-x-auto my-4"><table class="w-full text-left border-collapse"><thead><tr>';
+        `<div class="${classSet.tableWrap}"><table class="${classSet.table}"><thead><tr>`;
       headerCells.forEach((h) => {
-        tableHtml += `<th class="border p-2 bg-muted font-semibold">${h}</th>`;
+        tableHtml += `<th class="${classSet.tableHeaderCell}">${h}</th>`;
       });
       tableHtml += "</tr></thead><tbody>";
 
       rows.slice(2).forEach((rowLine) => {
         const cells = rowLine.split("|").map((c) => c.trim()).slice(1, -1);
         if (cells.length === headerCells.length) {
-          tableHtml += "<tr>";
+          tableHtml += classSet.tableRow
+            ? `<tr class="${classSet.tableRow}">`
+            : "<tr>";
           cells.forEach((cell) => {
-            tableHtml += `<td class="border p-2">${cell}</td>`;
+            tableHtml += `<td class="${classSet.tableBodyCell}">${cell}</td>`;
           });
           tableHtml += "</tr>";
         }
@@ -178,6 +376,8 @@ export const renderMarkdown = (input: unknown): { __html: string } => {
 
     lines.forEach((line) => {
       const trimmed = line.trim();
+      const inferredHeadingMatch = trimmed.match(/^<strong>(.+?)<\/strong>$/);
+
       if (trimmed.startsWith('<div class="overflow-x-auto')) {
         if (inUnorderedList) {
           finalHtml += "</ul>";
@@ -198,10 +398,13 @@ export const renderMarkdown = (input: unknown): { __html: string } => {
           inOrderedList = false;
         }
         if (!inUnorderedList) {
-          finalHtml += '<ul class="list-disc list-inside my-2 space-y-1">';
+          finalHtml += `<ul class="${classSet.unorderedList}">`;
           inUnorderedList = true;
         }
-        finalHtml += `<li>${unorderedMatch[1]}</li>`;
+        finalHtml += renderListItem(
+          unorderedMatch[1],
+          classSet.unorderedListItem,
+        );
         return;
       }
 
@@ -212,10 +415,13 @@ export const renderMarkdown = (input: unknown): { __html: string } => {
           inUnorderedList = false;
         }
         if (!inOrderedList) {
-          finalHtml += '<ol class="list-decimal list-inside my-2 space-y-1">';
+          finalHtml += `<ol class="${classSet.orderedList}">`;
           inOrderedList = true;
         }
-        finalHtml += `<li>${orderedMatch[1]}</li>`;
+        finalHtml += renderListItem(
+          orderedMatch[1],
+          classSet.orderedListItem,
+        );
         return;
       }
 
@@ -228,8 +434,13 @@ export const renderMarkdown = (input: unknown): { __html: string } => {
         inOrderedList = false;
       }
 
+      if (inferredHeadingMatch) {
+        finalHtml += `<h3 data-toc-source="inferred" class="${classSet.h3}">${inferredHeadingMatch[1]}</h3>`;
+        return;
+      }
+
       if (!trimmed.startsWith("<")) {
-        finalHtml += `<p class="my-2">${trimmed}</p>`;
+        finalHtml += `<p class="${classSet.paragraph}">${trimmed}</p>`;
       } else {
         finalHtml += trimmed;
       }
@@ -238,9 +449,43 @@ export const renderMarkdown = (input: unknown): { __html: string } => {
     if (inUnorderedList) finalHtml += "</ul>";
     if (inOrderedList) finalHtml += "</ol>";
 
-    return { __html: finalHtml };
+    const headings: MarkdownHeadingItem[] = [];
+    let headingIndex = 0;
+    const htmlWithAnchors = finalHtml.replace(
+      /<h([1-4])([^>]*)>([\s\S]*?)<\/h\1>/g,
+      (match, level, rawAttrs, inner) => {
+        const text = stripHtmlTags(inner);
+        if (!text) return match;
+        const headingId = `post-heading-${headingIndex}`;
+        headingIndex += 1;
+        headings.push({
+          id: headingId,
+          text,
+          level: Number(level),
+          source: /data-toc-source="inferred"/.test(rawAttrs) ? "inferred" : "heading",
+        });
+        const nextAttrs = resolveHeadingAttrs(
+          rawAttrs,
+          headingId,
+          Boolean(options?.injectHeadingAnchors),
+        );
+        return `<h${level}${nextAttrs}>${inner}</h${level}>`;
+      },
+    );
+
+    return { html: htmlWithAnchors, headings };
   } catch {
     const fallback = escapeHtml(normalizeMarkdownInput(input));
-    return { __html: fallback ? `<p class="my-2">${fallback}</p>` : "" };
+    return {
+      html: fallback ? `<p class="my-2">${fallback}</p>` : "",
+      headings: [],
+    };
   }
 };
+
+export const renderMarkdown = (
+  input: unknown,
+  options?: RenderMarkdownOptions,
+): { __html: string } => ({
+  __html: buildRenderedMarkdownDocument(input, options).html,
+});

@@ -31,6 +31,7 @@ interface CommunityPostCardProps {
   moderationBusy?: boolean;
   onDelete?: (post: CommunityPost) => void;
   onHide?: (post: CommunityPost) => void;
+  onOpenPost?: (postId: string) => void;
 }
 
 const BOOKMARK_STORAGE_KEY = 'community:bookmarked-posts:v1';
@@ -45,6 +46,22 @@ const LIKE_BURST_SPARKS: Array<{ x: number; y: number; color: string; delay: num
   { x: -16, y: 0, color: '#fdc003', delay: 120 },
   { x: -13, y: -11, color: '#ff7767', delay: 140 },
 ];
+const LIKE_STATUS_CACHE = new Map<string, boolean>();
+const LIKE_STATUS_INFLIGHT = new Map<string, Promise<boolean | null>>();
+
+function buildLikeStatusCacheKey(postId: string, token: string): string {
+  return `${token}::${postId}`;
+}
+
+function setLikeStatusCache(cacheKey: string, liked: boolean) {
+  if (!LIKE_STATUS_CACHE.has(cacheKey) && LIKE_STATUS_CACHE.size >= 400) {
+    const oldestKey = LIKE_STATUS_CACHE.keys().next().value;
+    if (oldestKey) {
+      LIKE_STATUS_CACHE.delete(oldestKey);
+    }
+  }
+  LIKE_STATUS_CACHE.set(cacheKey, liked);
+}
 
 function readBookmarkedPostIds(): string[] {
   if (typeof window === 'undefined') return [];
@@ -165,6 +182,7 @@ export default function CommunityPostCard({
   moderationBusy = false,
   onDelete,
   onHide,
+  onOpenPost,
 }: CommunityPostCardProps) {
   const router = useRouter();
   const { token, isAuthenticated } = useAuth();
@@ -191,6 +209,11 @@ export default function CommunityPostCard({
   const relatedAppPrimaryTag =
     relatedApp?.regionTag || relatedApp?.tags?.[0] || (relatedApp?.pkg ? '国际服' : '');
   const postId = String(post.id || '').trim();
+  const postHref = postId ? `/community/post/${encodeURIComponent(postId)}` : '/community';
+  const handleOpenPost = () => {
+    if (!postId) return;
+    onOpenPost?.(postId);
+  };
 
   useEffect(() => {
     setLikeCount(Math.max(0, Number(post.likesCount || 0)));
@@ -214,7 +237,27 @@ export default function CommunityPostCard({
       };
     }
 
-    const loadLikeStatus = async () => {
+    const cacheKey = buildLikeStatusCacheKey(postId, token);
+    const cachedLiked = LIKE_STATUS_CACHE.get(cacheKey);
+    if (typeof cachedLiked === 'boolean') {
+      setLiked(cachedLiked);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const inFlightRequest = LIKE_STATUS_INFLIGHT.get(cacheKey);
+    if (inFlightRequest) {
+      void inFlightRequest.then((resolvedLiked) => {
+        if (cancelled || resolvedLiked === null) return;
+        setLiked(resolvedLiked);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const request = (async (): Promise<boolean | null> => {
       try {
         const res = await trackedApiFetch(`/content/${encodeURIComponent(postId)}/like-status`, {
           method: 'GET',
@@ -224,16 +267,23 @@ export default function CommunityPostCard({
           cache: 'no-store',
         });
         const json = await res.json().catch(() => ({}));
-        if (cancelled) return;
-        if (res.ok && json?.code === 0) {
-          setLiked(Boolean(json?.data?.liked));
-        }
+        if (!res.ok || json?.code !== 0) return null;
+        return Boolean(json?.data?.liked);
       } catch {
-        // ignore like status failures
+        return null;
       }
-    };
+    })();
 
-    void loadLikeStatus();
+    LIKE_STATUS_INFLIGHT.set(cacheKey, request);
+    void request.then((resolvedLiked) => {
+      LIKE_STATUS_INFLIGHT.delete(cacheKey);
+      if (resolvedLiked === null) return;
+      setLikeStatusCache(cacheKey, resolvedLiked);
+      if (!cancelled) {
+        setLiked(resolvedLiked);
+      }
+    });
+
     return () => {
       cancelled = true;
     };
@@ -321,7 +371,8 @@ export default function CommunityPostCard({
 
   const handleComment = () => {
     if (!postId) return;
-    router.push(`/community/post/${encodeURIComponent(postId)}#comments`);
+    handleOpenPost();
+    router.push(`${postHref}#comments`);
   };
 
   const handleToggleBookmark = () => {
@@ -360,9 +411,11 @@ export default function CommunityPostCard({
     const prevLiked = liked;
     const prevCount = likeCount;
     const nextLiked = !prevLiked;
+    const cacheKey = buildLikeStatusCacheKey(postId, token);
 
     setLiked(nextLiked);
     setLikeCount(nextLiked ? prevCount + 1 : Math.max(0, prevCount - 1));
+    setLikeStatusCache(cacheKey, nextLiked);
     if (nextLiked) triggerLikeBurst();
     setLikePending(true);
 
@@ -383,9 +436,11 @@ export default function CommunityPostCard({
       const serverLiked = Boolean(json?.data?.liked);
       const serverCount = Number(json?.data?.like_count);
       setLiked(serverLiked);
+      setLikeStatusCache(cacheKey, serverLiked);
       setLikeCount(Number.isFinite(serverCount) ? Math.max(0, serverCount) : Math.max(0, prevCount));
     } catch {
       setLiked(prevLiked);
+      setLikeStatusCache(cacheKey, prevLiked);
       setLikeCount(prevCount);
       toast({
         title: '点赞失败',
@@ -431,7 +486,7 @@ export default function CommunityPostCard({
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>帖子操作</DropdownMenuLabel>
               <DropdownMenuItem asChild>
-                <Link href={`/community/post/${post.id}`}>查看详情</Link>
+                <Link href={postHref} onClick={handleOpenPost} onAuxClick={handleOpenPost}>查看详情</Link>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => void handleCopyPostId()}>复制 ID</DropdownMenuItem>
               {canManage ? (
@@ -458,11 +513,11 @@ export default function CommunityPostCard({
       </CardHeader>
       <CardContent className="p-4 pt-2 space-y-3">
         {post.title && (
-          <Link href={`/community/post/${post.id}`} className="block hover:text-primary transition-colors">
+          <Link href={postHref} onClick={handleOpenPost} onAuxClick={handleOpenPost} className="block hover:text-primary transition-colors">
             <h3 className="text-base font-semibold text-foreground leading-tight group-hover:text-primary">{post.title}</h3>
           </Link>
         )}
-        <Link href={`/community/post/${post.id}`} className="block min-w-0">
+        <Link href={postHref} onClick={handleOpenPost} onAuxClick={handleOpenPost} className="block min-w-0">
           <p className="text-sm text-foreground/90 leading-relaxed line-clamp-3 hover:text-foreground transition-colors">
             {excerpt}
           </p>
@@ -516,7 +571,9 @@ export default function CommunityPostCard({
                     return isSingle ? (
                       <Link
                         key={`${post.id}-img-${imageIndex}`}
-                        href={`/community/post/${post.id}`}
+                        href={postHref}
+                        onClick={handleOpenPost}
+                        onAuxClick={handleOpenPost}
                         className="absolute inset-0 block"
                       >
                         <Image
@@ -527,7 +584,8 @@ export default function CommunityPostCard({
                           data-ai-hint={post.imageAiHint || 'community post image'}
                           priority={post.id === '0'}
                           loading="eager"
-                          onLoadingComplete={(imgEl) => {
+                          onLoad={(event) => {
+                            const imgEl = event.currentTarget;
                             const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
                             if (!Number.isFinite(ratio)) return;
                             const c = ratio >= 1.9 ? 'ultraWide' : ratio >= 1.45 ? 'wide' : ratio >= 0.9 ? 'normal' : 'portrait';
@@ -553,7 +611,8 @@ export default function CommunityPostCard({
                           fill
                           className="object-cover"
                           sizes="220px"
-                          onLoadingComplete={(imgEl) => {
+                          onLoad={(event) => {
+                            const imgEl = event.currentTarget;
                             const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
                             if (!Number.isFinite(ratio)) return;
                             const c = ratio >= 1.9 ? 'ultraWide' : ratio >= 1.45 ? 'wide' : ratio >= 0.9 ? 'normal' : 'portrait';
@@ -586,7 +645,8 @@ export default function CommunityPostCard({
                               fill
                               className="object-cover"
                               sizes="220px"
-                              onLoadingComplete={(imgEl) => {
+                              onLoad={(event) => {
+                                const imgEl = event.currentTarget;
                                 const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
                                 if (!Number.isFinite(ratio)) return;
                                 const c = ratio >= 1.9 ? 'ultraWide' : ratio >= 1.45 ? 'wide' : ratio >= 0.9 ? 'normal' : 'portrait';

@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,17 +43,24 @@ export default function CommunitySidebar({
     ? followedTopics
     : followedTopics.slice(0, Math.max(1, followedCollapsedCount));
   const hasFollowedOverflow = followedTopics.length > Math.max(1, followedCollapsedCount);
+  const [failedIcons, setFailedIcons] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    setFailedIcons({});
+  }, [hotTopics, officialTopics, followedTopics]);
 
   const renderTopicButton = (topic: CommunityTopicItem) => {
     const topicId = String(topic._id || '').trim();
+    const topicKey = topicId || String(topic.slug || topic.name || '').trim();
     const isActive = Boolean(topicId) && topicId === selectedTopicId;
     const isFollowed = Boolean(topicId) && followedSet.has(topicId);
     const followBusy = topicId === followLoadingTopicId;
     const icon = topic.icon || topic.app_info?.icon || '';
+    const showIcon = Boolean(icon) && !failedIcons[topicKey];
 
     return (
       <Button
-        key={topicId || topic.slug || topic.name}
+        key={topicKey}
         type="button"
         variant="ghost"
         className={cn(
@@ -63,13 +71,16 @@ export default function CommunitySidebar({
         )}
         onClick={() => onSelectTopic(topic)}
       >
-        {icon ? (
+        {showIcon ? (
           <Image
             src={icon}
             alt={topic.name}
             width={50}
             height={50}
             className="rounded-md object-cover"
+            onError={() => {
+              setFailedIcons((prev) => ({ ...prev, [topicKey]: true }));
+            }}
           />
         ) : (
           <span className="inline-flex h-[50px] w-[50px] items-center justify-center rounded-md bg-muted text-muted-foreground">
@@ -77,7 +88,7 @@ export default function CommunitySidebar({
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <span className="line-clamp-1 block text-sm">#{topic.name}</span>
+          <span className="line-clamp-1 block text-sm">{topic.name}</span>
           <span className="text-[11px] text-muted-foreground">热度 {Number(topic.heat_score || 0)}</span>
         </div>
         {onToggleFollow ? (
@@ -117,21 +128,6 @@ export default function CommunitySidebar({
         <CardTitle className="text-sm font-semibold">社区话题</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 p-3 pt-1">
-        <Button
-          type="button"
-          variant="ghost"
-          className={cn(
-            'h-auto w-full justify-start px-3 py-2.5 text-sm',
-            !selectedTopicId
-              ? 'bg-primary/10 font-semibold text-primary'
-              : 'text-foreground/80 hover:bg-primary/5 hover:text-primary',
-          )}
-          onClick={() => onSelectTopic(null)}
-        >
-          <Hash className="mr-2 h-4 w-4" />
-          全部话题
-        </Button>
-
         <section className="space-y-1">
           <div className="flex items-center px-1 pb-1 text-xs font-semibold text-muted-foreground">
             <Flame className="mr-1.5 h-3.5 w-3.5 text-orange-500" />

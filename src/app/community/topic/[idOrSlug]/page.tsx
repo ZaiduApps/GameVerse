@@ -1,13 +1,51 @@
 import type { Metadata } from 'next';
+import { cache } from 'react';
+
 import CommunityTopicBoardView from './CommunityTopicBoardView';
-import { absoluteUrl } from '@/lib/seo';
+import { absoluteUrl, sanitizeSeoText } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
-import { getCommunityTopicDetail } from '@/lib/community-api';
+import { getCommunityFeed, getCommunityTopicDetail, type CommunityFeedResult } from '@/lib/community-api';
 
 function clamp(input: string, max: number): string {
   if (input.length <= max) return input;
   return `${input.slice(0, Math.max(1, max - 3)).trim()}...`;
 }
+
+const EMPTY_FEED: CommunityFeedResult = {
+  list: [],
+  total: 0,
+  page: 1,
+  pageSize: 10,
+  hasMore: false,
+};
+
+const getTopicPageData = cache(async (idOrSlug: string) => {
+  const safeIdOrSlug = decodeURIComponent(String(idOrSlug || '').trim());
+  const configPromise = getPublicSiteConfig(300);
+  const topic = await getCommunityTopicDetail(safeIdOrSlug);
+
+  if (!topic?._id) {
+    return {
+      config: await configPromise,
+      topic: null,
+      latestFeed: EMPTY_FEED,
+      hotFeed: EMPTY_FEED,
+    };
+  }
+
+  const [config, latestFeed, hotFeed] = await Promise.all([
+    configPromise,
+    getCommunityFeed('latest', { topicId: String(topic._id || '').trim(), page: 1, pageSize: 10 }),
+    getCommunityFeed('hot', { topicId: String(topic._id || '').trim(), page: 1, pageSize: 10 }),
+  ]);
+
+  return {
+    config,
+    topic,
+    latestFeed,
+    hotFeed,
+  };
+});
 
 export async function generateMetadata({
   params,
@@ -15,8 +53,7 @@ export async function generateMetadata({
   params: Promise<{ idOrSlug: string }>;
 }): Promise<Metadata> {
   const { idOrSlug } = await params;
-  const safeIdOrSlug = decodeURIComponent(String(idOrSlug || '').trim());
-  const [config, topic] = await Promise.all([getPublicSiteConfig(300), getCommunityTopicDetail(safeIdOrSlug)]);
+  const { config, topic } = await getTopicPageData(idOrSlug);
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
 
   if (!topic?._id) {
@@ -28,9 +65,14 @@ export async function generateMetadata({
   }
 
   const canonicalPath = `/community/topic/${encodeURIComponent(String(topic.slug || topic._id).trim())}`;
-  const title = clamp(`${topic.name} 社区话题 | ${siteName}`, 80);
+  const topicName = sanitizeSeoText(topic.name || '社区话题') || '社区话题';
+  const title = clamp(`${topicName} 社区话题 | ${siteName}`, 80);
   const description = clamp(
-    String(topic.description || topic.announcement || `${topic.name} 最新帖子、攻略讨论与玩家动态。`).trim(),
+    sanitizeSeoText(
+      topic.description ||
+        topic.announcement ||
+        `${topicName} 最新帖子、攻略讨论与玩家动态。`,
+    ) || `${topicName} 最新帖子、攻略讨论与玩家动态。`,
     160,
   );
   const image = String(topic.cover || topic.icon || config?.basic?.share_image || '').trim();
@@ -81,5 +123,19 @@ export default async function CommunityTopicPage({
   params: Promise<{ idOrSlug: string }>;
 }) {
   const { idOrSlug } = await params;
-  return <CommunityTopicBoardView idOrSlug={idOrSlug} />;
+  const { topic, latestFeed, hotFeed } = await getTopicPageData(idOrSlug);
+  return (
+    <CommunityTopicBoardView
+      idOrSlug={idOrSlug}
+      initialData={
+        topic?._id
+          ? {
+              topic,
+              latestFeed,
+              hotFeed,
+            }
+          : null
+      }
+    />
+  );
 }

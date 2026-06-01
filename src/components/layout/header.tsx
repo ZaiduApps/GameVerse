@@ -60,6 +60,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
   const [unreadTotal, setUnreadTotal] = useState(0);
+  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
 
   const isNavItemActive = (href: string) => {
     if (href === '/') return pathname === '/';
@@ -99,6 +100,10 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
     };
   }, [isAuthenticated, token, pathname]);
 
+  useEffect(() => {
+    setLogoLoadFailed(false);
+  }, [logoUrl]);
+
   const secondaryNavActive = navItems
     .filter((i) => i.priority === 'secondary')
     .some((i) => isNavItemActive(i.href));
@@ -109,7 +114,17 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center gap-2 text-primary hover:opacity-90 transition-opacity">
-              {logoUrl ? <Image src={logoUrl} alt={siteName} width={28} height={28} /> : <Gamepad2 size={28} />}
+              {logoUrl && !logoLoadFailed ? (
+                <Image
+                  src={logoUrl}
+                  alt={siteName}
+                  width={28}
+                  height={28}
+                  onError={() => setLogoLoadFailed(true)}
+                />
+              ) : (
+                <Gamepad2 size={28} />
+              )}
               <span className="text-lg font-bold sm:text-xl tracking-wide">{siteName}</span>
             </Link>
             {/* Tablet nav: primary items + "更多" dropdown */}
@@ -292,7 +307,17 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                     className="flex items-center gap-2 text-lg font-bold text-primary px-6 pb-4 border-b border-border/40"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    {logoUrl ? <Image src={logoUrl} alt={siteName} width={24} height={24} /> : <Gamepad2 size={24} />}
+                    {logoUrl && !logoLoadFailed ? (
+                      <Image
+                        src={logoUrl}
+                        alt={siteName}
+                        width={24}
+                        height={24}
+                        onError={() => setLogoLoadFailed(true)}
+                      />
+                    ) : (
+                      <Gamepad2 size={24} />
+                    )}
                     <span>{siteName}</span>
                   </Link>
 

@@ -8,13 +8,16 @@ import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, Bookmark, ChevronLeft, ChevronRight, Eye, MessageSquare, RotateCcw, Send, Share2, ThumbsUp, X, ZoomIn, ZoomOut } from 'lucide-react';
 
-import { renderMarkdown } from '@/lib/utils';
+import { buildRenderedMarkdownDocument, cn } from '@/lib/utils';
 import { apiUrl, trackedApiFetch } from '@/lib/api';
+import { hasValidCommunityReturnIntent, requestCommunityReturnRestore } from '@/lib/community-return';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import {
+  getCommunityCommentLikeStatuses,
   getCommunityCommentReplies,
   getCommunityCommentThreads,
+  getCommunityPostLikeStatus,
   getCommunityTopicDetail,
   moderatorDeleteTopicComment,
   moderatorSetTopicCommentStatus,
@@ -27,39 +30,44 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 
-const initialMockComments: CommunityCommentThread[] = [
-  {
-    id: 'comment1',
-    user: { name: '评论用户A', avatarUrl: '/favicon.ico', dataAiHint: 'user avatar' },
-    timestamp: '2小时前',
-    text: '内容很有帮助，感谢分享。',
-    likeCount: 0,
-    replies: [],
-    replyTotal: 0,
-    replyHasMore: false,
-    replyPageSize: 20,
-  },
-  {
-    id: 'comment2',
-    user: { name: '用户B', avatarUrl: '/favicon.ico', dataAiHint: 'user avatar' },
-    timestamp: '1小时前',
-    text: '建议补充一下复现步骤。',
-    likeCount: 0,
-    replies: [],
-    replyTotal: 0,
-    replyHasMore: false,
-    replyPageSize: 20,
-  },
-];
-
 interface CommunityPostDetailViewProps {
   post: CommunityPost;
   initialComments?: CommunityCommentThread[];
 }
 
+function normalizeComparableImageUrl(value?: string): string {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  try {
+    const parsed = new URL(raw);
+    const host = parsed.hostname.trim().toLowerCase();
+    let path = decodeURIComponent(parsed.pathname || '/').trim();
+    if (!path.startsWith('/')) path = `/${path}`;
+    path = path.replace(/\/+$/, '') || '/';
+    return `${host}${path}`;
+  } catch {
+    return raw.toLowerCase();
+  }
+}
+
+function normalizeHeadingText(value?: string): string {
+  return String(value || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function normalizeNonNegativeCount(value: unknown): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return Math.floor(parsed);
+}
+
 export default function CommunityPostDetailView({
   post,
-  initialComments = initialMockComments,
+  initialComments = [],
 }: CommunityPostDetailViewProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -98,6 +106,8 @@ export default function CommunityPostDetailView({
   const [canModerateTopic, setCanModerateTopic] = useState(false);
   const [moderatingCommentId, setModeratingCommentId] = useState('');
   const [moderationTopicId, setModerationTopicId] = useState('');
+  const [activeTocId, setActiveTocId] = useState('');
+  const articleRef = useRef<HTMLElement | null>(null);
 
   const postTopicIds = useMemo(
     () =>
@@ -112,12 +122,8 @@ export default function CommunityPostDetailView({
   );
 
   useEffect(() => {
-    if (typeof post.viewsCount === 'number' && post.viewsCount >= 0) {
-      setViewCount(post.viewsCount);
-      return;
-    }
-    setViewCount(Math.floor(Math.random() * 200) + post.commentsCount + post.likesCount + 51);
-  }, [post.commentsCount, post.likesCount, post.viewsCount]);
+    setViewCount(normalizeNonNegativeCount(post.viewsCount));
+  }, [post.viewsCount]);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,26 +137,32 @@ export default function CommunityPostDetailView({
         return;
       }
 
-      const topics = await Promise.all(
-        postTopicIds.map(async (topicId) => ({
-          topicId,
-          topic: await getCommunityTopicDetail(topicId),
-        })),
-      );
-      if (cancelled) return;
+      try {
+        const topics = await Promise.all(
+          postTopicIds.map(async (topicId) => ({
+            topicId,
+            topic: await getCommunityTopicDetail(topicId),
+          })),
+        );
+        if (cancelled) return;
 
-      const userId = String(user._id || '').trim();
-      const matched = topics.find((item) => {
-        const moderatorIds = Array.isArray(item.topic?.moderator_ids)
-          ? item.topic!.moderator_ids
-              .map((id) => String(id || '').trim())
-              .filter(Boolean)
-          : [];
-        return moderatorIds.includes(userId);
-      });
+        const userId = String(user._id || '').trim();
+        const matched = topics.find((item) => {
+          const moderatorIds = Array.isArray(item.topic?.moderator_ids)
+            ? item.topic!.moderator_ids
+                .map((id) => String(id || '').trim())
+                .filter(Boolean)
+            : [];
+          return moderatorIds.includes(userId);
+        });
 
-      setCanModerateTopic(Boolean(matched));
-      setModerationTopicId(String(matched?.topicId || '').trim());
+        setCanModerateTopic(Boolean(matched));
+        setModerationTopicId(String(matched?.topicId || '').trim());
+      } catch {
+        if (cancelled) return;
+        setCanModerateTopic(false);
+        setModerationTopicId('');
+      }
     };
 
     void syncTopicModerationPermission();
@@ -173,6 +185,20 @@ export default function CommunityPostDetailView({
       ),
     [comments],
   );
+  const commentStatusIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          comments.flatMap((comment) => [
+            String(comment.id || '').trim(),
+            ...(comment.replies || [])
+              .map((reply) => String(reply.id || '').trim())
+              .filter(Boolean),
+          ]),
+        ),
+      ).filter(Boolean),
+    [comments],
+  );
 
   useEffect(() => {
     const next: Record<string, number> = {};
@@ -185,7 +211,7 @@ export default function CommunityPostDetailView({
     setReplyLoadingMap({});
   }, [comments]);
 
-  const previewImages = useMemo(() => {
+  const contentImageUrls = useMemo(() => {
     const urls: string[] = [];
     const pushUnique = (value?: string) => {
       const url = (value || '').trim();
@@ -194,9 +220,6 @@ export default function CommunityPostDetailView({
       if (urls.includes(url)) return;
       urls.push(url);
     };
-
-    pushUnique(post.imageUrl);
-
     const markdownImageRegex = /!\[[^\]]*]\((https?:\/\/[^)\s]+)(?:\s+["'][^"']*["'])?\)/gi;
     const htmlImageRegex = /<img[^>]+src=["'](https?:\/\/[^"']+)["'][^>]*>/gi;
 
@@ -209,12 +232,71 @@ export default function CommunityPostDetailView({
     }
 
     return urls;
-  }, [post.content, post.imageUrl]);
+  }, [post.content]);
+
+  const previewImages = useMemo(() => {
+    const urls: string[] = [];
+    const pushUnique = (value?: string) => {
+      const url = (value || '').trim();
+      if (!url) return;
+      if (!/^https?:\/\//i.test(url)) return;
+      if (urls.includes(url)) return;
+      urls.push(url);
+    };
+
+    pushUnique(post.imageUrl);
+    contentImageUrls.forEach((url) => pushUnique(url));
+    return urls;
+  }, [contentImageUrls, post.imageUrl]);
+  const renderedContent = useMemo(
+    () =>
+      buildRenderedMarkdownDocument(post.content, {
+        preset: 'detail',
+        blockedLinkHosts: ['www.facebook.com', 'acg.gamer.com.tw'],
+        injectHeadingAnchors: true,
+      }),
+    [post.content],
+  );
+  const tocItems = useMemo(() => {
+    const normalizedPostTitle = normalizeHeadingText(post.title || post.summary || '');
+    const filtered = renderedContent.headings.filter((item, index) => {
+      if (!item.text) return false;
+      if (index === 0 && normalizedPostTitle && normalizeHeadingText(item.text) === normalizedPostTitle) {
+        return false;
+      }
+      return true;
+    });
+    const narrowed = filtered.some((item) => item.level >= 2 && item.level <= 4)
+      ? filtered.filter((item) => item.level >= 2 && item.level <= 4)
+      : filtered;
+    return narrowed.length >= 2 ? narrowed : [];
+  }, [post.summary, post.title, renderedContent.headings]);
+  const tocBaseLevel = useMemo(() => {
+    if (tocItems.length === 0) return 2;
+    return tocItems.reduce((min, item) => Math.min(min, item.level), tocItems[0].level);
+  }, [tocItems]);
+
+  const shouldRenderDetailCover = useMemo(() => {
+    const cover = String(post.imageUrl || '').trim();
+    if (!cover) return false;
+    const normalizedCover = normalizeComparableImageUrl(cover);
+    if (!normalizedCover) return false;
+    return !contentImageUrls.some((url) => normalizeComparableImageUrl(url) === normalizedCover);
+  }, [contentImageUrls, post.imageUrl]);
 
   const reloadComments = async () => {
     const latest = await getCommunityCommentThreads(post.id, 30);
     setComments(latest);
     setExpandedReplies({});
+  };
+
+  const refreshCommentsSafely = async (): Promise<boolean> => {
+    try {
+      await reloadComments();
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const handleModeratorApiError = (message: string) => {
@@ -231,16 +313,60 @@ export default function CommunityPostDetailView({
 
   useEffect(() => {
     setCommentLikeCounts((prev) => {
-      const next = { ...prev };
+      const next: Record<string, number> = {};
       comments.forEach((comment) => {
-        if (typeof next[comment.id] !== 'number') next[comment.id] = comment.likeCount || 0;
+        const commentId = String(comment.id || '').trim();
+        if (commentId) {
+          next[commentId] = pendingCommentLikeIds[commentId]
+            ? normalizeNonNegativeCount(prev[commentId] ?? comment.likeCount)
+            : normalizeNonNegativeCount(comment.likeCount);
+        }
         (comment.replies || []).forEach((reply) => {
-          if (typeof next[reply.id] !== 'number') next[reply.id] = reply.likeCount || 0;
+          const replyId = String(reply.id || '').trim();
+          if (!replyId) return;
+          next[replyId] = pendingCommentLikeIds[replyId]
+            ? normalizeNonNegativeCount(prev[replyId] ?? reply.likeCount)
+            : normalizeNonNegativeCount(reply.likeCount);
         });
       });
       return next;
     });
-  }, [comments]);
+  }, [comments, pendingCommentLikeIds]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const syncLikeStates = async () => {
+      if (!isAuthenticated || !token) {
+        if (!cancelled) {
+          setIsLiked(false);
+          setLikedCommentIds({});
+        }
+        return;
+      }
+
+      try {
+        const [postLiked, likedCommentMap] = await Promise.all([
+          getCommunityPostLikeStatus({ token, postId: post.id }),
+          getCommunityCommentLikeStatuses({ token, commentIds: commentStatusIds }),
+        ]);
+        if (cancelled) return;
+
+        if (postLiked !== null) {
+          setIsLiked(postLiked);
+        }
+        setLikedCommentIds(likedCommentMap);
+      } catch {
+        if (cancelled) return;
+        setLikedCommentIds({});
+      }
+    };
+
+    void syncLikeStates();
+    return () => {
+      cancelled = true;
+    };
+  }, [commentStatusIds, isAuthenticated, post.id, token]);
 
   const handleLike = async () => {
     if (isSyncingLike) return;
@@ -351,10 +477,13 @@ export default function CommunityPostDetailView({
 
       setNewComment('');
       setReplyTarget(null);
-      await reloadComments();
-      toast({ title: '评论成功', description: '已提交。' });
+      const refreshed = await refreshCommentsSafely();
+      toast({
+        title: '评论成功',
+        description: refreshed ? '已提交。' : '已提交，评论列表稍后刷新。',
+      });
     } catch {
-      await reloadComments();
+      await refreshCommentsSafely();
       toast({
         title: '提交失败',
         description: '请稍后重试。',
@@ -524,37 +653,27 @@ export default function CommunityPostDetailView({
     }));
     setPendingCommentLikeIds((prev) => ({ ...prev, [commentId]: true }));
 
-    const candidateEndpoints = [
-      `/content/comments/${commentId}/like`,
-      `/content/comment/${commentId}/like`,
-      `/content/comments/${commentId}/likes`,
-    ];
-
     try {
-      let synced = false;
-      let serverLiked = nextLiked;
-      let serverCount = nextLiked ? previousCount + 1 : Math.max(0, previousCount - 1);
-
-      for (const endpoint of candidateEndpoints) {
-        const res = await trackedApiFetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ action: 'toggle' }),
-        });
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok || json?.code !== 0) continue;
-
-        serverLiked = Boolean(json?.data?.liked ?? nextLiked);
-        const parsedCount = Number(json?.data?.like_count);
-        if (Number.isFinite(parsedCount)) serverCount = parsedCount;
-        synced = true;
-        break;
+      const res = await trackedApiFetch(`/content/comments/${commentId}/like`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: 'toggle' }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.code !== 0) {
+        throw new Error(json?.message || `HTTP ${res.status}`);
       }
 
-      if (!synced) throw new Error('like endpoint failed');
+      const serverLiked = Boolean(json?.data?.liked ?? nextLiked);
+      const parsedCount = Number(json?.data?.like_count);
+      const serverCount = Number.isFinite(parsedCount)
+        ? parsedCount
+        : nextLiked
+          ? previousCount + 1
+          : Math.max(0, previousCount - 1);
 
       setLikedCommentIds((prev) => ({ ...prev, [commentId]: serverLiked }));
       setCommentLikeCounts((prev) => ({ ...prev, [commentId]: serverCount }));
@@ -603,10 +722,12 @@ export default function CommunityPostDetailView({
       return;
     }
 
-    await reloadComments();
+    const refreshed = await refreshCommentsSafely();
     toast({
       title: `${actionText}成功`,
-      description: result.message,
+      description: refreshed
+        ? result.message
+        : `${result.message}，评论列表将在下次刷新后同步。`,
     });
   };
 
@@ -637,10 +758,12 @@ export default function CommunityPostDetailView({
       return;
     }
 
-    await reloadComments();
+    const refreshed = await refreshCommentsSafely();
     toast({
       title: '删除成功',
-      description: result.message,
+      description: refreshed
+        ? result.message
+        : `${result.message}，评论列表将在下次刷新后同步。`,
     });
   };
 
@@ -682,6 +805,20 @@ export default function CommunityPostDetailView({
   const relatedApp = post.relatedApp;
   const relatedAppHref = relatedApp?.pkg ? `/app/${relatedApp.pkg}` : undefined;
   const relatedAppPrimaryTag = relatedApp?.regionTag || relatedApp?.tags?.[0] || (relatedApp?.pkg ? '国际服' : '');
+  const handleTocJump = (headingId: string) => {
+    const element = document.getElementById(headingId);
+    if (!element) return;
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveTocId(headingId);
+  };
+  const handleBackToCommunity = () => {
+    const postId = String(post.id || '').trim();
+    if (postId && hasValidCommunityReturnIntent(postId) && requestCommunityReturnRestore(postId) && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.replace('/community');
+  };
 
   useEffect(() => {
     if (selectedPreviewIndex === null) return;
@@ -742,6 +879,60 @@ export default function CommunityPostDetailView({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedPreviewIndex, activePreviewImages.length]);
+
+  useEffect(() => {
+    if (tocItems.length === 0) {
+      setActiveTocId('');
+      return;
+    }
+
+    const articleElement = articleRef.current;
+    if (!articleElement) {
+      setActiveTocId('');
+      return;
+    }
+
+    const updateActiveHeading = () => {
+      let nextId = tocItems[0]?.id || '';
+      tocItems.forEach((item) => {
+        const element = articleElement.querySelector<HTMLElement>(`#${item.id}`);
+        if (!element) return;
+        if (element.getBoundingClientRect().top <= 180) {
+          nextId = item.id;
+        }
+      });
+      setActiveTocId((current) => (current === nextId ? current : nextId));
+    };
+
+    const headingElements = tocItems
+      .map((item) => articleElement.querySelector<HTMLElement>(`#${item.id}`))
+      .filter((element): element is HTMLElement => Boolean(element));
+
+    if (headingElements.length === 0) {
+      setActiveTocId('');
+      return;
+    }
+
+    updateActiveHeading();
+
+    const observer = new IntersectionObserver(
+      () => {
+        window.requestAnimationFrame(updateActiveHeading);
+      },
+      {
+        rootMargin: '-120px 0px -65% 0px',
+        threshold: [0, 0.1, 0.5, 1],
+      },
+    );
+
+    headingElements.forEach((element) => observer.observe(element));
+    window.addEventListener('resize', updateActiveHeading);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateActiveHeading);
+    };
+  }, [tocItems]);
 
   const commentsCard = (
     <Card id="comments" className="scroll-mt-24 shadow-lg">
@@ -1084,50 +1275,76 @@ export default function CommunityPostDetailView({
 
   return (
     <div className="mx-auto w-full max-w-[1680px] space-y-6 py-8 fade-in">
-      <Button variant="outline" size="sm" onClick={() => router.back()} className="mb-2 h-8 px-3 py-1 self-start btn-interactive">
+      <Button variant="outline" size="sm" onClick={handleBackToCommunity} className="mb-2 h-8 px-3 py-1 self-start btn-interactive">
         <ArrowLeft size={16} className="mr-2" />
         返回社区
       </Button>
 
       <div className="xl:grid xl:grid-cols-[320px_minmax(0,1fr)_360px] xl:gap-6">
         <aside className="hidden xl:block">
-          {relatedApp ? (
-            <Card className="sticky top-24 overflow-hidden border border-white/20 shadow-xl">
-              {relatedApp.icon && (
-                <div className="absolute inset-0">
-                  <Image src={relatedApp.icon} alt={relatedApp.name} fill className="scale-125 object-cover blur-2xl" />
-                  <div className="absolute inset-0 bg-black/45 backdrop-blur-xl" />
-                </div>
-              )}
-              <CardContent className="relative z-10 p-4">
-                <div className="flex items-start gap-3">
-                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-white/30 bg-white/10">
-                    {relatedApp.icon ? (
-                      <Image src={relatedApp.icon} alt={relatedApp.name} fill className="object-cover" />
-                    ) : (
-                      <div className="h-full w-full" />
-                    )}
+          <div className="sticky top-24 space-y-4">
+            {relatedApp ? (
+              <Card className="overflow-hidden border border-white/20 shadow-xl">
+                {relatedApp.icon && (
+                  <div className="absolute inset-0">
+                    <Image src={relatedApp.icon} alt={relatedApp.name} fill className="scale-125 object-cover blur-2xl" />
+                    <div className="absolute inset-0 bg-black/45 backdrop-blur-xl" />
                   </div>
-                  <div className="min-w-0">
-                    <p className="line-clamp-1 text-base font-semibold text-white">{relatedApp.name}</p>
-                    {relatedAppPrimaryTag && (
-                      <Badge className="mt-1 border-white/30 bg-white/20 text-[11px] text-white">{relatedAppPrimaryTag}</Badge>
-                    )}
-                  </div>
-                </div>
-                <p className="mt-3 line-clamp-2 text-xs leading-5 text-white/90">
-                  {relatedApp.summary || '查看关联游戏详情与资源信息。'}
-                </p>
-                {relatedAppHref && (
-                  <Button asChild size="sm" className="mt-3 w-full bg-white/20 text-white hover:bg-white/30">
-                    <Link href={relatedAppHref}>查看游戏详情</Link>
-                  </Button>
                 )}
-              </CardContent>
-            </Card>
-          ) : (
-            <div />
-          )}
+                <CardContent className="relative z-10 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-white/30 bg-white/10">
+                      {relatedApp.icon ? (
+                        <Image src={relatedApp.icon} alt={relatedApp.name} fill className="object-cover" />
+                      ) : (
+                        <div className="h-full w-full" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="line-clamp-1 text-base font-semibold text-white">{relatedApp.name}</p>
+                      {relatedAppPrimaryTag && (
+                        <Badge className="mt-1 border-white/30 bg-white/20 text-[11px] text-white">{relatedAppPrimaryTag}</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <p className="mt-3 line-clamp-2 text-xs leading-5 text-white/90">
+                    {relatedApp.summary || '查看关联游戏详情与资源信息。'}
+                  </p>
+                  {relatedAppHref && (
+                    <Button asChild size="sm" className="mt-3 w-full bg-white/20 text-white hover:bg-white/30">
+                      <Link href={relatedAppHref}>查看游戏详情</Link>
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ) : null}
+
+            {tocItems.length > 0 ? (
+              <Card className="border-border/70 shadow-lg">
+                <CardHeader className="px-4 pb-2 pt-4">
+                  <CardTitle className="text-sm font-semibold">文章目录</CardTitle>
+                </CardHeader>
+                <CardContent className="max-h-[calc(100vh-18rem)] space-y-1 overflow-y-auto px-2 pb-3">
+                  {tocItems.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={cn(
+                        'block w-full rounded-md px-3 py-2 text-left text-sm transition-colors',
+                        activeTocId === item.id
+                          ? 'bg-primary/10 font-medium text-primary'
+                          : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
+                      )}
+                      style={{ paddingLeft: `${12 + Math.max(0, item.level - tocBaseLevel) * 16}px` }}
+                      onClick={() => handleTocJump(item.id)}
+                    >
+                      <span className="line-clamp-2">{item.text}</span>
+                    </button>
+                  ))}
+                </CardContent>
+              </Card>
+            ) : null}
+          </div>
         </aside>
 
         <div className="min-w-0 space-y-6">
@@ -1164,8 +1381,9 @@ export default function CommunityPostDetailView({
 
             <CardContent className="p-4 pt-2 space-y-4 sm:space-y-5">
               <article
-                className="prose prose-sm sm:prose-base dark:prose-invert max-w-[760px] mx-auto px-1 sm:px-2 text-foreground/90 leading-relaxed"
-                dangerouslySetInnerHTML={renderMarkdown(post.content)}
+                ref={articleRef}
+                className="mx-auto w-full max-w-[760px] px-1 text-[15px] leading-relaxed text-foreground/90 sm:px-2 sm:text-base"
+                dangerouslySetInnerHTML={{ __html: renderedContent.html }}
                 onClick={handleMarkdownContainerClick}
               />
 
@@ -1179,7 +1397,7 @@ export default function CommunityPostDetailView({
                 </div>
               )}
 
-              {post.imageUrl && (
+              {shouldRenderDetailCover && post.imageUrl && (
                 <div className="mx-auto mt-5 w-full max-w-[680px] rounded-lg overflow-hidden aspect-video relative bg-muted">
                   {!detailImageError ? (
                     <Image

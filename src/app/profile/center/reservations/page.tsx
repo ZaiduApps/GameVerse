@@ -13,6 +13,7 @@ import PreregistrationGameCard from '@/components/home/PreregistrationGameCard';
 import { followReservationByAppId, getMyReservationGames, unfollowReservationByAppId } from '@/lib/profile-dashboard-api';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
+import CenterAuthRequired from '../CenterAuthRequired';
 import CenterPageHeader from '../CenterPageHeader';
 
 export default function ProfileCenterReservationsPage() {
@@ -32,10 +33,6 @@ export default function ProfileCenterReservationsPage() {
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    if (!isAuthLoading && !isAuthenticated) {
-      router.push('/');
-      return;
-    }
     async function load() {
       if (!token) return;
       setLoading(true);
@@ -51,7 +48,7 @@ export default function ProfileCenterReservationsPage() {
     if (isAuthenticated && token) {
       void load();
     }
-  }, [isAuthLoading, isAuthenticated, router, searchParams, token]);
+  }, [isAuthLoading, isAuthenticated, searchParams, token]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -129,7 +126,21 @@ export default function ProfileCenterReservationsPage() {
     });
   }
 
-  if (isAuthLoading || loading) {
+  if (isAuthLoading) {
+    return <div className="flex min-h-[40vh] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <CenterAuthRequired
+        title="我的预约游戏"
+        description="查看并管理你关注的预约应用。"
+        containerClassName="max-w-4xl"
+      />
+    );
+  }
+
+  if (loading) {
     return <div className="flex min-h-[40vh] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
 

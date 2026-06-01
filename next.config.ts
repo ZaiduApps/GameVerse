@@ -2,11 +2,12 @@ import type { NextConfig } from 'next';
 
 const appEnv = (process.env.APP_ENV || process.env.NODE_ENV || 'development').toLowerCase();
 const isDevRuntime = process.env.NODE_ENV !== 'production';
+const disableWebpackCache = process.env.DISABLE_WEBPACK_CACHE === '1';
 const backendBaseUrl = (
   process.env.API_BASE_URL ||
   (appEnv === 'production'
     ? process.env.API_BASE_URL_PROD || 'https://api.hk.apks.cc'
-    : process.env.API_BASE_URL_DEV || 'http://127.0.0.1:9527')
+    : process.env.API_BASE_URL_DEV || 'http://localhost:9527')
 ).replace(/\/+$/, '');
 
 const nextConfig: NextConfig = {
@@ -73,9 +74,8 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    // Production: bypass Next image optimizer for unstable third-party image origins.
-    // This avoids 504 timeout noise from /_next/image upstream fetch.
-    unoptimized: !isDevRuntime,
+    // 对第三方图源统一绕过 Next 图片优化器，避免开发态与生产环境都被上游超时拖垮。
+    unoptimized: true,
     // 使用通配符允许所有 HTTPS 和 HTTP 的图片域名
     remotePatterns: [
       {
@@ -89,7 +89,7 @@ const nextConfig: NextConfig = {
     ],
   },
   webpack: (config, { dev }) => {
-    if (dev) {
+    if (dev && disableWebpackCache) {
       config.cache = false;
     }
     return config;

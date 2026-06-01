@@ -21,6 +21,26 @@ type ContentPostSitemapItem = {
   is_deleted?: number | boolean;
 };
 
+type AlbumSitemapItem = {
+  _id?: string;
+  updated_at?: string;
+  created_at?: string;
+  is_active?: boolean;
+  is_deleted?: number | boolean;
+};
+
+type TopicSitemapItem = {
+  _id?: string;
+  slug?: string;
+  status?: string;
+  is_deleted?: number | boolean;
+  post_count?: number;
+  followers_count?: number;
+  last_activity_at?: string;
+  updated_at?: string;
+  created_at?: string;
+};
+
 type PagedList<T> = {
   list?: T[];
   total?: number;
@@ -32,6 +52,9 @@ const FALLBACK_STATIC_PATHS = ['/', '/app', '/community', '/rankings'];
 const SITEMAP_PAGE_SIZE = 500;
 const SITEMAP_MAX_PAGES = 200;
 const NEWS_SITEMAP_MAX_PAGES = 80;
+const SITEMAP_REVALIDATE_SECONDS = 1800;
+
+export const revalidate = SITEMAP_REVALIDATE_SECONDS;
 
 function getServerApiBaseUrl() {
   const appEnv = (process.env.APP_ENV || process.env.NODE_ENV || 'development').toLowerCase();
@@ -69,7 +92,10 @@ function normalizeListData<T>(payload: any): PagedList<T> {
 async function fetchJson(path: string): Promise<any | null> {
   try {
     const res = await fetch(`${getServerApiBaseUrl()}${path}`, {
-      cache: 'no-store',
+      cache: 'force-cache',
+      next: {
+        revalidate: SITEMAP_REVALIDATE_SECONDS,
+      },
       headers: {
         'x-tracking-skip': '1',
         'x-client-platform': 'web',
@@ -113,6 +139,49 @@ function toCommunityPostEntry(item: ContentPostSitemapItem): MetadataRoute.Sitem
     lastModified: lastmod,
     changeFrequency: 'daily',
     priority: 0.6,
+  };
+}
+
+function toAlbumEntry(item: AlbumSitemapItem): MetadataRoute.Sitemap[number] | null {
+  const id = String(item?._id || '').trim();
+  if (!id) return null;
+
+  const isDeleted = item?.is_deleted === true || Number(item?.is_deleted || 0) === 1;
+  if (isDeleted) return null;
+  if (item?.is_active === false) return null;
+
+  return {
+    url: absoluteUrl(`/albums/${encodeURIComponent(id)}`),
+    lastModified: parseDate(item.updated_at) || parseDate(item.created_at),
+    changeFrequency: 'daily',
+    priority: 0.75,
+  };
+}
+
+function toTopicEntry(item: TopicSitemapItem): MetadataRoute.Sitemap[number] | null {
+  const id = String(item?._id || '').trim();
+  const slug = String(item?.slug || '').trim();
+  const pathTarget = slug || id;
+  if (!pathTarget) return null;
+
+  const isDeleted = item?.is_deleted === true || Number(item?.is_deleted || 0) === 1;
+  if (isDeleted) return null;
+  if (item?.status && String(item.status).trim().toLowerCase() !== 'active') return null;
+
+  const postCount = Number(item?.post_count || 0);
+  const followersCount = Number(item?.followers_count || 0);
+  if (postCount <= 0 && followersCount <= 0) return null;
+
+  const lastmod =
+    parseDate(item.last_activity_at) ||
+    parseDate(item.updated_at) ||
+    parseDate(item.created_at);
+
+  return {
+    url: absoluteUrl(`/community/topic/${encodeURIComponent(pathTarget)}`),
+    lastModified: lastmod,
+    changeFrequency: 'daily',
+    priority: 0.58,
   };
 }
 
@@ -192,6 +261,55 @@ async function fetchCommunityPostsFromFeed(): Promise<MetadataRoute.Sitemap[numb
   return result;
 }
 
+async function fetchHomeAlbumEntries(): Promise<MetadataRoute.Sitemap[number][]> {
+  const json = await fetchJson('/albums/home');
+  if (!json || (json.code !== 0 && json.code !== undefined)) return [];
+
+  const { list } = normalizeListData<AlbumSitemapItem>(json);
+  const safeList = Array.isArray(list) ? list : [];
+  const result: MetadataRoute.Sitemap[number][] = [];
+  const seen = new Set<string>();
+
+  for (const item of safeList) {
+    const entry = toAlbumEntry(item);
+    if (!entry) continue;
+    if (seen.has(entry.url)) continue;
+    seen.add(entry.url);
+    result.push(entry);
+  }
+
+  return result;
+}
+
+async function fetchTopicEntries(): Promise<MetadataRoute.Sitemap[number][]> {
+  const result: MetadataRoute.Sitemap[number][] = [];
+  const seen = new Set<string>();
+
+  for (let page = 1; page <= NEWS_SITEMAP_MAX_PAGES; page += 1) {
+    const json = await fetchJson(
+      `/content/topics/public?page=${page}&pageSize=${SITEMAP_PAGE_SIZE}&sort=activity`,
+    );
+    if (!json || (json.code !== 0 && json.code !== undefined)) break;
+
+    const { list, total, pageSize } = normalizeListData<TopicSitemapItem>(json);
+    const safeList = Array.isArray(list) ? list : [];
+    if (safeList.length === 0) break;
+
+    for (const item of safeList) {
+      const entry = toTopicEntry(item);
+      if (!entry) continue;
+      if (seen.has(entry.url)) continue;
+      seen.add(entry.url);
+      result.push(entry);
+    }
+
+    if (total && page * (pageSize || SITEMAP_PAGE_SIZE) >= total) break;
+    if (safeList.length < SITEMAP_PAGE_SIZE) break;
+  }
+
+  return result;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const staticEntries: MetadataRoute.Sitemap = FALLBACK_STATIC_PATHS.map((path) => ({
@@ -203,8 +321,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const gameEntries = await fetchGamesFromSeoEndpoint();
   const communityPostEntries = await fetchCommunityPostsFromFeed();
+  const albumEntries = await fetchHomeAlbumEntries();
+  const topicEntries = await fetchTopicEntries();
 
   const safeGameEntries = gameEntries.length > 0 ? gameEntries : await fetchGamesFromListFallback();
 
-  return [...staticEntries, ...safeGameEntries, ...communityPostEntries];
+  return [...staticEntries, ...albumEntries, ...safeGameEntries, ...topicEntries, ...communityPostEntries];
 }

@@ -1,8 +1,9 @@
-import { trackedApiFetch } from '@/lib/api';
+import { trackedApiFetch, type TrackedFetchInit } from '@/lib/api';
 import { buildTrackingHeaders } from '@/lib/tracking-headers';
 import type { CommunityPost } from '@/types';
 
 const FALLBACK_AVATAR = '/favicon.ico';
+const MONGO_OBJECT_ID_PATTERN = /^[a-f0-9]{24}$/i;
 
 export interface CommunityTopicItem {
   _id: string;
@@ -126,6 +127,10 @@ interface CreateCommunityPostParams {
   topicNames?: string[];
 }
 
+interface UpdateCommunityPostParams extends CreateCommunityPostParams {
+  postId: string;
+}
+
 interface TopicListParams {
   page?: number;
   pageSize?: number;
@@ -133,6 +138,14 @@ interface TopicListParams {
   sort?: 'activity' | 'hot' | 'manual' | 'new';
   appId?: string;
   type?: 'event' | 'game' | 'general';
+}
+
+export interface CommunityReadFetchOptions {
+  cache?: TrackedFetchInit['cache'];
+  next?: TrackedFetchInit['next'];
+  timeoutMs?: number;
+  retries?: number;
+  logKey?: string;
 }
 
 interface TopicFollowResult {
@@ -147,6 +160,11 @@ export interface ModeratorTopicPatch {
   is_recommended?: boolean;
   pinned_post_id?: string | null;
 }
+
+const COMMUNITY_READ_TIMEOUT_MS = 12000;
+const COMMUNITY_READ_RETRIES = 1;
+const COMMUNITY_FEED_REVALIDATE_SECONDS = 120;
+const COMMUNITY_TOPIC_REVALIDATE_SECONDS = 180;
 
 function parseApiResponseMessage(json: any, fallback: string) {
   const message = String(json?.message || '').trim();
@@ -386,17 +404,115 @@ export function toCommentThreads(list: ApiCommunityComment[]): CommunityCommentT
   });
 }
 
-async function getApiData<T>(path: string): Promise<T | null> {
-  try {
-    const res = await trackedApiFetch(path, { cache: 'no-store' });
-    if (!res.ok) return null;
+function isTimeoutLikeError(error: unknown) {
+  if (!error || typeof error !== 'object') return false;
+  const name = 'name' in error ? String((error as { name?: unknown }).name || '') : '';
+  const message = error instanceof Error ? error.message : String(error);
+  return name === 'TimeoutError' || /timeout/i.test(message);
+}
 
-    const json = await res.json();
-    if (json?.code !== 0) return null;
-    return (json?.data ?? null) as T | null;
-  } catch {
-    return null;
+function resolveCommunityReadFetchOptions(
+  fetchOptions: CommunityReadFetchOptions | undefined,
+  defaults?: Partial<CommunityReadFetchOptions>,
+): Required<Pick<CommunityReadFetchOptions, 'cache' | 'timeoutMs' | 'retries' | 'logKey'>> &
+  Pick<CommunityReadFetchOptions, 'next'> {
+  const isServer = typeof window === 'undefined';
+  const cache =
+    fetchOptions?.cache ??
+    defaults?.cache ??
+    (isServer ? 'force-cache' : 'no-store');
+  const next =
+    fetchOptions?.next ??
+    defaults?.next ??
+    (isServer ? { revalidate: COMMUNITY_FEED_REVALIDATE_SECONDS } : undefined);
+  const timeoutMs =
+    Number(fetchOptions?.timeoutMs ?? defaults?.timeoutMs ?? COMMUNITY_READ_TIMEOUT_MS);
+  const retries =
+    Number(fetchOptions?.retries ?? defaults?.retries ?? COMMUNITY_READ_RETRIES);
+  const logKey = String(fetchOptions?.logKey || defaults?.logKey || 'community-api').trim();
+
+  return {
+    cache,
+    next,
+    timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : COMMUNITY_READ_TIMEOUT_MS,
+    retries: Number.isFinite(retries) && retries >= 0 ? retries : COMMUNITY_READ_RETRIES,
+    logKey,
+  };
+}
+
+async function getApiData<T>(
+  path: string,
+  fetchOptions?: CommunityReadFetchOptions,
+  defaults?: Partial<CommunityReadFetchOptions>,
+): Promise<T | null> {
+  const resolved = resolveCommunityReadFetchOptions(fetchOptions, defaults);
+  const maxAttempts = Math.max(1, resolved.retries + 1);
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const startedAt = Date.now();
+    try {
+      const res = await trackedApiFetch(path, {
+        cache: resolved.cache,
+        next: resolved.next,
+        timeoutMs: resolved.timeoutMs,
+      });
+      const durationMs = Date.now() - startedAt;
+
+      if (!res.ok) {
+        console.error(`[${resolved.logKey}] non-200 response`, {
+          path,
+          attempt,
+          maxAttempts,
+          status: res.status,
+          statusText: res.statusText,
+          durationMs,
+        });
+        if (attempt < maxAttempts && res.status >= 500) continue;
+        return null;
+      }
+
+      const json = await res.json().catch(() => null);
+      if (!json || json?.code !== 0) {
+        console.error(`[${resolved.logKey}] invalid-payload`, {
+          path,
+          attempt,
+          maxAttempts,
+          durationMs,
+          code: json && typeof json === 'object' ? (json as { code?: unknown }).code ?? null : null,
+          message:
+            json && typeof json === 'object'
+              ? String((json as { message?: unknown }).message || '').trim() || null
+              : null,
+        });
+        if (attempt < maxAttempts) continue;
+        return null;
+      }
+
+      if (attempt > 1) {
+        console.warn(`[${resolved.logKey}] retry-recovered`, {
+          path,
+          attempt,
+          maxAttempts,
+          durationMs,
+        });
+      }
+
+      return (json?.data ?? null) as T | null;
+    } catch (error) {
+      const durationMs = Date.now() - startedAt;
+      console.error(`[${resolved.logKey}] request exception`, {
+        path,
+        attempt,
+        maxAttempts,
+        durationMs,
+        errorType: isTimeoutLikeError(error) ? 'timeout' : 'exception',
+        error: error instanceof Error ? error.message : String(error),
+      });
+      if (attempt >= maxAttempts) return null;
+    }
   }
+
+  return null;
 }
 
 interface CommunityFeedData {
@@ -430,6 +546,7 @@ export async function getCommunityFeed(
     pageSize?: number;
     topicId?: string;
   },
+  fetchOptions?: CommunityReadFetchOptions,
 ): Promise<CommunityFeedResult> {
   const page = Math.max(1, Number(options?.page || 1));
   const pageSize = Math.min(50, Math.max(1, Number(options?.pageSize || 20)));
@@ -443,6 +560,8 @@ export async function getCommunityFeed(
   if (topicId) query.set('topic_id', topicId);
   const data = await getApiData<CommunityFeedData>(
     `/content/feed?${query.toString()}`,
+    fetchOptions,
+    { logKey: 'community-feed', next: { revalidate: COMMUNITY_FEED_REVALIDATE_SECONDS } },
   );
   const pagination = data?.pagination || {};
   const rawList = Array.isArray(data?.list) ? data.list : [];
@@ -659,7 +778,77 @@ export async function getCommunityCommentReplies(
   };
 }
 
-export async function getCommunityTopics(params: TopicListParams = {}): Promise<{
+export async function getCommunityPostLikeStatus(params: {
+  token: string;
+  postId: string;
+}): Promise<boolean | null> {
+  const token = String(params.token || '').trim();
+  const postId = String(params.postId || '').trim();
+  if (!token || !postId) return null;
+
+  try {
+    const res = await trackedApiFetch(`/content/${postId}/like-status`, {
+      method: 'GET',
+      headers: {
+        ...buildTrackingHeaders(),
+        Authorization: `Bearer ${token}`,
+      },
+      cache: 'no-store',
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json?.code !== 0) return null;
+    return Boolean(json?.data?.liked);
+  } catch {
+    return null;
+  }
+}
+
+export async function getCommunityCommentLikeStatuses(params: {
+  token: string;
+  commentIds: string[];
+}): Promise<Record<string, boolean>> {
+  const token = String(params.token || '').trim();
+  const commentIds = Array.from(
+    new Set(
+      (params.commentIds || [])
+        .map((id) => String(id || '').trim())
+        .filter((id) => Boolean(id) && MONGO_OBJECT_ID_PATTERN.test(id)),
+    ),
+  ).slice(0, 200);
+  if (!token || commentIds.length === 0) return {};
+
+  try {
+    const res = await trackedApiFetch('/content/comments/like-status-batch', {
+      method: 'POST',
+      headers: {
+        ...buildTrackingHeaders(),
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ids: commentIds }),
+      cache: 'no-store',
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json?.code !== 0) return {};
+    const likedIds = Array.isArray(json?.data?.liked_ids)
+      ? json.data.liked_ids
+          .map((id: unknown) => String(id || '').trim())
+          .filter(Boolean)
+      : [];
+    const statusMap: Record<string, boolean> = {};
+    likedIds.forEach((id: string) => {
+      statusMap[id] = true;
+    });
+    return statusMap;
+  } catch {
+    return {};
+  }
+}
+
+export async function getCommunityTopics(
+  params: TopicListParams = {},
+  fetchOptions?: CommunityReadFetchOptions,
+): Promise<{
   list: CommunityTopicItem[];
   total: number;
   page: number;
@@ -680,7 +869,11 @@ export async function getCommunityTopics(params: TopicListParams = {}): Promise<
     total?: number;
     page?: number;
     pageSize?: number;
-  }>(`/content/topics/public?${query.toString()}`);
+  }>(
+    `/content/topics/public?${query.toString()}`,
+    fetchOptions,
+    { logKey: 'community-topics', next: { revalidate: COMMUNITY_TOPIC_REVALIDATE_SECONDS } },
+  );
 
   return {
     list: Array.isArray(data?.list) ? data!.list!.map((item) => normalizeTopicItem(item)) : [],
@@ -690,10 +883,17 @@ export async function getCommunityTopics(params: TopicListParams = {}): Promise<
   };
 }
 
-export async function getCommunityTopicDetail(idOrSlug: string): Promise<CommunityTopicItem | null> {
+export async function getCommunityTopicDetail(
+  idOrSlug: string,
+  fetchOptions?: CommunityReadFetchOptions,
+): Promise<CommunityTopicItem | null> {
   const target = String(idOrSlug || '').trim();
   if (!target) return null;
-  const topic = await getApiData<CommunityTopicItem>(`/content/topics/public/${encodeURIComponent(target)}`);
+  const topic = await getApiData<CommunityTopicItem>(
+    `/content/topics/public/${encodeURIComponent(target)}`,
+    fetchOptions,
+    { logKey: 'community-topic-detail', next: { revalidate: COMMUNITY_TOPIC_REVALIDATE_SECONDS } },
+  );
   return topic ? normalizeTopicItem(topic) : null;
 }
 
@@ -840,6 +1040,95 @@ export async function createCommunityPost(
     };
   } catch {
     return { ok: false, message: '发布失败，请稍后重试' };
+  }
+}
+
+export async function updateMyCommunityPost(
+  params: UpdateCommunityPostParams,
+): Promise<{
+  ok: boolean;
+  message: string;
+  post?: CommunityPost;
+  reviewReason?: string;
+  reviewStatus?: string;
+  status?: number;
+  updatedAt?: string;
+  topicItems?: CommunityTopicItem[];
+}> {
+  const token = String(params.token || '').trim();
+  const postId = String(params.postId || '').trim();
+  const content = String(params.content || '').trim();
+  if (!token || !postId) {
+    return { ok: false, message: '参数不完整' };
+  }
+  if (!content) {
+    return { ok: false, message: '帖子内容不能为空' };
+  }
+
+  try {
+    const res = await trackedApiFetch(`/content/my/posts/${postId}`, {
+      method: 'PUT',
+      headers: {
+        ...buildTrackingHeaders(),
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title: String(params.title || '').trim() || undefined,
+        summary: String(params.summary || '').trim() || undefined,
+        content,
+        app_id: params.appId || undefined,
+        source: String(params.source || 'web').trim() || 'web',
+        topic_ids: Array.isArray(params.topicIds)
+          ? params.topicIds.filter((id) => String(id || '').trim())
+          : [],
+        topic_names: Array.isArray(params.topicNames)
+          ? params.topicNames
+              .map((name) => String(name || '').trim())
+              .filter(Boolean)
+          : [],
+      }),
+    });
+
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json?.code !== 0 || !json?.data) {
+      return {
+        ok: false,
+        message: parseApiResponseMessage(json, '保存失败'),
+      };
+    }
+
+    const rawItem = json.data as ApiCommunityPost & {
+      review_reason?: string;
+      review_status?: string;
+      status?: number;
+      updated_at?: string;
+    };
+    const topicItems = Array.isArray(rawItem.topic_infos)
+      ? rawItem.topic_infos
+          .map((topic) =>
+            normalizeTopicItem({
+              _id: String(topic?._id || '').trim(),
+              name: String(topic?.name || '').trim(),
+              slug: String(topic?.slug || '').trim(),
+              app_id: rawItem.app_info?._id,
+            }),
+          )
+          .filter((topic) => Boolean(topic._id))
+      : [];
+
+    return {
+      ok: true,
+      message: parseApiResponseMessage(json, '保存成功'),
+      post: toCommunityPost(rawItem),
+      reviewReason: String(rawItem.review_reason || '').trim() || undefined,
+      reviewStatus: String(rawItem.review_status || '').trim() || undefined,
+      status: Number(rawItem.status || 0),
+      updatedAt: String(rawItem.updated_at || '').trim() || undefined,
+      topicItems,
+    };
+  } catch {
+    return { ok: false, message: '保存失败，请稍后重试' };
   }
 }
 

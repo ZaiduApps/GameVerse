@@ -9,7 +9,7 @@ import type { SiteConfig } from '@/types';
 import Script from 'next/script';
 import { resolveSiteStylePreset } from '@/lib/site-style';
 import { getPublicSiteConfig } from '@/lib/site-config';
-import { getSiteUrl } from '@/lib/seo';
+import { getLayoutIconMetadata, getSiteShareImageUrl, getSiteUrl } from '@/lib/seo';
 import AppShell from '@/components/layout/AppShell';
 
 const siteStyle = resolveSiteStylePreset(process.env.NEXT_PUBLIC_SITE_STYLE);
@@ -35,8 +35,8 @@ export async function generateMetadata(): Promise<Metadata> {
     .map((k) => k.trim())
     .filter(Boolean);
   const titleSuffix = config?.seo?.title_suffix || '';
-  const shareImage = config?.basic?.share_image || '';
-  const favicon = config?.basic?.favicon_url || '/favicon.ico';
+  const shareImage = getSiteShareImageUrl(config?.basic?.share_image);
+  const icons = getLayoutIconMetadata(config?.basic?.favicon_url);
   const headerVerifications = config?.header?.verifications || {};
 
   if (!config) {
@@ -51,6 +51,7 @@ export async function generateMetadata(): Promise<Metadata> {
         index: true,
         follow: true,
       },
+      icons: getLayoutIconMetadata(),
     };
   }
 
@@ -75,7 +76,7 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       title: siteSlogan,
       description: seoDescription,
-      images: shareImage ? [{ url: shareImage, width: 1200, height: 630, alt: siteName }] : [],
+      images: [{ url: shareImage, width: 1200, height: 630, alt: siteName }],
       siteName: siteName,
       type: 'website',
       locale: 'zh_CN',
@@ -84,13 +85,9 @@ export async function generateMetadata(): Promise<Metadata> {
       card: 'summary_large_image',
       title: siteSlogan,
       description: seoDescription,
-      images: shareImage ? [shareImage] : [],
+      images: [shareImage],
     },
-    icons: {
-      icon: favicon,
-      shortcut: favicon,
-      apple: favicon,
-    },
+    icons,
   };
 }
 

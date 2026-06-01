@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
+import { cache } from 'react';
 
-import CommunityPageView from './CommunityPageView';
+import CommunityPageView, { type CommunityPageInitialData } from './CommunityPageView';
 import { absoluteUrl } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityFeed, getCommunityTopics } from '@/lib/community-api';
@@ -12,8 +13,29 @@ function clamp(input: string, max: number): string {
   return `${input.slice(0, Math.max(1, max - 3)).trim()}...`;
 }
 
+const getCommunityPageData = cache(async (): Promise<{
+  config: Awaited<ReturnType<typeof getPublicSiteConfig>>;
+  initialData: CommunityPageInitialData;
+}> => {
+  const [config, latestFeed, hotFeed, topics] = await Promise.all([
+    getPublicSiteConfig(300),
+    getCommunityFeed('latest', { page: 1, pageSize: COMMUNITY_JSONLD_LIMIT }),
+    getCommunityFeed('hot', { page: 1, pageSize: COMMUNITY_JSONLD_LIMIT }),
+    getCommunityTopics({ page: 1, pageSize: COMMUNITY_JSONLD_LIMIT, sort: 'hot' }),
+  ]);
+
+  return {
+    config,
+    initialData: {
+      latestFeed,
+      hotFeed,
+      topics: topics.list || [],
+    },
+  };
+});
+
 export async function generateMetadata(): Promise<Metadata> {
-  const config = await getPublicSiteConfig(300);
+  const { config } = await getCommunityPageData();
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
   const title = `${siteName} 社区 - 热门话题与最新动态`;
   const description = '浏览 APKScc 社区最新帖子与热门话题，查看游戏讨论、攻略分享和玩家互动内容。';
@@ -59,15 +81,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function CommunityPage() {
-  const [config, latestFeed, topics] = await Promise.all([
-    getPublicSiteConfig(300),
-    getCommunityFeed('latest', { page: 1, pageSize: COMMUNITY_JSONLD_LIMIT }),
-    getCommunityTopics({ page: 1, pageSize: COMMUNITY_JSONLD_LIMIT, sort: 'hot' }),
-  ]);
+  const { config, initialData } = await getCommunityPageData();
 
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
-  const postList = Array.isArray(latestFeed?.list) ? latestFeed.list : [];
-  const topicList = Array.isArray(topics?.list) ? topics.list : [];
+  const postList = Array.isArray(initialData.latestFeed?.list) ? initialData.latestFeed.list : [];
+  const topicList = Array.isArray(initialData.topics) ? initialData.topics : [];
 
   const collectionJsonLd = {
     '@context': 'https://schema.org',
@@ -136,7 +154,7 @@ export default async function CommunityPage() {
         />
       ) : null}
       <h1 className="sr-only">{siteName} 社区</h1>
-      <CommunityPageView />
+      <CommunityPageView initialData={initialData} />
     </>
   );
 }

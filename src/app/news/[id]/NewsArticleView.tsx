@@ -163,16 +163,16 @@ export default function NewsArticleView({ article, relatedArticles, sourceLinks,
           <Separator className="mb-6" />
 
           {article.excerpt ? (
-            <div className="mb-6 rounded-xl border bg-muted/35 p-4 text-sm leading-6 text-muted-foreground">
+            <div className="mb-6 rounded-xl bg-muted/35 p-4 text-sm leading-6 text-muted-foreground">
               <strong className="mr-2 text-foreground">摘要：</strong>
               {article.excerpt}
             </div>
           ) : null}
 
           <div
-            className="prose prose-sm max-w-none dark:prose-invert md:prose-base"
+            className="mx-auto w-full max-w-[760px] px-1 text-[15px] leading-relaxed text-foreground/90 sm:px-2 sm:text-base"
             onClick={handleMarkdownContainerClick}
-            dangerouslySetInnerHTML={{ __html: renderMarkdown(article.content) }}
+            dangerouslySetInnerHTML={renderMarkdown(article.content, { preset: 'detail' })}
           />
 
           <div className="mt-8 grid gap-4 md:grid-cols-2">

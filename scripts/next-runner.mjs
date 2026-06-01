@@ -26,6 +26,10 @@ if (mode === 'dev' && shouldCleanDevDist) {
   console.log('[next-runner] Cleared dev dist directory: .next-dev');
 }
 
+if (mode === 'dev' && process.env.DISABLE_WEBPACK_CACHE === '1') {
+  console.log('[next-runner] Disabled webpack cache for this dev session via DISABLE_WEBPACK_CACHE=1');
+}
+
 if (mode === 'start' && !(await pathExists(prodBuildIdFile))) {
   console.error('[next-runner] Missing production build (.next/BUILD_ID). Run `pnpm build` before `pnpm start`.');
   process.exit(1);

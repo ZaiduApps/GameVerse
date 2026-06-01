@@ -139,6 +139,21 @@ function gameMatchesKeyword(game: LibraryGame, keyword: string): boolean {
   return haystack.includes(query);
 }
 
+function gameMatchesCategory(game: LibraryGame, category: string): boolean {
+  const query = String(category || '').trim().toLowerCase();
+  if (!query) return true;
+  const haystack = [
+    game.category,
+    ...(game.tags || []),
+    game.title,
+    game.description,
+    game.shortDescription,
+  ]
+    .join(' ')
+    .toLowerCase();
+  return haystack.includes(query);
+}
+
 function getGameHref(game: LibraryGame): string {
   const target = String(game.pkg || game.id || '').trim();
   return `/app/${encodeURIComponent(target)}`;
@@ -217,7 +232,14 @@ function LibraryGameCard({ game }: { game: LibraryGame }) {
   );
 }
 
-export default function GamesPage({ initialKeyword = '' }: { initialKeyword?: string }) {
+export default function GamesPage({
+  initialKeyword = '',
+  initialCategory = 'all',
+}: {
+  initialKeyword?: string;
+  initialCategory?: string;
+}) {
+  const safeInitialCategory = String(initialCategory || '').trim() || 'all';
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadingAttempt, setLoadingAttempt] = useState(1);
@@ -228,9 +250,13 @@ export default function GamesPage({ initialKeyword = '' }: { initialKeyword?: st
   const [reloadToken, setReloadToken] = useState(0);
   const [searchInput, setSearchInput] = useState(initialKeyword);
   const [queryKeyword, setQueryKeyword] = useState(initialKeyword);
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState(safeInitialCategory);
   const [sortMode, setSortMode] = useState<SortMode>('latest');
   const [onlyHighScore, setOnlyHighScore] = useState(false);
+  const effectiveQueryKeyword = useMemo(() => {
+    if (selectedCategory !== 'all') return selectedCategory;
+    return queryKeyword;
+  }, [queryKeyword, selectedCategory]);
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setQueryKeyword(searchInput.trim());
@@ -243,13 +269,17 @@ export default function GamesPage({ initialKeyword = '' }: { initialKeyword?: st
     setQueryKeyword(initialKeyword);
   }, [initialKeyword]);
 
+  useEffect(() => {
+    setSelectedCategory(String(initialCategory || '').trim() || 'all');
+  }, [initialCategory]);
+
   async function fetchGamePage(
     page: number,
     options?: { append?: boolean; externalSignal?: AbortSignal; keywordOverride?: string },
   ): Promise<boolean> {
     const append = Boolean(options?.append);
     const externalSignal = options?.externalSignal;
-    const keyword = (options?.keywordOverride ?? queryKeyword).trim();
+    const keyword = (options?.keywordOverride ?? effectiveQueryKeyword).trim();
     const query = keyword || DEFAULT_GAME_QUERY;
 
     if (append) {
@@ -353,7 +383,7 @@ export default function GamesPage({ initialKeyword = '' }: { initialKeyword?: st
     setTotalGames(0);
     void fetchGamePage(1, { append: false, externalSignal: controller.signal });
     return () => controller.abort();
-  }, [queryKeyword, reloadToken]);
+  }, [effectiveQueryKeyword, reloadToken]);
 
   const categories = useMemo<CategoryItem[]>(() => {
     const counts = new Map<string, number>();
@@ -379,12 +409,12 @@ export default function GamesPage({ initialKeyword = '' }: { initialKeyword?: st
   }, [categories]);
 
   const filteredGames = useMemo(() => {
-    const normalizedKeyword = searchInput.trim();
+    const normalizedKeyword = effectiveQueryKeyword.trim();
 
     const filtered = allGames.filter((game) => {
       if (
         selectedCategory !== 'all' &&
-        !(game.tags || []).includes(selectedCategory)
+        !gameMatchesCategory(game, selectedCategory)
       ) {
         return false;
       }
@@ -402,7 +432,7 @@ export default function GamesPage({ initialKeyword = '' }: { initialKeyword?: st
       if (sortMode === 'name') return a.title.localeCompare(b.title, 'zh-CN');
       return a.sourceIndex - b.sourceIndex;
     });
-  }, [allGames, onlyHighScore, searchInput, selectedCategory, sortMode]);
+  }, [allGames, effectiveQueryKeyword, onlyHighScore, selectedCategory, sortMode]);
 
   const hasMore = !isLoading && !isLoadingMore && allGames.length < Math.max(totalGames, allGames.length);
   const renderedGames = isLoading ? [] : filteredGames;

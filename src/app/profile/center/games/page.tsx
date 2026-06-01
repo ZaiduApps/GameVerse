@@ -11,6 +11,7 @@ import { useAuth } from '@/context/auth-context';
 import GameCard from '@/components/game-card';
 import type { CommunityTopicItem } from '@/lib/community-api';
 import { extractFollowedGamesFromTopics, getMyFollowedGameTopics } from '@/lib/profile-dashboard-api';
+import CenterAuthRequired from '../CenterAuthRequired';
 import CenterPageHeader from '../CenterPageHeader';
 
 export default function ProfileCenterGamesPage() {
@@ -29,10 +30,6 @@ export default function ProfileCenterGamesPage() {
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    if (!isAuthLoading && !isAuthenticated) {
-      router.push('/');
-      return;
-    }
     async function load() {
       if (!token) return;
       setLoading(true);
@@ -48,7 +45,7 @@ export default function ProfileCenterGamesPage() {
     if (isAuthenticated && token) {
       void load();
     }
-  }, [isAuthLoading, isAuthenticated, router, searchParams, token]);
+  }, [isAuthLoading, isAuthenticated, searchParams, token]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -87,7 +84,21 @@ export default function ProfileCenterGamesPage() {
     setLoadingMore(false);
   }
 
-  if (isAuthLoading || loading) {
+  if (isAuthLoading) {
+    return <div className="flex min-h-[40vh] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <CenterAuthRequired
+        title="我关注的游戏"
+        description="从你关注的游戏社区自动聚合。"
+        containerClassName="max-w-5xl"
+      />
+    );
+  }
+
+  if (loading) {
     return <div className="flex min-h-[40vh] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
 

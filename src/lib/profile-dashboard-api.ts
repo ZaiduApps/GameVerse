@@ -4,16 +4,20 @@ import type { CommunityPost, Game } from '@/types';
 
 export type DashboardPostItem = {
   post: CommunityPost;
+  topicItems?: CommunityTopicItem[];
+  reviewReason?: string;
   reviewStatus: string;
   status: number;
   updatedAt?: string;
 };
 
 export type DashboardPageResult<T> = {
+  ok: boolean;
   list: T[];
   total: number;
   page: number;
   pageSize: number;
+  message?: string;
 };
 
 type ApiResponse<T> = {
@@ -23,10 +27,43 @@ type ApiResponse<T> = {
 };
 
 type ApiMyPostItem = ApiCommunityPost & {
+  review_reason?: string;
   review_status?: string;
   status?: number;
   updated_at?: string;
 };
+
+function mapDashboardTopicItems(
+  item: ApiMyPostItem,
+  post: CommunityPost,
+): CommunityTopicItem[] {
+  const topicMap = new Map<string, CommunityTopicItem>();
+
+  (item.topic_infos || []).forEach((topic) => {
+    const id = String(topic?._id || '').trim();
+    if (!id) return;
+    topicMap.set(id, {
+      _id: id,
+      app_id: post.relatedApp?.id,
+      name: String(topic?.name || '').trim() || id,
+      slug: String(topic?.slug || '').trim() || id,
+    });
+  });
+
+  (post.topicIds || []).forEach((topicId, index) => {
+    const id = String(topicId || '').trim();
+    if (!id || topicMap.has(id)) return;
+    const fallbackName = String(post.topicNames?.[index] || '').trim();
+    topicMap.set(id, {
+      _id: id,
+      app_id: post.relatedApp?.id,
+      name: fallbackName || id,
+      slug: fallbackName || id,
+    });
+  });
+
+  return Array.from(topicMap.values());
+}
 
 type ApiReservationItem = {
   app_id?: string;
@@ -42,17 +79,44 @@ type ApiReservationItem = {
   followed_at?: string;
 };
 
+function buildDashboardFailure<T>(
+  page: number,
+  pageSize: number,
+  message: string,
+): DashboardPageResult<T> {
+  return {
+    ok: false,
+    list: [],
+    total: 0,
+    page,
+    pageSize,
+    message,
+  };
+}
+
 export async function getMyDashboardPosts(params: {
   token: string;
   page?: number;
   pageSize?: number;
+  q?: string;
+  reviewStatus?: string;
+  status?: string;
+  sort?: string;
 }): Promise<DashboardPageResult<DashboardPostItem>> {
   const token = String(params.token || '').trim();
-  if (!token) return { list: [], total: 0, page: 1, pageSize: 6 };
-
   const page = Math.max(1, Number(params.page || 1));
   const pageSize = Math.max(1, Number(params.pageSize || 6));
+  if (!token) return buildDashboardFailure(page, pageSize, '登录状态已失效');
+
   const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  const keyword = String(params.q || '').trim();
+  const reviewStatus = String(params.reviewStatus || '').trim();
+  const status = String(params.status || '').trim();
+  const sort = String(params.sort || '').trim();
+  if (keyword) query.set('q', keyword);
+  if (reviewStatus) query.set('review_status', reviewStatus);
+  if (status === '0' || status === '1') query.set('status', status);
+  if (sort && sort !== 'latest') query.set('sort', sort);
 
   try {
     const res = await trackedApiFetch(`/content/my/posts?${query.toString()}`, {
@@ -60,22 +124,34 @@ export async function getMyDashboardPosts(params: {
       cache: 'no-store',
     });
     const json: ApiResponse<{ list?: ApiMyPostItem[]; total?: number; page?: number; pageSize?: number }> = await res.json().catch(() => ({ code: -1 }));
-    if (!res.ok || json.code !== 0) return { list: [], total: 0, page, pageSize };
+    if (!res.ok || json.code !== 0) {
+      return buildDashboardFailure(
+        page,
+        pageSize,
+        String(json.message || '动态列表加载失败，请稍后重试'),
+      );
+    }
     const rawList = Array.isArray(json.data?.list) ? json.data?.list : [];
-    const list: DashboardPostItem[] = rawList.map((item) => ({
-      post: toCommunityPost(item),
-      reviewStatus: String(item.review_status || '').trim(),
-      status: Number(item.status || 0),
-      updatedAt: String(item.updated_at || '').trim() || undefined,
-    }));
+    const list: DashboardPostItem[] = rawList.map((item) => {
+      const post = toCommunityPost(item);
+      return {
+        post,
+        topicItems: mapDashboardTopicItems(item, post),
+        reviewReason: String(item.review_reason || '').trim() || undefined,
+        reviewStatus: String(item.review_status || '').trim(),
+        status: Number(item.status || 0),
+        updatedAt: String(item.updated_at || '').trim() || undefined,
+      };
+    });
     return {
+      ok: true,
       list,
       total: Number(json.data?.total || list.length || 0),
       page: Number(json.data?.page || page),
       pageSize: Number(json.data?.pageSize || pageSize),
     };
   } catch {
-    return { list: [], total: 0, page, pageSize };
+    return buildDashboardFailure(page, pageSize, '动态列表加载失败，请稍后重试');
   }
 }
 
@@ -85,10 +161,10 @@ export async function getMyReservationGames(params: {
   pageSize?: number;
 }): Promise<DashboardPageResult<Game>> {
   const token = String(params.token || '').trim();
-  if (!token) return { list: [], total: 0, page: 1, pageSize: 6 };
-
   const page = Math.max(1, Number(params.page || 1));
   const pageSize = Math.max(1, Number(params.pageSize || 6));
+  if (!token) return buildDashboardFailure(page, pageSize, '登录状态已失效');
+
   const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
 
   try {
@@ -97,7 +173,13 @@ export async function getMyReservationGames(params: {
       cache: 'no-store',
     });
     const json: ApiResponse<{ list?: ApiReservationItem[]; total?: number; page?: number; pageSize?: number }> = await res.json().catch(() => ({ code: -1 }));
-    if (!res.ok || json.code !== 0) return { list: [], total: 0, page, pageSize };
+    if (!res.ok || json.code !== 0) {
+      return buildDashboardFailure(
+        page,
+        pageSize,
+        String(json.message || '预约列表加载失败，请稍后重试'),
+      );
+    }
     const rawList = Array.isArray(json.data?.list) ? json.data?.list : [];
     const list: Game[] = rawList.map((item) => ({
       id: String(item.app_id || item.pkg || '').trim(),
@@ -113,13 +195,14 @@ export async function getMyReservationGames(params: {
       status: item.is_reservation === false ? 'released' : 'pre-registration',
     }));
     return {
+      ok: true,
       list,
       total: Number(json.data?.total || list.length || 0),
       page: Number(json.data?.page || page),
       pageSize: Number(json.data?.pageSize || pageSize),
     };
   } catch {
-    return { list: [], total: 0, page, pageSize };
+    return buildDashboardFailure(page, pageSize, '预约列表加载失败，请稍后重试');
   }
 }
 
@@ -133,6 +216,7 @@ export async function getMyFollowedGameTopics(params: {
   const list = await getMyFollowedTopics(params);
   const gameTopics = list.filter((topic) => Boolean(topic?.app_info?._id || topic?.app_info?.pkg));
   return {
+    ok: true,
     list: gameTopics,
     total: gameTopics.length,
     page,

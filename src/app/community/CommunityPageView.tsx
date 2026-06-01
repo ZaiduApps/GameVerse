@@ -22,6 +22,7 @@ import {
   adminSetCommunityPostStatus,
   deleteMyCommunityPost,
   followTopic,
+  type CommunityFeedResult,
   getCommunityFeed,
   getCommunityTopics,
   getMyFollowedTopics,
@@ -33,6 +34,12 @@ import {
   unfollowTopic,
   type CommunityTopicItem,
 } from '@/lib/community-api';
+import {
+  readCommunityReturnSnapshotForRestore,
+  writeCommunityReturnSnapshot,
+  type CommunityFeedTab,
+  type CommunityReturnSnapshot,
+} from '@/lib/community-return';
 import type { CommunityPost } from '@/types';
 import { Loader2, X } from 'lucide-react';
 
@@ -59,7 +66,17 @@ function CommunityLoadingSkeleton() {
   );
 }
 
-export default function CommunityPage() {
+export interface CommunityPageInitialData {
+  latestFeed: CommunityFeedResult;
+  hotFeed: CommunityFeedResult;
+  topics: CommunityTopicItem[];
+}
+
+interface CommunityPageViewProps {
+  initialData?: CommunityPageInitialData;
+}
+
+export default function CommunityPageView({ initialData }: CommunityPageViewProps) {
   const FEED_PAGE_SIZE = 10;
   const HOT_TOPICS_LIMIT = 10;
   const router = useRouter();
@@ -67,20 +84,29 @@ export default function CommunityPage() {
   const { isAuthenticated, token, user } = useAuth();
   const { toast } = useToast();
 
-  const [latestPosts, setLatestPosts] = useState<CommunityPost[]>([]);
-  const [hotPosts, setHotPosts] = useState<CommunityPost[]>([]);
-  const [topicList, setTopicList] = useState<CommunityTopicItem[]>([]);
+  const initialLatestFeed = initialData?.latestFeed;
+  const initialHotFeed = initialData?.hotFeed;
+  const initialTopics = initialData?.topics || [];
+  const hasInitialFeedData = Boolean(initialLatestFeed && initialHotFeed);
+
+  const [latestPosts, setLatestPosts] = useState<CommunityPost[]>(() => initialLatestFeed?.list || []);
+  const [hotPosts, setHotPosts] = useState<CommunityPost[]>(() => initialHotFeed?.list || []);
+  const [topicList, setTopicList] = useState<CommunityTopicItem[]>(() => initialTopics);
   const [selectedTopic, setSelectedTopic] = useState<CommunityTopicItem | null>(null);
   const [followedTopicIds, setFollowedTopicIds] = useState<string[]>([]);
   const [followLoadingTopicId, setFollowLoadingTopicId] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [latestPage, setLatestPage] = useState(1);
-  const [hotPage, setHotPage] = useState(1);
-  const [latestTotal, setLatestTotal] = useState(0);
-  const [hotTotal, setHotTotal] = useState(0);
-  const [latestPageSize, setLatestPageSize] = useState(FEED_PAGE_SIZE);
-  const [hotPageSize, setHotPageSize] = useState(FEED_PAGE_SIZE);
-  const [activeFeedTab, setActiveFeedTab] = useState<'latest' | 'hot'>('latest');
+  const [isLoading, setIsLoading] = useState(!hasInitialFeedData);
+  const [latestPage, setLatestPage] = useState(() => Math.max(1, Number(initialLatestFeed?.page || 1)));
+  const [hotPage, setHotPage] = useState(() => Math.max(1, Number(initialHotFeed?.page || 1)));
+  const [latestTotal, setLatestTotal] = useState(() => Math.max(0, Number(initialLatestFeed?.total || 0)));
+  const [hotTotal, setHotTotal] = useState(() => Math.max(0, Number(initialHotFeed?.total || 0)));
+  const [latestPageSize, setLatestPageSize] = useState(() => Math.max(1, Number(initialLatestFeed?.pageSize || FEED_PAGE_SIZE)));
+  const [hotPageSize, setHotPageSize] = useState(() => Math.max(1, Number(initialHotFeed?.pageSize || FEED_PAGE_SIZE)));
+  const [latestHasMore, setLatestHasMore] = useState(() => Boolean(initialLatestFeed?.hasMore));
+  const [hotHasMore, setHotHasMore] = useState(() => Boolean(initialHotFeed?.hasMore));
+  const [latestLoadingMore, setLatestLoadingMore] = useState(false);
+  const [hotLoadingMore, setHotLoadingMore] = useState(false);
+  const [activeFeedTab, setActiveFeedTab] = useState<CommunityFeedTab>('latest');
   const [topicsLoading, setTopicsLoading] = useState(false);
   const [showAllFollowedTopics, setShowAllFollowedTopics] = useState(false);
   const [composeFocusPending, setComposeFocusPending] = useState(false);
@@ -92,6 +118,11 @@ export default function CommunityPage() {
   const [moderationPostId, setModerationPostId] = useState('');
 
   const requestIdRef = useRef(0);
+  const shouldSkipInitialFeedRequestRef = useRef(hasInitialFeedData);
+  const latestLoadMoreAnchorRef = useRef<HTMLDivElement | null>(null);
+  const hotLoadMoreAnchorRef = useRef<HTMLDivElement | null>(null);
+  const pendingRestoredTopicIdRef = useRef<string | null>(null);
+  const suppressNextResumeRefreshRef = useRef(false);
 
   const getPostListSignature = useCallback((posts: CommunityPost[]) => {
     return posts.map((item) => String(item.id || '').trim()).filter(Boolean).join('|');
@@ -110,19 +141,77 @@ export default function CommunityPage() {
       return code === 'admin' || code === 'super_admin';
     });
   }, [user?.roles]);
+  const moderatedTopicIds = useMemo(() => {
+    if (!currentUserId) return [] as string[];
+    return topicList
+      .map((topic) => {
+        const topicId = String(topic?._id || '').trim();
+        if (!topicId) return '';
+        const moderatorIds = Array.isArray(topic?.moderator_ids)
+          ? topic.moderator_ids
+              .map((id) => String(id || '').trim())
+              .filter(Boolean)
+          : [];
+        if (moderatorIds.includes(currentUserId)) return topicId;
+        return '';
+      })
+      .filter(Boolean);
+  }, [currentUserId, topicList]);
+  const isTopicModeratorById = useCallback(
+    (topicId?: string | null) => {
+      const safeTopicId = String(topicId || '').trim();
+      if (!safeTopicId) return false;
+      return moderatedTopicIds.includes(safeTopicId);
+    },
+    [moderatedTopicIds],
+  );
+  const canModerateTopicId = useCallback(
+    (topicId?: string | null) => {
+      const safeTopicId = String(topicId || '').trim();
+      if (!safeTopicId) return false;
+      if (isAdminUser) return true;
+      return isTopicModeratorById(safeTopicId);
+    },
+    [isAdminUser, isTopicModeratorById],
+  );
   const canModerateSelectedTopic = useMemo(() => {
-    if (!selectedTopicId || !currentUserId) return false;
-    const moderatorIds = Array.isArray(selectedTopic?.moderator_ids)
-      ? selectedTopic.moderator_ids
-          .map((id) => String(id || '').trim())
-          .filter(Boolean)
-      : [];
-    return moderatorIds.includes(currentUserId);
-  }, [currentUserId, selectedTopic, selectedTopicId]);
+    if (!selectedTopicId) return false;
+    return canModerateTopicId(selectedTopicId);
+  }, [canModerateTopicId, selectedTopicId]);
   const selectedTopicFollowed = useMemo(
     () => Boolean(selectedTopicId && followedTopicIds.includes(selectedTopicId)),
     [followedTopicIds, selectedTopicId],
   );
+
+  const restoreCommunityReturnSnapshot = useCallback((snapshot: CommunityReturnSnapshot) => {
+    const restoredTopic = snapshot.selectedTopic || null;
+    const restoredTopicId = String(restoredTopic?._id || snapshot.selectedTopicId || '').trim();
+    requestIdRef.current += 1;
+    pendingRestoredTopicIdRef.current = restoredTopic && restoredTopicId ? restoredTopicId : '';
+    suppressNextResumeRefreshRef.current = true;
+
+    setLatestPosts(snapshot.latest.posts);
+    setHotPosts(snapshot.hot.posts);
+    setLatestPage(Math.max(1, Number(snapshot.latest.page || 1)));
+    setHotPage(Math.max(1, Number(snapshot.hot.page || 1)));
+    setLatestTotal(Math.max(0, Number(snapshot.latest.total || 0)));
+    setHotTotal(Math.max(0, Number(snapshot.hot.total || 0)));
+    setLatestPageSize(Math.max(1, Number(snapshot.latest.pageSize || FEED_PAGE_SIZE)));
+    setHotPageSize(Math.max(1, Number(snapshot.hot.pageSize || FEED_PAGE_SIZE)));
+    setLatestHasMore(Boolean(snapshot.latest.hasMore));
+    setHotHasMore(Boolean(snapshot.hot.hasMore));
+    setLatestLoadingMore(false);
+    setHotLoadingMore(false);
+    setActiveFeedTab(snapshot.activeFeedTab === 'hot' ? 'hot' : 'latest');
+    setSelectedTopic(restoredTopic);
+    setIsLoading(false);
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: Math.max(0, Number(snapshot.scrollY || 0)), behavior: 'auto' });
+      });
+    });
+  }, [FEED_PAGE_SIZE]);
 
   const { followedTopics, officialTopics, hotTopics } = useMemo(() => {
     const topicMap = new Map<string, CommunityTopicItem>();
@@ -207,15 +296,27 @@ export default function CommunityPage() {
     setHotPosts((prev) => prev.filter((item) => String(item.id || '').trim() !== safePostId));
   }, []);
 
-  const resolveModerationTopicId = useCallback((post: CommunityPost) => {
-    const candidates = [
-      selectedTopicId,
-      ...(Array.isArray(post.topicIds) ? post.topicIds : []),
-    ]
-      .map((id) => String(id || '').trim())
-      .filter(Boolean);
-    return candidates[0] || '';
-  }, [selectedTopicId]);
+  const getPostTopicIds = useCallback(
+    (post: CommunityPost) => {
+      const candidates = [
+        selectedTopicId,
+        ...(Array.isArray(post.topicIds) ? post.topicIds : []),
+      ]
+        .map((id) => String(id || '').trim())
+        .filter(Boolean);
+      return Array.from(new Set(candidates));
+    },
+    [selectedTopicId],
+  );
+  const resolveModerationTopicId = useCallback(
+    (post: CommunityPost) => {
+      const candidates = getPostTopicIds(post);
+      if (!candidates.length) return '';
+      if (isAdminUser) return candidates[0];
+      return candidates.find((topicId) => canModerateTopicId(topicId)) || '';
+    },
+    [canModerateTopicId, getPostTopicIds, isAdminUser],
+  );
 
   const patchTopicFollowersCount = useCallback((topicId: string, followersCount: number) => {
     const safeTopicId = String(topicId || '').trim();
@@ -303,8 +404,8 @@ export default function CommunityPage() {
     } | null> => {
       const requestId = ++requestIdRef.current;
       if (showLoading) setIsLoading(true);
-      const targetLatestPage = Math.max(1, Number(options?.latestPage || latestPage || 1));
-      const targetHotPage = Math.max(1, Number(options?.hotPage || hotPage || 1));
+      const targetLatestPage = Math.max(1, Number(options?.latestPage || 1));
+      const targetHotPage = Math.max(1, Number(options?.hotPage || 1));
 
       const [latest, hot] = await Promise.all([
         getCommunityFeed('latest', { page: targetLatestPage, pageSize: FEED_PAGE_SIZE, topicId }),
@@ -321,6 +422,8 @@ export default function CommunityPage() {
       setHotTotal(hot.total);
       setLatestPageSize(latest.pageSize);
       setHotPageSize(hot.pageSize);
+      setLatestHasMore(Boolean(latest.hasMore));
+      setHotHasMore(Boolean(hot.hasMore));
       setIsLoading(false);
 
       return {
@@ -330,7 +433,137 @@ export default function CommunityPage() {
         hotSignature: hot.list.map((item) => String(item.id || '').trim()).filter(Boolean).join('|'),
       };
     },
-    [FEED_PAGE_SIZE, hotPage, latestPage],
+    [FEED_PAGE_SIZE],
+  );
+
+  const loadMoreByTab = useCallback(
+    async (targetTab: CommunityFeedTab) => {
+      if (isLoading) return;
+      if (targetTab === 'latest') {
+        if (latestLoadingMore || !latestHasMore) return;
+        const nextPage = Math.max(1, latestPage + 1);
+        setLatestLoadingMore(true);
+        const result = await getCommunityFeed('latest', {
+          page: nextPage,
+          pageSize: FEED_PAGE_SIZE,
+          topicId: selectedTopicId || undefined,
+        });
+        setLatestLoadingMore(false);
+        if (result.page < nextPage) {
+          toast({
+            title: '加载失败',
+            description: '接口返回页码未前进，请稍后重试。',
+            variant: 'destructive',
+          });
+          return;
+        }
+        setLatestPosts((prev) => {
+          const seen = new Set(prev.map((item) => String(item.id || '').trim()).filter(Boolean));
+          const merged = [...prev];
+          for (const item of result.list) {
+            const id = String(item.id || '').trim();
+            if (!id || seen.has(id)) continue;
+            seen.add(id);
+            merged.push(item);
+          }
+          return merged;
+        });
+        setLatestPage(result.page);
+        setLatestTotal(result.total);
+        setLatestPageSize(result.pageSize);
+        setLatestHasMore(Boolean(result.hasMore));
+        return;
+      }
+
+      if (hotLoadingMore || !hotHasMore) return;
+      const nextPage = Math.max(1, hotPage + 1);
+      setHotLoadingMore(true);
+      const result = await getCommunityFeed('hot', {
+        page: nextPage,
+        pageSize: FEED_PAGE_SIZE,
+        topicId: selectedTopicId || undefined,
+      });
+      setHotLoadingMore(false);
+      if (result.page < nextPage) {
+        toast({
+          title: '加载失败',
+          description: '接口返回页码未前进，请稍后重试。',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setHotPosts((prev) => {
+        const seen = new Set(prev.map((item) => String(item.id || '').trim()).filter(Boolean));
+        const merged = [...prev];
+        for (const item of result.list) {
+          const id = String(item.id || '').trim();
+          if (!id || seen.has(id)) continue;
+          seen.add(id);
+          merged.push(item);
+        }
+        return merged;
+      });
+      setHotPage(result.page);
+      setHotTotal(result.total);
+      setHotPageSize(result.pageSize);
+      setHotHasMore(Boolean(result.hasMore));
+    },
+    [
+      FEED_PAGE_SIZE,
+      hotHasMore,
+      hotLoadingMore,
+      hotPage,
+      isLoading,
+      latestHasMore,
+      latestLoadingMore,
+      latestPage,
+      selectedTopicId,
+      toast,
+    ],
+  );
+
+  const persistCommunityPostReturn = useCallback(
+    (targetPostId: string) => {
+      const safePostId = String(targetPostId || '').trim();
+      if (!safePostId) return;
+
+      writeCommunityReturnSnapshot({
+        targetPostId: safePostId,
+        activeFeedTab,
+        selectedTopic,
+        selectedTopicId,
+        latest: {
+          posts: latestPosts,
+          page: latestPage,
+          total: latestTotal,
+          pageSize: latestPageSize,
+          hasMore: latestHasMore,
+        },
+        hot: {
+          posts: hotPosts,
+          page: hotPage,
+          total: hotTotal,
+          pageSize: hotPageSize,
+          hasMore: hotHasMore,
+        },
+        scrollY: typeof window !== 'undefined' ? window.scrollY : 0,
+      });
+    },
+    [
+      activeFeedTab,
+      hotHasMore,
+      hotPage,
+      hotPageSize,
+      hotPosts,
+      hotTotal,
+      latestHasMore,
+      latestPage,
+      latestPageSize,
+      latestPosts,
+      latestTotal,
+      selectedTopic,
+      selectedTopicId,
+    ],
   );
 
   const handleToggleFollow = useCallback(
@@ -429,9 +662,9 @@ export default function CommunityPage() {
       String(post.authorId || '').trim() === currentUserId &&
       String(post.authorType || '').trim().toLowerCase() === 'user',
     );
-    const canUseTopicModeration = Boolean(topicId && isAdminUser);
-    const canUseAdminApi = Boolean(isAdminUser && !canUseTopicModeration);
-    const canUseMyPostApi = isOwner && !isAdminUser;
+    const canUseTopicModeration = Boolean(topicId && isTopicModeratorById(topicId));
+    const canUseAdminApi = Boolean(isAdminUser);
+    const canUseMyPostApi = isOwner && !canUseTopicModeration && !canUseAdminApi;
     if (!postId || !token || (!canUseTopicModeration && !canUseAdminApi && !canUseMyPostApi)) return;
 
     const ok = window.confirm('确认隐藏该帖子？隐藏后将不再在社区流中展示。');
@@ -473,7 +706,7 @@ export default function CommunityPage() {
       description: result.message,
     });
     void loadCommunityFeeds(false, selectedTopicId || undefined);
-  }, [currentUserId, isAdminUser, loadCommunityFeeds, removePostFromFeeds, resolveModerationTopicId, selectedTopicId, toast, token]);
+  }, [currentUserId, isAdminUser, isTopicModeratorById, loadCommunityFeeds, removePostFromFeeds, resolveModerationTopicId, selectedTopicId, toast, token]);
 
   const handleDeletePost = useCallback(async (post: CommunityPost) => {
     const topicId = resolveModerationTopicId(post);
@@ -483,9 +716,9 @@ export default function CommunityPage() {
       String(post.authorId || '').trim() === currentUserId &&
       String(post.authorType || '').trim().toLowerCase() === 'user',
     );
-    const canUseTopicModeration = Boolean(topicId && isAdminUser);
-    const canUseAdminApi = Boolean(isAdminUser && !canUseTopicModeration);
-    const canUseMyPostApi = isOwner && !isAdminUser;
+    const canUseTopicModeration = Boolean(topicId && isTopicModeratorById(topicId));
+    const canUseAdminApi = Boolean(isAdminUser);
+    const canUseMyPostApi = isOwner && !canUseTopicModeration && !canUseAdminApi;
     if (!postId || !token || (!canUseTopicModeration && !canUseAdminApi && !canUseMyPostApi)) return;
 
     const ok = window.confirm('确认删除该帖子？此操作会软删除并从列表移除。');
@@ -524,11 +757,18 @@ export default function CommunityPage() {
       description: result.message,
     });
     void loadCommunityFeeds(false, selectedTopicId || undefined);
-  }, [currentUserId, isAdminUser, loadCommunityFeeds, removePostFromFeeds, resolveModerationTopicId, selectedTopicId, toast, token]);
+  }, [currentUserId, isAdminUser, isTopicModeratorById, loadCommunityFeeds, removePostFromFeeds, resolveModerationTopicId, selectedTopicId, toast, token]);
 
   useEffect(() => {
+    const snapshot = readCommunityReturnSnapshotForRestore();
+    if (!snapshot) return;
+    restoreCommunityReturnSnapshot(snapshot);
+  }, [restoreCommunityReturnSnapshot]);
+
+  useEffect(() => {
+    if (initialTopics.length > 0) return;
     void loadTopics();
-  }, [loadTopics]);
+  }, [initialTopics.length, loadTopics]);
 
   useEffect(() => {
     void loadMyFollowedTopics();
@@ -551,6 +791,23 @@ export default function CommunityPage() {
   }, [searchParams, topicList]);
 
   useEffect(() => {
+    const restoredTopicId = pendingRestoredTopicIdRef.current;
+    if (restoredTopicId !== null) {
+      if (selectedTopicId === restoredTopicId) {
+        pendingRestoredTopicIdRef.current = null;
+        if (selectedTopicId) {
+          void syncTopicFollowStatus(selectedTopicId);
+        }
+        return;
+      }
+      if (!selectedTopicId && restoredTopicId) return;
+    }
+
+    if (shouldSkipInitialFeedRequestRef.current && !selectedTopicId) {
+      shouldSkipInitialFeedRequestRef.current = false;
+      return;
+    }
+
     void loadCommunityFeeds(true, selectedTopicId || undefined, { latestPage: 1, hotPage: 1 });
     if (selectedTopicId) {
       void syncTopicFollowStatus(selectedTopicId);
@@ -563,7 +820,11 @@ export default function CommunityPage() {
 
   useEffect(() => {
     const handlePageShow = () => {
-      void loadCommunityFeeds(true, selectedTopicId || undefined);
+      if (suppressNextResumeRefreshRef.current) {
+        suppressNextResumeRefreshRef.current = false;
+        return;
+      }
+      void loadCommunityFeeds(true, selectedTopicId || undefined, { latestPage: 1, hotPage: 1 });
       if (selectedTopicId) {
         void syncTopicFollowStatus(selectedTopicId);
       }
@@ -571,7 +832,11 @@ export default function CommunityPage() {
 
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        void loadCommunityFeeds(false, selectedTopicId || undefined);
+        if (suppressNextResumeRefreshRef.current) {
+          suppressNextResumeRefreshRef.current = false;
+          return;
+        }
+        void loadCommunityFeeds(false, selectedTopicId || undefined, { latestPage: 1, hotPage: 1 });
         if (selectedTopicId) {
           void syncTopicFollowStatus(selectedTopicId);
         }
@@ -586,6 +851,21 @@ export default function CommunityPage() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [loadCommunityFeeds, selectedTopicId, syncTopicFollowStatus]);
+
+  useEffect(() => {
+    const target = activeFeedTab === 'hot' ? hotLoadMoreAnchorRef.current : latestLoadMoreAnchorRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry?.isIntersecting) return;
+        void loadMoreByTab(activeFeedTab);
+      },
+      { rootMargin: '320px 0px' },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [activeFeedTab, loadMoreByTab]);
 
   const handlePosted = useCallback(() => {
     void loadCommunityFeeds(false, selectedTopicId || undefined, { latestPage: 1, hotPage: 1 });
@@ -606,52 +886,13 @@ export default function CommunityPage() {
     [router],
   );
 
-  const latestTotalPages = Math.max(1, Math.ceil(latestTotal / Math.max(1, latestPageSize)));
-  const hotTotalPages = Math.max(1, Math.ceil(hotTotal / Math.max(1, hotPageSize)));
-
-  const handleChangePage = useCallback(
-    (targetTab: 'latest' | 'hot', targetPage: number) => {
-      const normalizedPage = Math.max(1, targetPage);
-      if (targetTab === 'latest') {
-        if (normalizedPage === latestPage) return;
-        const previousSignature = getPostListSignature(latestPosts);
-        void (async () => {
-          const result = await loadCommunityFeeds(true, selectedTopicId || undefined, { latestPage: normalizedPage, hotPage });
-          if (!result) return;
-          if (result.latestPage < normalizedPage && result.latestSignature === previousSignature) {
-            toast({
-              title: '分页未生效',
-              description: '接口返回页码未前进，请检查后端分页协议。',
-              variant: 'destructive',
-            });
-          }
-        })();
-        return;
-      }
-      if (normalizedPage === hotPage) return;
-      const previousSignature = getPostListSignature(hotPosts);
-      void (async () => {
-        const result = await loadCommunityFeeds(true, selectedTopicId || undefined, { latestPage, hotPage: normalizedPage });
-        if (!result) return;
-        if (result.hotPage < normalizedPage && result.hotSignature === previousSignature) {
-          toast({
-            title: '分页未生效',
-            description: '接口返回页码未前进，请检查后端分页协议。',
-            variant: 'destructive',
-          });
-        }
-      })();
-    },
-    [getPostListSignature, hotPage, hotPosts, latestPage, latestPosts, loadCommunityFeeds, selectedTopicId, toast],
-  );
-
   const renderPostList = (
     posts: CommunityPost[],
     options: {
-      tab: 'latest' | 'hot';
-      page: number;
-      totalPages: number;
-      total: number;
+      tab: CommunityFeedTab;
+      hasMore: boolean;
+      loadingMore: boolean;
+      anchorRef: React.RefObject<HTMLDivElement>;
     },
   ) => {
     if (isLoading) {
@@ -676,7 +917,12 @@ export default function CommunityPage() {
           const postAuthorId = String(post.authorId || '').trim();
           const postAuthorType = String(post.authorType || '').trim().toLowerCase();
           const isOwner = Boolean(currentUserId && postAuthorId && postAuthorId === currentUserId && postAuthorType === 'user');
-          const canManage = Boolean(isOwner || isAdminUser);
+          const postTopicIds = getPostTopicIds(post);
+          const canManage = Boolean(
+            isOwner ||
+            isAdminUser ||
+            postTopicIds.some((topicId) => canModerateTopicId(topicId)),
+          );
           return (
             <CommunityPostCard
               key={post.id}
@@ -686,33 +932,33 @@ export default function CommunityPage() {
               moderationBusy={moderationPostId === String(post.id || '').trim()}
               onHide={handleHidePost}
               onDelete={handleDeletePost}
+              onOpenPost={persistCommunityPostReturn}
             />
           );
         })}
-        <div className="flex items-center justify-between rounded-md border bg-card px-3 py-2 text-xs text-muted-foreground sm:text-sm">
-          <span>
-            第 {options.page} / {options.totalPages} 页 · 共 {options.total} 条
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={isLoading || options.page <= 1}
-              onClick={() => handleChangePage(options.tab, options.page - 1)}
-            >
-              上一页
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={isLoading || options.page >= options.totalPages}
-              onClick={() => handleChangePage(options.tab, options.page + 1)}
-            >
-              下一页
-            </Button>
+        <div className="rounded-md border bg-card px-3 py-3 text-xs text-muted-foreground sm:text-sm">
+          <div className="flex items-center justify-between">
+            <span>已加载 {posts.length} 条</span>
+            {options.loadingMore ? (
+              <span className="inline-flex items-center gap-1"><Loader2 className="h-3.5 w-3.5 animate-spin" />加载中</span>
+            ) : null}
           </div>
+          <div ref={options.anchorRef} className="h-1 w-full" />
+          {options.hasMore ? (
+            <div className="mt-2 flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isLoading || options.loadingMore}
+                onClick={() => void loadMoreByTab(options.tab)}
+              >
+                {options.loadingMore ? '加载中...' : '加载更多'}
+              </Button>
+            </div>
+          ) : (
+            <p className="mt-2 text-right text-[11px] text-muted-foreground">没有更多内容了</p>
+          )}
         </div>
       </div>
     );
@@ -787,7 +1033,7 @@ export default function CommunityPage() {
                   <p className="text-sm font-semibold">版主治理面板</p>
                   <p className="text-xs text-muted-foreground">可控制话题锁定、推荐、公告与置顶帖子。</p>
                 </div>
-                <Badge variant="outline">版主</Badge>
+                <Badge variant="outline">版主 / 管理员</Badge>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
@@ -876,17 +1122,17 @@ export default function CommunityPage() {
             <TabsContent value="latest" className="space-y-4">
               {renderPostList(latestPosts, {
                 tab: 'latest',
-                page: latestPage,
-                totalPages: latestTotalPages,
-                total: latestTotal,
+                hasMore: latestHasMore,
+                loadingMore: latestLoadingMore,
+                anchorRef: latestLoadMoreAnchorRef,
               })}
             </TabsContent>
             <TabsContent value="hot" className="space-y-4">
               {renderPostList(hotPosts, {
                 tab: 'hot',
-                page: hotPage,
-                totalPages: hotTotalPages,
-                total: hotTotal,
+                hasMore: hotHasMore,
+                loadingMore: hotLoadingMore,
+                anchorRef: hotLoadMoreAnchorRef,
               })}
             </TabsContent>
           </Tabs>

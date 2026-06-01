@@ -82,7 +82,7 @@ async function getTopGamesForSeo(): Promise<ApiGame[]> {
 export async function generateMetadata({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; category?: string }>;
 }): Promise<Metadata> {
   const config = await getPublicSiteConfig(300);
   const params = await searchParams;
@@ -91,7 +91,10 @@ export async function generateMetadata({
   const description =
     '浏览 APKScc 游戏库，发现热门国际服与精品安卓应用。支持按分类、评分和关键词快速查找，一键直达下载页。';
   const shareImage = String(config?.basic?.share_image || '').trim();
-  const hasQuery = Boolean(String(params?.q || '').trim());
+  const hasQuery = Boolean(
+    String(params?.q || '').trim() ||
+    String(params?.category || '').trim(),
+  );
 
   return {
     title: { absolute: title },
@@ -153,12 +156,13 @@ const APP_TOPIC_CLUSTERS = [
 export default async function GamesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; category?: string }>;
 }) {
   const [config, games] = await Promise.all([getPublicSiteConfig(300), getTopGamesForSeo()]);
   const params = await searchParams;
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
   const initialKeyword = String(params?.q || '').trim();
+  const initialCategory = String(params?.category || '').trim() || 'all';
 
   const collectionJsonLd = {
     '@context': 'https://schema.org',
@@ -215,7 +219,7 @@ export default async function GamesPage({
           ))}
         </div>
       </section>
-      <AppLibraryView initialKeyword={initialKeyword} />
+      <AppLibraryView initialKeyword={initialKeyword} initialCategory={initialCategory} />
     </>
   );
 }
