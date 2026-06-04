@@ -354,6 +354,8 @@ function formatNewsDate(value?: string | null) {
   if (!value) return '最近更新';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '最近更新';
+  const year = date.getUTCFullYear();
+  if (year < 2005 || year > 2100) return '最近更新';
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
@@ -367,7 +369,7 @@ function toRelatedNewsItem(post: CommunityPost): RelatedNewsItem | null {
     id,
     title,
     excerpt: getCommunityPostPreviewText(post, 120, '查看这篇相关社区帖的完整内容。'),
-    date: formatNewsDate(post.timestamp),
+    date: formatNewsDate(post.rawTimestamp || post.timestamp),
   };
 }
 

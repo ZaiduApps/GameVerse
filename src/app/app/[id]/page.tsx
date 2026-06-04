@@ -68,6 +68,8 @@ type RelatedNewsItem = {
 function formatNewsDate(input?: string | null) {
   const date = new Date(input || '');
   if (Number.isNaN(date.getTime())) return '最近更新';
+  const year = date.getUTCFullYear();
+  if (year < 2005 || year > 2100) return '最近更新';
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
@@ -81,7 +83,7 @@ function toRelatedNewsItem(post: CommunityPost): RelatedNewsItem | null {
     id,
     title,
     excerpt: getCommunityPostPreviewText(post, 120, '查看这篇相关资讯的完整内容。'),
-    date: formatNewsDate(post.timestamp),
+    date: formatNewsDate(post.rawTimestamp || post.timestamp),
   };
 }
 
@@ -336,7 +338,6 @@ export default async function GameDetailPage({
   const heroImage = resolveGameSeoImage(game, getSiteShareImageUrl());
   const description = normalizeText(game.summary || game.description);
 
-  const fallbackRatingCount = Math.max(1, Number(String(game.download_count_show || '').replace(/\D/g, '')) || 1);
   const [relatedNews, reviewSummary] = await Promise.all([
     getRelatedNews(game),
     getGameReviewSummary({
@@ -346,7 +347,7 @@ export default async function GameDetailPage({
       manualScore: game.star,
     }).catch(() => null),
   ]);
-  const ratingCount = Math.max(1, Number(reviewSummary?.ratingCount || 0) || fallbackRatingCount);
+  const ratingCount = Math.max(0, Number(reviewSummary?.ratingCount || 0));
   const ratingValue = Number(
     reviewSummary?.displayScore ??
       normalizeToFiveStar(game.star) ??
@@ -380,7 +381,7 @@ export default async function GameDetailPage({
       priceCurrency: 'CNY',
       availability: 'https://schema.org/InStock',
     },
-    aggregateRating: ratingValue > 0
+    aggregateRating: ratingValue > 0 && ratingCount > 0
       ? {
           '@type': 'AggregateRating',
           ratingValue,

@@ -193,6 +193,16 @@ function formatTimestamp(value?: string): string {
   return `${month}-${day} ${hour}:${minute}`;
 }
 
+function normalizeRawTimestamp(value?: string): string | undefined {
+  const normalized = String(value || '').trim();
+  if (!normalized) return undefined;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return undefined;
+  const year = date.getUTCFullYear();
+  if (year < 2005 || year > 2100) return undefined;
+  return date.toISOString();
+}
+
 function normalizePlainText(text: string): string {
   return text
     .replace(/\r\n?/g, '\n')
@@ -268,6 +278,9 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
   );
   const uniqueTopicNames = Array.from(new Set(topicNames));
 
+  const rawTimestamp = normalizeRawTimestamp(
+    item.last_commented_at || item.publish_at || item.created_at,
+  );
   return {
     id: String(item._id || ''),
     authorId: String(item.author_id || '').trim() || undefined,
@@ -280,6 +293,7 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
     timestamp: formatTimestamp(
       item.last_commented_at || item.publish_at || item.created_at,
     ),
+    rawTimestamp,
     source: item.source?.trim() || undefined,
     title: item.title?.trim() || undefined,
     summary,
@@ -655,6 +669,22 @@ const matchesRelatedGame = (
   return false;
 };
 
+function isSeoSafeRelatedPost(post: CommunityPost): boolean {
+  const title = String(post.title || '').trim();
+  const summary = String(post.summary || '').trim();
+  const content = String(post.content || '').trim();
+  const combined = [title, summary, content].filter(Boolean).join(' ');
+
+  if (!post.id || !title || !combined) return false;
+  if (!post.rawTimestamp) return false;
+  if (/测试|測試|开发中|開發中|beta|demo|smoke|feedback|反馈/i.test(combined)) {
+    return false;
+  }
+  if (/^https?:\/\//i.test(combined)) return false;
+  if (/(.)\1{5,}/.test(combined)) return false;
+  return true;
+}
+
 async function fetchCommunityFeedByQuery(
   query: URLSearchParams,
 ): Promise<ApiCommunityPost[]> {
@@ -687,7 +717,9 @@ export async function getCommunityPostsByGame(
     if (rawList.length === 0) continue;
 
     const mapped = rawList.map(toCommunityPost).filter((item) => Boolean(item.id));
-    const filtered = mapped.filter((post) => matchesRelatedGame(post, options));
+    const filtered = mapped.filter(
+      (post) => matchesRelatedGame(post, options) && isSeoSafeRelatedPost(post),
+    );
     if (filtered.length > 0) return filtered;
   }
 

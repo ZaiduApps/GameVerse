@@ -112,6 +112,15 @@ function normalizePosition(value: string): AnnouncementPosition | 'global' | '' 
   return '';
 }
 
+function isSafeAnnouncementHref(value?: string | null): boolean {
+  const href = String(value || '').trim();
+  if (!href) return true;
+  if (href === '#') return false;
+  if (/^javascript:/i.test(href)) return false;
+  if (/^https?:\/\/(?:example\.com|placehold\.co)/i.test(href)) return false;
+  return /^(https?:\/\/|\/)/i.test(href);
+}
+
 function isAllowedByPosition(item: Announcement, currentPosition: AnnouncementPosition): boolean {
   const positions = Array.isArray(item.position)
     ? item.position
@@ -160,6 +169,13 @@ function normalizeAnnouncements(
 
     if (!normalized._id) {
       normalized._id = `${normalized.type}-${normalized.title || normalized.summary || 'announcement'}`;
+    }
+
+    if (!normalized.title && !normalized.summary && !normalized.content) {
+      return;
+    }
+    if (!isSafeAnnouncementHref(normalized.link?.url)) {
+      return;
     }
 
     list.push(normalized);

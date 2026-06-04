@@ -72,12 +72,6 @@ function isExternalUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
 }
 
-function isSeoSafeAnnouncementText(value?: string | null): boolean {
-  const normalized = String(value || '').trim();
-  if (!normalized) return true;
-  return !/测试|測試|开发中|開發中|beta|demo/i.test(normalized);
-}
-
 function isLowQualityDynamicText(value?: string | null): boolean {
   const normalized = String(value || '').trim();
   if (!normalized) return true;
@@ -93,23 +87,6 @@ function isSeoSafeDynamicPost(post: ApiDynamicPost): boolean {
   if (isLowQualityDynamicText(post.title) && isLowQualityDynamicText(post.summary)) return false;
   if (/example\.com|placehold\.co/i.test(String(post.cover || '').trim())) return false;
   return true;
-}
-
-function filterSeoSafeAnnouncements(
-  announcements?: Announcement[] | Record<string, Announcement[] | undefined> | null,
-) {
-  if (!announcements || typeof announcements !== 'object') return announcements;
-  const nextEntries = Object.entries(announcements).map(([key, items]) => {
-    const safeItems = Array.isArray(items)
-      ? items.filter((item) =>
-          isSeoSafeAnnouncementText(item?.title) &&
-          isSeoSafeAnnouncementText(item?.summary) &&
-          isSeoSafeAnnouncementText(item?.content),
-        )
-      : items;
-    return [key, safeItems];
-  });
-  return Object.fromEntries(nextEntries);
 }
 
 function normalizeAlbumGames(album: ApiAlbum | null | undefined): ApiGame[] {
@@ -360,8 +337,6 @@ export default async function HomePage() {
   const allAlbums = (Array.isArray(homeData.albums) ? [...homeData.albums] : []).filter(
     (album): album is ApiAlbum => Boolean(album && album._id),
   );
-  const announcements = homeData.announcements;
-  const safeAnnouncements = filterSeoSafeAnnouncements(homeData.announcements);
   const bannerItems = (Array.isArray(homeData.banner) ? homeData.banner : []).filter(
     (banner): banner is ApiBanner => Boolean(banner && banner._id),
   );
@@ -403,7 +378,7 @@ export default async function HomePage() {
   const toolGames = normalizeAlbumGames(toolsAlbum);
 
   const promoAnnouncement: Announcement | null =
-    safeAnnouncements?.popup?.[0] || safeAnnouncements?.normal?.[0] || safeAnnouncements?.marquee?.[0] || null;
+    homeData.announcements?.popup?.[0] || homeData.announcements?.normal?.[0] || homeData.announcements?.marquee?.[0] || null;
   const promoHref = String(promoAnnouncement?.link?.url || '').trim() || '/submit-resource';
   const promoIsExternal = isExternalUrl(promoHref);
   const androidDownloadHref = String(clientLanding?.client?.download_url || '').trim() || '/download/app';
@@ -437,7 +412,7 @@ export default async function HomePage() {
     ],
   };
 
-  const shouldShowPromoCard = Boolean(promoAnnouncement && isSeoSafeAnnouncementText(promoAnnouncement?.content));
+  const shouldShowPromoCard = Boolean(promoAnnouncement && String(promoAnnouncement?.content || '').trim());
 
   return (
     <div className="home-page space-y-8 pb-2 text-foreground">
@@ -527,7 +502,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {announcements ? <GameAnnouncements announcements={announcements} position="home" /> : null}
+      {homeData.announcements ? <GameAnnouncements announcements={homeData.announcements} position="home" /> : null}
 
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 xl:gap-10">
         <div className="space-y-8 xl:col-span-8">

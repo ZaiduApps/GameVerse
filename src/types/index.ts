@@ -67,6 +67,7 @@ export interface CommunityPost {
     location?: string;
   };
   timestamp: string;
+  rawTimestamp?: string;
   source?: string; // e.g., "来自web", "来自Android"
   title?: string;
   summary?: string;
