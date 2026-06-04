@@ -54,7 +54,7 @@ const SITEMAP_MAX_PAGES = 200;
 const NEWS_SITEMAP_MAX_PAGES = 80;
 const SITEMAP_REVALIDATE_SECONDS = 1800;
 
-export const revalidate = SITEMAP_REVALIDATE_SECONDS;
+export const revalidate = 1800;
 
 function getServerApiBaseUrl() {
   const appEnv = (process.env.APP_ENV || process.env.NODE_ENV || 'development').toLowerCase();
