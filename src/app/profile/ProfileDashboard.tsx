@@ -22,6 +22,7 @@ import {
   type DashboardPostItem,
 } from '@/lib/profile-dashboard-api';
 import { useToast } from '@/hooks/use-toast';
+import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
 
 function statusText(reviewStatus: string, status: number) {
   const review = String(reviewStatus || '').trim();
@@ -49,6 +50,7 @@ function formatLatestLabel(input?: string) {
 function DashboardPostCard({ item }: { item: DashboardPostItem }) {
   const post = item.post;
   const title = String(post.title || '').trim() || String(post.summary || '').trim() || '未命名动态';
+  const previewText = getCommunityPostPreviewText(post, 80, '暂无内容');
   return (
     <div className="rounded-lg border p-3">
       <div className="flex items-start justify-between gap-2">
@@ -57,7 +59,7 @@ function DashboardPostCard({ item }: { item: DashboardPostItem }) {
         </Link>
         <Badge variant="outline" className="text-[10px]">{statusText(item.reviewStatus, item.status)}</Badge>
       </div>
-      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{post.summary || post.content || '暂无内容'}</p>
+      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{previewText}</p>
       <div className="mt-2 text-[11px] text-muted-foreground">
         {formatTime(item.updatedAt || post.timestamp)} · 点赞 {post.likesCount} · 评论 {post.commentsCount}
       </div>

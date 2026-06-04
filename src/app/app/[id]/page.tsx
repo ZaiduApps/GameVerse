@@ -3,10 +3,10 @@ import { notFound } from 'next/navigation';
 
 import GameDetailView from './GameDetailView';
 import { trackedApiFetch } from '@/lib/api';
+import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
 import {
   absoluteUrl,
   getSiteShareImageUrl,
-  hasSeoMarkupNoise,
   resolveGameSeoImage,
   sanitizeSeoText,
 } from '@/lib/seo';
@@ -65,19 +65,6 @@ type RelatedNewsItem = {
   date: string;
 };
 
-function extractNewsExcerpt(summary?: string | null, content?: string | null, maxLength = 120) {
-  const summaryText = sanitizeSeoText(summary);
-  const contentText = sanitizeSeoText(content);
-  const source =
-    (!summaryText ||
-    (hasSeoMarkupNoise(summary) && contentText.length > summaryText.length)
-      ? contentText || summaryText
-      : summaryText || contentText);
-  if (!source) return '查看这篇相关资讯的完整内容。';
-  if (source.length <= maxLength) return source;
-  return `${source.slice(0, maxLength).trim()}...`;
-}
-
 function formatNewsDate(input?: string | null) {
   const date = new Date(input || '');
   if (Number.isNaN(date.getTime())) return '最近更新';
@@ -93,7 +80,7 @@ function toRelatedNewsItem(post: CommunityPost): RelatedNewsItem | null {
   return {
     id,
     title,
-    excerpt: extractNewsExcerpt(post.summary, post.content),
+    excerpt: getCommunityPostPreviewText(post, 120, '查看这篇相关资讯的完整内容。'),
     date: formatNewsDate(post.timestamp),
   };
 }

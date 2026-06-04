@@ -6,7 +6,8 @@ import { ChevronLeft, ChevronRight, Eye, Heart, MessageCircle, MoreHorizontal, X
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { trackedApiFetch } from '@/lib/api';
-import { cn, renderMarkdown } from '@/lib/utils';
+import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import type { ApiDynamicPost } from '@/types';
@@ -26,52 +27,6 @@ function formatRelativeTime(dateStr?: string): string {
   const hour = String(d.getHours()).padStart(2, '0');
   const minute = String(d.getMinutes()).padStart(2, '0');
   return `${month}-${dayNum} ${hour}:${minute}`;
-}
-
-function extractPlainText(text: string): string {
-  return text
-    .replace(/\r\n?/g, '\n')
-    .replace(/!\[([^\]]*)\]\((?:[^)]+)\)/g, '$1')
-    .replace(/\[([^\]]+)\]\((?:[^)]+)\)/g, '$1')
-    .replace(/<[^>]*>/g, '')
-    .replace(/[#*`~>|_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function normalizePreviewMarkdownSource(value: string): string {
-  return value
-    .replace(/\r\n?/g, '\n')
-    .replace(/\\r\\n/g, '\n')
-    .replace(/\\n/g, '\n')
-    .replace(/\\t/g, '  ')
-    .trim();
-}
-
-function extractLeadHtml(post: ApiDynamicPost, maxLength = 420): string {
-  const title = String(post.title || '').trim();
-  const summary = String(post.summary || '').trim();
-  const rawContent = String(post.content || post.body || '').trim();
-  const source = rawContent || summary || title;
-  if (!source) return '<p class="my-0">分享了一条动态</p>';
-
-  const normalized = normalizePreviewMarkdownSource(source);
-  const clipped = normalized.length > maxLength
-    ? `${normalized.slice(0, maxLength).trim()}...`
-    : normalized;
-
-  const rendered = renderMarkdown(clipped).__html
-    .replace(/<img[^>]*>/gi, '')
-    .replace(/<div class="overflow-x-auto my-4">[\s\S]*?<\/div>/gi, '')
-    .replace(/<pre[\s\S]*?<\/pre>/gi, '')
-    .replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1')
-    .replace(/<\/?(?:button|input|textarea|select|option|form)[^>]*>/gi, '');
-
-  const safeHtml = String(rendered || '').trim();
-  if (safeHtml) return safeHtml;
-
-  const fallback = extractPlainText(clipped);
-  return fallback ? `<p class="my-0">${fallback}</p>` : '<p class="my-0">分享了一条动态</p>';
 }
 
 function normalizeComparableText(value: string): string {
@@ -424,7 +379,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
         const likeCount = likeCountMap[postId] ?? Number(post.like_count || 0);
         const liked = Boolean(likedMap[postId]);
         const viewCount = Number(post.view_count || 0) || likeCount + Number(post.comment_count || 0);
-        const leadHtml = extractLeadHtml(post, 520);
+        const previewText = getCommunityPostPreviewText(post, 520, '分享了一条动态');
         const hashtags = extractHashtags(post);
         const titleText = String(post.title || '').trim();
         const hasMeaningfulTitle = isMeaningfulTitle(titleText);
@@ -470,15 +425,14 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
 
             <Link href={`/community/post/${postId}`} className="block">
               {hasMeaningfulTitle ? <p className="line-clamp-2 text-[16px] font-semibold leading-[1.45] text-[#2a3038] dark:text-[#edf2fb]">{titleText}</p> : null}
-              <div
+              <p
                 className={cn(
                   'text-[14px] leading-[1.62] text-[#5a6270] dark:text-[#9ca6b8] sm:text-[15px] sm:line-clamp-8',
-                  '[&_p]:my-0 [&_h1]:text-inherit [&_h1]:font-semibold [&_h1]:my-0 [&_h2]:text-inherit [&_h2]:font-semibold [&_h2]:my-0 [&_h3]:text-inherit [&_h3]:font-semibold [&_h3]:my-0 [&_h4]:text-inherit [&_h4]:font-semibold [&_h4]:my-0',
-                  '[&_ul]:my-0 [&_ol]:my-0 [&_li]:my-0 [&_blockquote]:my-0 [&_blockquote]:border-l-0 [&_blockquote]:bg-transparent [&_blockquote]:pl-0 [&_hr]:hidden [&_img]:hidden',
                   hasMeaningfulTitle ? 'mt-1 line-clamp-6' : 'line-clamp-8',
                 )}
-                dangerouslySetInnerHTML={{ __html: leadHtml }}
-              />
+              >
+                {previewText}
+              </p>
               {hashtags.length > 0 ? (
                 <p className="mt-2 line-clamp-1 text-[12px] text-[#3578e5] dark:text-[#7fc1ff]">
                   {hashtags.join(' ')}

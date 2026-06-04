@@ -22,6 +22,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { trackedApiFetch } from '@/lib/api';
+import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
 import { useRouter } from 'next/navigation';
 
 interface CommunityPostCardProps {
@@ -83,32 +84,6 @@ function writeBookmarkedPostIds(postIds: string[]) {
   } catch {
     // ignore localStorage failures
   }
-}
-
-function toPostExcerpt(post: CommunityPost, maxLength = 140): string {
-  const source = String(post.summary || post.content || '').trim();
-  if (!source) return '暂无摘要';
-
-  const plain = source
-    .replace(/\r\n?/g, '\n')
-    .replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1')
-    .replace(/!\[([^\]]*)\]\((?:[^)]+)\)/g, '$1')
-    .replace(/\[([^\]]+)\]\((?:[^)]+)\)/g, '$1')
-    .replace(/<img[^>]*>/gi, ' ')
-    .replace(/\b(?:https?|acbox|uu-mobile):\/\/[^\s<>"')\]]+/gi, ' ')
-    .replace(/^>+\s?/gm, '')
-    .replace(/^#{1,6}\s*/gm, '')
-    .replace(/^---+$/gm, ' ')
-    .replace(/^[-*+]\s+/gm, '')
-    .replace(/^\d+\.\s+/gm, '')
-    .replace(/[`*_~]/g, '')
-    .replace(/<\/?(?:p|div|section|article|blockquote|li|ul|ol|h[1-6]|span|strong|em|code|pre)[^>]*>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  if (!plain) return '暂无摘要';
-  return plain.length > maxLength ? `${plain.slice(0, maxLength).trim()}...` : plain;
 }
 
 interface MultiCellLayout {
@@ -194,7 +169,7 @@ export default function CommunityPostCard({
   const [showLikeBurst, setShowLikeBurst] = useState(false);
   const likeBurstTimerRef = useRef<number | null>(null);
   const { toast } = useToast();
-  const excerpt = toPostExcerpt(post);
+  const excerpt = getCommunityPostPreviewText(post, 140, '暂无摘要');
   const [previewState, setPreviewState] = useState<{
     images: string[];
     index: number;

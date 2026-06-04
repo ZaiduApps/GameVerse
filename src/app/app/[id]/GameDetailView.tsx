@@ -35,6 +35,7 @@ import GameReviewPanel from '@/components/game-detail/GameReviewPanel';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { trackedApiFetch } from '@/lib/api';
+import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
 import { getCommunityPostsByGame } from '@/lib/community-api';
 import { buildFeedbackCommonFields, submitFeedbackTicket } from '@/lib/feedback';
 import { cn } from '@/lib/utils';
@@ -158,45 +159,6 @@ function formatDescriptionHtml(input?: string | null) {
   return escapeHtml(raw)
     .replace(/\n{2,}/g, '<br /><br />')
     .replace(/\n/g, '<br />');
-}
-
-function markdownToPlainText(input?: string | null) {
-  if (!input) return '';
-  return String(input)
-    .replace(/\r\n?/g, '\n')
-    .replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1')
-    .replace(
-      /<p[^>]*class=["'][^"']*defined-image[^"']*["'][^>]*>[\s\S]*?<\/p>/gi,
-      ' ',
-    )
-    .replace(/<img[^>]*>/gi, ' ')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/!\[([^\]]*)\]\((?:[^)]+)\)/g, '$1')
-    .replace(/\[([^\]]+)\]\((?:[^)]+)\)/g, '$1')
-    .replace(/^>+\s?/gm, '')
-    .replace(/^#{1,6}\s*/gm, '')
-    .replace(/^---+$/gm, ' ')
-    .replace(/^[-*+]\s+/gm, '')
-    .replace(/^\d+\.\s+/gm, '')
-    .replace(/[`*_~]/g, '')
-    .replace(/\b(?:https?|acbox|uu-mobile):\/\/[^\s<>"')\]]+/gi, ' ')
-    .replace(/<\/?(?:p|div|section|article|blockquote|li|ul|ol|h[1-6]|span|strong|em|code|pre)[^>]*>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function getPostPreviewText(post: CommunityPost, maxLength = 180, fallback = '暂无内容') {
-  const contentText = markdownToPlainText(post.content || '');
-  const summaryText = markdownToPlainText(post.summary || '');
-  const source =
-    (summaryText.length >= 12 ? summaryText : '') ||
-    (contentText.length >= 12 ? contentText : '') ||
-    summaryText ||
-    contentText ||
-    fallback;
-  if (source.length <= maxLength) return source;
-  return `${source.slice(0, maxLength).trim()}...`;
 }
 
 function formatDateText(value?: string | null) {
@@ -400,13 +362,11 @@ function toRelatedNewsItem(post: CommunityPost): RelatedNewsItem | null {
   if (!id) return null;
 
   const title = String(post.title || post.summary || '社区帖子').trim() || '社区帖子';
-  const source = String(post.summary || post.content || '').trim();
-  const excerpt = source.length > 120 ? `${source.slice(0, 120).trim()}...` : source;
 
   return {
     id,
     title,
-    excerpt: excerpt || '查看这篇相关社区帖的完整内容。',
+    excerpt: getCommunityPostPreviewText(post, 120, '查看这篇相关社区帖的完整内容。'),
     date: formatNewsDate(post.timestamp),
   };
 }
@@ -1415,7 +1375,7 @@ export default function GameDetailView({
                               </div>
                             </div>
 
-                            <p className="line-clamp-3 text-sm leading-relaxed text-[#2c2f30]">{getPostPreviewText(post, 180, '暂无内容')}</p>
+                            <p className="line-clamp-3 text-sm leading-relaxed text-[#2c2f30]">{getCommunityPostPreviewText(post, 180, '暂无内容')}</p>
 
                             {cover && (
                               <div className="relative mt-4 aspect-[16/9] overflow-hidden rounded-xl">
@@ -1801,7 +1761,7 @@ export default function GameDetailView({
                           <p className="text-[10px] text-[#757778]">{post.timestamp}</p>
                         </div>
                       </div>
-                      <p className="line-clamp-3 text-sm leading-relaxed text-[#595c5d]">{getPostPreviewText(post, 150, '暂无内容')}</p>
+                      <p className="line-clamp-3 text-sm leading-relaxed text-[#595c5d]">{getCommunityPostPreviewText(post, 150, '暂无内容')}</p>
                       {cover && (
                         <div className="relative mt-3 aspect-[16/9] overflow-hidden rounded-xl">
                           <Image src={cover} alt={post.title || post.summary || '帖子配图'} fill sizes="100vw" className="object-cover" />

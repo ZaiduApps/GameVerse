@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { deleteMyCommunityPost, setMyCommunityPostStatus, updateMyCommunityPost } from '@/lib/community-api';
+import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
 import { getMyDashboardPosts, type DashboardPostItem } from '@/lib/profile-dashboard-api';
 import CenterAuthRequired from '../CenterAuthRequired';
 import CenterPageHeader from '../CenterPageHeader';
@@ -397,6 +398,7 @@ export default function ProfileCenterPostsPage() {
                 String(item.reviewStatus || '').trim() === 'published' &&
                 Number(item.status || 0) === 1;
               const canToggleStatus = String(item.reviewStatus || '').trim() === 'published';
+              const previewText = getCommunityPostPreviewText(item.post, 80, '暂无内容');
               const hiddenReason =
                 String(item.reviewStatus || '').trim() === 'published' && Number(item.status || 0) === 0
                   ? '当前动态已隐藏，重新显示后可查看详情。'
@@ -421,7 +423,7 @@ export default function ProfileCenterPostsPage() {
                     )}
                     <Badge variant={statusTone(item.reviewStatus, item.status)} className="text-[10px]">{statusText(item.reviewStatus, item.status)}</Badge>
                   </div>
-                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{item.post.summary || item.post.content || '暂无内容'}</p>
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{previewText}</p>
                   {!isPubliclyViewable ? (
                     <p className="mt-2 text-[11px] text-muted-foreground">{hiddenReason}</p>
                   ) : null}
