@@ -24,7 +24,8 @@ import { cn } from '@/lib/utils';
 import type { ApiGame, Game } from '@/types';
 
 const PAGE_SIZE = 24;
-const DEFAULT_GAME_QUERY = '国际服';
+const DEFAULT_BROWSE_QUERIES = ['国际服', '日服', '韩服', '动作', '卡牌', '冒险'];
+const DEFAULT_BROWSE_PAGE_SIZE = 8;
 const GAME_LIST_REQUEST_TIMEOUT_MS = 12000;
 const GAME_LIST_RETRY_ATTEMPTS = 3;
 const GAME_LIST_RETRY_DELAY_MS = 1200;
@@ -130,21 +131,6 @@ function normalizeGameTags(tags: unknown): string[] {
   );
 }
 
-function buildGameSearchText(game: LibraryGame): string {
-  return [
-    game.title,
-    game.description,
-    game.shortDescription,
-    game.category,
-    game.pkg,
-    game.region,
-    ...game.deviceList,
-    ...(game.tags || []),
-  ]
-    .join(' ')
-    .toLowerCase();
-}
-
 function getTagPriority(tag: string): number {
   const index = PRIORITY_TAGS.findIndex((item) => item === tag);
   return index === -1 ? PRIORITY_TAGS.length + 1 : index;
@@ -232,10 +218,8 @@ function normalizeGameQueryResult(payload: unknown): {
   };
 }
 
-function gameMatchesKeyword(game: LibraryGame, keyword: string): boolean {
-  const query = keyword.trim().toLowerCase();
-  if (!query) return true;
-  return buildGameSearchText(game).includes(query);
+function isBrowseMode(keyword: string): boolean {
+  return !String(keyword || '').trim();
 }
 
 function gameMatchesCategory(game: LibraryGame, category: string): boolean {
@@ -387,8 +371,8 @@ export default function GamesPage({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadingAttempt, setLoadingAttempt] = useState(1);
   const [allGames, setAllGames] = useState<LibraryGame[]>([]);
-  const [totalGames, setTotalGames] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [hasMorePages, setHasMorePages] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [reloadToken, setReloadToken] = useState(0);
   const [searchInput, setSearchInput] = useState(initialKeyword);
@@ -452,7 +436,9 @@ export default function GamesPage({
     const append = Boolean(options?.append);
     const externalSignal = options?.externalSignal;
     const keyword = (options?.keywordOverride ?? queryKeyword).trim();
-    const query = keyword || DEFAULT_GAME_QUERY;
+    const browseMode = isBrowseMode(keyword);
+    const queries = browseMode ? DEFAULT_BROWSE_QUERIES : [keyword];
+    const requestPageSize = browseMode ? DEFAULT_BROWSE_PAGE_SIZE : PAGE_SIZE;
 
     if (append) {
       setIsLoadingMore(true);
@@ -474,49 +460,65 @@ export default function GamesPage({
         externalSignal?.addEventListener('abort', relayAbort, { once: true });
 
         try {
-          const params = new URLSearchParams({
-            q: query,
-            page: String(page),
-            pageSize: String(PAGE_SIZE),
-          });
-          const res = await trackedApiFetch(`/game/q?${params.toString()}`, {
-            cache: 'no-store',
-            signal: requestController.signal,
-          });
-          const json = await res.json().catch(() => null);
-
-          if (!res.ok) {
-            if (attempt < GAME_LIST_RETRY_ATTEMPTS - 1) {
-              await new Promise((resolve) => window.setTimeout(resolve, GAME_LIST_RETRY_DELAY_MS));
-              continue;
-            }
-            setLoadError(`游戏服务异常（${res.status}）`);
-            return false;
-          }
-
-          const result = normalizeGameQueryResult(json);
-          if (result.code !== 0) {
-            if (attempt < GAME_LIST_RETRY_ATTEMPTS - 1) {
-              await new Promise((resolve) => window.setTimeout(resolve, GAME_LIST_RETRY_DELAY_MS));
-              continue;
-            }
-            setLoadError('游戏接口返回异常，请稍后重试');
-            return false;
-          }
-
-          const mapped = result.list.map((item, index) =>
-            transformApiGameToGame(item, (result.page - 1) * result.pageSize + index),
+          const queryResults = await Promise.all(
+            queries.map(async (query, queryIndex) => {
+              const params = new URLSearchParams({
+                q: query,
+                page: String(page),
+                pageSize: String(requestPageSize),
+              });
+              const res = await trackedApiFetch(`/game/q?${params.toString()}`, {
+                cache: 'no-store',
+                signal: requestController.signal,
+              });
+              const json = await res.json().catch(() => null);
+              return { query, queryIndex, res, result: normalizeGameQueryResult(json) };
+            }),
           );
-          setCurrentPage(Math.max(1, Number(result.page || page)));
+
+          const successfulResults = queryResults.filter(
+            ({ res, result }) => res.ok && result.code === 0,
+          );
+
+          if (successfulResults.length === 0) {
+            if (attempt < GAME_LIST_RETRY_ATTEMPTS - 1) {
+              await new Promise((resolve) => window.setTimeout(resolve, GAME_LIST_RETRY_DELAY_MS));
+              continue;
+            }
+            const failedStatus = queryResults.find(({ res }) => !res.ok)?.res.status;
+            setLoadError(
+              failedStatus
+                ? `游戏服务异常（${failedStatus}）`
+                : '游戏接口返回异常，请稍后重试',
+            );
+            return false;
+          }
+
+          const mapped = successfulResults.flatMap(({ result, queryIndex }) =>
+            result.list.map((item, index) =>
+              transformApiGameToGame(
+                item,
+                (page - 1) * queries.length * requestPageSize + queryIndex * requestPageSize + index,
+              ),
+            ),
+          );
+          const mergedPageGames = mergeUniqueGames([], mapped);
+          const nextHasMore = successfulResults.some(
+            ({ result }) => Number(result.total || 0) > Number(result.page || page) * Number(result.pageSize || requestPageSize),
+          );
+          const nextPageNumber = successfulResults.reduce(
+            (maxPage, { result }) => Math.max(maxPage, Number(result.page || page)),
+            page,
+          );
+
+          setCurrentPage(Math.max(1, nextPageNumber));
+          setHasMorePages(nextHasMore);
           if (append) {
             setAllGames((prev) => {
-              const next = mergeUniqueGames(prev, mapped);
-              setTotalGames(Math.max(Number(result.total || 0), next.length));
-              return next;
+              return mergeUniqueGames(prev, mergedPageGames);
             });
           } else {
-            setAllGames(mapped);
-            setTotalGames(Math.max(Number(result.total || 0), mapped.length));
+            setAllGames(mergedPageGames);
           }
           setLoadError('');
           return true;
@@ -552,7 +554,7 @@ export default function GamesPage({
     const controller = new AbortController();
     setAllGames([]);
     setCurrentPage(1);
-    setTotalGames(0);
+    setHasMorePages(false);
     void fetchGamePage(1, { append: false, externalSignal: controller.signal });
     return () => controller.abort();
   }, [queryKeyword, reloadToken]);
@@ -615,7 +617,6 @@ export default function GamesPage({
   }, [allGames]);
 
   const filteredGames = useMemo(() => {
-    const normalizedKeyword = queryKeyword.trim();
     const minimumRating = getMinimumRating(ratingFilter, onlyHighScore);
     const updateThreshold = getUpdateWindowThreshold(updateWindow);
 
@@ -638,9 +639,6 @@ export default function GamesPage({
       if (updateThreshold > 0 && Number(game.latestTimestamp || 0) < updateThreshold) {
         return false;
       }
-      if (!gameMatchesKeyword(game, normalizedKeyword)) {
-        return false;
-      }
       return true;
     });
 
@@ -652,7 +650,6 @@ export default function GamesPage({
   }, [
     allGames,
     onlyHighScore,
-    queryKeyword,
     ratingFilter,
     selectedCategory,
     selectedDevice,
@@ -662,7 +659,7 @@ export default function GamesPage({
     updateWindow,
   ]);
 
-  const hasMore = !isLoading && !isLoadingMore && allGames.length < Math.max(totalGames, allGames.length);
+  const hasMore = !isLoading && !isLoadingMore && hasMorePages;
   const renderedGames = isLoading ? [] : filteredGames;
   const hasActiveFilters =
     selectedCategory !== 'all' ||
@@ -686,9 +683,10 @@ export default function GamesPage({
     RATING_FILTER_OPTIONS.find((option) => option.id === ratingFilter)?.label || '';
   const selectedUpdateLabel =
     UPDATE_WINDOW_OPTIONS.find((option) => option.id === updateWindow)?.label || '';
+  const aggregatedBrowseActive = isBrowseMode(queryKeyword);
   const resultScopeLabel = queryKeyword.trim()
     ? `关键词：${queryKeyword.trim()}`
-    : `默认浏览：${DEFAULT_GAME_QUERY}`;
+    : `综合浏览：${DEFAULT_BROWSE_QUERIES.join(' / ')}`;
   const isEmpty = !isLoading && !loadError && renderedGames.length === 0;
 
   return (
@@ -840,6 +838,45 @@ export default function GamesPage({
                   </button>
                 </div>
               </form>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-widest text-zinc-400">
+                  快速浏览
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchInput('');
+                    setQueryKeyword('');
+                  }}
+                  className={cn(
+                    'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                    aggregatedBrowseActive
+                      ? 'bg-[#005e9f] text-white'
+                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200',
+                  )}
+                >
+                  综合推荐
+                </button>
+                {DEFAULT_BROWSE_QUERIES.map((query) => (
+                  <button
+                    key={`browse-${query}`}
+                    type="button"
+                    onClick={() => {
+                      setSearchInput(query);
+                      setQueryKeyword(query);
+                    }}
+                    className={cn(
+                      'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                      queryKeyword.trim() === query
+                        ? 'bg-[#b71211] text-white'
+                        : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200',
+                    )}
+                  >
+                    {query}
+                  </button>
+                ))}
+              </div>
 
               <div className="mt-6 rounded-3xl bg-[#f7f8fa] p-4 sm:p-5">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -1208,7 +1245,7 @@ export default function GamesPage({
               </span>
             </button>
             <p className="text-xs text-zinc-400">
-              已加载 {allGames.length} / {totalGames || allGames.length} 款 · 当前展示 {renderedGames.length} 款
+              已载入 {allGames.length} 款候选 · 当前展示 {renderedGames.length} 款
             </p>
           </div>
         </section>
