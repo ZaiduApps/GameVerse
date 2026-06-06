@@ -792,16 +792,16 @@ export default function ProfilePage() {
                     <Settings2 className="h-5 w-5 text-primary" /> 通知设置
                   </CardTitle>
                   <CardDescription>
-                    管理游戏评论回复邮件提醒与后台总开关。
+                    管理回复与系统消息邮件提醒。
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="rounded-xl border border-border/70 p-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="font-medium">评论被回复时邮件提醒我</p>
+                        <p className="font-medium">回复和系统消息邮件提醒我</p>
                         <p className="text-sm text-muted-foreground">
-                          发布游戏评论后，其他用户回复你的评论时发送邮件通知。
+                          收到帖子回复、评论回复或系统消息时发送邮件通知。
                         </p>
                       </div>
                       <Switch
@@ -811,7 +811,7 @@ export default function ProfilePage() {
                           void handleToggleEmailNotify(Boolean(checked));
                         }}
                         data-acbox-action="profile_email_notify_toggle"
-                        data-acbox-label="评论回复邮件提醒"
+                        data-acbox-label="回复和系统消息邮件提醒"
                       />
                     </div>
                     {!adminEmailSwitchEnabled ? (
@@ -827,7 +827,7 @@ export default function ProfilePage() {
                         <div>
                           <p className="font-medium">管理员：全站游戏评论邮件提醒</p>
                           <p className="text-sm text-muted-foreground">
-                            关闭后，全体用户评论回复邮件通知都会暂停。
+                            关闭后，全体用户回复与系统消息邮件通知都会暂停。
                           </p>
                         </div>
                         <Switch
@@ -837,7 +837,7 @@ export default function ProfilePage() {
                             void handleToggleAdminEmailSwitch(Boolean(checked));
                           }}
                           data-acbox-action="profile_admin_email_notify_toggle"
-                          data-acbox-label="全站游戏评论邮件提醒"
+                          data-acbox-label="全站通知邮件提醒"
                         />
                       </div>
                     </div>

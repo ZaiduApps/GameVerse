@@ -725,7 +725,10 @@ function writeLocalBoolean(key: string, value: boolean) {
 export async function getGameReviewEmailPreference(token: string): Promise<{ enabled: boolean; source: 'remote' | 'local' }> {
   const auth = String(token || '').trim();
   if (!auth) return { enabled: readLocalBoolean(USER_EMAIL_PREF_LOCAL_KEY), source: 'local' };
-  const result = await requestCandidates<{ reply_email_enabled?: boolean }>(
+  const result = await requestCandidates<{
+    notification_email_enabled?: boolean;
+    reply_email_enabled?: boolean;
+  }>(
     ['/users/preferences/game-reviews', '/users/preferences/notifications', '/game/reviews/preferences'],
     {
       method: 'GET',
@@ -737,7 +740,7 @@ export async function getGameReviewEmailPreference(token: string): Promise<{ ena
     },
   );
   if (!result.ok) return { enabled: readLocalBoolean(USER_EMAIL_PREF_LOCAL_KEY), source: 'local' };
-  const enabled = Boolean(result.data?.reply_email_enabled);
+  const enabled = Boolean(result.data?.notification_email_enabled ?? result.data?.reply_email_enabled);
   writeLocalBoolean(USER_EMAIL_PREF_LOCAL_KEY, enabled);
   return { enabled, source: 'remote' };
 }
@@ -751,7 +754,10 @@ export async function updateGameReviewEmailPreference(params: {
     writeLocalBoolean(USER_EMAIL_PREF_LOCAL_KEY, Boolean(params.enabled));
     return { ok: true, enabled: Boolean(params.enabled), source: 'local', message: '已保存到本地' };
   }
-  const body = JSON.stringify({ reply_email_enabled: Boolean(params.enabled) });
+  const body = JSON.stringify({
+    notification_email_enabled: Boolean(params.enabled),
+    reply_email_enabled: Boolean(params.enabled),
+  });
   const result = await requestCandidates<any>(
     ['/users/preferences/game-reviews', '/users/preferences/notifications', '/game/reviews/preferences'],
     {
