@@ -120,6 +120,8 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                   alt={siteName}
                   width={28}
                   height={28}
+                  priority
+                  fetchPriority="high"
                   onError={() => setLogoLoadFailed(true)}
                 />
               ) : (

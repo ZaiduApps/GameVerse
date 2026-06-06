@@ -72,6 +72,25 @@ function isExternalUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
 }
 
+function uniqueExternalUrls(values: Array<string | null | undefined>): string[] {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => String(value || '').trim())
+        .filter((value) => /^https?:\/\//i.test(value)),
+    ),
+  );
+}
+
+function buildHomeSeoDescription(value?: string | null): string {
+  const base = String(value || '').trim();
+  if (!base) {
+    return 'APKScc 提供热门安卓游戏、应用下载、排行榜、游戏资讯与玩家社区内容，帮助玩家发现安全、高速、实用的 APK 资源。';
+  }
+  if (Array.from(base).length >= 120) return base;
+  return `${base} 覆盖排行榜、资讯与社区。`;
+}
+
 function isLowQualityDynamicText(value?: string | null): boolean {
   const normalized = String(value || '').trim();
   if (!normalized) return true;
@@ -279,7 +298,7 @@ async function buildDownloadQrCodeDataUrl(downloadUrl: string): Promise<string> 
 export async function generateMetadata(): Promise<Metadata> {
   const config = await getPublicSiteConfig(300);
   const siteSlogan = config?.basic?.site_slogan || 'APKScc';
-  const seoDescription = config?.seo?.description || 'APKScc - 安卓游戏与应用下载平台';
+  const seoDescription = buildHomeSeoDescription(config?.seo?.description);
   const siteName = config?.basic?.site_name || 'APKScc';
   const shareImage = getSiteShareImageUrl(config?.basic?.share_image);
   const keywords = (config?.seo?.keywords || 'APKScc')
@@ -390,19 +409,42 @@ export default async function HomePage() {
   const downloadSize = String(clientLanding?.client?.file_size_text || '').trim();
   const qrCodeTarget = absoluteUrl(androidDownloadHref);
   const downloadQrCodeDataUrl = await buildDownloadQrCodeDataUrl(qrCodeTarget);
+  const siteConfig = await getPublicSiteConfig(300);
+  const siteName = siteConfig?.basic?.site_name || 'APKScc';
+  const siteDescription = buildHomeSeoDescription(siteConfig?.seo?.description);
+  const logoUrl = siteConfig?.basic?.logo_url ? absoluteUrl(siteConfig.basic.logo_url) : '';
+  const shareImage = getSiteShareImageUrl(siteConfig?.basic?.share_image);
+  const sameAs = uniqueExternalUrls([
+    ...(siteConfig?.friend_links || []).map((item) => item.url),
+    process.env.NEXT_PUBLIC_SOCIAL_FACEBOOK_URL,
+    process.env.NEXT_PUBLIC_SOCIAL_X_URL,
+    process.env.NEXT_PUBLIC_SOCIAL_YOUTUBE_URL,
+    process.env.NEXT_PUBLIC_SOCIAL_DISCORD_URL,
+  ]);
 
   const homeJsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
       {
         '@type': 'Organization',
-        name: 'APKScc',
+        name: siteName,
         url: absoluteUrl('/'),
+        description: siteDescription,
+        logo: logoUrl || undefined,
+        image: shareImage,
+        sameAs: sameAs.length > 0 ? sameAs : undefined,
+        contactPoint: {
+          '@type': 'ContactPoint',
+          contactType: 'customer support',
+          url: absoluteUrl('/contact'),
+          availableLanguage: ['zh-CN'],
+        },
       },
       {
         '@type': 'WebSite',
-        name: 'APKScc',
+        name: siteName,
         url: absoluteUrl('/'),
+        description: siteDescription,
         potentialAction: {
           '@type': 'SearchAction',
           target: `${absoluteUrl('/app')}?q={search_term_string}`,
