@@ -31,6 +31,27 @@ function getPostTitle(post: PublicProfilePost): string {
   return sanitizeSeoText(post.title) || postPreview(post);
 }
 
+function getPostImages(post: PublicProfilePost): string[] {
+  const values = [
+    post.cover,
+    ...(Array.isArray(post.preview_images) ? post.preview_images : []),
+  ];
+  return Array.from(
+    new Set(
+      values
+        .map((url) => String(url || '').trim())
+        .filter(Boolean),
+    ),
+  ).slice(0, 3);
+}
+
+function getPostJsonLdImages(post: PublicProfilePost): string[] | undefined {
+  const images = getPostImages(post)
+    .map((url) => normalizeSeoAssetUrl(url))
+    .filter(Boolean);
+  return images.length ? images : undefined;
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -169,7 +190,7 @@ export default async function PublicUserPage({
                 url: postUrl,
                 datePublished: post.publish_at || undefined,
                 dateModified: post.updated_at || post.publish_at || undefined,
-                image: normalizeSeoAssetUrl(post.cover) || undefined,
+                image: getPostJsonLdImages(post),
                 text: sanitizeSeoText(post.content || post.summary || '') || undefined,
                 author: {
                   '@id': `${canonicalUrl}#person`,
@@ -274,17 +295,30 @@ export default async function PublicUserPage({
             <p className="rounded-lg bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
               暂无公开动态
             </p>
-          ) : (
-            data.posts.map((post) => (
+          ) : data.posts.map((post) => {
+            const images = getPostImages(post);
+            return (
               <Link
                 key={post._id}
                 href={`/community/post/${post._id}`}
                 className="block rounded-lg border border-border/70 p-4 transition-colors hover:border-primary/30 hover:bg-muted/35"
               >
                 <div className="flex gap-3">
-                  {post.cover && (
-                    <div className="h-16 w-20 shrink-0 overflow-hidden rounded-md bg-muted">
-                      <img src={post.cover} alt={getPostTitle(post)} className="h-full w-full object-cover" />
+                  {images.length > 0 && (
+                    <div className="grid h-16 w-24 shrink-0 grid-cols-2 gap-1 overflow-hidden rounded-md bg-muted">
+                      <img
+                        src={images[0]}
+                        alt={getPostTitle(post)}
+                        className={images.length === 1 ? 'col-span-2 h-full w-full object-cover' : 'h-full w-full object-cover'}
+                      />
+                      {images.slice(1, 3).map((image, index) => (
+                        <img
+                          key={`${post._id}-preview-${image}`}
+                          src={image}
+                          alt={`${getPostTitle(post)} 配图 ${index + 2}`}
+                          className="h-full w-full object-cover"
+                        />
+                      ))}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
@@ -312,8 +346,8 @@ export default async function PublicUserPage({
                   </div>
                 </div>
               </Link>
-            ))
-          )}
+            );
+          })}
         </CardContent>
       </Card>
     </main>
