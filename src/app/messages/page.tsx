@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { resolveNotificationTarget } from '@/lib/notification-target';
 
 interface NotificationItem {
   _id?: string;
@@ -35,23 +36,6 @@ interface NotificationListData {
 
 type CategoryFilter = 'all' | 'system' | 'reply' | 'like';
 
-type NotificationTarget = {
-  href: string;
-  isExternal: boolean;
-};
-
-const INTERNAL_TARGET_PREFIXES = [
-  'app',
-  'category',
-  'community',
-  'download',
-  'messages',
-  'profile',
-  'search',
-  'tag',
-  'u',
-];
-
 function formatDate(value?: string) {
   if (!value) return '未知时间';
   const d = new Date(value);
@@ -61,55 +45,6 @@ function formatDate(value?: string) {
 
 function getNotificationId(item: NotificationItem) {
   return String(item._id || item.id || '').trim();
-}
-
-function cleanTargetUrl(input?: string) {
-  return String(input || '').replace(/[\u0000-\u001F\u007F]/g, '').trim();
-}
-
-function isKnownInternalPath(input: string) {
-  const firstSegment = input.split(/[/?#]/)[0]?.toLowerCase();
-  return INTERNAL_TARGET_PREFIXES.includes(firstSegment);
-}
-
-function normalizeNotificationTarget(input?: string): NotificationTarget | null {
-  const raw = cleanTargetUrl(input);
-  if (!raw) return null;
-
-  if (raw.startsWith('/') && !raw.startsWith('//')) {
-    return { href: raw, isExternal: false };
-  }
-
-  if (isKnownInternalPath(raw)) {
-    return { href: `/${raw.replace(/^\/+/, '')}`, isExternal: false };
-  }
-
-  try {
-    const parsed = raw.startsWith('//') ? new URL(`https:${raw}`) : new URL(raw);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
-
-    const normalizedHref = parsed.toString();
-    if (typeof window !== 'undefined' && parsed.origin === window.location.origin) {
-      return {
-        href: `${parsed.pathname}${parsed.search}${parsed.hash}`,
-        isExternal: false,
-      };
-    }
-
-    return { href: normalizedHref, isExternal: true };
-  } catch {
-    return null;
-  }
-}
-
-function resolveTarget(item: NotificationItem): NotificationTarget | null {
-  const directTarget = normalizeNotificationTarget(item.target_url);
-  if (directTarget) return directTarget;
-  if (item.target_type === 'post' && item.target_id) return { href: `/community/post/${encodeURIComponent(item.target_id)}`, isExternal: false };
-  if (item.target_type === 'app' && item.target_id) return { href: `/app/${encodeURIComponent(item.target_id)}`, isExternal: false };
-  if ((item.target_type === 'user' || item.target_type === 'profile') && item.target_id) return { href: `/u/${encodeURIComponent(item.target_id)}`, isExternal: false };
-  if (item.target_type === 'feedback') return { href: '/profile', isExternal: false };
-  return null;
 }
 
 export default function MessagesPage() {
@@ -316,7 +251,7 @@ export default function MessagesPage() {
             <div className="space-y-2">
               {data.list.map((item) => {
                 const itemId = getNotificationId(item);
-                const target = resolveTarget(item);
+                const target = resolveNotificationTarget(item);
                 return (
                   <div key={itemId} className={`rounded-lg border p-3 ${item.is_read ? 'bg-card' : 'bg-primary/5 border-primary/30'}`}>
                     <div className="flex items-start justify-between gap-3">

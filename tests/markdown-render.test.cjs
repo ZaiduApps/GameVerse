@@ -152,6 +152,27 @@ function loadCommunityProfileUtils() {
   return moduleObj.exports;
 }
 
+function loadNotificationTargetUtils() {
+  const filePath = path.join(process.cwd(), 'src/lib/notification-target.ts');
+  const source = fs.readFileSync(filePath, 'utf8');
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2020,
+    },
+  }).outputText;
+
+  const moduleObj = { exports: {} };
+  const sandbox = {
+    module: moduleObj,
+    exports: moduleObj.exports,
+    URL,
+  };
+
+  vm.runInNewContext(compiled, sandbox);
+  return moduleObj.exports;
+}
+
 const renderMarkdown = loadRenderMarkdown();
 const buildRenderedMarkdownDocument = loadMarkdownDocumentBuilder();
 const { sanitizeSeoText } = loadSeoUtils();
@@ -163,6 +184,7 @@ const {
 } = loadCommunityApiUtils();
 const { getCommunityAuthorProfileHref } = loadCommunityProfileUtils();
 const { buildCommunityPostDiscussionJsonLd } = loadCommunitySeoUtils();
+const { normalizeNotificationTarget, resolveNotificationTarget } = loadNotificationTargetUtils();
 
 function plainJsonValue(value) {
   return JSON.parse(JSON.stringify(value));
@@ -732,4 +754,56 @@ test('community seo: builds discussion forum posting json-ld from visible data',
   assert.equal(jsonLd.comment[0].comment.length, 1);
   assert.equal(jsonLd.comment[0].comment[0].datePublished, '2026-06-06T10:21:30.000Z');
   assert.equal(jsonLd.comment[0].comment[0].author.url, 'https://apks.cc/u/222222222222222222222222');
+});
+
+test('notification target resolver: supports backend and admin target aliases', () => {
+  assert.deepEqual(plainJsonValue(resolveNotificationTarget({ target_type: 'community_post', target_id: 'post-1' })), {
+    href: '/community/post/post-1',
+    isExternal: false,
+  });
+  assert.deepEqual(plainJsonValue(resolveNotificationTarget({ target_type: 'game', target_id: 'game-1' })), {
+    href: '/app/game-1',
+    isExternal: false,
+  });
+  assert.deepEqual(plainJsonValue(resolveNotificationTarget({ target_type: 'resource', target_id: 'res 1' })), {
+    href: '/app/res%201',
+    isExternal: false,
+  });
+  assert.deepEqual(plainJsonValue(resolveNotificationTarget({ target_type: 'profile', target_id: 'alice' })), {
+    href: '/u/alice',
+    isExternal: false,
+  });
+  assert.deepEqual(plainJsonValue(resolveNotificationTarget({ target_type: 'feedback' })), {
+    href: '/profile',
+    isExternal: false,
+  });
+  assert.deepEqual(plainJsonValue(resolveNotificationTarget({ target_type: 'url', target_id: 'community/post/post-2' })), {
+    href: '/community/post/post-2',
+    isExternal: false,
+  });
+  assert.deepEqual(plainJsonValue(resolveNotificationTarget({ target_type: 'link', target_id: 'https://example.com/path' })), {
+    href: 'https://example.com/path',
+    isExternal: true,
+  });
+});
+
+test('notification target resolver: prefers explicit url and blocks unsafe schemes', () => {
+  assert.deepEqual(
+    plainJsonValue(
+      resolveNotificationTarget(
+        {
+          target_type: 'post',
+          target_id: 'post-1',
+          target_url: 'https://apks.cc/community/post/direct?from=message#reply',
+        },
+        'https://apks.cc',
+      ),
+    ),
+    {
+      href: '/community/post/direct?from=message#reply',
+      isExternal: false,
+    },
+  );
+  assert.equal(resolveNotificationTarget({ target_type: 'url', target_id: 'javascript:alert(1)' }), null);
+  assert.equal(normalizeNotificationTarget('ftp://example.com/file'), null);
 });
