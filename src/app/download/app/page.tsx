@@ -66,6 +66,9 @@ export async function generateMetadata(): Promise<Metadata> {
           apple: favicon,
         }
       : undefined,
+    alternates: {
+      canonical: '/download/app',
+    },
     openGraph: {
       title,
       description,

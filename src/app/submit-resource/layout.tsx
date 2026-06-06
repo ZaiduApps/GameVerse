@@ -7,6 +7,9 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
+  alternates: {
+    canonical: '/submit-resource',
+  },
 };
 
 export default function SubmitResourceLayout({ children }: { children: React.ReactNode }) {
