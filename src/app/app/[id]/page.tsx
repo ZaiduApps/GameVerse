@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
@@ -160,7 +161,7 @@ async function getSiteConfig(): Promise<SiteConfig | null> {
   return getPublicSiteConfig(300);
 }
 
-async function getGameDetails(id: string): Promise<GameDetailData | null> {
+const getGameDetails = cache(async (id: string): Promise<GameDetailData | null> => {
   try {
     const platform = process.env.NEXT_PUBLIC_CLIENT_PLATFORM || process.env.CLIENT_PLATFORM || 'android';
     const region = process.env.NEXT_PUBLIC_CLIENT_REGION || process.env.CLIENT_REGION || '';
@@ -175,19 +176,33 @@ async function getGameDetails(id: string): Promise<GameDetailData | null> {
     const res = await trackedApiFetch(`/game/details?${query.toString()}`, {
       cache: 'force-cache',
       next: { revalidate: DETAIL_REVALIDATE_SECONDS },
+      timeoutMs: 12000,
     });
     if (!res.ok) return null;
     const json = await res.json();
     if (json.code !== 0) {
-      console.error('API error for game details:', json.message);
+      const message = String(json.message || '').trim() || 'unknown';
+      const logPayload = {
+        id,
+        code: json.code,
+        message,
+      };
+      if (message.includes('不存在')) {
+        console.warn('[game-detail] expected missing game', logPayload);
+      } else {
+        console.error('[game-detail] invalid payload', logPayload);
+      }
       return null;
     }
     return json.data;
   } catch (error) {
-    console.error('Failed to fetch game details:', error);
+    console.error('[game-detail] request failed', {
+      id,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
-}
+});
 
 function buildInitialGameDataForHydration(gameData: GameDetailData): GameDetailData {
   return {

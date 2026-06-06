@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
@@ -20,11 +21,16 @@ import {
 import { absoluteUrl, sanitizeSeoText } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 
-async function getPostById(id: string): Promise<CommunityPost | null> {
+const getPostById = cache(async (id: string): Promise<CommunityPost | null> => {
   const apiPost = await getCommunityPostById(id);
   if (apiPost) return apiPost;
   const fallback = MOCK_COMMUNITY_POSTS.find((p) => p.id === id);
   return fallback || null;
+});
+
+function isMockCommunityPost(post: CommunityPost | null): boolean {
+  if (!post) return false;
+  return MOCK_COMMUNITY_POSTS.some((item) => item.id === post.id);
 }
 
 export async function generateMetadata({
@@ -103,15 +109,13 @@ export default async function CommunityPostPage({
 }) {
   const { id } = await params;
 
-  const [config, post, apiComments] = await Promise.all([
-    getPublicSiteConfig(300),
-    getPostById(id),
-    getCommunityCommentThreads(id, 30),
-  ]);
+  const [config, post] = await Promise.all([getPublicSiteConfig(300), getPostById(id)]);
 
   if (!post) {
     notFound();
   }
+
+  const apiComments = isMockCommunityPost(post) ? [] : await getCommunityCommentThreads(post.id, 30);
 
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
   const canonicalPath = `/community/post/${encodeURIComponent(id)}`;

@@ -167,6 +167,7 @@ export interface CommunityReadFetchOptions {
   timeoutMs?: number;
   retries?: number;
   logKey?: string;
+  warnStatuses?: number[];
 }
 
 interface TopicFollowResult {
@@ -505,7 +506,7 @@ function resolveCommunityReadFetchOptions(
   fetchOptions: CommunityReadFetchOptions | undefined,
   defaults?: Partial<CommunityReadFetchOptions>,
 ): Required<Pick<CommunityReadFetchOptions, 'cache' | 'timeoutMs' | 'retries' | 'logKey'>> &
-  Pick<CommunityReadFetchOptions, 'next'> {
+  Pick<CommunityReadFetchOptions, 'next' | 'warnStatuses'> {
   const isServer = typeof window === 'undefined';
   const cache =
     fetchOptions?.cache ??
@@ -520,6 +521,12 @@ function resolveCommunityReadFetchOptions(
   const retries =
     Number(fetchOptions?.retries ?? defaults?.retries ?? COMMUNITY_READ_RETRIES);
   const logKey = String(fetchOptions?.logKey || defaults?.logKey || 'community-api').trim();
+  const warnStatuses = Array.from(
+    new Set([
+      ...(Array.isArray(defaults?.warnStatuses) ? defaults!.warnStatuses : []),
+      ...(Array.isArray(fetchOptions?.warnStatuses) ? fetchOptions!.warnStatuses : []),
+    ]),
+  ).filter((status) => Number.isInteger(status) && status >= 100 && status <= 599);
 
   return {
     cache,
@@ -527,6 +534,7 @@ function resolveCommunityReadFetchOptions(
     timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : COMMUNITY_READ_TIMEOUT_MS,
     retries: Number.isFinite(retries) && retries >= 0 ? retries : COMMUNITY_READ_RETRIES,
     logKey,
+    warnStatuses,
   };
 }
 
@@ -549,14 +557,19 @@ async function getApiData<T>(
       const durationMs = Date.now() - startedAt;
 
       if (!res.ok) {
-        console.error(`[${resolved.logKey}] non-200 response`, {
+        const logPayload = {
           path,
           attempt,
           maxAttempts,
           status: res.status,
           statusText: res.statusText,
           durationMs,
-        });
+        };
+        if (resolved.warnStatuses?.includes(res.status)) {
+          console.warn(`[${resolved.logKey}] expected non-200 response`, logPayload);
+        } else {
+          console.error(`[${resolved.logKey}] non-200 response`, logPayload);
+        }
         if (attempt < maxAttempts && res.status >= 500) continue;
         return null;
       }
@@ -805,7 +818,10 @@ export async function getCommunityPostsByGame(
 export async function getCommunityPostById(
   id: string,
 ): Promise<CommunityPost | null> {
-  const data = await getApiData<ApiCommunityPost>(`/content/public/${id}`);
+  const data = await getApiData<ApiCommunityPost>(`/content/public/${id}`, undefined, {
+    logKey: 'community-post',
+    warnStatuses: [404],
+  });
   if (!data || !data._id) return null;
   return toCommunityPost(data);
 }
