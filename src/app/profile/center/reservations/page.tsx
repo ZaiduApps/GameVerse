@@ -185,7 +185,14 @@ export default function ProfileCenterReservationsPage() {
               {filtered.map((game) => (
                 <div key={game.id} className="space-y-2">
                   <PreregistrationGameCard game={game} />
-                  <Button variant="outline" size="sm" className="w-full" onClick={() => void unfollow(game)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => void unfollow(game)}
+                    data-acbox-action="profile_center_reservation_unfollow"
+                    data-acbox-label={game.title || '取消预约'}
+                  >
                     取消预约
                   </Button>
                 </div>
@@ -193,7 +200,14 @@ export default function ProfileCenterReservationsPage() {
             </div>
           )}
           {canLoadMore ? (
-            <Button variant="outline" className="w-full" onClick={() => void loadMore()} disabled={loadingMore}>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
+              data-acbox-action="profile_center_reservations_load_more"
+              data-acbox-label="加载更多预约游戏"
+            >
               {loadingMore ? '加载中...' : '加载更多'}
             </Button>
           ) : null}

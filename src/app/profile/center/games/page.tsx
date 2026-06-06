@@ -152,6 +152,8 @@ export default function ProfileCenterGamesPage() {
                 void loadMore();
               }}
               disabled={loadingMore}
+              data-acbox-action="profile_center_games_load_more"
+              data-acbox-label="加载更多关注游戏"
             >
               {loadingMore ? '加载中...' : '加载更多'}
             </button>

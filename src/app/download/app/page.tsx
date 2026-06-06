@@ -128,16 +128,36 @@ export default async function DownloadAppPage() {
           </div>
           {/* Block: Desktop nav links */}
           <div className="hidden md:flex gap-10 items-center">
-            <a className="text-[#0070f3] font-headline font-bold tracking-tight relative after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-0.5 after:bg-[#0070f3] after:rounded-full" href="#">
+            <a
+              className="text-[#0070f3] font-headline font-bold tracking-tight relative after:content-[''] after:absolute after:-bottom-1 after:left-0 after:w-full after:h-0.5 after:bg-[#0070f3] after:rounded-full"
+              href="#"
+              data-acbox-action="client_download_nav_home"
+              data-acbox-label="首页"
+            >
               首页
             </a>
-            <a className="text-[#001e05]/70 hover:text-[#0070f3] transition-colors duration-300 font-headline font-bold tracking-tight" href="#features">
+            <a
+              className="text-[#001e05]/70 hover:text-[#0070f3] transition-colors duration-300 font-headline font-bold tracking-tight"
+              href="#features"
+              data-acbox-action="client_download_nav_features"
+              data-acbox-label="核心功能"
+            >
               核心功能
             </a>
-            <a className="text-[#001e05]/70 hover:text-[#e53935] transition-colors duration-300 font-headline font-bold tracking-tight" href="#community">
+            <a
+              className="text-[#001e05]/70 hover:text-[#e53935] transition-colors duration-300 font-headline font-bold tracking-tight"
+              href="#community"
+              data-acbox-action="client_download_nav_community"
+              data-acbox-label="玩家社区"
+            >
               玩家社区
             </a>
-            <a className="text-[#001e05]/70 hover:text-[#ffb300] transition-colors duration-300 font-headline font-bold tracking-tight" href="#">
+            <a
+              className="text-[#001e05]/70 hover:text-[#ffb300] transition-colors duration-300 font-headline font-bold tracking-tight"
+              href="#"
+              data-acbox-action="client_download_nav_help"
+              data-acbox-label="帮助中心"
+            >
               帮助中心
             </a>
           </div>
@@ -148,6 +168,8 @@ export default async function DownloadAppPage() {
               href={downloadUrl}
               target="_blank"
               rel="noopener noreferrer"
+              data-acbox-action="client_download_nav_apk"
+              data-acbox-label={`导航下载 v${versionText}`}
             >
               立即下载 APK
             </a>
@@ -197,6 +219,8 @@ export default async function DownloadAppPage() {
                 href={downloadUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                data-acbox-action="client_download_hero_apk"
+                data-acbox-label={`Hero 下载 v${versionText}`}
               >
                 <span className="material-symbols-outlined">download</span>
                 下载安卓 APK
@@ -204,6 +228,8 @@ export default async function DownloadAppPage() {
               <a
                 className="bg-white w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl text-sm sm:text-base font-bold border border-gray-200 text-[#001e05]/70 transition-all hover:bg-gray-50 inline-flex items-center justify-center"
                 href="/"
+                data-acbox-action="client_download_open_web"
+                data-acbox-label="前往网页版"
               >
                 前往网页版
               </a>
@@ -416,6 +442,8 @@ export default async function DownloadAppPage() {
                 href={downloadUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                data-acbox-action="client_download_main_apk"
+                data-acbox-label={`主下载区 v${versionText}`}
               >
                 <span className="material-symbols-outlined text-3xl">download_for_offline</span>
                 点击下载 APK
@@ -476,13 +504,28 @@ export default async function DownloadAppPage() {
           </div>
           {/* Block: Footer links */}
           <div className="flex gap-12 text-sm font-bold text-[#001e05]/50">
-            <a className="hover:text-[#0070f3] transition-colors" href="#">
+            <a
+              className="hover:text-[#0070f3] transition-colors"
+              href="#"
+              data-acbox-action="client_download_footer_privacy"
+              data-acbox-label="隐私条款"
+            >
               隐私条款
             </a>
-            <a className="hover:text-[#0070f3] transition-colors" href="#">
+            <a
+              className="hover:text-[#0070f3] transition-colors"
+              href="#"
+              data-acbox-action="client_download_footer_terms"
+              data-acbox-label="用户协议"
+            >
               用户协议
             </a>
-            <a className="hover:text-[#0070f3] transition-colors" href="#">
+            <a
+              className="hover:text-[#0070f3] transition-colors"
+              href="#"
+              data-acbox-action="client_download_footer_contact"
+              data-acbox-label="联系支持"
+            >
               联系支持
             </a>
           </div>

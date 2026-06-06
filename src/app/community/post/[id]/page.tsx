@@ -9,35 +9,16 @@ import {
   getCommunityPostById,
   type CommunityCommentThread,
 } from '@/lib/community-api';
-import { absoluteUrl, hasSeoMarkupNoise, sanitizeSeoText } from '@/lib/seo';
+import {
+  buildCommunityPostBreadcrumbJsonLd,
+  buildCommunityPostDiscussionJsonLd,
+  buildCommunityPostSeoDescription,
+  buildCommunityPostSeoTitle,
+  getCommunityAuthorProfileUrl,
+  getCommunityPostShareImage,
+} from '@/lib/community-seo';
+import { absoluteUrl, sanitizeSeoText } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
-
-function clamp(input: string, max: number): string {
-  if (input.length <= max) return input;
-  return `${input.slice(0, Math.max(1, max - 3)).trim()}...`;
-}
-
-function buildPostTitle(post: CommunityPost, siteName: string): string {
-  const core =
-    sanitizeSeoText(post.title || post.summary || '社区帖子') || '社区帖子';
-  return clamp(`${core} | ${siteName} 社区`, 90);
-}
-
-function buildPostDescription(post: CommunityPost): string {
-  const summary = sanitizeSeoText(post.summary);
-  const content = sanitizeSeoText(post.content);
-  const source =
-    (!summary ||
-    (hasSeoMarkupNoise(post.summary) && content.length > summary.length)
-      ? content || summary
-      : summary || content) || '查看社区帖子详情';
-  return clamp(source, 180);
-}
-
-function getPostImage(post: CommunityPost, fallbackImage: string): string {
-  const image = String(post.imageUrl || '').trim();
-  return image || fallbackImage;
-}
 
 async function getPostById(id: string): Promise<CommunityPost | null> {
   const apiPost = await getCommunityPostById(id);
@@ -64,9 +45,10 @@ export async function generateMetadata({
 
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
   const canonicalPath = `/community/post/${encodeURIComponent(id)}`;
-  const title = buildPostTitle(post, siteName);
-  const description = buildPostDescription(post);
-  const image = getPostImage(post, String(config?.basic?.share_image || '').trim());
+  const title = buildCommunityPostSeoTitle(post, siteName);
+  const description = buildCommunityPostSeoDescription(post);
+  const image = getCommunityPostShareImage(post, String(config?.basic?.share_image || '').trim());
+  const authorUrl = getCommunityAuthorProfileUrl(post);
 
   return {
     title: { absolute: title },
@@ -96,7 +78,9 @@ export async function generateMetadata({
       siteName,
       type: 'article',
       locale: 'zh_CN',
-      images: image ? [image] : [],
+      images: image
+        ? [{ url: image, width: 1200, height: 630, alt: sanitizeSeoText(post.title || post.summary) || siteName }]
+        : [],
       authors: post.user?.name ? [post.user.name] : undefined,
       tags: Array.isArray(post.tags) ? post.tags.filter(Boolean) : undefined,
     },
@@ -104,8 +88,11 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title,
       description,
-      images: image ? [image] : [],
+      images: image ? [{ url: image, alt: sanitizeSeoText(post.title || post.summary) || siteName }] : [],
     },
+    authors: post.user?.name
+      ? [{ name: post.user.name, url: authorUrl }]
+      : undefined,
   };
 }
 
@@ -129,87 +116,22 @@ export default async function CommunityPostPage({
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
   const canonicalPath = `/community/post/${encodeURIComponent(id)}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
-  const postDescription = buildPostDescription(post as CommunityPost);
-  const postImage = getPostImage(post as CommunityPost, String(config?.basic?.share_image || '').trim());
-
-  const articleJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline:
-      sanitizeSeoText(
-        (post as CommunityPost).title ||
-          (post as CommunityPost).summary ||
-          '社区帖子',
-      ) || '社区帖子',
-    description: postDescription || undefined,
-    image: postImage ? [postImage] : undefined,
-    mainEntityOfPage: canonicalUrl,
-    inLanguage: 'zh-CN',
-    author: {
-      '@type': 'Person',
-      name: String((post as CommunityPost).user?.name || '匿名用户').trim(),
-    },
-    publisher: {
-      '@type': 'Organization',
-      name: siteName,
-      logo: config?.basic?.logo_url
-        ? {
-            '@type': 'ImageObject',
-            url: config.basic.logo_url,
-          }
-        : undefined,
-    },
-    articleSection: String((post as CommunityPost).category || '社区').trim(),
-    keywords: Array.isArray((post as CommunityPost).tags)
-      ? (post as CommunityPost).tags!.filter(Boolean).join(',')
-      : undefined,
-    interactionStatistic: [
-      {
-        '@type': 'InteractionCounter',
-        interactionType: 'https://schema.org/LikeAction',
-        userInteractionCount: Number((post as CommunityPost).likesCount || 0),
-      },
-      {
-        '@type': 'InteractionCounter',
-        interactionType: 'https://schema.org/CommentAction',
-        userInteractionCount: Number((post as CommunityPost).commentsCount || 0),
-      },
-    ],
-  };
-
-  const breadcrumbJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: '首页',
-        item: absoluteUrl('/'),
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: '社区',
-        item: absoluteUrl('/community'),
-      },
-      {
-        '@type': 'ListItem',
-        position: 3,
-        name:
-          sanitizeSeoText(
-            (post as CommunityPost).title ||
-              (post as CommunityPost).summary ||
-              '帖子详情',
-          ) || '帖子详情',
-        item: canonicalUrl,
-      },
-    ],
-  };
+  const communityPost = post as CommunityPost;
+  const discussionJsonLd = buildCommunityPostDiscussionJsonLd({
+    post: communityPost,
+    comments: apiComments as CommunityCommentThread[],
+    siteName,
+    siteLogoUrl: config?.basic?.logo_url,
+    canonicalUrl,
+  });
+  const breadcrumbJsonLd = buildCommunityPostBreadcrumbJsonLd({
+    post: communityPost,
+    canonicalUrl,
+  });
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(discussionJsonLd) }} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}

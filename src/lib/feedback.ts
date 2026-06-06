@@ -4,7 +4,6 @@ type FeedbackUserLike = {
   _id?: string;
   email?: string;
   name?: string;
-  phone?: string;
   username?: string;
 };
 
@@ -16,7 +15,7 @@ export function buildFeedbackCommonFields(
   return {
     user_id: user?._id || '',
     nickname: user?.name || user?.username || '游客',
-    contact: user?.email || user?.phone || '',
+    contact: user?.email || '',
     clientType: 'Web',
     clientVersion: process.env.NEXT_PUBLIC_CLIENT_VERSION || '',
     osVersion: userAgent,

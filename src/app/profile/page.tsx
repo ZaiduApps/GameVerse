@@ -27,14 +27,15 @@ import {
   Cake,
   CheckCircle2,
   History,
+  KeyRound,
   Loader2,
   Lock,
+  Mail,
   LogOut,
   MapPin,
   PencilLine,
   Settings2,
   ShieldCheck,
-  Smartphone,
   User as UserIcon,
 } from 'lucide-react';
 import ProfileDashboard from './ProfileDashboard';
@@ -62,7 +63,7 @@ export default function ProfilePage() {
   const [isFetchingProfile, setIsFetchingProfile] = useState(true);
 
   const [editName, setEditName] = useState('');
-  const [editPhone, setEditPhone] = useState('');
+  const [editSignature, setEditSignature] = useState('');
   const [editGender, setEditGender] = useState('');
   const [editBirthday, setEditBirthday] = useState('');
   const [editCountry, setEditCountry] = useState('');
@@ -74,6 +75,10 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [emailVerifyCode, setEmailVerifyCode] = useState('');
+  const [emailVerifyCountdown, setEmailVerifyCountdown] = useState(0);
+  const [isSendingEmailVerifyCode, setIsSendingEmailVerifyCode] = useState(false);
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
   const [emailNotifyEnabled, setEmailNotifyEnabled] = useState(false);
   const [isSavingEmailNotify, setIsSavingEmailNotify] = useState(false);
   const [adminEmailSwitchEnabled, setAdminEmailSwitchEnabled] = useState(true);
@@ -94,7 +99,7 @@ export default function ProfilePage() {
         if (json.code === 0 && json.data) {
           setProfile(json.data);
           setEditName(json.data.name || '');
-          setEditPhone(json.data.phone || '');
+          setEditSignature(json.data.signature || '');
           setEditGender(json.data.gender || 'secret');
           setEditBirthday(json.data.birthday || '');
           setEditCountry(json.data.country || '');
@@ -140,6 +145,16 @@ export default function ProfilePage() {
     };
   }, [isAdminUser, isAuthenticated, token]);
 
+  useEffect(() => {
+    if (emailVerifyCountdown <= 0) return;
+    const timer = window.setTimeout(() => {
+      setEmailVerifyCountdown((current) => Math.max(0, current - 1));
+    }, 1000);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [emailVerifyCountdown]);
+
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
@@ -154,7 +169,7 @@ export default function ProfilePage() {
         },
         body: JSON.stringify({
           name: editName,
-          phone: editPhone,
+          signature: editSignature,
           gender: editGender === 'secret' ? '' : editGender,
           birthday: editBirthday,
           country: editCountry,
@@ -217,6 +232,71 @@ export default function ProfilePage() {
       toast({ variant: 'destructive', title: '网络请求失败' });
     } finally {
       setIsChangingPassword(false);
+    }
+  };
+
+  const handleSendEmailVerifyCode = async () => {
+    if (!token || profile?.isVerified) return;
+    setIsSendingEmailVerifyCode(true);
+    try {
+      const res = await trackedApiFetch('/auth/verify-email/send-code', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (json.code === 0) {
+        if (json.data?.verified && json.data?.user) {
+          setProfile(json.data.user);
+          login({ user: json.data.user, token });
+        }
+        setEmailVerifyCountdown(json.data?.verified ? 0 : 60);
+        toast({ title: json.data?.message || json.message || '验证码已发送，请查收邮件' });
+      } else {
+        const retryAfter = Number(json.data?.retry_after_seconds || json.retry_after_seconds || 0);
+        if (retryAfter > 0) {
+          setEmailVerifyCountdown(retryAfter);
+        }
+        toast({ variant: 'destructive', title: '发送失败', description: json.message || '请稍后重试' });
+      }
+    } catch {
+      toast({ variant: 'destructive', title: '网络请求失败' });
+    } finally {
+      setIsSendingEmailVerifyCode(false);
+    }
+  };
+
+  const handleVerifyEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || profile?.isVerified) return;
+    if (!/^\d{6}$/.test(emailVerifyCode.trim())) {
+      toast({ variant: 'destructive', title: '请输入 6 位邮箱验证码' });
+      return;
+    }
+
+    setIsVerifyingEmail(true);
+    try {
+      const res = await trackedApiFetch('/auth/verify-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ code: emailVerifyCode.trim() }),
+      });
+      const json = await res.json();
+      if (json.code === 0 && json.data?.user) {
+        setProfile(json.data.user);
+        login({ user: json.data.user, token });
+        setEmailVerifyCode('');
+        setEmailVerifyCountdown(0);
+        toast({ title: json.data?.message || '邮箱认证成功' });
+      } else {
+        toast({ variant: 'destructive', title: '认证失败', description: json.message || '请稍后重试' });
+      }
+    } catch {
+      toast({ variant: 'destructive', title: '网络请求失败' });
+    } finally {
+      setIsVerifyingEmail(false);
     }
   };
 
@@ -299,6 +379,9 @@ export default function ProfilePage() {
     );
   }
 
+  const profileDisplayName = profile.name || profile.username || '社区用户';
+  const profileHandle = profile.username ? `@${profile.username}` : '';
+
   return (
     <div className="mx-auto max-w-5xl space-y-8 py-4 md:py-8 fade-in">
       <div className="flex flex-col gap-8 md:flex-row">
@@ -307,14 +390,14 @@ export default function ProfilePage() {
             <div className="h-24 bg-gradient-to-r from-primary/20 to-accent/20" />
             <CardContent className="relative flex flex-col items-center pt-0">
               <Avatar className="-mt-12 h-20 w-20 border-4 border-background shadow-xl">
-                <AvatarImage src={profile.avatar} alt={profile.name || profile.username} />
+                <AvatarImage src={profile.avatar} alt={profileDisplayName} />
                 <AvatarFallback className="bg-primary text-xl text-primary-foreground">
-                  {(profile.name || profile.username).substring(0, 1).toUpperCase()}
+                  {profileDisplayName.substring(0, 1).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
 
               <div className="mt-4 space-y-1 text-center">
-                <h2 className="text-lg font-bold">{profile.name || profile.username}</h2>
+                <h2 className="text-lg font-bold">{profileDisplayName}</h2>
                 <p className="text-sm text-muted-foreground">{profile.email}</p>
               </div>
 
@@ -346,7 +429,13 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <Button variant="destructive" className="btn-interactive mt-8 w-full gap-2" onClick={logout}>
+              <Button
+                variant="destructive"
+                className="btn-interactive mt-8 w-full gap-2"
+                onClick={logout}
+                data-acbox-action="profile_logout"
+                data-acbox-label="退出登录"
+              >
                 <LogOut className="h-4 w-4" /> 退出登录
               </Button>
             </CardContent>
@@ -356,12 +445,48 @@ export default function ProfilePage() {
         <div className="flex-1">
           <Tabs defaultValue="account" className="w-full">
             <TabsList className="mb-6 grid w-full grid-cols-6">
-              <TabsTrigger value="dashboard">个人中心</TabsTrigger>
-              <TabsTrigger value="account">个人资料</TabsTrigger>
-              <TabsTrigger value="edit">编辑信息</TabsTrigger>
-              <TabsTrigger value="security">安全设置</TabsTrigger>
-              <TabsTrigger value="notifications">通知设置</TabsTrigger>
-              <TabsTrigger value="api-keys">API密钥</TabsTrigger>
+              <TabsTrigger
+                value="dashboard"
+                data-acbox-action="profile_tab_dashboard"
+                data-acbox-label="个人中心"
+              >
+                个人中心
+              </TabsTrigger>
+              <TabsTrigger
+                value="account"
+                data-acbox-action="profile_tab_account"
+                data-acbox-label="个人资料"
+              >
+                个人资料
+              </TabsTrigger>
+              <TabsTrigger
+                value="edit"
+                data-acbox-action="profile_tab_edit"
+                data-acbox-label="编辑信息"
+              >
+                编辑信息
+              </TabsTrigger>
+              <TabsTrigger
+                value="security"
+                data-acbox-action="profile_tab_security"
+                data-acbox-label="安全设置"
+              >
+                安全设置
+              </TabsTrigger>
+              <TabsTrigger
+                value="notifications"
+                data-acbox-action="profile_tab_notifications"
+                data-acbox-label="通知设置"
+              >
+                通知设置
+              </TabsTrigger>
+              <TabsTrigger
+                value="api-keys"
+                data-acbox-action="profile_tab_api_keys"
+                data-acbox-label="API密钥"
+              >
+                API密钥
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="dashboard">
@@ -384,7 +509,7 @@ export default function ProfilePage() {
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs uppercase tracking-wider text-muted-foreground">用户名</Label>
-                      <p className="font-medium">@{profile.username}</p>
+                      <p className="font-medium">{profileHandle || '未设置'}</p>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs uppercase tracking-wider text-muted-foreground">性别</Label>
@@ -406,10 +531,10 @@ export default function ProfilePage() {
                       </p>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">手机号</Label>
+                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">个性签名</Label>
                       <p className="flex items-center gap-2 font-medium">
-                        <Smartphone className="h-4 w-4 text-green-500" />
-                        {profile.phone || '未绑定'}
+                        <PencilLine className="h-4 w-4 text-green-500" />
+                        {profile.signature || '未设置'}
                       </p>
                     </div>
                     <div className="space-y-1.5">
@@ -447,10 +572,15 @@ export default function ProfilePage() {
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <PencilLine className="h-5 w-5 text-primary" /> 编辑基本信息
                   </CardTitle>
-                  <CardDescription>更新你的姓名、性别、联系方式和地区信息。</CardDescription>
+                  <CardDescription>更新你的姓名、性别、个性签名和地区信息。</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleUpdateProfile} className="space-y-6">
+                  <form
+                    onSubmit={handleUpdateProfile}
+                    className="space-y-6"
+                    data-acbox-action="profile_update_submit"
+                    data-acbox-label="保存个人资料"
+                  >
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="edit-name">姓名 / 显示名称</Label>
@@ -475,8 +605,8 @@ export default function ProfilePage() {
                         <Input id="edit-birthday" type="date" value={editBirthday} onChange={(e) => setEditBirthday(e.target.value)} />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="edit-phone">手机号</Label>
-                        <Input id="edit-phone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="请输入手机号码" />
+                        <Label htmlFor="edit-signature">个性签名</Label>
+                        <Input id="edit-signature" value={editSignature} onChange={(e) => setEditSignature(e.target.value)} maxLength={120} placeholder="写一句你的主页签名" />
                       </div>
                     </div>
 
@@ -495,7 +625,13 @@ export default function ProfilePage() {
                       </div>
                     </div>
 
-                    <Button type="submit" className="btn-interactive w-full px-8 sm:w-auto" disabled={isUpdatingProfile}>
+                    <Button
+                      type="submit"
+                      className="btn-interactive w-full px-8 sm:w-auto"
+                      disabled={isUpdatingProfile}
+                      data-acbox-action="profile_update_submit"
+                      data-acbox-label="保存修改"
+                    >
                       {isUpdatingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       保存修改
                     </Button>
@@ -510,10 +646,79 @@ export default function ProfilePage() {
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <ShieldCheck className="h-5 w-5 text-primary" /> 安全与隐私
                   </CardTitle>
-                  <CardDescription>定期更新密码，保护你的账号安全。</CardDescription>
+                  <CardDescription>管理邮箱认证与登录密码，保护你的账号安全。</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleChangePassword} className="space-y-6">
+                <CardContent className="space-y-8">
+                  <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-primary" />
+                          <p className="font-medium">邮箱认证</p>
+                          {profile.isVerified ? (
+                            <Badge variant="secondary" className="border-green-200 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                              <CheckCircle2 className="mr-1 h-3 w-3" /> 已认证
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+                              待认证
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{profile.email}</p>
+                        <p className="text-xs text-muted-foreground">
+                          邮箱认证后可稳定接收回复、系统消息与账号安全通知。
+                        </p>
+                      </div>
+                    </div>
+
+                    {!profile.isVerified ? (
+                      <form onSubmit={handleVerifyEmail} className="mt-4 flex flex-col gap-3 sm:flex-row">
+                        <div className="relative flex-1">
+                          <KeyRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            value={emailVerifyCode}
+                            onChange={(e) => setEmailVerifyCode(e.target.value)}
+                            className="pl-9"
+                            inputMode="numeric"
+                            maxLength={6}
+                            placeholder="输入 6 位验证码"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={isSendingEmailVerifyCode || emailVerifyCountdown > 0}
+                            onClick={() => {
+                              void handleSendEmailVerifyCode();
+                            }}
+                            data-acbox-action="profile_email_verify_send"
+                            data-acbox-label="发送邮箱认证验证码"
+                          >
+                            {isSendingEmailVerifyCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {emailVerifyCountdown > 0 ? `${emailVerifyCountdown}s` : '发送验证码'}
+                          </Button>
+                          <Button
+                            type="submit"
+                            disabled={isVerifyingEmail}
+                            data-acbox-action="profile_email_verify_submit"
+                            data-acbox-label="确认邮箱认证"
+                          >
+                            {isVerifyingEmail && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            确认认证
+                          </Button>
+                        </div>
+                      </form>
+                    ) : null}
+                  </div>
+
+                  <form
+                    onSubmit={handleChangePassword}
+                    className="space-y-6"
+                    data-acbox-action="profile_password_submit"
+                    data-acbox-label="确认修改密码"
+                  >
                     <div className="space-y-2">
                       <Label htmlFor="old-password">当前密码</Label>
                       <div className="relative">
@@ -562,7 +767,13 @@ export default function ProfilePage() {
                       </div>
                     </div>
 
-                    <Button type="submit" className="btn-interactive w-full px-8 sm:w-auto" disabled={isChangingPassword}>
+                    <Button
+                      type="submit"
+                      className="btn-interactive w-full px-8 sm:w-auto"
+                      disabled={isChangingPassword}
+                      data-acbox-action="profile_password_submit"
+                      data-acbox-label="确认修改密码"
+                    >
                       {isChangingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       确认修改密码
                     </Button>
@@ -599,6 +810,8 @@ export default function ProfilePage() {
                         onCheckedChange={(checked) => {
                           void handleToggleEmailNotify(Boolean(checked));
                         }}
+                        data-acbox-action="profile_email_notify_toggle"
+                        data-acbox-label="评论回复邮件提醒"
                       />
                     </div>
                     {!adminEmailSwitchEnabled ? (
@@ -623,6 +836,8 @@ export default function ProfilePage() {
                           onCheckedChange={(checked) => {
                             void handleToggleAdminEmailSwitch(Boolean(checked));
                           }}
+                          data-acbox-action="profile_admin_email_notify_toggle"
+                          data-acbox-label="全站游戏评论邮件提醒"
                         />
                       </div>
                     </div>
@@ -650,6 +865,8 @@ export default function ProfilePage() {
                     onClick={() => {
                       router.push('/profile/api-keys');
                     }}
+                    data-acbox-action="profile_api_keys_manage"
+                    data-acbox-label="前往 API 密钥管理"
                   >
                     前往 API 密钥管理
                   </Button>

@@ -41,6 +41,15 @@ type TopicSitemapItem = {
   created_at?: string;
 };
 
+type UserSitemapItem = {
+  _id?: string;
+  username?: string;
+  isVerified?: boolean;
+  post_count?: number;
+  updated_at?: string;
+  created_at?: string;
+};
+
 type PagedList<T> = {
   list?: T[];
   total?: number;
@@ -48,7 +57,7 @@ type PagedList<T> = {
   pageSize?: number;
 };
 
-const FALLBACK_STATIC_PATHS = ['/', '/app', '/community', '/rankings'];
+const FALLBACK_STATIC_PATHS = ['/', '/app', '/community', '/rankings', '/llms.txt'];
 const SITEMAP_PAGE_SIZE = 500;
 const SITEMAP_MAX_PAGES = 200;
 const NEWS_SITEMAP_MAX_PAGES = 80;
@@ -131,7 +140,8 @@ function toCommunityPostEntry(item: ContentPostSitemapItem): MetadataRoute.Sitem
   const isDeleted = item?.is_deleted === true || Number(item?.is_deleted || 0) === 1;
   if (isDeleted) return null;
   if (item?.status !== undefined && Number(item.status) !== 1) return null;
-  if (item?.post_type && String(item.post_type) !== 'news') return null;
+  const postType = String(item?.post_type || '').trim();
+  if (postType && !['news', 'post'].includes(postType)) return null;
 
   const lastmod = parseDate(item.updated_at) || parseDate(item.last_commented_at) || parseDate(item.publish_at);
   return {
@@ -236,29 +246,48 @@ async function fetchCommunityPostsFromFeed(): Promise<MetadataRoute.Sitemap[numb
   const result: MetadataRoute.Sitemap[number][] = [];
   const seen = new Set<string>();
 
-  for (let page = 1; page <= NEWS_SITEMAP_MAX_PAGES; page += 1) {
-    const json = await fetchJson(
-      `/content/feed?page=${page}&pageSize=${SITEMAP_PAGE_SIZE}&post_type=news&sort=latest&view=card`,
-    );
-    if (!json || (json.code !== 0 && json.code !== undefined)) break;
+  for (const postType of ['news', 'post']) {
+    for (let page = 1; page <= NEWS_SITEMAP_MAX_PAGES; page += 1) {
+      const json = await fetchJson(
+        `/content/feed?page=${page}&pageSize=${SITEMAP_PAGE_SIZE}&post_type=${postType}&sort=latest&view=card`,
+      );
+      if (!json || (json.code !== 0 && json.code !== undefined)) break;
 
-    const { list, total, pageSize } = normalizeListData<ContentPostSitemapItem>(json);
-    const safeList = Array.isArray(list) ? list : [];
-    if (safeList.length === 0) break;
+      const { list, total, pageSize } = normalizeListData<ContentPostSitemapItem>(json);
+      const safeList = Array.isArray(list) ? list : [];
+      if (safeList.length === 0) break;
 
-    for (const item of safeList) {
-      const entry = toCommunityPostEntry(item);
-      if (!entry) continue;
-      if (seen.has(entry.url)) continue;
-      seen.add(entry.url);
-      result.push(entry);
+      for (const item of safeList) {
+        const entry = toCommunityPostEntry(item);
+        if (!entry) continue;
+        if (seen.has(entry.url)) continue;
+        seen.add(entry.url);
+        result.push(entry);
+      }
+
+      if (total && page * (pageSize || SITEMAP_PAGE_SIZE) >= total) break;
+      if (safeList.length < SITEMAP_PAGE_SIZE) break;
     }
-
-    if (total && page * (pageSize || SITEMAP_PAGE_SIZE) >= total) break;
-    if (safeList.length < SITEMAP_PAGE_SIZE) break;
   }
 
   return result;
+}
+
+function toUserEntry(item: UserSitemapItem): MetadataRoute.Sitemap[number] | null {
+  const username = String(item?.username || '').trim();
+  const id = String(item?._id || '').trim();
+  const pathTarget = username || id;
+  if (!pathTarget) return null;
+
+  const postCount = Number(item?.post_count || 0);
+  if (postCount <= 0 && !item?.isVerified) return null;
+
+  return {
+    url: absoluteUrl(`/u/${encodeURIComponent(pathTarget)}`),
+    lastModified: parseDate(item.updated_at) || parseDate(item.created_at),
+    changeFrequency: 'weekly',
+    priority: item?.isVerified ? 0.52 : 0.46,
+  };
 }
 
 async function fetchHomeAlbumEntries(): Promise<MetadataRoute.Sitemap[number][]> {
@@ -310,6 +339,33 @@ async function fetchTopicEntries(): Promise<MetadataRoute.Sitemap[number][]> {
   return result;
 }
 
+async function fetchUserEntries(): Promise<MetadataRoute.Sitemap[number][]> {
+  const result: MetadataRoute.Sitemap[number][] = [];
+  const seen = new Set<string>();
+
+  for (let page = 1; page <= NEWS_SITEMAP_MAX_PAGES; page += 1) {
+    const json = await fetchJson(`/seo/sitemap/users?page=${page}&pageSize=${SITEMAP_PAGE_SIZE}`);
+    if (!json || (json.code !== 0 && json.code !== undefined)) break;
+
+    const { list, total, pageSize } = normalizeListData<UserSitemapItem>(json);
+    const safeList = Array.isArray(list) ? list : [];
+    if (safeList.length === 0) break;
+
+    for (const item of safeList) {
+      const entry = toUserEntry(item);
+      if (!entry) continue;
+      if (seen.has(entry.url)) continue;
+      seen.add(entry.url);
+      result.push(entry);
+    }
+
+    if (total && page * (pageSize || SITEMAP_PAGE_SIZE) >= total) break;
+    if (safeList.length < SITEMAP_PAGE_SIZE) break;
+  }
+
+  return result;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const staticEntries: MetadataRoute.Sitemap = FALLBACK_STATIC_PATHS.map((path) => ({
@@ -323,8 +379,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const communityPostEntries = await fetchCommunityPostsFromFeed();
   const albumEntries = await fetchHomeAlbumEntries();
   const topicEntries = await fetchTopicEntries();
+  const userEntries = await fetchUserEntries();
 
   const safeGameEntries = gameEntries.length > 0 ? gameEntries : await fetchGamesFromListFallback();
 
-  return [...staticEntries, ...albumEntries, ...safeGameEntries, ...topicEntries, ...communityPostEntries];
+  return [
+    ...staticEntries,
+    ...albumEntries,
+    ...safeGameEntries,
+    ...topicEntries,
+    ...userEntries,
+    ...communityPostEntries,
+  ];
 }

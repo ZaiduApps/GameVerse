@@ -237,6 +237,8 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
       <div className="mx-auto mt-[10vh] w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
         <div className="relative p-4">
           <form
+            data-acbox-action="global_search_form"
+            data-acbox-label="全局搜索表单"
             onSubmit={(e) => {
               e.preventDefault();
               handleSearchSubmit(searchTerm);
@@ -258,6 +260,8 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
             variant="ghost"
             size="icon"
             className="absolute right-6 top-1/2 h-10 w-10 -translate-y-1/2 rounded-full"
+            data-acbox-action="global_search_close"
+            data-acbox-label="关闭搜索"
             onClick={() => setIsOpen(false)}
             aria-label="关闭搜索"
           >
@@ -272,6 +276,8 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                 <Button
                   size="sm"
                   variant={resultFilter === 'all' ? 'default' : 'outline'}
+                  data-acbox-action="global_search_filter"
+                  data-acbox-label="全部"
                   onClick={() => setResultFilter('all')}
                 >
                   全部 ({totalResultCount})
@@ -279,6 +285,8 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                 <Button
                   size="sm"
                   variant={resultFilter === 'game' ? 'default' : 'outline'}
+                  data-acbox-action="global_search_filter"
+                  data-acbox-label="游戏"
                   onClick={() => setResultFilter('game')}
                 >
                   游戏 ({resultCounts.game})
@@ -286,6 +294,8 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                 <Button
                   size="sm"
                   variant={resultFilter === 'topic' ? 'default' : 'outline'}
+                  data-acbox-action="global_search_filter"
+                  data-acbox-label="话题"
                   onClick={() => setResultFilter('topic')}
                 >
                   话题 ({resultCounts.topic})
@@ -293,6 +303,8 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                 <Button
                   size="sm"
                   variant={resultFilter === 'post' ? 'default' : 'outline'}
+                  data-acbox-action="global_search_filter"
+                  data-acbox-label="帖子"
                   onClick={() => setResultFilter('post')}
                 >
                   帖子 ({resultCounts.post})
@@ -300,6 +312,8 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                 <Button
                   size="sm"
                   variant={resultFilter === 'article' ? 'default' : 'outline'}
+                  data-acbox-action="global_search_filter"
+                  data-acbox-label="文章"
                   onClick={() => setResultFilter('article')}
                 >
                   文章 ({resultCounts.article})
@@ -328,6 +342,8 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                               : `/community/post/${item.id}`)
                         }
                         key={`${item.type}-${item.id}`}
+                        data-acbox-action="global_search_result_click"
+                        data-acbox-label={`${getResultTypeLabel(item.type)}：${item.title}`}
                         onClick={() => {
                           setIsOpen(false);
                           updateSearchHistory(searchTerm);
@@ -376,6 +392,8 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                     </p>
                     <Link
                       href="/submit-resource"
+                      data-acbox-action="global_search_submit_resource"
+                      data-acbox-label="找不到资源反馈"
                       onClick={() => setIsOpen(false)}
                       className="mx-auto mt-3 inline-flex text-sm font-medium text-primary hover:underline"
                     >
@@ -393,7 +411,14 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                     <h3 className="flex items-center text-sm font-semibold text-muted-foreground">
                       <History className="mr-2 h-4 w-4" /> 搜索历史
                     </h3>
-                    <Button variant="ghost" size="sm" className="h-auto py-1 text-xs" onClick={handleClearHistory}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto py-1 text-xs"
+                      data-acbox-action="global_search_history_clear"
+                      data-acbox-label="清除搜索历史"
+                      onClick={handleClearHistory}
+                    >
                       清除
                     </Button>
                   </div>
@@ -404,6 +429,8 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                         variant="ghost"
                         size="sm"
                         className="h-8 rounded-md border border-border/30 bg-card px-3 text-xs font-medium text-slate-900 shadow-sm transition-all hover:-translate-y-0.5 hover:bg-card hover:text-slate-950 hover:shadow-md dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/16 dark:hover:text-white"
+                        data-acbox-action="global_search_history_click"
+                        data-acbox-label={item}
                         onClick={() => handleSearchSubmit(item)}
                       >
                         {item}
@@ -427,6 +454,8 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                       <Link
                         href={item.href || `/app/${item.pkg || item.id}`}
                         key={item.id}
+                        data-acbox-action="global_search_recommend_click"
+                        data-acbox-label={item.title}
                         onClick={() => setIsOpen(false)}
                         className="group block"
                       >
@@ -460,6 +489,8 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                 <div className="flex justify-center px-4 pt-3">
                   <Link
                     href="/submit-resource"
+                    data-acbox-action="global_search_submit_resource"
+                    data-acbox-label="热门推荐资源反馈"
                     onClick={() => setIsOpen(false)}
                     className="inline-flex text-sm font-medium text-primary hover:underline"
                   >

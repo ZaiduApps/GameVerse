@@ -30,6 +30,31 @@ function loadRenderMarkdown() {
   return moduleObj.exports.renderMarkdown;
 }
 
+function loadMarkdownDocumentBuilder() {
+  const filePath = path.join(process.cwd(), 'src/lib/utils.ts');
+  const source = fs.readFileSync(filePath, 'utf8');
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2020,
+    },
+  }).outputText;
+
+  const moduleObj = { exports: {} };
+  const sandbox = {
+    module: moduleObj,
+    exports: moduleObj.exports,
+    require: (id) => {
+      if (id === 'clsx') return { clsx: (...args) => args.filter(Boolean).join(' ') };
+      if (id === 'tailwind-merge') return { twMerge: (v) => v };
+      return require(id);
+    },
+  };
+
+  vm.runInNewContext(compiled, sandbox);
+  return moduleObj.exports.buildRenderedMarkdownDocument;
+}
+
 function loadSeoUtils() {
   const filePath = path.join(process.cwd(), 'src/lib/seo.ts');
   const source = fs.readFileSync(filePath, 'utf8');
@@ -52,8 +77,73 @@ function loadSeoUtils() {
   return moduleObj.exports;
 }
 
+function loadCommunityApiUtils(trackedApiFetch = async () => { throw new Error('mocked'); }) {
+  const filePath = path.join(process.cwd(), 'src/lib/community-api.ts');
+  const source = fs.readFileSync(filePath, 'utf8');
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2020,
+    },
+  }).outputText;
+
+  const moduleObj = { exports: {} };
+  const sandbox = {
+    module: moduleObj,
+    exports: moduleObj.exports,
+    require: (id) => {
+      if (id === '@/lib/api') return { trackedApiFetch };
+      if (id === '@/lib/tracking-headers') return { buildTrackingHeaders: () => ({}) };
+      return require(id);
+    },
+    URL,
+    console,
+    process,
+  };
+
+  vm.runInNewContext(compiled, sandbox);
+  return moduleObj.exports;
+}
+
+function loadCommunitySeoUtils() {
+  const filePath = path.join(process.cwd(), 'src/lib/community-seo.ts');
+  const source = fs.readFileSync(filePath, 'utf8');
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2020,
+    },
+  }).outputText;
+
+  const moduleObj = { exports: {} };
+  const sandbox = {
+    module: moduleObj,
+    exports: moduleObj.exports,
+    require: (id) => {
+      if (id === '@/lib/seo') return loadSeoUtils();
+      return require(id);
+    },
+    process,
+  };
+
+  vm.runInNewContext(compiled, sandbox);
+  return moduleObj.exports;
+}
+
 const renderMarkdown = loadRenderMarkdown();
+const buildRenderedMarkdownDocument = loadMarkdownDocumentBuilder();
 const { sanitizeSeoText } = loadSeoUtils();
+const {
+  resolveCommunityPostViewSource,
+  stripCommunityMarkdownCodeSegments,
+  toCommentThreads,
+  toCommunityPost,
+} = loadCommunityApiUtils();
+const { buildCommunityPostDiscussionJsonLd } = loadCommunitySeoUtils();
+
+function plainJsonValue(value) {
+  return JSON.parse(JSON.stringify(value));
+}
 
 test('markdown regression: code + https link + hr', () => {
   const input = [
@@ -96,11 +186,165 @@ test('markdown regression: uu-mobile scheme mapped to app prompt', () => {
   assert.doesNotMatch(html, /target="_blank"/);
 });
 
+test('markdown regression: link tracking attributes are emitted', () => {
+  const input = [
+    '[HTTPS](https://example.com/page?q=1)',
+    '',
+    '[HTTP](http://example.com/page)',
+    '',
+    '[App](acbox://jump?type=post&id=123)',
+  ].join('\n');
+
+  const html = renderMarkdown(input).__html;
+  assert.match(html, /data-acbox-action="markdown_https_link"/);
+  assert.match(html, /data-acbox-label="https:\/\/example\.com\/page\?q=1"/);
+  assert.match(html, /rel="noopener noreferrer ugc"/);
+  assert.match(html, /data-acbox-action="markdown_http_link"/);
+  assert.match(html, /rel="noopener noreferrer nofollow ugc"/);
+  assert.match(html, /data-acbox-action="markdown_app_link"/);
+  assert.match(html, /data-acbox-label="acbox:\/\/jump\?type=post&amp;id=123"/);
+});
+
 test('markdown regression: non-whitelisted scheme rendered as text only', () => {
   const input = '[危险链接](javascript:evil)';
   const html = renderMarkdown(input).__html;
   assert.match(html, /\(javascript:evil\)/);
   assert.doesNotMatch(html, /href="javascript:/);
+});
+
+test('markdown regression: blocked hosts cover http and subdomains', () => {
+  const input = [
+    '[巴哈姆特](http://acg.gamer.com.tw/search.php?kw=eFootball)',
+    '',
+    '[子域名](https://www.facebook.com/demo)',
+    '',
+    'https://www.konami.com/efootball/en/。',
+  ].join('\n');
+
+  const html = renderMarkdown(input, {
+    blockedLinkHosts: ['acg.gamer.com.tw', 'facebook.com'],
+    preset: 'detail',
+  }).__html;
+
+  assert.match(html, />巴哈姆特<\/span>/);
+  assert.match(html, />子域名<\/span>/);
+  assert.doesNotMatch(html, /href="http:\/\/acg\.gamer\.com\.tw/);
+  assert.doesNotMatch(html, /href="https:\/\/www\.facebook\.com/);
+  assert.match(html, /href="https:\/\/www\.konami\.com\/efootball\/en\/"/);
+  assert.match(html, /rel="noopener noreferrer ugc"/);
+  assert.match(html, /https:\/\/www\.konami\.com\/efootball\/en\/<\/a>。/);
+});
+
+test('markdown regression: bare links trim punctuation and autolinks work', () => {
+  const input = [
+    '<https://example.com/path?q=1>',
+    '',
+    '参考链接：https://example.com/demo)。',
+  ].join('\n');
+
+  const html = renderMarkdown(input).__html;
+  assert.match(html, /href="https:\/\/example\.com\/path\?q=1"/);
+  assert.match(html, /href="https:\/\/example\.com\/demo"/);
+  assert.match(html, /https:\/\/example\.com\/demo<\/a>\)。/);
+});
+
+test('markdown regression: code spans and fences do not autolink urls', () => {
+  const input = [
+    '`https://example.com/inline`',
+    '',
+    '```bash',
+    'curl https://example.com/api',
+    '```',
+    '',
+    '正文 https://example.com/page',
+  ].join('\n');
+
+  const html = renderMarkdown(input).__html;
+  assert.match(html, /<code[^>]*>https:\/\/example\.com\/inline<\/code>/);
+  assert.match(html, /<code class="language-bash">curl https:\/\/example\.com\/api<\/code>/);
+  assert.doesNotMatch(html, /href="https:\/\/example\.com\/inline"/);
+  assert.doesNotMatch(html, /href="https:\/\/example\.com\/api"/);
+  assert.match(html, /href="https:\/\/example\.com\/page"/);
+});
+
+test('markdown regression: code spans and fences keep markdown link syntax inert', () => {
+  const input = [
+    '`[内联](https://example.com/inline)`',
+    '',
+    '```md',
+    '## 代码块标题',
+    '- 代码块列表',
+    '[代码块链接](https://example.com/fence)',
+    '![代码块图片](https://example.com/fence.png)',
+    '```',
+    '',
+    '[正文链接](https://example.com/body)',
+  ].join('\n');
+
+  const html = renderMarkdown(input).__html;
+  assert.match(html, /<pre class="bg-muted/);
+  assert.match(html, /<code[^>]*>\[内联\]\(https:\/\/example\.com\/inline\)<\/code>/);
+  assert.match(html, /<code class="language-md">## 代码块标题\n- 代码块列表\n\[代码块链接\]\(https:\/\/example\.com\/fence\)\n!\[代码块图片\]\(https:\/\/example\.com\/fence\.png\)<\/code>/);
+  assert.doesNotMatch(html, /<h2[^>]*>代码块标题<\/h2>/);
+  assert.doesNotMatch(html, /<li[^>]*>代码块列表<\/li>/);
+  assert.doesNotMatch(html, /href="https:\/\/example\.com\/inline"/);
+  assert.doesNotMatch(html, /href="https:\/\/example\.com\/fence"/);
+  assert.doesNotMatch(html, /src="https:\/\/example\.com\/fence\.png"/);
+  assert.match(html, /href="https:\/\/example\.com\/body"/);
+});
+
+test('markdown regression: html inside code spans and fences stays escaped', () => {
+  const input = [
+    '`<img src="https://example.com/inline.png">`',
+    '',
+    '```html',
+    '<h2>代码标题</h2>',
+    '<img src="https://example.com/fence.png">',
+    '```',
+    '',
+    '<h2>正文标题</h2>',
+  ].join('\n');
+
+  const html = renderMarkdown(input).__html;
+  assert.match(html, /<code[^>]*>&lt;img src=&quot;https:\/\/example\.com\/inline\.png&quot;&gt;<\/code>/);
+  assert.match(html, /<code class="language-html">&lt;h2&gt;代码标题&lt;\/h2&gt;\n&lt;img src=&quot;https:\/\/example\.com\/fence\.png&quot;&gt;<\/code>/);
+  assert.doesNotMatch(html, /<img src="https:\/\/example\.com\/fence\.png"/);
+  assert.match(html, /<h2[^>]*>正文标题<\/h2>/);
+});
+
+test('markdown document builder: heading toc text restores inline link tokens', () => {
+  const doc = buildRenderedMarkdownDocument('## [游戏官网](https://example.com/game)', {
+    injectHeadingAnchors: true,
+  });
+
+  assert.equal(doc.headings.length, 1);
+  assert.equal(doc.headings[0].text, '游戏官网');
+  assert.match(doc.html, /id="post-heading-0"/);
+  assert.match(doc.html, /href="https:\/\/example\.com\/game"/);
+});
+
+test('markdown regression: insecure images render as safe text', () => {
+  const input = '![unsafe](http://example.com/image.png)';
+  const html = renderMarkdown(input).__html;
+  assert.match(html, /\[图片链接已拦截: http:\/\/example\.com\/image\.png\]/);
+  assert.doesNotMatch(html, /<img/);
+});
+
+test('markdown regression: link and image attributes are escaped', () => {
+  const input = [
+    '[安全链接](https://example.com/path?q=%22%20onclick=alert(1))',
+    '',
+    '![alt" onerror="alert(1)](https://example.com/image.png)',
+    '',
+    '[App 打开](acbox://jump?name=%22%20onclick=alert(1))',
+  ].join('\n');
+
+  const html = renderMarkdown(input).__html;
+  assert.match(html, /href="https:\/\/example\.com\/path\?q=%22%20onclick=alert\(1\)"/);
+  assert.match(html, /alt="alt&quot; onerror=&quot;alert\(1\)"/);
+  assert.match(html, /data-app-link="acbox:\/\/jump\?name=%22%20onclick=alert\(1\)"/);
+  assert.doesNotMatch(html, /"\s+onclick=/);
+  assert.doesNotMatch(html, /"\s+onerror=/);
 });
 
 test('markdown regression: parting-line html compatibility', () => {
@@ -197,4 +441,234 @@ test('seo text sanitizer: repairs truncated markdown link fragments', () => {
   const output = sanitizeSeoText(input);
   assert.equal(output, '由《灌籃高手》團隊打造的 3v3 手機遊戲《超時空街球對決');
   assert.doesNotMatch(output, /\[[^\]]+\]\(/);
+});
+
+test('community view source resolver: classifies search, referral and direct', () => {
+  assert.equal(resolveCommunityPostViewSource(''), 'direct');
+  assert.equal(resolveCommunityPostViewSource('https://www.google.com/search?q=game'), 'search');
+  assert.equal(resolveCommunityPostViewSource('https://cn.bing.com/search?q=game'), 'search');
+  assert.equal(resolveCommunityPostViewSource('https://www.baidu.com/s?wd=game'), 'search');
+  assert.equal(resolveCommunityPostViewSource('https://www.so.com/s?q=game'), 'search');
+  assert.equal(resolveCommunityPostViewSource('https://example.com/post'), 'referral');
+});
+
+test('community markdown helper: strips code segments before preview extraction', () => {
+  const text = [
+    '`https://example.com/inline`',
+    '',
+    '```md',
+    '![code](https://example.com/code.png)',
+    'https://example.com/code-link',
+    '```',
+    '',
+    '正文 https://example.com/body',
+  ].join('\n');
+
+  const stripped = stripCommunityMarkdownCodeSegments(text);
+  assert.doesNotMatch(stripped, /inline/);
+  assert.doesNotMatch(stripped, /code\.png/);
+  assert.doesNotMatch(stripped, /code-link/);
+  assert.match(stripped, /https:\/\/example\.com\/body/);
+});
+
+test('community post mapper: ignores code-block images when selecting cover', () => {
+  const post = toCommunityPost({
+    _id: 'post-1',
+    content: [
+      '```html',
+      '<img src="https://example.com/code.png">',
+      '```',
+      '',
+      '正文图片 ![cover](https://example.com/body.png)',
+    ].join('\n'),
+  });
+
+  assert.equal(post.imageUrl, 'https://example.com/body.png');
+  assert.deepEqual(plainJsonValue(post.previewImages), ['https://example.com/body.png']);
+});
+
+test('community post mapper: keeps link click ranking stats', () => {
+  const post = toCommunityPost({
+    _id: 'post-2',
+    content: '正文 https://example.com/body',
+    link_click_count: 5,
+    link_clicks: {
+      url_abc: 5,
+    },
+    link_click_stats: [
+      {
+        click_key: 'url_abc',
+        count: 5,
+        host: 'example.com',
+        url: 'https://example.com/body',
+      },
+      {
+        click_key: '',
+        count: 10,
+        host: 'invalid.example',
+        url: 'https://invalid.example/',
+      },
+    ],
+  });
+
+  assert.equal(post.linkClickCount, 5);
+  assert.deepEqual(plainJsonValue(post.linkClicks), { url_abc: 5 });
+  assert.deepEqual(plainJsonValue(post.linkClickStats), [
+    {
+      click_key: 'url_abc',
+      count: 5,
+      host: 'example.com',
+      url: 'https://example.com/body',
+    },
+  ]);
+});
+
+test('community link click reporter: sends keepalive payload', async () => {
+  const calls = [];
+  const { recordCommunityPostLinkClick } = loadCommunityApiUtils(async (path, init) => {
+    calls.push({ path, init });
+    return {
+      ok: true,
+      json: async () => ({
+        code: 0,
+        data: {
+          link_click_count: 2,
+          heat_score: 8,
+        },
+      }),
+    };
+  });
+
+  const result = await recordCommunityPostLinkClick({
+    postId: 'post-1',
+    url: 'https://example.com/body',
+    referrer: 'https://www.google.com/search?q=game',
+  });
+
+  assert.deepEqual(plainJsonValue(result), {
+    link_click_count: 2,
+    heat_score: 8,
+  });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].path, '/content/public/post-1/link-click');
+  assert.equal(calls[0].init.method, 'POST');
+  assert.equal(calls[0].init.keepalive, true);
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    url: 'https://example.com/body',
+    referrer: 'https://www.google.com/search?q=game',
+  });
+});
+
+test('community comment mapper: keeps machine readable created time', () => {
+  const threads = toCommentThreads([
+    {
+      _id: 'comment-1',
+      user_name: '评论者',
+      content: '评论正文',
+      created_at: '2026-06-06T10:20:30.000Z',
+      replies: [
+        {
+          _id: 'reply-1',
+          user_name: '回复者',
+          content: '回复正文',
+          created_at: '2026-06-06T10:21:30.000Z',
+        },
+      ],
+    },
+  ]);
+
+  assert.equal(threads[0].createdAt, '2026-06-06T10:20:30.000Z');
+  assert.equal(threads[0].replies[0].createdAt, '2026-06-06T10:21:30.000Z');
+});
+
+test('community seo: builds discussion forum posting json-ld from visible data', () => {
+  const post = {
+    id: 'post-1',
+    authorType: 'user',
+    authorUsername: 'alice',
+    user: {
+      name: 'Alice',
+      avatarUrl: '/favicon.ico',
+    },
+    title: '独立帖子标题',
+    summary: '摘要',
+    content: '正文 https://example.com/body',
+    imageUrl: 'https://example.com/post.png',
+    rawTimestamp: '2026-06-06T10:00:00.000Z',
+    updatedAt: '2026-06-06T11:00:00.000Z',
+    commentsCount: 2,
+    likesCount: 3,
+    viewsCount: 4,
+    category: '游戏社区',
+    tags: ['攻略'],
+    linkPreviews: [
+      {
+        url: 'https://example.com/body',
+        title: '外链标题',
+        description: '外链摘要',
+        icon: '/favicon.ico',
+      },
+    ],
+  };
+  const comments = [
+    {
+      id: 'comment-1',
+      user: { name: '评论者', avatarUrl: '/favicon.ico' },
+      timestamp: '06-06 10:20',
+      createdAt: '2026-06-06T10:20:30.000Z',
+      text: '有效评论',
+      likeCount: 1,
+      replies: [
+        {
+          id: 'reply-1',
+          user: { name: '回复者', avatarUrl: '/favicon.ico' },
+          timestamp: '06-06 10:21',
+          createdAt: '2026-06-06T10:21:30.000Z',
+          text: '有效回复',
+          likeCount: 0,
+        },
+        {
+          id: 'reply-2',
+          user: { name: '无时间', avatarUrl: '/favicon.ico' },
+          timestamp: '刚刚',
+          text: '无时间回复',
+          likeCount: 0,
+        },
+      ],
+      replyTotal: 2,
+      replyHasMore: false,
+      replyPageSize: 20,
+    },
+    {
+      id: 'comment-2',
+      user: { name: '无时间', avatarUrl: '/favicon.ico' },
+      timestamp: '刚刚',
+      text: '无时间评论',
+      likeCount: 0,
+      replies: [],
+      replyTotal: 0,
+      replyHasMore: false,
+      replyPageSize: 20,
+    },
+  ];
+
+  const jsonLd = buildCommunityPostDiscussionJsonLd({
+    post,
+    comments,
+    siteName: 'APKScc',
+    siteLogoUrl: '/logo.png',
+    canonicalUrl: 'https://apks.cc/community/post/post-1',
+  });
+
+  assert.equal(jsonLd['@type'], 'DiscussionForumPosting');
+  assert.equal(jsonLd.headline, '独立帖子标题');
+  assert.deepEqual(plainJsonValue(jsonLd.image), ['https://example.com/post.png']);
+  assert.equal(jsonLd.author.url, 'https://apks.cc/u/alice');
+  assert.equal(jsonLd.author.image, undefined);
+  assert.equal(jsonLd.sharedContent[0].url, 'https://example.com/body');
+  assert.equal(jsonLd.sharedContent[0].image, 'https://apks.cc/favicon.ico');
+  assert.equal(jsonLd.comment.length, 1);
+  assert.equal(jsonLd.comment[0].datePublished, '2026-06-06T10:20:30.000Z');
+  assert.equal(jsonLd.comment[0].comment.length, 1);
+  assert.equal(jsonLd.comment[0].comment[0].datePublished, '2026-06-06T10:21:30.000Z');
 });

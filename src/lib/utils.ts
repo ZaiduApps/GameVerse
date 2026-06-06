@@ -13,6 +13,17 @@ const escapeHtml = (text: string): string =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
+const escapeHtmlAttribute = (text: string): string =>
+  String(text || "")
+    .replace(
+      /&(?!amp;|lt;|gt;|quot;|apos;|#39;|#x27;|#\d+;|#x[0-9a-f]+;)/gi,
+      "&amp;",
+    )
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
 const normalizeMarkdownInput = (value: unknown): string => {
   if (value == null) return "";
   if (typeof value === "string") return value;
@@ -20,6 +31,7 @@ const normalizeMarkdownInput = (value: unknown): string => {
 };
 
 const isHttpsUrl = (value: string): boolean => /^https:\/\//i.test(value.trim());
+const isHttpUrl = (value: string): boolean => /^https?:\/\//i.test(value.trim());
 const isAcboxUrl = (value: string): boolean => /^acbox:\/\//i.test(value.trim());
 const isAppDeepLink = (value: string): boolean =>
   /^(acbox|uu-mobile):\/\//i.test(value.trim());
@@ -43,6 +55,8 @@ export interface RenderedMarkdownDocument {
 }
 
 type MarkdownClassPreset = "default" | "detail";
+
+type MarkdownTokenMap = Map<string, string>;
 
 interface MarkdownClassSet {
   h1: string;
@@ -102,7 +116,7 @@ const MARKDOWN_CLASS_SETS: Record<MarkdownClassPreset, MarkdownClassSet> = {
     tableRow: "",
     tableHeaderCell: "border p-2 bg-muted font-semibold",
     tableBodyCell: "border p-2",
-    image: "block mx-auto w-full max-w-[600px] max-h-[44vh] sm:max-h-[52vh] h-auto rounded-lg my-5 sm:my-7",
+    image: "block mx-auto w-full max-w-[600px] max-h-[44vh] sm:max-h-[52vh] h-auto rounded-lg mt-5 mb-8 sm:mt-7 sm:mb-10",
   },
   detail: {
     h1: "mt-8 mb-5 text-3xl font-semibold tracking-[0.01em] text-foreground sm:text-[2rem]",
@@ -131,7 +145,7 @@ const MARKDOWN_CLASS_SETS: Record<MarkdownClassPreset, MarkdownClassSet> = {
     tableRow: "odd:bg-muted/[0.16]",
     tableHeaderCell: "bg-muted/65 px-3 py-2.5 font-semibold text-foreground",
     tableBodyCell: "px-3 py-2.5 align-top",
-    image: "my-7 block h-auto max-h-[48vh] w-full max-w-[680px] rounded-xl bg-muted/20 object-contain sm:my-9 sm:max-h-[56vh]",
+    image: "mt-7 mb-10 block h-auto max-h-[48vh] w-full max-w-[680px] rounded-xl bg-muted/20 object-contain sm:mt-9 sm:mb-12 sm:max-h-[56vh]",
   },
 };
 
@@ -144,8 +158,27 @@ const parseHostname = (url: string): string => {
   try {
     return new URL(url).hostname.trim().toLowerCase();
   } catch {
-    return "";
+    const match = String(url || "").match(/^[a-z][a-z0-9+.-]*:\/\/([^/?#:]+)/i);
+    return String(match?.[1] || "").trim().toLowerCase();
   }
+};
+
+const isBlockedLinkHost = (
+  host: string,
+  blockedHosts: ReadonlySet<string>,
+): boolean => {
+  const normalizedHost = String(host || "").trim().toLowerCase();
+  if (!normalizedHost) return false;
+  for (const blockedHost of blockedHosts) {
+    if (!blockedHost) continue;
+    if (
+      normalizedHost === blockedHost ||
+      normalizedHost.endsWith(`.${blockedHost}`)
+    ) {
+      return true;
+    }
+  }
+  return false;
 };
 
 const preprocessHtmlImageAsMarkdown = (raw: string): string => {
@@ -211,6 +244,32 @@ const preprocessPartingLine = (raw: string): string =>
     },
   );
 
+const preprocessBareAutolinks = (raw: string): string =>
+  raw.replace(/<((?:https?:\/\/)[^\s<>]+)>/gi, "$1");
+
+const normalizeBareMarkdownUrl = (rawUrl: string): { tail: string; url: string } => {
+  let url = String(rawUrl || "");
+  let tail = "";
+
+  const moveTail = (count: number) => {
+    tail = `${url.slice(url.length - count)}${tail}`;
+    url = url.slice(0, -count);
+  };
+
+  while (/[.,;!?，。；！？、]$/.test(url)) {
+    moveTail(1);
+  }
+
+  const openParenCount = (url.match(/\(/g) || []).length;
+  let closeParenCount = (url.match(/\)/g) || []).length;
+  while (url.endsWith(")") && closeParenCount > openParenCount) {
+    moveTail(1);
+    closeParenCount -= 1;
+  }
+
+  return { url, tail };
+};
+
 const renderSafeLink = (
   label: string,
   urlRaw: string,
@@ -218,18 +277,167 @@ const renderSafeLink = (
   classSet: MarkdownClassSet,
 ): string => {
   const url = urlRaw.trim();
-  if (isHttpsUrl(url)) {
+  if (isHttpUrl(url)) {
     const host = parseHostname(url);
-    if (host && blockedHosts.has(host)) {
+    const safeHref = escapeHtmlAttribute(url);
+    if (isBlockedLinkHost(host, blockedHosts)) {
       return `<span class="${classSet.blockedLink}">${label}</span>`;
     }
-    return `<a href="${url}" class="${classSet.link}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    if (/^http:\/\//i.test(url)) {
+      return `<a href="${safeHref}" class="${classSet.link}" target="_blank" rel="noopener noreferrer nofollow ugc" data-acbox-action="markdown_http_link" data-acbox-label="${safeHref}">${label}</a>`;
+    }
+    return `<a href="${safeHref}" class="${classSet.link}" target="_blank" rel="noopener noreferrer ugc" data-acbox-action="markdown_https_link" data-acbox-label="${safeHref}">${label}</a>`;
   }
   if (isAppDeepLink(url)) {
-    return `<a href="#" data-app-link="${url}" class="${classSet.appLink}">${label}</a>`;
+    return `<a href="#" data-app-link="${escapeHtmlAttribute(url)}" class="${classSet.appLink}" data-acbox-action="markdown_app_link" data-acbox-label="${escapeHtmlAttribute(url)}">${label}</a>`;
   }
   return `<span class="${classSet.invalidLink}">${label} (${url})</span>`;
 };
+
+const stashMarkdownToken = (tokens: MarkdownTokenMap, html: string): string => {
+  const token = `@@ACBOX_MD_TOKEN_${tokens.size}@@`;
+  tokens.set(token, html);
+  return token;
+};
+
+const restoreMarkdownTokens = (value: string, tokens: MarkdownTokenMap): string => {
+  let next = value;
+  for (const [token, html] of tokens) {
+    next = next.split(token).join(html);
+  }
+  return next;
+};
+
+const findMarkdownTargetEnd = (
+  value: string,
+  targetStartIndex: number,
+): number => {
+  let depth = 1;
+  for (let index = targetStartIndex; index < value.length; index += 1) {
+    const char = value[index];
+    if (char === "\\") {
+      index += 1;
+      continue;
+    }
+    if (char === "(") {
+      depth += 1;
+      continue;
+    }
+    if (char === ")") {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return -1;
+};
+
+const replaceMarkdownImageSyntax = (
+  value: string,
+  tokens: MarkdownTokenMap,
+  classSet: MarkdownClassSet,
+): string => {
+  let output = "";
+  let index = 0;
+
+  while (index < value.length) {
+    const start = value.indexOf("![", index);
+    if (start < 0) {
+      output += value.slice(index);
+      break;
+    }
+
+    const labelEnd = value.indexOf("]", start + 2);
+    if (labelEnd < 0 || value[labelEnd + 1] !== "(") {
+      output += value.slice(index, start + 2);
+      index = start + 2;
+      continue;
+    }
+
+    const targetStart = labelEnd + 2;
+    const targetEnd = findMarkdownTargetEnd(value, targetStart);
+    if (targetEnd < 0) {
+      output += value.slice(index, targetStart);
+      index = targetStart;
+      continue;
+    }
+
+    output += value.slice(index, start);
+    output += stashMarkdownToken(
+      tokens,
+      renderSafeImage(
+        value.slice(start + 2, labelEnd),
+        value.slice(targetStart, targetEnd),
+        classSet,
+      ),
+    );
+    index = targetEnd + 1;
+  }
+
+  return output;
+};
+
+const replaceMarkdownLinkSyntax = (
+  value: string,
+  tokens: MarkdownTokenMap,
+  blockedHosts: ReadonlySet<string>,
+  classSet: MarkdownClassSet,
+): string => {
+  let output = "";
+  let index = 0;
+
+  while (index < value.length) {
+    const start = value.indexOf("[", index);
+    if (start < 0) {
+      output += value.slice(index);
+      break;
+    }
+
+    const labelEnd = value.indexOf("]", start + 1);
+    if (labelEnd < 0 || value[labelEnd + 1] !== "(") {
+      output += value.slice(index, start + 1);
+      index = start + 1;
+      continue;
+    }
+
+    const targetStart = labelEnd + 2;
+    const targetEnd = findMarkdownTargetEnd(value, targetStart);
+    if (targetEnd < 0) {
+      output += value.slice(index, targetStart);
+      index = targetStart;
+      continue;
+    }
+
+    const rawTarget = value.slice(targetStart, targetEnd).trim();
+    const urlOnly = rawTarget.split(/\s+/)[0] || rawTarget;
+    output += value.slice(index, start);
+    output += stashMarkdownToken(
+      tokens,
+      renderSafeLink(
+        value.slice(start + 1, labelEnd),
+        urlOnly,
+        blockedHosts,
+        classSet,
+      ),
+    );
+    index = targetEnd + 1;
+  }
+
+  return output;
+};
+
+const renderBareUrls = (
+  value: string,
+  blockedHosts: ReadonlySet<string>,
+  classSet: MarkdownClassSet,
+): string =>
+  value.replace(
+    /(^|[\s>：:])((?:https?:\/\/)[^\s<]+)/gim,
+    (match, prefix, rawUrl) => {
+      const { url, tail } = normalizeBareMarkdownUrl(String(rawUrl || ""));
+      if (!isHttpUrl(url)) return match;
+      return `${prefix}${renderSafeLink(url, url, blockedHosts, classSet)}${tail}`;
+    },
+  );
 
 const renderSafeImage = (
   alt: string,
@@ -240,8 +448,9 @@ const renderSafeImage = (
   if (!isHttpsUrl(url)) {
     return `<span class="${classSet.invalidLink}">[图片链接已拦截: ${url}]</span>`;
   }
-  const safeAlt = (alt || '').trim() || '内容配图';
-  return `<img alt="${safeAlt}" src="${url}" class="${classSet.image}" />`;
+  const safeAlt = escapeHtmlAttribute((alt || '').trim() || '内容配图');
+  const safeSrc = escapeHtmlAttribute(url);
+  return `<img alt="${safeAlt}" src="${safeSrc}" class="${classSet.image}" />`;
 };
 
 const stripHtmlTags = (value: string): string =>
@@ -292,10 +501,30 @@ export const buildRenderedMarkdownDocument = (
     const raw = normalizeMarkdownInput(input);
     if (!raw.trim()) return { html: "", headings: [] };
 
+    const tokens: MarkdownTokenMap = new Map();
+    const normalizedRaw = raw.replace(/\r\n?/g, "\n");
+    const codeProtectedRaw = normalizedRaw
+      .replace(
+        /```([a-zA-Z0-9_-]+)?\n([\s\S]*?)```/gim,
+        (_m, lang, code) =>
+          stashMarkdownToken(
+            tokens,
+            `<pre class="${classSet.codeBlock}"><code${lang ? ` class="language-${lang}"` : ""}>${escapeHtml(String(code || "").replace(/\n$/, ""))}</code></pre>`,
+          ),
+      )
+      .replace(/`([^`]+)`/gim, (_m, code) =>
+        stashMarkdownToken(
+          tokens,
+          `<code class="${classSet.inlineCode}">${escapeHtml(code)}</code>`,
+        ),
+      );
+
     const preprocessed = preprocessPartingLine(
       preprocessCodeLinkAsQuote(
         preprocessHtmlHeadings(
-          preprocessHtmlImageAsMarkdown(raw.replace(/\r\n?/g, "\n")),
+          preprocessHtmlImageAsMarkdown(
+            preprocessBareAutolinks(codeProtectedRaw),
+          ),
         ),
       ),
     );
@@ -305,20 +534,14 @@ export const buildRenderedMarkdownDocument = (
       .replace(/^### (.*$)/gim, `<h3 data-toc-source="heading" class="${classSet.h3}">$1</h3>`)
       .replace(/^## (.*$)/gim, `<h2 data-toc-source="heading" class="${classSet.h2}">$1</h2>`)
       .replace(/^# (.*$)/gim, `<h1 data-toc-source="heading" class="${classSet.h1}">$1</h1>`)
-      .replace(/!\[([^\]]*)\]\(([^)]+)\)/gim, (_m, alt, src) => renderSafeImage(alt, src, classSet))
+      ;
+
+    html = replaceMarkdownImageSyntax(html, tokens, classSet)
       .replace(/\*\*(.*?)\*\*/gim, "<strong>$1</strong>")
       .replace(/\*(.*?)\*/gim, "<em>$1</em>")
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, (_m, label, target) => {
-        const rawTarget = String(target || '').trim();
-        const urlOnly = rawTarget.split(/\s+/)[0] || rawTarget;
-        return renderSafeLink(label, urlOnly, blockedHosts, classSet);
-      })
-      .replace(
-        /```([a-zA-Z0-9_-]+)?\n([\s\S]*?)```/gim,
-        (_m, lang, code) =>
-          `<pre class="${classSet.codeBlock}"><code${lang ? ` class="language-${lang}"` : ""}>${code}</code></pre>`,
-      )
-      .replace(/`([^`]+)`/gim, `<code class="${classSet.inlineCode}">$1</code>`)
+      ;
+
+    html = replaceMarkdownLinkSyntax(html, tokens, blockedHosts, classSet)
       .replace(
         /^&gt;\s*#### (.*$)/gim,
         `<blockquote class="${classSet.blockquote}"><h4 data-toc-source="heading" class="${classSet.quoteH4}">$1</h4></blockquote>`,
@@ -340,6 +563,8 @@ export const buildRenderedMarkdownDocument = (
         `<blockquote class="${classSet.blockquote}">$1</blockquote>`,
       )
       .replace(/^---$/gim, `<hr class="${classSet.hr}" />`);
+
+    html = renderBareUrls(html, blockedHosts, classSet);
 
     const tableRegex = /\|(.+)\|\n\|( *[-:]+ *\|)+([\s\S]*?)(?=\n\n|$)/g;
     html = html.replace(tableRegex, (match) => {
@@ -377,8 +602,22 @@ export const buildRenderedMarkdownDocument = (
     lines.forEach((line) => {
       const trimmed = line.trim();
       const inferredHeadingMatch = trimmed.match(/^<strong>(.+?)<\/strong>$/);
+      const tokenOnlyMatch = trimmed.match(/^@@ACBOX_MD_TOKEN_\d+@@$/);
 
       if (trimmed.startsWith('<div class="overflow-x-auto')) {
+        if (inUnorderedList) {
+          finalHtml += "</ul>";
+          inUnorderedList = false;
+        }
+        if (inOrderedList) {
+          finalHtml += "</ol>";
+          inOrderedList = false;
+        }
+        finalHtml += trimmed;
+        return;
+      }
+
+      if (tokenOnlyMatch) {
         if (inUnorderedList) {
           finalHtml += "</ul>";
           inUnorderedList = false;
@@ -454,7 +693,7 @@ export const buildRenderedMarkdownDocument = (
     const htmlWithAnchors = finalHtml.replace(
       /<h([1-4])([^>]*)>([\s\S]*?)<\/h\1>/g,
       (match, level, rawAttrs, inner) => {
-        const text = stripHtmlTags(inner);
+        const text = stripHtmlTags(restoreMarkdownTokens(inner, tokens));
         if (!text) return match;
         const headingId = `post-heading-${headingIndex}`;
         headingIndex += 1;
@@ -473,7 +712,7 @@ export const buildRenderedMarkdownDocument = (
       },
     );
 
-    return { html: htmlWithAnchors, headings };
+    return { html: restoreMarkdownTokens(htmlWithAnchors, tokens), headings };
   } catch {
     const fallback = escapeHtml(normalizeMarkdownInput(input));
     return {

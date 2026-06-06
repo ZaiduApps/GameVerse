@@ -140,6 +140,8 @@ export default function GameDownloadDialog({
           <Button
             size="lg"
             className={`w-full md:w-auto btn-interactive ${triggerClassName || ''}`}
+            data-acbox-action="game_download_open"
+            data-acbox-label={triggerLabel || '获取游戏'}
           >
             <Download className="mr-2 h-5 w-5" />
             {triggerLabel || '获取游戏'}
@@ -190,6 +192,8 @@ export default function GameDownloadDialog({
                     variant="outline"
                     className="w-full justify-start text-left h-auto py-3 px-4 relative group"
                     disabled={loadingChannelId !== null}
+                    data-acbox-action="game_download_channel_click"
+                    data-acbox-label={resource.channel?.name || '未知渠道'}
                     onClick={() => handleDownloadClick(resource)}
                   >
                     {loading ? (
@@ -242,6 +246,8 @@ export default function GameDownloadDialog({
                 type="button"
                 variant="secondary"
                 disabled={loadingChannelId !== null}
+                data-acbox-action="game_download_close"
+                data-acbox-label="关闭下载渠道弹窗"
               >
                 关闭
               </Button>

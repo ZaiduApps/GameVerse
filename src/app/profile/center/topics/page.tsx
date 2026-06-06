@@ -187,8 +187,23 @@ export default function ProfileCenterTopicsPage() {
               return (
                 <div key={topicId} className="rounded-lg border p-3">
                   <div className="flex items-start justify-between gap-2">
-                    <Link href={href} className="line-clamp-1 text-sm font-semibold hover:text-primary">{topic.name || '未命名话题'}</Link>
-                    <Button variant="outline" size="sm" onClick={() => void unfollow(topic)}>取消关注</Button>
+                    <Link
+                      href={href}
+                      className="line-clamp-1 text-sm font-semibold hover:text-primary"
+                      data-acbox-action="profile_center_topic_detail"
+                      data-acbox-label={topic.name || '未命名话题'}
+                    >
+                      {topic.name || '未命名话题'}
+                    </Link>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void unfollow(topic)}
+                      data-acbox-action="profile_center_topic_unfollow"
+                      data-acbox-label={topic.name || '取消关注'}
+                    >
+                      取消关注
+                    </Button>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">{topic.app_info?.name || '游戏社区'} · 帖子 {Number(topic.post_count || 0)} · 关注 {Number(topic.followers_count || 0)}</p>
                 </div>
@@ -196,7 +211,14 @@ export default function ProfileCenterTopicsPage() {
             })
           )}
           {canLoadMore ? (
-            <Button variant="outline" className="w-full" onClick={() => void loadMore()} disabled={loadingMore}>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
+              data-acbox-action="profile_center_topics_load_more"
+              data-acbox-label="加载更多游戏社区"
+            >
               {loadingMore ? '加载中...' : '加载更多'}
             </Button>
           ) : null}

@@ -185,6 +185,10 @@ export default function CommunityPostCard({
     relatedApp?.regionTag || relatedApp?.tags?.[0] || (relatedApp?.pkg ? '国际服' : '');
   const postId = String(post.id || '').trim();
   const postHref = postId ? `/community/post/${encodeURIComponent(postId)}` : '/community';
+  const authorProfileHref =
+    post.authorType === 'user' && post.authorId
+      ? `/u/${encodeURIComponent(post.authorId)}`
+      : '';
   const handleOpenPost = () => {
     if (!postId) return;
     onOpenPost?.(postId);
@@ -431,7 +435,13 @@ export default function CommunityPostCard({
     <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
       <CardHeader className="p-4 pb-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <Link
+            href={authorProfileHref || postHref}
+            className="flex items-center space-x-3 rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary"
+            onClick={(event) => {
+              if (!authorProfileHref) event.preventDefault();
+            }}
+          >
             <Avatar>
               <AvatarImage src={post.user.avatarUrl} alt={post.user.name} data-ai-hint={post.user.dataAiHint || 'user avatar'} />
               <AvatarFallback>{post.user.name.substring(0, 2)}</AvatarFallback>
@@ -451,7 +461,7 @@ export default function CommunityPostCard({
                 {post.user.location && ` · ${post.user.location}`}
               </p>
             </div>
-          </div>
+          </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">

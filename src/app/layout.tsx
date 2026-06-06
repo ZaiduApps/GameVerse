@@ -111,6 +111,7 @@ export default async function RootLayout({
   return (
     <html lang="zh-CN" data-site-style={siteStyle} suppressHydrationWarning>
       <head>
+        <link rel="llms" href="/llms.txt" type="text/plain" />
         {siteConfig?.header?.custom_css && (
           <style dangerouslySetInnerHTML={{ __html: siteConfig.header.custom_css }} />
         )}

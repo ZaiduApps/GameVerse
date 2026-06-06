@@ -54,7 +54,12 @@ function DashboardPostCard({ item }: { item: DashboardPostItem }) {
   return (
     <div className="rounded-lg border p-3">
       <div className="flex items-start justify-between gap-2">
-        <Link href={`/community/post/${encodeURIComponent(post.id)}`} className="line-clamp-1 text-sm font-semibold hover:text-primary">
+        <Link
+          href={`/community/post/${encodeURIComponent(post.id)}`}
+          className="line-clamp-1 text-sm font-semibold hover:text-primary"
+          data-acbox-action="profile_dashboard_post_detail"
+          data-acbox-label={title}
+        >
           {title}
         </Link>
         <Badge variant="outline" className="text-[10px]">{statusText(item.reviewStatus, item.status)}</Badge>
@@ -76,7 +81,12 @@ function DashboardTopicCard({ topic }: { topic: CommunityTopicItem }) {
   return (
     <div>
       <div className="flex items-start justify-between gap-2">
-        <Link href={href} className="line-clamp-1 text-sm font-semibold hover:text-primary">
+        <Link
+          href={href}
+          className="line-clamp-1 text-sm font-semibold hover:text-primary"
+          data-acbox-action="profile_dashboard_topic_detail"
+          data-acbox-label={topic.name || '未命名话题'}
+        >
           {topic.name || '未命名话题'}
         </Link>
         {topic.is_official ? <Badge variant="secondary" className="text-[10px]">官方</Badge> : null}
@@ -87,7 +97,12 @@ function DashboardTopicCard({ topic }: { topic: CommunityTopicItem }) {
       <div className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
         <span>热度 {Number(topic.heat_score || 0)}</span>
         {appHref ? (
-          <Link href={appHref} className="text-primary hover:underline">
+          <Link
+            href={appHref}
+            className="text-primary hover:underline"
+            data-acbox-action="profile_dashboard_topic_game_detail"
+            data-acbox-label={topic.app_info?.name || '查看游戏'}
+          >
             查看游戏
           </Link>
         ) : null}
@@ -370,7 +385,12 @@ export default function ProfileDashboard({ token }: { token: string }) {
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
             <CardTitle>我的动态</CardTitle>
-            <Link href="/profile/center/posts" className="inline-flex items-center text-xs text-primary hover:underline">
+            <Link
+              href="/profile/center/posts"
+              className="inline-flex items-center text-xs text-primary hover:underline"
+              data-acbox-action="profile_dashboard_posts_more"
+              data-acbox-label="查看更多动态"
+            >
               查看更多
               <ChevronRight className="ml-1 h-3 w-3" />
             </Link>
@@ -387,6 +407,8 @@ export default function ProfileDashboard({ token }: { token: string }) {
                 void loadMorePosts();
               }}
               disabled={loadingMorePosts}
+              data-acbox-action="profile_dashboard_posts_load_more"
+              data-acbox-label="加载更多动态"
             >
               {loadingMorePosts ? '加载中...' : '加载更多动态'}
             </button>
@@ -398,7 +420,12 @@ export default function ProfileDashboard({ token }: { token: string }) {
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
             <CardTitle>我关注的游戏社区</CardTitle>
-            <Link href="/profile/center/topics" className="inline-flex items-center text-xs text-primary hover:underline">
+            <Link
+              href="/profile/center/topics"
+              className="inline-flex items-center text-xs text-primary hover:underline"
+              data-acbox-action="profile_dashboard_topics_more"
+              data-acbox-label="查看更多社区"
+            >
               查看更多
               <ChevronRight className="ml-1 h-3 w-3" />
             </Link>
@@ -417,6 +444,8 @@ export default function ProfileDashboard({ token }: { token: string }) {
                   onClick={() => {
                     void handleUnfollowTopic(topic);
                   }}
+                  data-acbox-action="profile_dashboard_topic_unfollow"
+                  data-acbox-label={topic.name || '取消关注'}
                 >
                   取消关注
                 </Button>
@@ -430,6 +459,8 @@ export default function ProfileDashboard({ token }: { token: string }) {
                 void loadMoreTopics();
               }}
               disabled={loadingMoreTopics}
+              data-acbox-action="profile_dashboard_topics_load_more"
+              data-acbox-label="加载更多社区"
             >
               {loadingMoreTopics ? '加载中...' : '加载更多社区'}
             </button>
@@ -441,7 +472,12 @@ export default function ProfileDashboard({ token }: { token: string }) {
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
             <CardTitle>我的预约游戏</CardTitle>
-            <Link href="/profile/center/reservations" className="inline-flex items-center text-xs text-primary hover:underline">
+            <Link
+              href="/profile/center/reservations"
+              className="inline-flex items-center text-xs text-primary hover:underline"
+              data-acbox-action="profile_dashboard_reservations_more"
+              data-acbox-label="查看更多预约"
+            >
               查看更多
               <ChevronRight className="ml-1 h-3 w-3" />
             </Link>
@@ -464,6 +500,8 @@ export default function ProfileDashboard({ token }: { token: string }) {
                     onClick={() => {
                       void handleUnfollowReservation(game);
                     }}
+                    data-acbox-action="profile_dashboard_reservation_unfollow"
+                    data-acbox-label={game.title || '取消预约'}
                   >
                     取消预约
                   </Button>
@@ -478,6 +516,8 @@ export default function ProfileDashboard({ token }: { token: string }) {
                 void loadMoreReservations();
               }}
               disabled={loadingMoreReservations}
+              data-acbox-action="profile_dashboard_reservations_load_more"
+              data-acbox-label="加载更多预约游戏"
             >
               {loadingMoreReservations ? '加载中...' : '加载更多预约游戏'}
             </button>
@@ -489,7 +529,12 @@ export default function ProfileDashboard({ token }: { token: string }) {
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
             <CardTitle>我关注的游戏</CardTitle>
-            <Link href="/profile/center/games" className="inline-flex items-center text-xs text-primary hover:underline">
+            <Link
+              href="/profile/center/games"
+              className="inline-flex items-center text-xs text-primary hover:underline"
+              data-acbox-action="profile_dashboard_games_more"
+              data-acbox-label="查看更多关注游戏"
+            >
               查看更多
               <ChevronRight className="ml-1 h-3 w-3" />
             </Link>

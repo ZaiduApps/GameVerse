@@ -45,6 +45,7 @@ export interface ApiCommunityPost {
   _id?: string;
   author_id?: string;
   author_type?: string;
+  author_username?: string;
   title?: string;
   summary?: string;
   content?: string;
@@ -61,6 +62,7 @@ export interface ApiCommunityPost {
   publish_at?: string;
   last_commented_at?: string;
   created_at?: string;
+  updated_at?: string;
   app_info?: {
     _id?: string;
     name?: string;
@@ -85,6 +87,24 @@ export interface ApiCommunityPost {
   topic_ids?: string[];
   is_top?: boolean;
   is_recommended?: boolean;
+  heat_score?: number;
+  view_sources?: Record<string, number>;
+  link_click_count?: number;
+  link_clicks?: Record<string, number>;
+  link_click_stats?: Array<{
+    click_key?: string;
+    count?: number;
+    host?: string;
+    url?: string;
+  }>;
+  link_previews?: Array<{
+    url?: string;
+    title?: string;
+    description?: string;
+    image?: string;
+    icon?: string;
+    site_name?: string;
+  }>;
 }
 
 export interface ApiCommunityComment {
@@ -105,6 +125,7 @@ export interface CommunityCommentItem {
   id: string;
   user: { name: string; avatarUrl: string; dataAiHint?: string };
   timestamp: string;
+  createdAt?: string;
   text: string;
   likeCount: number;
 }
@@ -165,6 +186,8 @@ const COMMUNITY_READ_TIMEOUT_MS = 12000;
 const COMMUNITY_READ_RETRIES = 1;
 const COMMUNITY_FEED_REVALIDATE_SECONDS = 120;
 const COMMUNITY_TOPIC_REVALIDATE_SECONDS = 180;
+const SEARCH_ENGINE_HOST_PATTERN =
+  /(^|\.)((google|bing|baidu|sogou|yahoo)\.[a-z0-9.-]+|so\.com|360\.cn)$/i;
 
 function parseApiResponseMessage(json: any, fallback: string) {
   const message = String(json?.message || '').trim();
@@ -191,6 +214,20 @@ function formatTimestamp(value?: string): string {
   const hour = String(date.getHours()).padStart(2, '0');
   const minute = String(date.getMinutes()).padStart(2, '0');
   return `${month}-${day} ${hour}:${minute}`;
+}
+
+export function resolveCommunityPostViewSource(referrer?: string): 'direct' | 'referral' | 'search' {
+  const raw = String(referrer || '').trim();
+  if (!raw) return 'direct';
+  try {
+    const host = new URL(raw).hostname.trim().toLowerCase();
+    if (SEARCH_ENGINE_HOST_PATTERN.test(host)) return 'search';
+    return 'referral';
+  } catch {
+    return /google|bing|baidu|sogou|so\.com|yahoo|360\.cn/i.test(raw)
+      ? 'search'
+      : 'referral';
+  }
 }
 
 function normalizeRawTimestamp(value?: string): string | undefined {
@@ -223,6 +260,12 @@ function normalizePlainText(text: string): string {
     .trim();
 }
 
+export function stripCommunityMarkdownCodeSegments(text: string): string {
+  return String(text || '')
+    .replace(/```[\s\S]*?```/g, '\n')
+    .replace(/`[^`]*`/g, ' ');
+}
+
 function extractSummary(
   summaryInput?: string,
   contentInput?: string,
@@ -235,9 +278,10 @@ function extractSummary(
 }
 
 function extractFirstImageFromText(text: string): string | undefined {
-  const markdownMatch = text.match(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)(?:\s+[^)]*)?\)/i);
+  const searchableText = stripCommunityMarkdownCodeSegments(text);
+  const markdownMatch = searchableText.match(/!\[[^\]]*\]\((https?:\/\/[^)\s]+)(?:\s+[^)]*)?\)/i);
   if (markdownMatch?.[1]) return markdownMatch[1];
-  const htmlMatch = text.match(/<img[^>]*src=["'](https?:\/\/[^"']+)["'][^>]*>/i);
+  const htmlMatch = searchableText.match(/<img[^>]*src=["'](https?:\/\/[^"']+)["'][^>]*>/i);
   if (htmlMatch?.[1]) return htmlMatch[1];
   return undefined;
 }
@@ -281,10 +325,12 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
   const rawTimestamp = normalizeRawTimestamp(
     item.last_commented_at || item.publish_at || item.created_at,
   );
+  const updatedAt = normalizeRawTimestamp(item.updated_at);
   return {
     id: String(item._id || ''),
     authorId: String(item.author_id || '').trim() || undefined,
     authorType: String(item.author_type || '').trim() || undefined,
+    authorUsername: String(item.author_username || '').trim() || undefined,
     user: {
       name: item.author_name?.trim() || '匿名用户',
       avatarUrl: item.author_avatar?.trim() || FALLBACK_AVATAR,
@@ -294,6 +340,7 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
       item.last_commented_at || item.publish_at || item.created_at,
     ),
     rawTimestamp,
+    updatedAt,
     source: item.source?.trim() || undefined,
     title: item.title?.trim() || undefined,
     summary,
@@ -308,6 +355,34 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
     commentsCount: Number(item.comment_count || 0),
     likesCount: Number(item.like_count || 0),
     viewsCount: Number(item.view_count || 0),
+    heatScore: Number(item.heat_score || 0),
+    viewSources: item.view_sources || undefined,
+    linkClickCount: Number(item.link_click_count || 0),
+    linkClicks: item.link_clicks || undefined,
+    linkClickStats: Array.isArray(item.link_click_stats)
+      ? item.link_click_stats
+          .map((stat) => ({
+            click_key: String(stat?.click_key || '').trim(),
+            count: Number(stat?.count || 0),
+            host: String(stat?.host || '').trim() || undefined,
+            url: String(stat?.url || '').trim() || undefined,
+          }))
+          .filter((stat) => stat.click_key && stat.count > 0)
+          .slice(0, 10)
+      : undefined,
+    linkPreviews: Array.isArray(item.link_previews)
+      ? item.link_previews
+          .map((preview) => ({
+            url: String(preview?.url || '').trim(),
+            title: String(preview?.title || '').trim() || undefined,
+            description: String(preview?.description || '').trim() || undefined,
+            image: String(preview?.image || '').trim() || undefined,
+            icon: String(preview?.icon || '').trim() || undefined,
+            site_name: String(preview?.site_name || '').trim() || undefined,
+          }))
+          .filter((preview) => /^https?:\/\//i.test(preview.url))
+          .slice(0, 5)
+      : [],
     isTop: Boolean(item.is_top),
     isRecommended: Boolean(item.is_recommended),
     relatedApp: item.app_info?.name
@@ -378,6 +453,7 @@ function toCommentItem(input: ApiCommunityComment): CommunityCommentItem {
       dataAiHint: 'user avatar',
     },
     timestamp: formatTimestamp(input.created_at),
+    createdAt: normalizeRawTimestamp(input.created_at),
     text: input.content?.trim() || '',
     likeCount: Number(input.like_count || 0),
   };
@@ -732,6 +808,66 @@ export async function getCommunityPostById(
   const data = await getApiData<ApiCommunityPost>(`/content/public/${id}`);
   if (!data || !data._id) return null;
   return toCommunityPost(data);
+}
+
+export async function recordCommunityPostView(params: {
+  postId: string;
+  referrer?: string;
+  source?: string;
+}): Promise<{ view_count?: number; heat_score?: number } | null> {
+  const postId = String(params.postId || '').trim();
+  if (!postId) return null;
+  try {
+    const res = await trackedApiFetch(`/content/public/${encodeURIComponent(postId)}/view`, {
+      method: 'POST',
+      headers: {
+        ...buildTrackingHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        referrer: String(params.referrer || '').trim(),
+        source: String(params.source || '').trim() || undefined,
+      }),
+      cache: 'no-store',
+      timeoutMs: 5000,
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json?.code !== 0) return null;
+    return json?.data || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function recordCommunityPostLinkClick(params: {
+  postId: string;
+  url: string;
+  referrer?: string;
+}): Promise<{ link_click_count?: number; heat_score?: number } | null> {
+  const postId = String(params.postId || '').trim();
+  const url = String(params.url || '').trim();
+  if (!postId || !/^https?:\/\//i.test(url)) return null;
+  try {
+    const res = await trackedApiFetch(`/content/public/${encodeURIComponent(postId)}/link-click`, {
+      method: 'POST',
+      headers: {
+        ...buildTrackingHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        url,
+        referrer: String(params.referrer || '').trim(),
+      }),
+      cache: 'no-store',
+      keepalive: true,
+      timeoutMs: 5000,
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json?.code !== 0) return null;
+    return json?.data || null;
+  } catch {
+    return null;
+  }
 }
 
 export async function getCommunityComments(

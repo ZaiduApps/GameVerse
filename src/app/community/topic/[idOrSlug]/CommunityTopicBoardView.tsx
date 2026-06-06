@@ -601,6 +601,8 @@ export default function CommunityTopicBoardView({
                   <Link
                     key={`topic-announcement-${postId}`}
                     href={`/community/post/${postId}`}
+                    data-acbox-action="topic_announcement_click"
+                    data-acbox-label={extractAnnouncementText(post)}
                     className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm transition-colors hover:border-primary/35 hover:bg-primary/5"
                   >
                     <Badge variant={isPinned ? 'default' : 'secondary'}>
@@ -654,6 +656,8 @@ export default function CommunityTopicBoardView({
                 variant="outline"
                 size="sm"
                 disabled={loading || options.loadingMore}
+                data-acbox-action={`topic_${options.tab}_load_more`}
+                data-acbox-label={options.tab === 'hot' ? '加载更多热门帖子' : '加载更多最新帖子'}
                 onClick={() => void loadMoreByTab(options.tab)}
               >
                 {options.loadingMore ? '加载中...' : '加载更多'}
@@ -677,7 +681,11 @@ export default function CommunityTopicBoardView({
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link href="/community">
+              <Link
+                href="/community"
+                data-acbox-action="topic_back_community"
+                data-acbox-label="话题不存在返回社区"
+              >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 返回社区
               </Link>
@@ -704,7 +712,11 @@ export default function CommunityTopicBoardView({
     <div className="container mx-auto px-2 py-4 sm:px-4 sm:py-6 lg:py-8">
       <div className="mb-4">
         <Button variant="ghost" asChild className="px-2">
-          <Link href="/community">
+          <Link
+            href="/community"
+            data-acbox-action="topic_back_community"
+            data-acbox-label={topic?.name || safeIdOrSlug}
+          >
             <ArrowLeft className="mr-1 h-4 w-4" />
             返回社区
           </Link>
@@ -789,6 +801,8 @@ export default function CommunityTopicBoardView({
                             variant="link"
                             size="sm"
                             className="h-auto p-0 text-xs leading-none"
+                            data-acbox-action="topic_open_moderators"
+                            data-acbox-label={topic?.name || safeIdOrSlug}
                             onClick={() => setModeratorDialogOpen(true)}
                           >
                             更多&gt;&gt;
@@ -802,6 +816,8 @@ export default function CommunityTopicBoardView({
                             variant="link"
                             size="sm"
                             className="h-auto p-0 text-xs leading-none"
+                            data-acbox-action="topic_open_moderators"
+                            data-acbox-label={topic?.name || safeIdOrSlug}
                             onClick={() => setModeratorDialogOpen(true)}
                           >
                             更多&gt;&gt;
@@ -818,6 +834,8 @@ export default function CommunityTopicBoardView({
                     size="lg"
                     className="min-w-[124px]"
                     disabled={!topicId}
+                    data-acbox-action="topic_create_post"
+                    data-acbox-label={topic?.name || safeIdOrSlug}
                     onClick={handleCreatePost}
                   >
                     <PenSquare className="mr-1.5 h-4 w-4" />
@@ -827,6 +845,8 @@ export default function CommunityTopicBoardView({
                     type="button"
                     variant={followed ? 'outline' : 'default'}
                     disabled={followBusy || !topicId}
+                    data-acbox-action={followed ? 'topic_unfollow' : 'topic_follow'}
+                    data-acbox-label={topic?.name || safeIdOrSlug}
                     onClick={() => void handleToggleFollow()}
                   >
                     {followBusy ? '处理中...' : followed ? '已关注' : '关注话题'}
@@ -834,6 +854,8 @@ export default function CommunityTopicBoardView({
                   <Button
                     type="button"
                     variant="outline"
+                    data-acbox-action="topic_share"
+                    data-acbox-label={topic?.name || safeIdOrSlug}
                     onClick={() => void handleShareTopic()}
                   >
                     <Share2 className="mr-1 h-4 w-4" />
@@ -918,6 +940,8 @@ export default function CommunityTopicBoardView({
                     type="button"
                     variant="outline"
                     disabled={moderationSaving}
+                    data-acbox-action="topic_moderation_reset"
+                    data-acbox-label={topic?.name || safeIdOrSlug}
                     onClick={() => {
                       setModerationAnnouncement(String(topic?.announcement || ''));
                       setModerationPinnedPostId(String(topic?.pinned_post_id || ''));
@@ -930,6 +954,8 @@ export default function CommunityTopicBoardView({
                   <Button
                     type="button"
                     disabled={moderationSaving}
+                    data-acbox-action="topic_moderation_save"
+                    data-acbox-label={topic?.name || safeIdOrSlug}
                     onClick={() => void handleModeratorSave()}
                   >
                     {moderationSaving ? '保存中...' : '保存治理设置'}
@@ -944,8 +970,20 @@ export default function CommunityTopicBoardView({
             onValueChange={(value) => setActiveFeedTab(value === 'hot' ? 'hot' : 'latest')}
           >
             <TabsList className="mb-4 border bg-card">
-              <TabsTrigger value="latest">最新帖子</TabsTrigger>
-              <TabsTrigger value="hot">热门帖子</TabsTrigger>
+              <TabsTrigger
+                value="latest"
+                data-acbox-action="topic_tab_latest"
+                data-acbox-label={topic?.name || safeIdOrSlug}
+              >
+                最新帖子
+              </TabsTrigger>
+              <TabsTrigger
+                value="hot"
+                data-acbox-action="topic_tab_hot"
+                data-acbox-label={topic?.name || safeIdOrSlug}
+              >
+                热门帖子
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="latest">
               {renderPostStream(latestPosts, {
@@ -985,6 +1023,8 @@ export default function CommunityTopicBoardView({
                       size="icon"
                       className="mt-[-4px] h-8 w-8 shrink-0 text-muted-foreground/70"
                       aria-label="话题操作"
+                      data-acbox-action="topic_more_actions"
+                      data-acbox-label={topic?.name || safeIdOrSlug}
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
@@ -992,6 +1032,8 @@ export default function CommunityTopicBoardView({
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
                       disabled={!topicId}
+                      data-acbox-action="topic_copy_id"
+                      data-acbox-label={topic?.name || safeIdOrSlug}
                       onClick={() => void handleCopyTopicId()}
                     >
                       复制话题 ID
@@ -1058,6 +1100,8 @@ export default function CommunityTopicBoardView({
                 variant="outline"
                 size="sm"
                 disabled={!topicId}
+                data-acbox-action="topic_copy_id_dialog"
+                data-acbox-label={topic?.name || safeIdOrSlug}
                 onClick={() => void handleCopyTopicId()}
               >
                 复制话题 ID

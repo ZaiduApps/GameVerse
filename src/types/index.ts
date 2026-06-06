@@ -59,6 +59,7 @@ export interface CommunityPost {
   id:string;
   authorId?: string;
   authorType?: string;
+  authorUsername?: string;
   user: {
     name: string;
     avatarUrl: string;
@@ -68,10 +69,29 @@ export interface CommunityPost {
   };
   timestamp: string;
   rawTimestamp?: string;
+  updatedAt?: string;
   source?: string; // e.g., "来自web", "来自Android"
   title?: string;
   summary?: string;
   content: string;
+  heatScore?: number;
+  viewSources?: Record<string, number>;
+  linkClickCount?: number;
+  linkClicks?: Record<string, number>;
+  linkClickStats?: Array<{
+    click_key: string;
+    count: number;
+    host?: string;
+    url?: string;
+  }>;
+  linkPreviews?: Array<{
+    url: string;
+    title?: string;
+    description?: string;
+    image?: string;
+    icon?: string;
+    site_name?: string;
+  }>;
   imageUrl?: string; // Primary display image (from display_cover or fallback)
   imageAiHint?: string;
   previewImages?: string[]; // Multi-image preview (max 3 for card, up to 9 for full)
@@ -222,6 +242,16 @@ export interface ApiDynamicPost {
   like_count?: number;
   comment_count?: number;
   view_count?: number;
+  heat_score?: number;
+  view_sources?: Record<string, number>;
+  link_previews?: Array<{
+    url?: string;
+    title?: string;
+    description?: string;
+    image?: string;
+    icon?: string;
+    site_name?: string;
+  }>;
   author_name?: string;
   author_avatar?: string;
   app_id?: string;
@@ -430,7 +460,7 @@ export interface User {
   created_at?: string;
   updated_at?: string;
   gender?: string;
-  phone?: string;
+  signature?: string;
   birthday?: string;
   country?: string;
   province?: string;

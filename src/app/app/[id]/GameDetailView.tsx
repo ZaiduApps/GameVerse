@@ -981,6 +981,8 @@ export default function GameDetailView({
           <button
             type="button"
             key={`${isMobile ? 'mobile-shot' : url}-${index}`}
+            data-acbox-action="game_detail_screenshot_open"
+            data-acbox-label={`${gameName} 截图 ${index + 1}`}
             className={cn(
               'group relative shrink-0 snap-center overflow-hidden bg-[#dadddf] shadow-[0_18px_36px_rgba(15,23,32,0.08)] transition-transform duration-300',
               '[@media(hover:hover)]:hover:-translate-y-1',
@@ -1088,6 +1090,8 @@ export default function GameDetailView({
           size="icon"
           variant="outline"
           aria-label="分享当前游戏页面"
+          data-acbox-action="game_detail_share"
+          data-acbox-label={gameName}
           className="h-12 w-12 rounded-full border-[#abadae]/30 bg-white/80 shadow-xl backdrop-blur-md transition-transform hover:scale-110 dark:border-border/50 dark:bg-card/90"
           onClick={handleShare}
         >
@@ -1097,6 +1101,8 @@ export default function GameDetailView({
           size="icon"
           variant="outline"
           aria-label={isFavorite ? '取消收藏当前游戏' : '收藏当前游戏'}
+          data-acbox-action="game_detail_favorite_toggle"
+          data-acbox-label={gameName}
           className={cn(
             'h-12 w-12 rounded-full border-[#abadae]/30 bg-white/80 shadow-xl backdrop-blur-md transition-transform hover:scale-110 dark:border-border/50 dark:bg-card/90',
             isFavorite && 'border-[#b71211]/30 text-[#b71211]',
@@ -1170,6 +1176,8 @@ export default function GameDetailView({
                       {isPreregGame && (
                         <Button
                           type="button"
+                          data-acbox-action="game_detail_reminder_toggle"
+                          data-acbox-label={gameName}
                           onClick={handleReminderToggle}
                           className={cn(
                             'h-12 shrink-0 whitespace-nowrap rounded-full border border-[#b71211] bg-transparent px-5 text-base font-bold leading-none text-[#b71211] transition-colors hover:bg-[#b71211]/8',
@@ -1222,6 +1230,8 @@ export default function GameDetailView({
                 </div>
                 <Button
                   type="button"
+                  data-acbox-action="game_detail_urge_update"
+                  data-acbox-label={gameName}
                   onClick={handleUrge}
                   disabled={isSubmittingUrge}
                   className="flex items-center gap-2 rounded-full border border-[#b71211] bg-transparent px-4 py-2 text-sm font-bold text-[#b71211] transition-colors hover:bg-[#b71211]/5 dark:border-primary dark:text-primary dark:hover:bg-primary/10"
@@ -1279,6 +1289,8 @@ export default function GameDetailView({
                 {hasMoreDescription && (
                   <button
                     type="button"
+                    data-acbox-action="game_detail_description_toggle"
+                    data-acbox-label={showFullDescription ? '收起详情' : '查看更多详情'}
                     className="mt-8 inline-flex items-center gap-1 text-sm font-bold text-[#005e9f] hover:underline"
                     onClick={() => setShowFullDescription((value) => !value)}
                   >
@@ -1338,6 +1350,8 @@ export default function GameDetailView({
                   <div className="inline-flex rounded-full bg-white/80 p-1">
                     <button
                       type="button"
+                      data-acbox-action="game_detail_posts_sort_latest"
+                      data-acbox-label={gameName}
                       className={cn(
                         'rounded-full px-4 py-2 text-sm font-bold transition-colors',
                         sort === 'latest' ? 'bg-[#b71211] text-white' : 'text-[#595c5d]',
@@ -1348,6 +1362,8 @@ export default function GameDetailView({
                     </button>
                     <button
                       type="button"
+                      data-acbox-action="game_detail_posts_sort_hot"
+                      data-acbox-label={gameName}
                       className={cn(
                         'rounded-full px-4 py-2 text-sm font-bold transition-colors',
                         sort === 'hot' ? 'bg-[#b71211] text-white' : 'text-[#595c5d]',
@@ -1529,6 +1545,8 @@ export default function GameDetailView({
           <button
             type="button"
             aria-label="返回上一页"
+            data-acbox-action="game_detail_mobile_back"
+            data-acbox-label={gameName}
             className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-black/5"
             onClick={handleBack}
           >
@@ -1539,6 +1557,8 @@ export default function GameDetailView({
         <button
           type="button"
           aria-label="分享当前游戏页面"
+          data-acbox-action="game_detail_share"
+          data-acbox-label={gameName}
           className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-black/5"
           onClick={handleShare}
         >
@@ -1605,6 +1625,8 @@ export default function GameDetailView({
             </div>
             <Button
               type="button"
+              data-acbox-action="game_detail_urge_update"
+              data-acbox-label={gameName}
               onClick={handleUrge}
               disabled={isSubmittingUrge}
               className="rounded-full bg-[#b3d4ff] px-4 py-2 text-sm font-bold text-[#004a7e] hover:opacity-90"
@@ -1658,6 +1680,8 @@ export default function GameDetailView({
           {hasMoreDescription && (
             <button
               type="button"
+              data-acbox-action="game_detail_description_toggle"
+              data-acbox-label={showFullDescription ? '收起' : '展开更多'}
               className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#b71211]"
               onClick={() => setShowFullDescription((value) => !value)}
             >
@@ -1731,6 +1755,8 @@ export default function GameDetailView({
             <div className="inline-flex rounded-full bg-white p-1">
               <button
                 type="button"
+                data-acbox-action="game_detail_posts_sort_latest"
+                data-acbox-label={gameName}
                 className={cn('rounded-full px-3 py-1 text-xs font-bold', sort === 'latest' ? 'bg-[#b71211] text-white' : 'text-[#595c5d]')}
                 onClick={() => setSort('latest')}
               >
@@ -1738,6 +1764,8 @@ export default function GameDetailView({
               </button>
               <button
                 type="button"
+                data-acbox-action="game_detail_posts_sort_hot"
+                data-acbox-label={gameName}
                 className={cn('rounded-full px-3 py-1 text-xs font-bold', sort === 'hot' ? 'bg-[#b71211] text-white' : 'text-[#595c5d]')}
                 onClick={() => setSort('hot')}
               >
@@ -1837,6 +1865,8 @@ export default function GameDetailView({
         <div className="flex items-center gap-3">
           <Link
             href="/community"
+            data-acbox-action="game_detail_mobile_community"
+            data-acbox-label={gameName}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#595c5d] transition-colors hover:bg-black/5 hover:text-[#b71211]"
           >
             <MessageSquare className="h-5 w-5" />
@@ -1844,6 +1874,8 @@ export default function GameDetailView({
           <button
             type="button"
             aria-label={isFavorite ? '取消收藏当前游戏' : '收藏当前游戏'}
+            data-acbox-action="game_detail_favorite_toggle"
+            data-acbox-label={gameName}
             className={cn(
               'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#595c5d] transition-colors hover:bg-black/5',
               isFavorite && 'text-[#b71211]',
@@ -1855,6 +1887,8 @@ export default function GameDetailView({
           {isPreregGame && (
             <Button
               type="button"
+              data-acbox-action="game_detail_reminder_toggle"
+              data-acbox-label={gameName}
               onClick={handleReminderToggle}
               className={cn(
                 'h-12 shrink-0 whitespace-nowrap rounded-full border border-[#b71211] bg-transparent px-4 text-sm font-bold leading-none text-[#b71211] transition-colors hover:bg-[#b71211]/8',
@@ -1888,6 +1922,8 @@ export default function GameDetailView({
                   size="icon"
                   variant="secondary"
                   aria-label="缩小预览图片"
+                  data-acbox-action="game_detail_preview_zoom_out"
+                  data-acbox-label={gameName}
                   className="h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -1901,6 +1937,8 @@ export default function GameDetailView({
                   size="icon"
                   variant="secondary"
                   aria-label="放大预览图片"
+                  data-acbox-action="game_detail_preview_zoom_in"
+                  data-acbox-label={gameName}
                   className="h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -1914,6 +1952,8 @@ export default function GameDetailView({
                   size="icon"
                   variant="secondary"
                   aria-label="重置预览图片缩放"
+                  data-acbox-action="game_detail_preview_reset"
+                  data-acbox-label={gameName}
                   className="h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -1928,6 +1968,8 @@ export default function GameDetailView({
                   size="icon"
                   variant="secondary"
                   aria-label="关闭图片预览"
+                  data-acbox-action="game_detail_preview_close"
+                  data-acbox-label={gameName}
                   className="h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -1942,6 +1984,8 @@ export default function GameDetailView({
                 <>
                   <button
                     type="button"
+                    data-acbox-action="game_detail_preview_prev"
+                    data-acbox-label={gameName}
                     className="absolute left-3 top-1/2 z-[130] hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:flex"
                     onClick={(event) => {
                       event.stopPropagation();
@@ -1952,6 +1996,8 @@ export default function GameDetailView({
                   </button>
                   <button
                     type="button"
+                    data-acbox-action="game_detail_preview_next"
+                    data-acbox-label={gameName}
                     className="absolute right-3 top-1/2 z-[130] hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:flex"
                     onClick={(event) => {
                       event.stopPropagation();

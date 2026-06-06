@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Mail, Lock, User, KeyRound, Smartphone } from 'lucide-react';
+import { Loader2, Mail, Lock, User, KeyRound } from 'lucide-react';
 import type { ApiResponse, AuthData } from '@/types';
 import { apiUrl } from '@/lib/api';
 import { getDeviceHeaders, getDeviceId, getDeviceName } from '@/lib/auth-device';
@@ -274,7 +274,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                     <Label htmlFor="login-code">验证码</Label>
                     <div className="flex gap-2">
                       <div className="relative flex-grow">
-                        <Smartphone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <KeyRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           id="login-code"
                           placeholder="6 位验证码"
@@ -343,7 +343,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                   <Label htmlFor="reg-code">邮箱验证码</Label>
                   <div className="flex gap-2">
                     <div className="relative flex-grow">
-                      <Smartphone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <KeyRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
                         id="reg-code"
                         placeholder="6 位验证码"

@@ -5,14 +5,14 @@ import Link from 'next/link';
 import { Bell, CheckCheck, Loader2, MessageCircle, Heart, Megaphone, ExternalLink } from 'lucide-react';
 
 import { useAuth } from '@/context/auth-context';
-import { apiUrl, trackedApiFetch } from '@/lib/api';
+import { trackedApiFetch } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 interface NotificationItem {
-  _id: string;
+  _id?: string;
   id?: string;
   category: 'system' | 'reply' | 'like';
   title: string;
@@ -35,6 +35,23 @@ interface NotificationListData {
 
 type CategoryFilter = 'all' | 'system' | 'reply' | 'like';
 
+type NotificationTarget = {
+  href: string;
+  isExternal: boolean;
+};
+
+const INTERNAL_TARGET_PREFIXES = [
+  'app',
+  'category',
+  'community',
+  'download',
+  'messages',
+  'profile',
+  'search',
+  'tag',
+  'u',
+];
+
 function formatDate(value?: string) {
   if (!value) return '未知时间';
   const d = new Date(value);
@@ -42,11 +59,56 @@ function formatDate(value?: string) {
   return d.toLocaleString('zh-CN');
 }
 
-function resolveTargetUrl(item: NotificationItem): string | null {
-  if (item.target_url) return item.target_url;
-  if (item.target_type === 'post' && item.target_id) return `/community/post/${item.target_id}`;
-  if (item.target_type === 'app' && item.target_id) return `/app/${item.target_id}`;
-  if (item.target_type === 'feedback' && item.target_id) return `/profile`;
+function getNotificationId(item: NotificationItem) {
+  return String(item._id || item.id || '').trim();
+}
+
+function cleanTargetUrl(input?: string) {
+  return String(input || '').replace(/[\u0000-\u001F\u007F]/g, '').trim();
+}
+
+function isKnownInternalPath(input: string) {
+  const firstSegment = input.split(/[/?#]/)[0]?.toLowerCase();
+  return INTERNAL_TARGET_PREFIXES.includes(firstSegment);
+}
+
+function normalizeNotificationTarget(input?: string): NotificationTarget | null {
+  const raw = cleanTargetUrl(input);
+  if (!raw) return null;
+
+  if (raw.startsWith('/') && !raw.startsWith('//')) {
+    return { href: raw, isExternal: false };
+  }
+
+  if (isKnownInternalPath(raw)) {
+    return { href: `/${raw.replace(/^\/+/, '')}`, isExternal: false };
+  }
+
+  try {
+    const parsed = raw.startsWith('//') ? new URL(`https:${raw}`) : new URL(raw);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+
+    const normalizedHref = parsed.toString();
+    if (typeof window !== 'undefined' && parsed.origin === window.location.origin) {
+      return {
+        href: `${parsed.pathname}${parsed.search}${parsed.hash}`,
+        isExternal: false,
+      };
+    }
+
+    return { href: normalizedHref, isExternal: true };
+  } catch {
+    return null;
+  }
+}
+
+function resolveTarget(item: NotificationItem): NotificationTarget | null {
+  const directTarget = normalizeNotificationTarget(item.target_url);
+  if (directTarget) return directTarget;
+  if (item.target_type === 'post' && item.target_id) return { href: `/community/post/${encodeURIComponent(item.target_id)}`, isExternal: false };
+  if (item.target_type === 'app' && item.target_id) return { href: `/app/${encodeURIComponent(item.target_id)}`, isExternal: false };
+  if ((item.target_type === 'user' || item.target_type === 'profile') && item.target_id) return { href: `/u/${encodeURIComponent(item.target_id)}`, isExternal: false };
+  if (item.target_type === 'feedback') return { href: '/profile', isExternal: false };
   return null;
 }
 
@@ -59,6 +121,7 @@ export default function MessagesPage() {
   const [markingAll, setMarkingAll] = useState(false);
   const [summary, setSummary] = useState<{ total_unread: number; unread_by_category: Record<string, number> } | null>(null);
   const [data, setData] = useState<NotificationListData>({ list: [], total: 0, page: 1, pageSize: 20 });
+  const [page, setPage] = useState(1);
 
   const categoryLabel = useMemo(
     () => ({ all: '全部', system: '系统', reply: '回复', like: '点赞' } as const),
@@ -72,17 +135,17 @@ export default function MessagesPage() {
   }, [token]);
 
   const loadSummary = async () => {
-      const res = await trackedApiFetch('/notifications/summary', { headers: requestHeaders, cache: 'no-store' });
+    const res = await trackedApiFetch('/notifications/summary', { headers: requestHeaders, cache: 'no-store' });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json?.code !== 0) throw new Error(json?.message || `HTTP ${res.status}`);
     setSummary(json.data || { total_unread: 0, unread_by_category: {} });
   };
 
   const loadList = async () => {
-    const params = new URLSearchParams({ page: '1', pageSize: '20' });
+    const params = new URLSearchParams({ page: String(page), pageSize: '20' });
     if (category !== 'all') params.set('category', category);
 
-      const res = await trackedApiFetch(`/notifications?${params.toString()}`, { headers: requestHeaders, cache: 'no-store' });
+    const res = await trackedApiFetch(`/notifications?${params.toString()}`, { headers: requestHeaders, cache: 'no-store' });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json?.code !== 0) throw new Error(json?.message || `HTTP ${res.status}`);
     setData(json.data || { list: [], total: 0, page: 1, pageSize: 20 });
@@ -106,28 +169,70 @@ export default function MessagesPage() {
 
   useEffect(() => {
     reload();
-  }, [category, isAuthenticated, token]);
+  }, [category, isAuthenticated, page, token]);
 
-  const markRead = async (id: string) => {
+  useEffect(() => {
+    setPage(1);
+  }, [category]);
+
+  const markRead = async (id: string, options: { silent?: boolean } = {}) => {
+    if (!id) return false;
+    const targetItem = data.list.find((item) => getNotificationId(item) === id);
+    const shouldUpdateSummary = Boolean(targetItem && !targetItem.is_read);
+
+    if (shouldUpdateSummary) {
+      setData((prev) => ({
+        ...prev,
+        list: prev.list.map((item) => (getNotificationId(item) === id ? { ...item, is_read: true } : item)),
+      }));
+      setSummary((prev) => {
+        if (!prev) return prev;
+        const categoryKey = targetItem?.category || '';
+        const categoryUnread = Math.max(0, Number(prev.unread_by_category?.[categoryKey] || 0) - 1);
+        return {
+          total_unread: Math.max(0, Number(prev.total_unread || 0) - 1),
+          unread_by_category: {
+            ...prev.unread_by_category,
+            [categoryKey]: categoryUnread,
+          },
+        };
+      });
+    }
+
     try {
       const res = await trackedApiFetch('/notifications/read', {
         method: 'POST',
+        keepalive: true,
         headers: requestHeaders,
         body: JSON.stringify({ id }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || json?.code !== 0) throw new Error(json?.message || `HTTP ${res.status}`);
-      setData((prev) => ({
-        ...prev,
-        list: prev.list.map((item) => (item._id === id ? { ...item, is_read: true } : item)),
-      }));
       await loadSummary();
+      return true;
     } catch (error) {
-      toast({
-        title: '操作失败',
-        description: error instanceof Error ? error.message : '请稍后重试',
-        variant: 'destructive',
-      });
+      if (shouldUpdateSummary) {
+        setData((prev) => ({
+          ...prev,
+          list: prev.list.map((item) => (getNotificationId(item) === id ? { ...item, is_read: false } : item)),
+        }));
+        void loadSummary().catch(() => {});
+      }
+      if (!options.silent) {
+        toast({
+          title: '操作失败',
+          description: error instanceof Error ? error.message : '请稍后重试',
+          variant: 'destructive',
+        });
+      }
+      return false;
+    }
+  };
+
+  const openNotificationTarget = (item: NotificationItem) => {
+    const id = getNotificationId(item);
+    if (!item.is_read && id) {
+      void markRead(id, { silent: true });
     }
   };
 
@@ -210,9 +315,10 @@ export default function MessagesPage() {
           ) : (
             <div className="space-y-2">
               {data.list.map((item) => {
-                const targetUrl = resolveTargetUrl(item);
+                const itemId = getNotificationId(item);
+                const target = resolveTarget(item);
                 return (
-                  <div key={item._id} className={`rounded-lg border p-3 ${item.is_read ? 'bg-card' : 'bg-primary/5 border-primary/30'}`}>
+                  <div key={itemId} className={`rounded-lg border p-3 ${item.is_read ? 'bg-card' : 'bg-primary/5 border-primary/30'}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -227,16 +333,23 @@ export default function MessagesPage() {
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        {targetUrl && (
+                        {target && (
                           <Button asChild size="sm" variant="outline" className="btn-interactive">
-                            <Link href={targetUrl}>
-                              查看
-                              <ExternalLink className="ml-1 h-3.5 w-3.5" />
-                            </Link>
+                            {target.isExternal ? (
+                              <a href={target.href} target="_blank" rel="noopener noreferrer" onClick={() => openNotificationTarget(item)}>
+                                查看
+                                <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                              </a>
+                            ) : (
+                              <Link href={target.href} onClick={() => openNotificationTarget(item)}>
+                                查看
+                                <ExternalLink className="ml-1 h-3.5 w-3.5" />
+                              </Link>
+                            )}
                           </Button>
                         )}
                         {!item.is_read && (
-                          <Button size="sm" variant="ghost" onClick={() => markRead(item._id)}>
+                          <Button size="sm" variant="ghost" onClick={() => void markRead(itemId)}>
                             标记已读
                           </Button>
                         )}
@@ -247,6 +360,30 @@ export default function MessagesPage() {
               })}
             </div>
           )}
+
+          {data.total > data.pageSize ? (
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={loading || page <= 1}
+                onClick={() => setPage((value) => Math.max(1, value - 1))}
+              >
+                上一页
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                第 {data.page || page} / {Math.max(1, Math.ceil(data.total / data.pageSize))} 页
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={loading || page >= Math.ceil(data.total / data.pageSize)}
+                onClick={() => setPage((value) => value + 1)}
+              >
+                下一页
+              </Button>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     </div>

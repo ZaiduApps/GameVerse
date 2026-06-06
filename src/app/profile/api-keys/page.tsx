@@ -699,6 +699,8 @@ export default function ProfileApiKeysPage() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="例如：自动发帖服务（content:write）"
                 maxLength={60}
+                data-acbox-action="profile_api_keys_name_input"
+                data-acbox-label="密钥名称"
               />
             </div>
             <div className="space-y-2 md:col-span-1">
@@ -708,6 +710,8 @@ export default function ProfileApiKeysPage() {
                 type="datetime-local"
                 value={expiresAt}
                 onChange={(e) => setExpiresAt(e.target.value)}
+                data-acbox-action="profile_api_keys_expire_input"
+                data-acbox-label="过期时间"
               />
             </div>
             <div className="flex items-end md:col-span-1">
@@ -715,6 +719,8 @@ export default function ProfileApiKeysPage() {
                 className="w-full md:w-auto"
                 onClick={createKey}
                 disabled={submitting || reachedKeyLimit}
+                data-acbox-action="profile_api_keys_create"
+                data-acbox-label="新建发布密钥"
               >
                 {submitting ? (
                   <>
@@ -748,8 +754,20 @@ export default function ProfileApiKeysPage() {
         <CardContent>
           <Tabs defaultValue="publish" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="publish">发布文章</TabsTrigger>
-              <TabsTrigger value="mcp">连接 MCP（只读）</TabsTrigger>
+              <TabsTrigger
+                value="publish"
+                data-acbox-action="profile_api_keys_tab_publish"
+                data-acbox-label="发布文章"
+              >
+                发布文章
+              </TabsTrigger>
+              <TabsTrigger
+                value="mcp"
+                data-acbox-action="profile_api_keys_tab_mcp"
+                data-acbox-label="连接 MCP"
+              >
+                连接 MCP（只读）
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="publish" className="space-y-4 pt-4">
@@ -771,6 +789,8 @@ export default function ProfileApiKeysPage() {
                     onClick={() => {
                       setIdempotencyKeySample(createIdempotencyKeySample());
                     }}
+                    data-acbox-action="profile_api_keys_generate_idempotency_key"
+                    data-acbox-label="生成新幂等键"
                   >
                     生成新幂等键
                   </Button>
@@ -780,6 +800,8 @@ export default function ProfileApiKeysPage() {
                     onClick={() => {
                       void copyText(idempotencyKeySample, '幂等键已复制');
                     }}
+                    data-acbox-action="profile_api_keys_copy_idempotency_key"
+                    data-acbox-label="复制当前幂等键"
                   >
                     <Copy className="mr-1 h-4 w-4" />
                     复制当前幂等键
@@ -1113,6 +1135,8 @@ export default function ProfileApiKeysPage() {
                         onCheckedChange={(checked) => {
                           void toggleStatus(item, checked);
                         }}
+                        data-acbox-action="profile_api_keys_toggle_status"
+                        data-acbox-label={item.name || '切换密钥状态'}
                       />
                     </div>
                     <Button
@@ -1121,6 +1145,8 @@ export default function ProfileApiKeysPage() {
                       onClick={() => {
                         void viewDetail(item);
                       }}
+                      data-acbox-action="profile_api_keys_view_detail"
+                      data-acbox-label={item.name || '密钥详情'}
                     >
                       详情
                     </Button>
@@ -1130,6 +1156,8 @@ export default function ProfileApiKeysPage() {
                       onClick={() => {
                         void viewSecret(item);
                       }}
+                      data-acbox-action="profile_api_keys_view_secret"
+                      data-acbox-label={item.name || '查看密钥'}
                     >
                       <Eye className="mr-1 h-4 w-4" />
                       查看
@@ -1140,6 +1168,8 @@ export default function ProfileApiKeysPage() {
                       onClick={() => {
                         void copyText(item._id, '密钥ID已复制');
                       }}
+                      data-acbox-action="profile_api_keys_copy_id"
+                      data-acbox-label={item.name || '复制密钥ID'}
                     >
                       <Copy className="mr-1 h-4 w-4" />
                       复制ID
@@ -1150,6 +1180,8 @@ export default function ProfileApiKeysPage() {
                       onClick={() => {
                         void revoke(item);
                       }}
+                      data-acbox-action="profile_api_keys_revoke"
+                      data-acbox-label={item.name || '吊销密钥'}
                     >
                       <Trash2 className="mr-1 h-4 w-4" />
                       吊销
@@ -1187,6 +1219,8 @@ export default function ProfileApiKeysPage() {
               onClick={() => {
                 setSecretModalOpen(false);
               }}
+              data-acbox-action="profile_api_keys_secret_close"
+              data-acbox-label="关闭密钥明文弹窗"
             >
               关闭
             </Button>
@@ -1198,6 +1232,8 @@ export default function ProfileApiKeysPage() {
                   '发布 cURL 已复制',
                 );
               }}
+              data-acbox-action="profile_api_keys_copy_secret_curl"
+              data-acbox-label="复制可直接发布的 cURL"
             >
               <Copy className="mr-2 h-4 w-4" />
               复制可直接发布的 cURL
@@ -1206,6 +1242,8 @@ export default function ProfileApiKeysPage() {
               onClick={() => {
                 void copyText(secretPayload.key, '密钥已复制');
               }}
+              data-acbox-action="profile_api_keys_copy_secret"
+              data-acbox-label="复制密钥"
             >
               <Copy className="mr-2 h-4 w-4" />
               复制密钥
@@ -1258,6 +1296,8 @@ export default function ProfileApiKeysPage() {
                         await loadDetailData(detailKey._id);
                         setDetailActionNotice('已执行禁用操作，并刷新最新状态。');
                       }}
+                      data-acbox-action="profile_api_keys_disable_risky_key"
+                      data-acbox-label={detailKey.name || '一键禁用当前密钥'}
                     >
                       一键禁用当前密钥
                     </Button>
@@ -1298,7 +1338,13 @@ export default function ProfileApiKeysPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <Label>最近调用日志（5条）</Label>
-                  <Button variant="outline" size="sm" onClick={() => void exportUsageLogs()}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void exportUsageLogs()}
+                    data-acbox-action="profile_api_keys_export_usage_logs"
+                    data-acbox-label="导出调用日志"
+                  >
                     导出 CSV
                   </Button>
                 </div>
@@ -1312,7 +1358,13 @@ export default function ProfileApiKeysPage() {
                         <div className="mt-1 flex flex-wrap items-center gap-2">
                           <span className="font-mono">request_id: {log.request_id || '-'}</span>
                           {log.request_id ? (
-                            <Button variant="outline" size="sm" onClick={() => void copyText(log.request_id, 'request_id 已复制')}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => void copyText(log.request_id, 'request_id 已复制')}
+                              data-acbox-action="profile_api_keys_copy_request_id"
+                              data-acbox-label={log.request_id}
+                            >
                               复制 request_id
                             </Button>
                           ) : null}
@@ -1325,7 +1377,14 @@ export default function ProfileApiKeysPage() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDetailModalOpen(false)}>关闭</Button>
+            <Button
+              variant="outline"
+              onClick={() => setDetailModalOpen(false)}
+              data-acbox-action="profile_api_keys_detail_close"
+              data-acbox-label="关闭密钥详情"
+            >
+              关闭
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

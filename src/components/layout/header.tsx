@@ -243,7 +243,9 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                       <AvatarFallback>{(user?.name || user?.username || 'U').substring(0, 1).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     {unreadTotal > 0 && (
-                      <span className="absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-background" />
+                      <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] leading-none text-white ring-2 ring-background">
+                        {unreadTotal > 99 ? '99+' : unreadTotal}
+                      </span>
                     )}
                   </Button>
                 </DropdownMenuTrigger>
@@ -265,6 +267,11 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                     <Link href="/messages">
                       <Bell className="mr-2 h-4 w-4" />
                       <span>我的消息</span>
+                      {unreadTotal > 0 ? (
+                        <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] leading-none text-white">
+                          {unreadTotal > 99 ? '99+' : unreadTotal}
+                        </span>
+                      ) : null}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
@@ -379,6 +386,11 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                             >
                               <Bell size={18} />
                               我的消息
+                              {unreadTotal > 0 ? (
+                                <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] leading-none text-white">
+                                  {unreadTotal > 99 ? '99+' : unreadTotal}
+                                </span>
+                              ) : null}
                             </Link>
                           </li>
                           <li>

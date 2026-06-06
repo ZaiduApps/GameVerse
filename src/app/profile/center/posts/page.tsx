@@ -376,6 +376,8 @@ export default function ProfileCenterPostsPage() {
                   setLoadError('');
                   setReloadKey((value) => value + 1);
                 }}
+                data-acbox-action="profile_center_posts_reload"
+                data-acbox-label="重新加载动态"
               >
                 重新加载
               </Button>
@@ -415,7 +417,12 @@ export default function ProfileCenterPostsPage() {
                 <div key={item.post.id} className="rounded-lg border p-3">
                   <div className="flex items-start justify-between gap-2">
                     {isPubliclyViewable ? (
-                      <Link href={`/community/post/${encodeURIComponent(item.post.id)}`} className="line-clamp-1 text-sm font-semibold hover:text-primary">
+                      <Link
+                        href={`/community/post/${encodeURIComponent(item.post.id)}`}
+                        className="line-clamp-1 text-sm font-semibold hover:text-primary"
+                        data-acbox-action="profile_center_post_detail"
+                        data-acbox-label={title}
+                      >
                         {title}
                       </Link>
                     ) : (
@@ -435,6 +442,8 @@ export default function ProfileCenterPostsPage() {
                         className="h-8 px-2 text-xs text-muted-foreground hover:text-primary"
                         disabled={hasPendingAction}
                         onClick={() => handleStartEdit(item)}
+                        data-acbox-action="profile_center_post_edit"
+                        data-acbox-label={title}
                       >
                         <PencilLine className="mr-1.5 h-3.5 w-3.5" />
                         编辑
@@ -447,6 +456,8 @@ export default function ProfileCenterPostsPage() {
                         className="h-8 px-2 text-xs text-muted-foreground hover:text-primary"
                         disabled={hasPendingAction}
                         onClick={() => void handleToggleStatus(item)}
+                        data-acbox-action="profile_center_post_toggle_status"
+                        data-acbox-label={title}
                       >
                         {Number(item.status || 0) === 1 ? (
                           <>
@@ -467,6 +478,8 @@ export default function ProfileCenterPostsPage() {
                       className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
                       disabled={hasPendingAction}
                       onClick={() => void handleDelete(item)}
+                      data-acbox-action="profile_center_post_delete"
+                      data-acbox-label={title}
                     >
                       <Trash2 className="mr-1.5 h-3.5 w-3.5" />
                       {isPendingAction && actionType === 'delete' ? '删除中...' : '删除'}
@@ -477,7 +490,14 @@ export default function ProfileCenterPostsPage() {
             })
           )}
           {canLoadMore ? (
-            <Button variant="outline" className="w-full" onClick={() => void loadMore()} disabled={loadingMore}>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
+              data-acbox-action="profile_center_posts_load_more"
+              data-acbox-label="加载更多动态"
+            >
               {loadingMore ? '加载中...' : '加载更多'}
             </Button>
           ) : null}

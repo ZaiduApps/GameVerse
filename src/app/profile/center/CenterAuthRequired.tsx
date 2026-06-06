@@ -39,12 +39,21 @@ export default function CenterAuthRequired({
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button className="min-w-32" onClick={() => setAuthModalOpen(true)}>
+              <Button
+                className="min-w-32"
+                onClick={() => setAuthModalOpen(true)}
+                data-acbox-action="profile_center_auth_login"
+                data-acbox-label="登录 / 注册"
+              >
                 <LogIn className="mr-2 h-4 w-4" />
                 登录 / 注册
               </Button>
               <Button asChild variant="outline" className="min-w-32">
-                <Link href="/">
+                <Link
+                  href="/"
+                  data-acbox-action="profile_center_auth_back_home"
+                  data-acbox-label="返回首页"
+                >
                   <MoveLeft className="mr-2 h-4 w-4" />
                   返回首页
                 </Link>

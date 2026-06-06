@@ -241,6 +241,8 @@ function FeatureGameCard({
   return (
     <Link
       href={getGameHref(game)}
+      data-acbox-action="album_feature_game_click"
+      data-acbox-label={normalizeText(game.name) || '专题首屏推荐'}
       className="group overflow-hidden rounded-[28px] border border-white/12 bg-white/10 shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur"
     >
       <div className="relative h-56 overflow-hidden">
@@ -291,6 +293,8 @@ function SupportingGameCard({
   return (
     <Link
       href={getGameHref(game)}
+      data-acbox-action="album_supporting_game_click"
+      data-acbox-label={normalizeText(game.name) || '专题辅助推荐'}
       className="group flex items-center gap-3 rounded-[22px] border border-white/12 bg-white/10 p-3.5 text-white transition-transform hover:-translate-y-0.5"
     >
       <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl bg-white/8">
@@ -331,6 +335,8 @@ function ShowcaseCard({
   return (
     <Link
       href={getGameHref(game)}
+      data-acbox-action="album_showcase_game_click"
+      data-acbox-label={normalizeText(game.name) || '专题精选游戏'}
       className={`group overflow-hidden rounded-[26px] border border-[#d9e4ef] bg-white shadow-[0_12px_32px_rgba(12,15,16,0.08)] transition-all hover:-translate-y-1 ${cardRing}`}
     >
       <div className="relative h-48 overflow-hidden bg-[#e9eef4]">
@@ -391,6 +397,8 @@ function RankingRow({
   return (
     <Link
       href={getGameHref(game)}
+      data-acbox-action="album_ranking_game_click"
+      data-acbox-label={`${index + 1}. ${normalizeText(game.name) || '专题榜单游戏'}`}
       className={`group flex items-center gap-4 rounded-[24px] border border-[#d9e4ef] bg-white p-4 shadow-[0_12px_32px_rgba(12,15,16,0.08)] transition-all hover:-translate-y-1 ${cardRing}`}
     >
       <div className="flex w-10 flex-shrink-0 items-center justify-center text-xl font-black italic text-[#b71211]">
@@ -444,6 +452,8 @@ function PreregCard({
   return (
     <Link
       href={getGameHref(game)}
+      data-acbox-action="album_prereg_game_click"
+      data-acbox-label={normalizeText(game.name) || '预约专题游戏'}
       className={`group flex h-full flex-col justify-between gap-5 rounded-[26px] border border-[#f3d9df] bg-white p-5 shadow-[0_12px_32px_rgba(12,15,16,0.08)] transition-all hover:-translate-y-1 ${cardRing}`}
     >
       <div className="flex items-start gap-4">
@@ -505,6 +515,8 @@ function CompactToolCard({
   return (
     <Link
       href={getGameHref(game)}
+      data-acbox-action="album_tool_game_click"
+      data-acbox-label={normalizeText(game.name) || '工具专题应用'}
       className={`group rounded-[24px] border border-[#d9e4ef] bg-white p-4 shadow-[0_12px_32px_rgba(12,15,16,0.08)] transition-all hover:-translate-y-1 ${cardRing}`}
     >
       <div className="flex items-center gap-3">
@@ -652,6 +664,8 @@ export default function AlbumTopicView({
             <div className="mt-6 flex flex-wrap gap-3">
               <a
                 href="#album-games"
+                data-acbox-action="album_enter_content"
+                data-acbox-label={title}
                 className={`inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-black transition-colors ${palette.primaryButton}`}
               >
                 进入专题内容
@@ -659,6 +673,8 @@ export default function AlbumTopicView({
               </a>
               <Link
                 href="/app"
+                data-acbox-action="album_browse_library"
+                data-acbox-label={title}
                 className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-bold transition-colors ${palette.secondaryButton}`}
               >
                 浏览游戏库
@@ -747,6 +763,8 @@ export default function AlbumTopicView({
           </div>
           <Link
             href="/app"
+            data-acbox-action="album_browse_library"
+            data-acbox-label={title}
             className="inline-flex items-center gap-2 text-sm font-bold text-[#005e9f] transition-colors hover:text-[#004a7e]"
           >
             扩展浏览游戏库

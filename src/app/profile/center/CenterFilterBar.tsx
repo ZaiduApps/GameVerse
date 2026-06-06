@@ -43,16 +43,29 @@ export default function CenterFilterBar({
 }: CenterFilterBarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Link href="/profile" className="text-xs text-primary hover:underline">返回个人中心</Link>
+      <Link
+        href="/profile"
+        className="text-xs text-primary hover:underline"
+        data-acbox-action="profile_center_back_to_profile"
+        data-acbox-label="返回个人中心"
+      >
+        返回个人中心
+      </Link>
       <Input
         value={keyword}
         onChange={(e) => onKeywordChange(e.target.value)}
         placeholder={placeholder}
         className="w-full max-w-xs"
+        data-acbox-action="profile_center_filter_keyword"
+        data-acbox-label={placeholder}
       />
       {statusOptions && onStatusChange ? (
         <Select value={status || 'all'} onValueChange={onStatusChange}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger
+            className="w-[180px]"
+            data-acbox-action="profile_center_filter_status"
+            data-acbox-label="状态筛选"
+          >
             <SelectValue placeholder="状态" />
           </SelectTrigger>
           <SelectContent>
@@ -64,7 +77,11 @@ export default function CenterFilterBar({
       ) : null}
       {sortOptions && onSortChange ? (
         <Select value={sort || 'latest'} onValueChange={onSortChange}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger
+            className="w-[160px]"
+            data-acbox-action="profile_center_filter_sort"
+            data-acbox-label="排序筛选"
+          >
             <SelectValue placeholder="排序" />
           </SelectTrigger>
           <SelectContent>
@@ -75,7 +92,11 @@ export default function CenterFilterBar({
         </Select>
       ) : null}
       <Select value={String(pageSize)} onValueChange={(val) => onPageSizeChange(Number(val))}>
-        <SelectTrigger className="w-[120px]">
+        <SelectTrigger
+          className="w-[120px]"
+          data-acbox-action="profile_center_filter_page_size"
+          data-acbox-label="每页数量"
+        >
           <SelectValue placeholder="每页" />
         </SelectTrigger>
         <SelectContent>
@@ -84,7 +105,15 @@ export default function CenterFilterBar({
           <SelectItem value="48">48 / 页</SelectItem>
         </SelectContent>
       </Select>
-      <Button variant="ghost" size="sm" onClick={onClear}>清空筛选</Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onClear}
+        data-acbox-action="profile_center_filter_clear"
+        data-acbox-label="清空筛选"
+      >
+        清空筛选
+      </Button>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import Image from 'next/image';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Bookmark, ChevronLeft, ChevronRight, Eye, MessageSquare, RotateCcw, Send, Share2, ThumbsUp, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowLeft, Bookmark, ChevronLeft, ChevronRight, ExternalLink, Eye, MessageSquare, RotateCcw, Send, Share2, ThumbsUp, X, ZoomIn, ZoomOut } from 'lucide-react';
 
 import { buildRenderedMarkdownDocument, cn } from '@/lib/utils';
 import { apiUrl, trackedApiFetch } from '@/lib/api';
@@ -21,6 +21,10 @@ import {
   getCommunityTopicDetail,
   moderatorDeleteTopicComment,
   moderatorSetTopicCommentStatus,
+  recordCommunityPostLinkClick,
+  recordCommunityPostView,
+  resolveCommunityPostViewSource,
+  stripCommunityMarkdownCodeSegments,
   type CommunityCommentThread,
 } from '@/lib/community-api';
 import AppDownloadGuideDialog from '@/components/app-download-guide-dialog';
@@ -34,6 +38,8 @@ interface CommunityPostDetailViewProps {
   post: CommunityPost;
   initialComments?: CommunityCommentThread[];
 }
+
+const DETAIL_BLOCKED_LINK_HOSTS = ['www.facebook.com', 'acg.gamer.com.tw'];
 
 function normalizeComparableImageUrl(value?: string): string {
   const raw = String(value || '').trim();
@@ -57,6 +63,29 @@ function normalizeHeadingText(value?: string): string {
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
+}
+
+function getUrlHost(value: string): string {
+  try {
+    return new URL(value).hostname.trim().toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+function buildFaviconUrl(value: string): string | undefined {
+  const host = getUrlHost(value).replace(/^www\./, '');
+  if (!host) return undefined;
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
+}
+
+function isBlockedDetailLink(value: string): boolean {
+  const host = getUrlHost(value);
+  if (!host) return false;
+  return DETAIL_BLOCKED_LINK_HOSTS.some((blockedHost) => {
+    const normalized = blockedHost.trim().toLowerCase();
+    return host === normalized || host.endsWith(`.${normalized}`);
+  });
 }
 
 function normalizeNonNegativeCount(value: unknown): number {
@@ -108,6 +137,11 @@ export default function CommunityPostDetailView({
   const [moderationTopicId, setModerationTopicId] = useState('');
   const [activeTocId, setActiveTocId] = useState('');
   const articleRef = useRef<HTMLElement | null>(null);
+  const authorProfileTarget = post.authorUsername || post.authorId || '';
+  const authorProfileHref =
+    post.authorType === 'user' && authorProfileTarget
+      ? `/u/${encodeURIComponent(authorProfileTarget)}`
+      : '';
 
   const postTopicIds = useMemo(
     () =>
@@ -124,6 +158,27 @@ export default function CommunityPostDetailView({
   useEffect(() => {
     setViewCount(normalizeNonNegativeCount(post.viewsCount));
   }, [post.viewsCount]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const referrer = typeof document !== 'undefined' ? document.referrer : '';
+    const source = resolveCommunityPostViewSource(referrer);
+
+    void recordCommunityPostView({
+      postId: post.id,
+      referrer,
+      source,
+    }).then((data) => {
+      if (cancelled || !data) return;
+      if (data.view_count !== undefined) {
+        setViewCount(normalizeNonNegativeCount(data.view_count));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [post.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -211,6 +266,11 @@ export default function CommunityPostDetailView({
     setReplyLoadingMap({});
   }, [comments]);
 
+  const previewSearchContent = useMemo(
+    () => stripCommunityMarkdownCodeSegments(post.content || ''),
+    [post.content],
+  );
+
   const contentImageUrls = useMemo(() => {
     const urls: string[] = [];
     const pushUnique = (value?: string) => {
@@ -224,15 +284,15 @@ export default function CommunityPostDetailView({
     const htmlImageRegex = /<img[^>]+src=["'](https?:\/\/[^"']+)["'][^>]*>/gi;
 
     let match: RegExpExecArray | null;
-    while ((match = markdownImageRegex.exec(post.content || '')) !== null) {
+    while ((match = markdownImageRegex.exec(previewSearchContent)) !== null) {
       pushUnique(match[1]);
     }
-    while ((match = htmlImageRegex.exec(post.content || '')) !== null) {
+    while ((match = htmlImageRegex.exec(previewSearchContent)) !== null) {
       pushUnique(match[1]);
     }
 
     return urls;
-  }, [post.content]);
+  }, [previewSearchContent]);
 
   const previewImages = useMemo(() => {
     const urls: string[] = [];
@@ -248,15 +308,55 @@ export default function CommunityPostDetailView({
     contentImageUrls.forEach((url) => pushUnique(url));
     return urls;
   }, [contentImageUrls, post.imageUrl]);
+  const contentLinkUrls = useMemo(() => {
+    const urls: string[] = [];
+    const imageUrlSet = new Set(contentImageUrls.map(normalizeComparableImageUrl));
+    const pushUnique = (value?: string) => {
+      const url = String(value || '').trim().replace(/[.,;!?，。；！？]+$/g, '');
+      if (!/^https?:\/\//i.test(url)) return;
+      if (isBlockedDetailLink(url)) return;
+      if (imageUrlSet.has(normalizeComparableImageUrl(url))) return;
+      if (urls.includes(url)) return;
+      urls.push(url);
+    };
+    const urlRegex = /\bhttps?:\/\/[^\s<>"')\]]+/gi;
+    let match: RegExpExecArray | null;
+    while ((match = urlRegex.exec(previewSearchContent)) !== null) {
+      pushUnique(match[0]);
+      if (urls.length >= 8) break;
+    }
+    return urls;
+  }, [contentImageUrls, previewSearchContent]);
   const renderedContent = useMemo(
     () =>
       buildRenderedMarkdownDocument(post.content, {
         preset: 'detail',
-        blockedLinkHosts: ['www.facebook.com', 'acg.gamer.com.tw'],
+        blockedLinkHosts: DETAIL_BLOCKED_LINK_HOSTS,
         injectHeadingAnchors: true,
       }),
     [post.content],
   );
+  const linkPreviews = useMemo(() => {
+    const byUrl = new Map<string, NonNullable<CommunityPost['linkPreviews']>[number]>();
+    (post.linkPreviews || []).forEach((preview) => {
+      const url = String(preview.url || '').trim();
+      if (!/^https?:\/\//i.test(url)) return;
+      if (isBlockedDetailLink(url)) return;
+      byUrl.set(url, { ...preview, url, icon: preview.icon || buildFaviconUrl(url) });
+    });
+    contentLinkUrls.forEach((url) => {
+      if (byUrl.has(url)) return;
+      const host = getUrlHost(url).replace(/^www\./, '');
+      byUrl.set(url, {
+        url,
+        title: host || '外部链接',
+        description: url,
+        icon: buildFaviconUrl(url),
+        site_name: host,
+      });
+    });
+    return [...byUrl.values()].slice(0, 4);
+  }, [contentLinkUrls, post.linkPreviews]);
   const tocItems = useMemo(() => {
     const normalizedPostTitle = normalizeHeadingText(post.title || post.summary || '');
     const filtered = renderedContent.headings.filter((item, index) => {
@@ -288,6 +388,21 @@ export default function CommunityPostDetailView({
     const latest = await getCommunityCommentThreads(post.id, 30);
     setComments(latest);
     setExpandedReplies({});
+  };
+
+  const recordDetailLinkClick = (url: string) => {
+    const targetUrl = String(url || '').trim();
+    if (!/^https?:\/\//i.test(targetUrl)) return;
+    const referrer = typeof document !== 'undefined' ? document.referrer : '';
+    void recordCommunityPostLinkClick({
+      postId: post.id,
+      url: targetUrl,
+      referrer,
+    });
+  };
+
+  const handleLinkPreviewClick = (url: string) => {
+    recordDetailLinkClick(url);
   };
 
   const refreshCommentsSafely = async (): Promise<boolean> => {
@@ -786,18 +901,34 @@ export default function CommunityPostDetailView({
     }
   };
 
+  const handleMarkdownPointerIntent = (event: React.PointerEvent<HTMLElement>) => {
+    const target = event.target as HTMLElement | null;
+    const imageEl = target?.closest('img') as HTMLImageElement | null;
+    if (!imageEl?.src) return;
+    imageEl.dataset.acboxAction = 'community_post_image_preview';
+    imageEl.dataset.acboxLabel = post.id;
+  };
+
   const handleMarkdownContainerClick = (event: React.MouseEvent<HTMLElement>) => {
     const target = event.target as HTMLElement | null;
-
     const imageEl = target?.closest('img') as HTMLImageElement | null;
     if (imageEl?.src) {
       event.preventDefault();
+      imageEl.dataset.acboxAction = 'community_post_image_preview';
+      imageEl.dataset.acboxLabel = post.id;
       openPreviewImage(imageEl.src);
       return;
     }
 
     const appLinkEl = target?.closest('[data-app-link], [data-acbox-url]') as HTMLElement | null;
-    if (!appLinkEl) return;
+    if (!appLinkEl) {
+      const linkEl = target?.closest('a[href]') as HTMLAnchorElement | null;
+      const href = String(linkEl?.getAttribute('href') || linkEl?.href || '').trim();
+      if (/^https?:\/\//i.test(href)) {
+        recordDetailLinkClick(href);
+      }
+      return;
+    }
     event.preventDefault();
     setAppPromptDialogOpen(true);
   };
@@ -934,13 +1065,20 @@ export default function CommunityPostDetailView({
     };
   }, [tocItems]);
 
-  const commentsCard = (
-    <Card id="comments" className="scroll-mt-24 shadow-lg">
+  const renderCommentsCard = (options: { includeAnchor?: boolean } = {}) => (
+    <Card id={options.includeAnchor ? 'comments' : undefined} className="scroll-mt-24 shadow-lg">
       <CardHeader>
-        <CardTitle className="text-lg font-semibold flex items-center">
-          <MessageSquare size={20} className="mr-2 text-primary" />
-          评论 ({totalCommentCount})
-        </CardTitle>
+        {options.includeAnchor ? (
+          <h2 className="text-lg font-semibold flex items-center">
+            <MessageSquare size={20} className="mr-2 text-primary" />
+            评论 ({totalCommentCount})
+          </h2>
+        ) : (
+          <div className="text-lg font-semibold flex items-center">
+            <MessageSquare size={20} className="mr-2 text-primary" />
+            评论 ({totalCommentCount})
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-start space-x-3">
@@ -949,7 +1087,12 @@ export default function CommunityPostDetailView({
             <AvatarFallback>ME</AvatarFallback>
           </Avatar>
           <div className="flex-grow space-y-2">
+            <label htmlFor={options.includeAnchor ? 'comment-input' : 'comment-input-side'} className="sr-only">
+              {replyTarget ? `回复 @${replyTarget.name}` : '写下你的评论'}
+            </label>
             <Textarea
+              id={options.includeAnchor ? 'comment-input' : 'comment-input-side'}
+              aria-label={replyTarget ? `回复 @${replyTarget.name}` : '写下你的评论'}
               placeholder={replyTarget ? `回复 @${replyTarget.name}...` : '写下你的评论...'}
               rows={3}
               className="text-sm"
@@ -963,6 +1106,8 @@ export default function CommunityPostDetailView({
                   type="button"
                   variant="link"
                   size="sm"
+                  data-acbox-action="community_post_reply_cancel"
+                  data-acbox-label={replyTarget.name}
                   className="h-auto p-0 ml-2"
                   onClick={() => setReplyTarget(null)}
                 >
@@ -972,6 +1117,9 @@ export default function CommunityPostDetailView({
             )}
             <div className="flex justify-end">
               <Button
+                type="button"
+                data-acbox-action="community_post_comment_submit"
+                data-acbox-label={replyTarget ? 'reply' : 'comment'}
                 onClick={handleCommentSubmit}
                 className="btn-interactive"
                 size="sm"
@@ -1002,6 +1150,8 @@ export default function CommunityPostDetailView({
                       type="button"
                       variant="ghost"
                       size="sm"
+                      data-acbox-action="community_post_comment_like"
+                      data-acbox-label={comment.id}
                       className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
                       disabled={pendingCommentLikeIds[comment.id]}
                       onClick={() => handleCommentLike(comment.id)}
@@ -1013,6 +1163,8 @@ export default function CommunityPostDetailView({
                       type="button"
                       variant="ghost"
                       size="sm"
+                      data-acbox-action="community_post_comment_reply"
+                      data-acbox-label={comment.id}
                       className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
                       onClick={() => setReplyTarget({ id: comment.id, name: comment.user.name })}
                     >
@@ -1024,6 +1176,8 @@ export default function CommunityPostDetailView({
                           type="button"
                           variant="ghost"
                           size="sm"
+                          data-acbox-action="community_post_comment_offline"
+                          data-acbox-label={comment.id}
                           className="h-7 px-2 text-xs text-amber-600 hover:text-amber-700"
                           disabled={moderatingCommentId === comment.id}
                           onClick={() => void handleModeratorSetCommentStatus(comment.id, 0)}
@@ -1034,6 +1188,8 @@ export default function CommunityPostDetailView({
                           type="button"
                           variant="ghost"
                           size="sm"
+                          data-acbox-action="community_post_comment_delete"
+                          data-acbox-label={comment.id}
                           className="h-7 px-2 text-xs text-red-600 hover:text-red-700"
                           disabled={moderatingCommentId === comment.id}
                           onClick={() => void handleModeratorDeleteComment(comment.id)}
@@ -1065,6 +1221,8 @@ export default function CommunityPostDetailView({
                             type="button"
                             variant="ghost"
                             size="sm"
+                            data-acbox-action="community_post_comment_like"
+                            data-acbox-label={reply.id}
                             className="h-6 px-1.5 text-[11px] text-muted-foreground hover:text-primary"
                             disabled={pendingCommentLikeIds[reply.id]}
                             onClick={() => handleCommentLike(reply.id)}
@@ -1079,6 +1237,8 @@ export default function CommunityPostDetailView({
                             type="button"
                             variant="ghost"
                             size="sm"
+                            data-acbox-action="community_post_comment_reply"
+                            data-acbox-label={reply.id}
                             className="h-6 px-1.5 text-[11px] text-muted-foreground hover:text-primary"
                             onClick={() => setReplyTarget({ id: comment.id, name: reply.user.name })}
                           >
@@ -1090,6 +1250,8 @@ export default function CommunityPostDetailView({
                                 type="button"
                                 variant="ghost"
                                 size="sm"
+                                data-acbox-action="community_post_comment_offline"
+                                data-acbox-label={reply.id}
                                 className="h-6 px-1.5 text-[11px] text-amber-600 hover:text-amber-700"
                                 disabled={moderatingCommentId === reply.id}
                                 onClick={() => void handleModeratorSetCommentStatus(reply.id, 0)}
@@ -1100,6 +1262,8 @@ export default function CommunityPostDetailView({
                                 type="button"
                                 variant="ghost"
                                 size="sm"
+                                data-acbox-action="community_post_comment_delete"
+                                data-acbox-label={reply.id}
                                 className="h-6 px-1.5 text-[11px] text-red-600 hover:text-red-700"
                                 disabled={moderatingCommentId === reply.id}
                                 onClick={() => void handleModeratorDeleteComment(reply.id)}
@@ -1118,6 +1282,8 @@ export default function CommunityPostDetailView({
                       type="button"
                       variant="link"
                       size="sm"
+                      data-acbox-action="community_post_reply_expand"
+                      data-acbox-label={comment.id}
                       className="h-auto p-0 text-xs"
                       onClick={() =>
                         setExpandedReplies((prev) => ({
@@ -1136,6 +1302,8 @@ export default function CommunityPostDetailView({
                       type="button"
                       variant="link"
                       size="sm"
+                      data-acbox-action="community_post_reply_load_more"
+                      data-acbox-label={comment.id}
                       className="h-auto p-0 text-xs"
                       disabled={replyLoadingMap[comment.id]}
                       onClick={() => void handleLoadMoreReplies(comment.id)}
@@ -1157,6 +1325,7 @@ export default function CommunityPostDetailView({
       </CardContent>
     </Card>
   );
+  const commentsCard = renderCommentsCard({ includeAnchor: true });
 
   const currentPreviewUrl =
     selectedPreviewIndex !== null ? activePreviewImages[selectedPreviewIndex] || '' : '';
@@ -1176,6 +1345,8 @@ export default function CommunityPostDetailView({
               type="button"
               variant="ghost"
               size="icon"
+              data-acbox-action="community_post_preview_zoom_out"
+              data-acbox-label={post.id}
               className="bg-black/50 text-white hover:bg-black/70"
               onClick={() => handlePreviewZoom(previewZoom - 0.2)}
             >
@@ -1185,6 +1356,8 @@ export default function CommunityPostDetailView({
               type="button"
               variant="ghost"
               size="icon"
+              data-acbox-action="community_post_preview_reset"
+              data-acbox-label={post.id}
               className="bg-black/50 text-white hover:bg-black/70"
               onClick={() => {
                 setPreviewPosition({ x: 0, y: 0 });
@@ -1197,13 +1370,22 @@ export default function CommunityPostDetailView({
               type="button"
               variant="ghost"
               size="icon"
+              data-acbox-action="community_post_preview_zoom_in"
+              data-acbox-label={post.id}
               className="bg-black/50 text-white hover:bg-black/70"
               onClick={() => handlePreviewZoom(previewZoom + 0.2)}
             >
               <ZoomIn size={18} />
             </Button>
             <Button asChild type="button" variant="ghost" size="sm" className="bg-black/50 text-white hover:bg-black/70">
-              <a href={currentPreviewUrl} target="_blank" rel="noopener noreferrer" download>
+              <a
+                href={currentPreviewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+                data-acbox-action="community_post_preview_download"
+                data-acbox-label={post.id}
+              >
                 下载
               </a>
             </Button>
@@ -1211,6 +1393,8 @@ export default function CommunityPostDetailView({
               type="button"
               variant="ghost"
               size="icon"
+              data-acbox-action="community_post_preview_close"
+              data-acbox-label={post.id}
               className="bg-black/50 text-white hover:bg-black/70"
               onClick={closePreviewImage}
             >
@@ -1223,6 +1407,8 @@ export default function CommunityPostDetailView({
                 type="button"
                 variant="ghost"
                 size="icon"
+                data-acbox-action="community_post_preview_prev"
+                data-acbox-label={post.id}
                 className="absolute left-4 top-1/2 z-20 -translate-y-1/2 bg-black/45 text-white hover:bg-black/65"
                 onClick={handlePrevPreviewImage}
               >
@@ -1232,6 +1418,8 @@ export default function CommunityPostDetailView({
                 type="button"
                 variant="ghost"
                 size="icon"
+                data-acbox-action="community_post_preview_next"
+                data-acbox-label={post.id}
                 className="absolute right-4 top-1/2 z-20 -translate-y-1/2 bg-black/45 text-white hover:bg-black/65"
                 onClick={handleNextPreviewImage}
               >
@@ -1275,7 +1463,14 @@ export default function CommunityPostDetailView({
 
   return (
     <div className="mx-auto w-full max-w-[1680px] space-y-6 py-8 fade-in">
-      <Button variant="outline" size="sm" onClick={handleBackToCommunity} className="mb-2 h-8 px-3 py-1 self-start btn-interactive">
+      <Button
+        variant="outline"
+        size="sm"
+        data-acbox-action="community_post_back"
+        data-acbox-label={post.id}
+        onClick={handleBackToCommunity}
+        className="mb-2 h-8 px-3 py-1 self-start btn-interactive"
+      >
         <ArrowLeft size={16} className="mr-2" />
         返回社区
       </Button>
@@ -1312,7 +1507,13 @@ export default function CommunityPostDetailView({
                   </p>
                   {relatedAppHref && (
                     <Button asChild size="sm" className="mt-3 w-full bg-white/20 text-white hover:bg-white/30">
-                      <Link href={relatedAppHref}>查看游戏详情</Link>
+                      <Link
+                        href={relatedAppHref}
+                        data-acbox-action="community_post_related_game_detail"
+                        data-acbox-label={relatedApp?.pkg || post.id}
+                      >
+                        查看游戏详情
+                      </Link>
                     </Button>
                   )}
                 </CardContent>
@@ -1329,6 +1530,8 @@ export default function CommunityPostDetailView({
                     <button
                       key={item.id}
                       type="button"
+                      data-acbox-action="community_post_toc_jump"
+                      data-acbox-label={item.id}
                       className={cn(
                         'block w-full rounded-md px-3 py-2 text-left text-sm transition-colors',
                         activeTocId === item.id
@@ -1350,7 +1553,13 @@ export default function CommunityPostDetailView({
         <div className="min-w-0 space-y-6">
           <Card className="shadow-lg">
             <CardHeader className="p-4 pb-3">
-              <div className="flex items-start space-x-3">
+              <Link
+                href={authorProfileHref || '#'}
+                className="flex items-start space-x-3 rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary"
+                onClick={(event) => {
+                  if (!authorProfileHref) event.preventDefault();
+                }}
+              >
                 <Avatar className="w-10 h-10">
                   <AvatarImage src={post.user.avatarUrl} alt={post.user.name} />
                   <AvatarFallback>{post.user.name.substring(0, 2)}</AvatarFallback>
@@ -1375,7 +1584,7 @@ export default function CommunityPostDetailView({
                     </Badge>
                   ) : null}
                 </div>
-              </div>
+              </Link>
               {post.title && <h1 className="mt-3 text-base font-bold md:text-lg">{post.title}</h1>}
             </CardHeader>
 
@@ -1384,8 +1593,64 @@ export default function CommunityPostDetailView({
                 ref={articleRef}
                 className="mx-auto w-full max-w-[760px] px-1 text-[15px] leading-relaxed text-foreground/90 sm:px-2 sm:text-base"
                 dangerouslySetInnerHTML={{ __html: renderedContent.html }}
+                onPointerDownCapture={handleMarkdownPointerIntent}
                 onClick={handleMarkdownContainerClick}
               />
+
+              {linkPreviews.length > 0 && (
+                <div className="mx-auto w-full max-w-[760px] space-y-2 px-1 sm:px-2">
+                  {linkPreviews.map((preview) => (
+                    <a
+                      key={`${post.id}-link-preview-${preview.url}`}
+                      href={preview.url}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow ugc"
+                      data-acbox-action="community_post_link_preview_click"
+                      data-acbox-label={preview.url}
+                      className="flex gap-3 rounded-lg bg-muted/25 p-3 transition-colors hover:bg-muted/40"
+                      onClick={() => handleLinkPreviewClick(preview.url)}
+                    >
+                      {preview.image ? (
+                        <span className="relative block h-16 w-16 shrink-0 overflow-hidden rounded-md bg-muted">
+                          <Image
+                            src={preview.image}
+                            alt={preview.title || '链接预览'}
+                            fill
+                            className="object-cover"
+                          />
+                        </span>
+                      ) : preview.icon ? (
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-background/80">
+                          <Image
+                            src={preview.icon}
+                            alt={preview.title || preview.site_name || '链接图标'}
+                            width={32}
+                            height={32}
+                            className="h-8 w-8 object-contain"
+                          />
+                        </span>
+                      ) : (
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-background/80 text-muted-foreground">
+                          <ExternalLink className="h-5 w-5" aria-hidden="true" />
+                        </span>
+                      )}
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="line-clamp-1 text-sm font-medium text-foreground">
+                          {preview.title || preview.site_name || preview.url}
+                        </span>
+                        <span className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                          {preview.description || preview.url}
+                        </span>
+                        {preview.site_name ? (
+                          <span className="mt-1 block truncate text-[11px] text-muted-foreground/80">
+                            {preview.site_name}
+                          </span>
+                        ) : null}
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              )}
 
               {post.tags && post.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 pt-2">
@@ -1398,15 +1663,19 @@ export default function CommunityPostDetailView({
               )}
 
               {shouldRenderDetailCover && post.imageUrl && (
-                <div className="mx-auto mt-5 w-full max-w-[680px] rounded-lg overflow-hidden aspect-video relative bg-muted">
+                <div className="mx-auto mt-5 mb-8 w-full max-w-[680px] rounded-lg overflow-hidden aspect-video relative bg-muted sm:mb-10">
                   {!detailImageError ? (
                     <Image
                       key={imageRetry}
                       src={post.imageUrl}
                       alt={post.title || '帖子图片'}
                       fill
+                      priority
+                      sizes="(max-width: 768px) 100vw, 680px"
                       className="object-contain cursor-zoom-in"
                       data-ai-hint={post.imageAiHint || 'community post image detail'}
+                      data-acbox-action="community_post_image_preview"
+                      data-acbox-label={post.id}
                       onError={() => setDetailImageError(true)}
                       onClick={() => openPreviewImage(post.imageUrl || '')}
                     />
@@ -1416,11 +1685,13 @@ export default function CommunityPostDetailView({
                         type="button"
                         variant="outline"
                         size="sm"
-                      onClick={() => {
-                        setDetailImageError(false);
-                        setImageRetry((v) => v + 1);
-                      }}
-                    >
+                        data-acbox-action="community_post_image_retry"
+                        data-acbox-label={post.id}
+                        onClick={() => {
+                          setDetailImageError(false);
+                          setImageRetry((v) => v + 1);
+                        }}
+                      >
                         图片加载失败，点击重试
                       </Button>
                     </div>
@@ -1435,18 +1706,49 @@ export default function CommunityPostDetailView({
                   <Eye size={16} className="mr-1.5" />
                   {viewCount !== null ? `${viewCount} 次浏览` : '...'}
                 </div>
+                {post.heatScore ? (
+                  <div className="flex items-center">
+                    热度 {post.heatScore}
+                  </div>
+                ) : null}
               </div>
               <div className="w-full flex items-center justify-start gap-2 sm:gap-3 border-t pt-3">
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary px-2" onClick={handleLike}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  data-acbox-action="community_post_like"
+                  data-acbox-label={post.id}
+                  className="text-muted-foreground hover:text-primary px-2"
+                  onClick={handleLike}
+                >
                   <ThumbsUp size={18} className={`mr-1.5 ${isLiked ? 'fill-primary text-primary' : ''}`} /> {likeCount}
                 </Button>
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary px-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  data-acbox-action="community_post_comment_anchor"
+                  data-acbox-label={post.id}
+                  className="text-muted-foreground hover:text-primary px-2"
+                >
                   <MessageSquare size={18} className="mr-1.5" /> {totalCommentCount}
                 </Button>
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary px-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  data-acbox-action="community_post_bookmark"
+                  data-acbox-label={post.id}
+                  className="text-muted-foreground hover:text-primary px-2"
+                >
                   <Bookmark size={18} className="mr-1.5" /> 收藏
                 </Button>
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary px-2 ml-auto" onClick={handleSharePost}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  data-acbox-action="community_post_share"
+                  data-acbox-label={post.id}
+                  className="text-muted-foreground hover:text-primary px-2 ml-auto"
+                  onClick={handleSharePost}
+                >
                   <Share2 size={18} className="mr-1.5" /> 分享
                 </Button>
               </div>
@@ -1458,7 +1760,7 @@ export default function CommunityPostDetailView({
 
         <aside className="hidden xl:block">
           <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-1">
-            {commentsCard}
+            {renderCommentsCard()}
           </div>
         </aside>
       </div>

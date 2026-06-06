@@ -179,8 +179,20 @@ export default function SubmitResourcePage() {
 
       <Tabs defaultValue="request" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger value="request">求添加资源</TabsTrigger>
-          <TabsTrigger value="author">我是作者</TabsTrigger>
+          <TabsTrigger
+            value="request"
+            data-acbox-action="submit_resource_tab_request"
+            data-acbox-label="求添加资源"
+          >
+            求添加资源
+          </TabsTrigger>
+          <TabsTrigger
+            value="author"
+            data-acbox-action="submit_resource_tab_author"
+            data-acbox-label="我是作者"
+          >
+            我是作者
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="request">
@@ -190,7 +202,11 @@ export default function SubmitResourcePage() {
               <CardDescription>如果你发现我们缺少某些资源，请告诉我们。</CardDescription>
             </CardHeader>
             <Form {...requestForm}>
-              <form onSubmit={requestForm.handleSubmit(onRequestSubmit)}>
+              <form
+                data-acbox-action="submit_resource_request_form"
+                data-acbox-label="求添加资源表单"
+                onSubmit={requestForm.handleSubmit(onRequestSubmit)}
+              >
                 <CardContent className="space-y-6">
                   <FormField
                     control={requestForm.control}
@@ -223,7 +239,12 @@ export default function SubmitResourcePage() {
                   />
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full md:w-auto btn-interactive">
+                  <Button
+                    type="submit"
+                    className="w-full md:w-auto btn-interactive"
+                    data-acbox-action="submit_resource_request_submit"
+                    data-acbox-label="提交资源请求"
+                  >
                     提交请求
                   </Button>
                 </CardFooter>
@@ -241,7 +262,11 @@ export default function SubmitResourcePage() {
               </CardDescription>
             </CardHeader>
             <Form {...authorForm}>
-              <form onSubmit={authorForm.handleSubmit(onAuthorSubmit)}>
+              <form
+                data-acbox-action="submit_resource_author_form"
+                data-acbox-label="作者投稿表单"
+                onSubmit={authorForm.handleSubmit(onAuthorSubmit)}
+              >
                 <CardContent className="space-y-6">
                   <FormField
                     control={authorForm.control}
@@ -257,13 +282,21 @@ export default function SubmitResourcePage() {
                           >
                             <FormItem className="flex items-center space-x-2 space-y-0">
                               <FormControl>
-                                <RadioGroupItem value="app" />
+                                <RadioGroupItem
+                                  value="app"
+                                  data-acbox-action="submit_resource_type_app"
+                                  data-acbox-label="应用"
+                                />
                               </FormControl>
                               <FormLabel className="font-normal">应用</FormLabel>
                             </FormItem>
                             <FormItem className="flex items-center space-x-2 space-y-0">
                               <FormControl>
-                                <RadioGroupItem value="game" />
+                                <RadioGroupItem
+                                  value="game"
+                                  data-acbox-action="submit_resource_type_game"
+                                  data-acbox-label="游戏"
+                                />
                               </FormControl>
                               <FormLabel className="font-normal">游戏</FormLabel>
                             </FormItem>
@@ -356,6 +389,8 @@ export default function SubmitResourcePage() {
                                 onClick={() => removeImageUrl(index)}
                                 className="text-destructive hover:text-destructive"
                                 aria-label="删除图片链接"
+                                data-acbox-action="submit_resource_remove_image"
+                                data-acbox-label={`删除图片链接 ${index + 1}`}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -386,6 +421,8 @@ export default function SubmitResourcePage() {
                         size="sm"
                         onClick={() => appendImageUrl({ value: '' })}
                         className="mt-1 text-sm"
+                        data-acbox-action="submit_resource_add_image"
+                        data-acbox-label="添加图片链接"
                       >
                         <PlusCircle className="mr-2 h-4 w-4" />
                         添加图片链接
@@ -408,7 +445,12 @@ export default function SubmitResourcePage() {
                   />
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full md:w-auto btn-interactive">
+                  <Button
+                    type="submit"
+                    className="w-full md:w-auto btn-interactive"
+                    data-acbox-action="submit_resource_author_submit"
+                    data-acbox-label="提交作者投稿"
+                  >
                     提交投稿
                   </Button>
                 </CardFooter>

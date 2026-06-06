@@ -701,6 +701,8 @@ export default function GamesPage({
           <nav className="flex flex-col gap-1">
             <button
               type="button"
+              data-acbox-action="app_library_sidebar_category"
+              data-acbox-label="全部游戏"
               onClick={() => handleCategorySelect('all')}
               className={cn(
                 'flex items-center gap-3 rounded-full px-4 py-2.5 text-left transition-transform duration-200 hover:translate-x-1',
@@ -720,6 +722,8 @@ export default function GamesPage({
                 <button
                   key={category.id}
                   type="button"
+                  data-acbox-action="app_library_sidebar_category"
+                  data-acbox-label={category.name}
                   onClick={() => handleCategorySelect(category.name)}
                   className={cn(
                     'flex items-center gap-3 rounded-full px-4 py-2.5 text-left transition-transform duration-200 hover:translate-x-1',
@@ -745,6 +749,8 @@ export default function GamesPage({
                   <button
                     key={`theme-${tag.id}`}
                     type="button"
+                    data-acbox-action="app_library_sidebar_theme"
+                    data-acbox-label={tag.name}
                     onClick={() => handleThemeTagToggle(tag.name)}
                     className={cn(
                       'rounded-full bg-muted/70 px-3 py-1 text-xs transition-colors hover:bg-primary/14',
@@ -780,6 +786,8 @@ export default function GamesPage({
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
+                    data-acbox-action="app_library_sort_toggle"
+                    data-acbox-label={getSortLabel(sortMode)}
                     className="flex items-center gap-2 rounded-full bg-[#dadddf] px-5 py-2 text-sm font-semibold text-[#2c2f30] transition-colors hover:bg-[#cdd1d4]"
                     onClick={() =>
                       setSortMode((prev) =>
@@ -792,6 +800,8 @@ export default function GamesPage({
                   </button>
                   <button
                     type="button"
+                    data-acbox-action="app_library_high_score_toggle"
+                    data-acbox-label={onlyHighScore ? '关闭只看高分' : '开启只看高分'}
                     className={cn(
                       'flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold shadow-lg transition-opacity',
                       onlyHighScore
@@ -819,6 +829,8 @@ export default function GamesPage({
                     {searchInput ? (
                       <button
                         type="button"
+                        data-acbox-action="app_library_search_clear"
+                        data-acbox-label="清空搜索"
                         onClick={() => {
                           setSearchInput('');
                           setQueryKeyword('');
@@ -832,6 +844,8 @@ export default function GamesPage({
                   </label>
                   <button
                     type="submit"
+                    data-acbox-action="app_library_search_submit"
+                    data-acbox-label="搜索游戏库"
                     className="inline-flex min-h-14 items-center justify-center rounded-2xl bg-[#005e9f] px-6 text-sm font-bold text-white shadow-[0_16px_30px_-18px_rgba(0,94,159,0.9)] transition-opacity hover:opacity-90"
                   >
                     搜索游戏库
@@ -845,6 +859,8 @@ export default function GamesPage({
                 </span>
                 <button
                   type="button"
+                  data-acbox-action="app_library_quick_browse"
+                  data-acbox-label="综合推荐"
                   onClick={() => {
                     setSearchInput('');
                     setQueryKeyword('');
@@ -862,6 +878,8 @@ export default function GamesPage({
                   <button
                     key={`browse-${query}`}
                     type="button"
+                    data-acbox-action="app_library_quick_browse"
+                    data-acbox-label={query}
                     onClick={() => {
                       setSearchInput(query);
                       setQueryKeyword(query);
@@ -889,6 +907,8 @@ export default function GamesPage({
                   {hasActiveFilters ? (
                     <button
                       type="button"
+                      data-acbox-action="app_library_filter_reset"
+                      data-acbox-label="重置筛选"
                       onClick={resetAllFilters}
                       className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-zinc-600 transition-colors hover:bg-zinc-100"
                     >
@@ -906,6 +926,8 @@ export default function GamesPage({
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
+                          data-acbox-action="app_library_filter_category"
+                          data-acbox-label="全部"
                           onClick={() => handleCategorySelect('all')}
                           className={cn(
                             'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
@@ -920,6 +942,8 @@ export default function GamesPage({
                           <button
                             key={`category-chip-${category.id}`}
                             type="button"
+                            data-acbox-action="app_library_filter_category"
+                            data-acbox-label={category.name}
                             onClick={() => handleCategorySelect(category.name)}
                             className={cn(
                               'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
@@ -944,6 +968,8 @@ export default function GamesPage({
                           <button
                             key={`theme-chip-${tag.id}`}
                             type="button"
+                            data-acbox-action="app_library_filter_theme"
+                            data-acbox-label={tag.name}
                             onClick={() => handleThemeTagToggle(tag.name)}
                             className={cn(
                               'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
@@ -966,6 +992,8 @@ export default function GamesPage({
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
+                          data-acbox-action="app_library_filter_region"
+                          data-acbox-label="全部地区"
                           onClick={() => setSelectedRegion('all')}
                           className={cn(
                             'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
@@ -980,6 +1008,8 @@ export default function GamesPage({
                           <button
                             key={`region-chip-${region.id}`}
                             type="button"
+                            data-acbox-action="app_library_filter_region"
+                            data-acbox-label={region.name}
                             onClick={() => setSelectedRegion(region.name)}
                             className={cn(
                               'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
@@ -1004,6 +1034,8 @@ export default function GamesPage({
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
+                          data-acbox-action="app_library_filter_device"
+                          data-acbox-label="全平台"
                           onClick={() => setSelectedDevice('all')}
                           className={cn(
                             'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
@@ -1018,6 +1050,8 @@ export default function GamesPage({
                           <button
                             key={`device-chip-${device.id}`}
                             type="button"
+                            data-acbox-action="app_library_filter_device"
+                            data-acbox-label={device.name}
                             onClick={() => setSelectedDevice(device.id as DeviceFilter)}
                             className={cn(
                               'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
@@ -1042,6 +1076,8 @@ export default function GamesPage({
                           <button
                             key={`rating-chip-${option.id}`}
                             type="button"
+                            data-acbox-action="app_library_filter_rating"
+                            data-acbox-label={option.label}
                             onClick={() => setRatingFilter(option.id)}
                             className={cn(
                               'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
@@ -1065,6 +1101,8 @@ export default function GamesPage({
                           <button
                             key={`update-chip-${option.id}`}
                             type="button"
+                            data-acbox-action="app_library_filter_update_window"
+                            data-acbox-label={option.label}
                             onClick={() => setUpdateWindow(option.id)}
                             className={cn(
                               'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
@@ -1085,6 +1123,8 @@ export default function GamesPage({
                   {onlyHighScore ? (
                     <button
                       type="button"
+                      data-acbox-action="app_library_filter_chip_remove"
+                      data-acbox-label="只看高分"
                       onClick={() => setOnlyHighScore(false)}
                       className="flex items-center gap-2 rounded-full bg-[#ffe8ab] px-4 py-1.5 text-xs font-bold text-[#7a6000]"
                     >
@@ -1095,6 +1135,8 @@ export default function GamesPage({
                   {selectedCategoryName ? (
                     <button
                       type="button"
+                      data-acbox-action="app_library_filter_chip_remove"
+                      data-acbox-label={`分类：${selectedCategoryName}`}
                       onClick={() => handleCategorySelect('all')}
                       className="flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-medium text-zinc-600"
                     >
@@ -1105,6 +1147,8 @@ export default function GamesPage({
                   {selectedThemeTag ? (
                     <button
                       type="button"
+                      data-acbox-action="app_library_filter_chip_remove"
+                      data-acbox-label={`题材：${selectedThemeTag}`}
                       onClick={() => setSelectedThemeTag('')}
                       className="flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-medium text-zinc-600"
                     >
@@ -1115,6 +1159,8 @@ export default function GamesPage({
                   {selectedRegion !== 'all' ? (
                     <button
                       type="button"
+                      data-acbox-action="app_library_filter_chip_remove"
+                      data-acbox-label={`地区：${selectedRegion}`}
                       onClick={() => setSelectedRegion('all')}
                       className="flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-medium text-zinc-600"
                     >
@@ -1125,6 +1171,8 @@ export default function GamesPage({
                   {selectedDeviceName ? (
                     <button
                       type="button"
+                      data-acbox-action="app_library_filter_chip_remove"
+                      data-acbox-label={`平台：${selectedDeviceName}`}
                       onClick={() => setSelectedDevice('all')}
                       className="flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-medium text-zinc-600"
                     >
@@ -1135,6 +1183,8 @@ export default function GamesPage({
                   {ratingFilter !== 'all' ? (
                     <button
                       type="button"
+                      data-acbox-action="app_library_filter_chip_remove"
+                      data-acbox-label={`评分：${selectedRatingLabel}`}
                       onClick={() => setRatingFilter('all')}
                       className="flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-medium text-zinc-600"
                     >
@@ -1145,6 +1195,8 @@ export default function GamesPage({
                   {updateWindow !== 'all' ? (
                     <button
                       type="button"
+                      data-acbox-action="app_library_filter_chip_remove"
+                      data-acbox-label={`更新时间：${selectedUpdateLabel}`}
                       onClick={() => setUpdateWindow('all')}
                       className="flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-medium text-zinc-600"
                     >
@@ -1173,6 +1225,8 @@ export default function GamesPage({
               <span>{loadError}</span>
               <button
                 type="button"
+                data-acbox-action="app_library_reload"
+                data-acbox-label="重新加载游戏库"
                 onClick={() => setReloadToken((prev) => prev + 1)}
                 className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-200"
               >
@@ -1193,6 +1247,8 @@ export default function GamesPage({
               <div className="mt-6 flex flex-wrap justify-center gap-3">
                 <button
                   type="button"
+                  data-acbox-action="app_library_restore_default"
+                  data-acbox-label="恢复默认浏览"
                   onClick={() => {
                     resetAllFilters();
                     setSearchInput('');
@@ -1204,6 +1260,8 @@ export default function GamesPage({
                 </button>
                 <button
                   type="button"
+                  data-acbox-action="app_library_filter_reset"
+                  data-acbox-label="仅清空筛选"
                   onClick={resetAllFilters}
                   className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-100"
                 >
@@ -1229,6 +1287,8 @@ export default function GamesPage({
           <div className="mt-14 flex flex-col items-center gap-4">
             <button
               type="button"
+              data-acbox-action="app_library_load_more"
+              data-acbox-label="查看更多精彩游戏"
               onClick={() => {
                 if (isLoading || isLoadingMore || !hasMore) return;
                 void fetchGamePage(currentPage + 1, { append: true });
