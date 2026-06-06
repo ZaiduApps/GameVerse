@@ -428,6 +428,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
                 aria-label="更多操作"
               >
                 <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">更多操作</span>
               </button>
             </div>
 
@@ -494,6 +495,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
                             key={`${postId}-img-${imageIndex}`}
                             type="button"
                             onClick={() => setPreviewState({ postId, index: imageIndex })}
+                            aria-label={`预览第 ${imageIndex + 1} 张动态图片`}
                             className={cn(
                               'relative overflow-hidden rounded-lg text-left transition-[filter] hover:brightness-[0.98]',
                               isFeaturedHero ? 'aspect-video w-full' :
@@ -502,6 +504,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
                               orderClass,
                             )}
                           >
+                          <span className="sr-only">预览第 {imageIndex + 1} 张动态图片</span>
                           <Image
                             src={img || cover || '/favicon.ico'}
                             alt={post.title || post.summary || '动态图片'}
@@ -538,8 +541,10 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
                                 key={`${postId}-img-featured-${imageIndex}`}
                                 type="button"
                                 onClick={() => setPreviewState({ postId, index: imageIndex })}
+                                aria-label={`预览第 ${imageIndex + 1} 张动态图片`}
                                 className="relative aspect-square overflow-hidden rounded-lg text-left transition-[filter] hover:brightness-[0.98]"
                               >
+                                <span className="sr-only">预览第 {imageIndex + 1} 张动态图片</span>
                                 <Image
                                   src={img || cover || '/favicon.ico'}
                                   alt={post.title || post.summary || '动态图片'}
@@ -641,6 +646,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
           aria-label="关闭预览"
         >
           <X className="h-5 w-5" />
+          <span className="sr-only">关闭预览</span>
         </button>
         {previewImages.length > 1 ? (
           <button
@@ -653,6 +659,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
             aria-label="上一张"
           >
             <ChevronLeft className="h-5 w-5" />
+            <span className="sr-only">上一张</span>
           </button>
         ) : null}
         <div
@@ -688,6 +695,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
             aria-label="下一张"
           >
             <ChevronRight className="h-5 w-5" />
+            <span className="sr-only">下一张</span>
           </button>
         ) : null}
         <div className="absolute bottom-4 rounded-full bg-black/45 px-3 py-1 text-xs text-white">

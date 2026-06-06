@@ -372,6 +372,7 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-white/85">快速搜索</p>
                 <button
                   type="button"
+                  aria-label="打开快速搜索"
                   onClick={() => setSearchOverlayOpen(true)}
                   className="mt-3 flex h-10 w-full items-center justify-start gap-2 rounded-xl border border-white/35 bg-white/15 px-3 text-sm text-white/95 transition-colors hover:bg-white/22"
                 >
@@ -383,6 +384,7 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
                     <button
                       type="button"
                       key={`${tag}-${index}`}
+                      aria-label={`搜索 ${tag}`}
                       onClick={() => setSearchOverlayOpen(true)}
                       className="rounded-full border border-white/30 bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white/92 transition-colors hover:bg-white/25"
                     >
@@ -454,7 +456,9 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
                     setActiveIndex(index);
                   }}
                   className={isActive ? 'h-2 w-7 rounded-full bg-white' : 'h-2 w-2 rounded-full bg-white/45'}
-                />
+                >
+                  <span className="sr-only">切换到第 {index + 1} 张</span>
+                </button>
               );
             })}
           </div>
