@@ -936,6 +936,34 @@ export default function CommunityPostDetailView({
   const relatedApp = post.relatedApp;
   const relatedAppHref = relatedApp?.pkg ? `/app/${relatedApp.pkg}` : undefined;
   const relatedAppPrimaryTag = relatedApp?.regionTag || relatedApp?.tags?.[0] || (relatedApp?.pkg ? '国际服' : '');
+  const authorSummary = (
+    <>
+      <Avatar className="w-10 h-10">
+        <AvatarImage src={post.user.avatarUrl} alt={post.user.name} />
+        <AvatarFallback>{post.user.name.substring(0, 2)}</AvatarFallback>
+      </Avatar>
+      <div>
+        <div className="flex items-center gap-2">
+          <p className="text-base font-semibold text-foreground">{post.user.name}</p>
+          {post.user.level && (
+            <Badge variant="secondary" className="text-xs px-1.5 py-0.5 font-normal bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200">
+              Lv.{post.user.level}
+            </Badge>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {post.timestamp}
+          {post.source && ` · ${post.source}`}
+          {post.user.location && ` · ${post.user.location}`}
+        </p>
+        {canModerateTopic ? (
+          <Badge variant="outline" className="mt-1 text-[10px]">
+            版主模式
+          </Badge>
+        ) : null}
+      </div>
+    </>
+  );
   const handleTocJump = (headingId: string) => {
     const element = document.getElementById(headingId);
     if (!element) return;
@@ -1135,13 +1163,35 @@ export default function CommunityPostDetailView({
           {comments.map((comment) => (
             <div key={comment.id} className="space-y-2">
               <div className="flex items-start space-x-3">
-                <Avatar>
-                  <AvatarImage src={comment.user.avatarUrl} alt={comment.user.name} />
-                  <AvatarFallback>{comment.user.name.substring(0, 1)}</AvatarFallback>
-                </Avatar>
+                {comment.user.profileHref ? (
+                  <Link
+                    href={comment.user.profileHref}
+                    aria-label={`查看 ${comment.user.name} 的主页`}
+                    className="shrink-0 rounded-full"
+                  >
+                    <Avatar>
+                      <AvatarImage src={comment.user.avatarUrl} alt={comment.user.name} />
+                      <AvatarFallback>{comment.user.name.substring(0, 1)}</AvatarFallback>
+                    </Avatar>
+                  </Link>
+                ) : (
+                  <Avatar>
+                    <AvatarImage src={comment.user.avatarUrl} alt={comment.user.name} />
+                    <AvatarFallback>{comment.user.name.substring(0, 1)}</AvatarFallback>
+                  </Avatar>
+                )}
                 <div className="flex-grow bg-muted/30 p-3 rounded-md">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-sm text-foreground">{comment.user.name}</span>
+                    {comment.user.profileHref ? (
+                      <Link
+                        href={comment.user.profileHref}
+                        className="font-semibold text-sm text-foreground hover:text-primary"
+                      >
+                        {comment.user.name}
+                      </Link>
+                    ) : (
+                      <span className="font-semibold text-sm text-foreground">{comment.user.name}</span>
+                    )}
                     <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
                   </div>
                   <p className="text-sm text-foreground/90 whitespace-pre-line">{comment.text}</p>
@@ -1206,13 +1256,35 @@ export default function CommunityPostDetailView({
                 <div className="ml-12 space-y-2">
                   {(expandedReplies[comment.id] ? comment.replies : comment.replies.slice(0, 2)).map((reply) => (
                     <div key={reply.id} className="flex items-start space-x-2">
-                      <Avatar className="h-7 w-7">
-                        <AvatarImage src={reply.user.avatarUrl} alt={reply.user.name} />
-                        <AvatarFallback>{reply.user.name.substring(0, 1)}</AvatarFallback>
-                      </Avatar>
+                      {reply.user.profileHref ? (
+                        <Link
+                          href={reply.user.profileHref}
+                          aria-label={`查看 ${reply.user.name} 的主页`}
+                          className="shrink-0 rounded-full"
+                        >
+                          <Avatar className="h-7 w-7">
+                            <AvatarImage src={reply.user.avatarUrl} alt={reply.user.name} />
+                            <AvatarFallback>{reply.user.name.substring(0, 1)}</AvatarFallback>
+                          </Avatar>
+                        </Link>
+                      ) : (
+                        <Avatar className="h-7 w-7">
+                          <AvatarImage src={reply.user.avatarUrl} alt={reply.user.name} />
+                          <AvatarFallback>{reply.user.name.substring(0, 1)}</AvatarFallback>
+                        </Avatar>
+                      )}
                       <div className="flex-grow rounded-md bg-muted/20 p-2.5">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="font-semibold text-xs text-foreground">{reply.user.name}</span>
+                          {reply.user.profileHref ? (
+                            <Link
+                              href={reply.user.profileHref}
+                              className="font-semibold text-xs text-foreground hover:text-primary"
+                            >
+                              {reply.user.name}
+                            </Link>
+                          ) : (
+                            <span className="font-semibold text-xs text-foreground">{reply.user.name}</span>
+                          )}
                           <span className="text-[11px] text-muted-foreground">{reply.timestamp}</span>
                         </div>
                         <p className="text-xs text-foreground/90 whitespace-pre-line">{reply.text}</p>
@@ -1559,38 +1631,18 @@ export default function CommunityPostDetailView({
         <div className="min-w-0 space-y-6">
           <Card className="shadow-lg">
             <CardHeader className="p-4 pb-3">
-              <Link
-                href={authorProfileHref || '#'}
-                className="flex items-start space-x-3 rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary"
-                onClick={(event) => {
-                  if (!authorProfileHref) event.preventDefault();
-                }}
-              >
-                <Avatar className="w-10 h-10">
-                  <AvatarImage src={post.user.avatarUrl} alt={post.user.name} />
-                  <AvatarFallback>{post.user.name.substring(0, 2)}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-base font-semibold text-foreground">{post.user.name}</p>
-                    {post.user.level && (
-                      <Badge variant="secondary" className="text-xs px-1.5 py-0.5 font-normal bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200">
-                        Lv.{post.user.level}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {post.timestamp}
-                    {post.source && ` · ${post.source}`}
-                    {post.user.location && ` · ${post.user.location}`}
-                  </p>
-                  {canModerateTopic ? (
-                    <Badge variant="outline" className="mt-1 text-[10px]">
-                      版主模式
-                    </Badge>
-                  ) : null}
+              {authorProfileHref ? (
+                <Link
+                  href={authorProfileHref}
+                  className="flex items-start space-x-3 rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  {authorSummary}
+                </Link>
+              ) : (
+                <div className="flex items-start space-x-3 rounded-md">
+                  {authorSummary}
                 </div>
-              </Link>
+              )}
               {post.title && <h1 className="mt-3 text-base font-bold md:text-lg">{post.title}</h1>}
             </CardHeader>
 

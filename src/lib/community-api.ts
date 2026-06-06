@@ -109,6 +109,8 @@ export interface ApiCommunityPost {
 
 export interface ApiCommunityComment {
   _id?: string;
+  user_id?: string;
+  user_username?: string;
   user_name?: string;
   user_avatar?: string;
   content?: string;
@@ -123,7 +125,14 @@ export interface ApiCommunityComment {
 
 export interface CommunityCommentItem {
   id: string;
-  user: { name: string; avatarUrl: string; dataAiHint?: string };
+  user: {
+    id?: string;
+    username?: string;
+    name: string;
+    avatarUrl: string;
+    dataAiHint?: string;
+    profileHref?: string;
+  };
   timestamp: string;
   createdAt?: string;
   text: string;
@@ -446,12 +455,18 @@ export function toPostComments(list: ApiCommunityComment[]): Array<{
 }
 
 function toCommentItem(input: ApiCommunityComment): CommunityCommentItem {
+  const userId = String(input.user_id || '').trim();
+  const username = String(input.user_username || '').trim();
+  const profileTarget = username || (MONGO_OBJECT_ID_PATTERN.test(userId) ? userId : '');
   return {
     id: String(input._id || ''),
     user: {
+      id: userId || undefined,
+      username: username || undefined,
       name: input.user_name?.trim() || '匿名用户',
       avatarUrl: input.user_avatar?.trim() || FALLBACK_AVATAR,
       dataAiHint: 'user avatar',
+      profileHref: profileTarget ? `/u/${encodeURIComponent(profileTarget)}` : undefined,
     },
     timestamp: formatTimestamp(input.created_at),
     createdAt: normalizeRawTimestamp(input.created_at),

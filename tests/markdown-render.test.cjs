@@ -563,12 +563,15 @@ test('community comment mapper: keeps machine readable created time', () => {
   const threads = toCommentThreads([
     {
       _id: 'comment-1',
+      user_id: '111111111111111111111111',
+      user_username: 'commenter',
       user_name: '评论者',
       content: '评论正文',
       created_at: '2026-06-06T10:20:30.000Z',
       replies: [
         {
           _id: 'reply-1',
+          user_id: '222222222222222222222222',
           user_name: '回复者',
           content: '回复正文',
           created_at: '2026-06-06T10:21:30.000Z',
@@ -579,6 +582,8 @@ test('community comment mapper: keeps machine readable created time', () => {
 
   assert.equal(threads[0].createdAt, '2026-06-06T10:20:30.000Z');
   assert.equal(threads[0].replies[0].createdAt, '2026-06-06T10:21:30.000Z');
+  assert.equal(threads[0].user.profileHref, '/u/commenter');
+  assert.equal(threads[0].replies[0].user.profileHref, '/u/222222222222222222222222');
 });
 
 test('community seo: builds discussion forum posting json-ld from visible data', () => {
