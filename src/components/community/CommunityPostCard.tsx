@@ -180,6 +180,7 @@ export default function CommunityPostCard({
   const touchStartX = useRef<number | null>(null);
 
   const allImages = post.previewImages?.filter(Boolean) || (post.imageUrl ? [post.imageUrl] : []);
+  const shouldPrioritizeLeadImage = index < 2;
   const relatedApp = post.relatedApp;
   const relatedAppHref = relatedApp?.pkg ? `/app/${relatedApp.pkg}` : undefined;
   const relatedAppPrimaryTag =
@@ -551,6 +552,7 @@ export default function CommunityPostCard({
                     const spanClass = cell?.rowSpan ? 'row-span-2' : '';
                     const orderClass = cell?.orderFirst ? 'order-first' : '';
                     const isFeaturedHero = useFeaturedThreeLayout && imageIndex === 0;
+                    const isLeadImage = imageIndex === 0 && shouldPrioritizeLeadImage;
                     return isSingle ? (
                       <Link
                         key={`${post.id}-img-${imageIndex}`}
@@ -565,8 +567,8 @@ export default function CommunityPostCard({
                           fill
                           className="object-cover"
                           data-ai-hint={post.imageAiHint || 'community post image'}
-                          priority={post.id === '0'}
-                          loading="eager"
+                          priority={isLeadImage}
+                          fetchPriority={isLeadImage ? 'high' : undefined}
                           onLoad={(event) => {
                             const imgEl = event.currentTarget;
                             const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
@@ -594,6 +596,8 @@ export default function CommunityPostCard({
                           fill
                           className="object-cover"
                           sizes="220px"
+                          priority={isLeadImage}
+                          fetchPriority={isLeadImage ? 'high' : undefined}
                           onLoad={(event) => {
                             const imgEl = event.currentTarget;
                             const ratio = imgEl.naturalWidth / imgEl.naturalHeight;
