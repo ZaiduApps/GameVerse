@@ -37,8 +37,9 @@ const getCommunityPageData = cache(async (): Promise<{
 export async function generateMetadata(): Promise<Metadata> {
   const { config } = await getCommunityPageData();
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
-  const title = `${siteName} 社区 - 热门话题与最新动态`;
-  const description = '浏览 APKScc 社区最新帖子与热门话题，查看游戏讨论、攻略分享和玩家互动内容。';
+  const title = `${siteName} 社区 - 安卓游戏讨论、攻略分享与资源反馈动态`;
+  const description =
+    '浏览 APKScc 社区最新帖子、热门话题、安卓游戏讨论、攻略分享、资源反馈、版本体验和玩家互动动态，发现真实玩家正在关注的内容、实用经验与社区交流记录。';
   const shareImage = String(config?.basic?.share_image || '').trim();
 
   return {
@@ -69,7 +70,7 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName,
       type: 'website',
       locale: 'zh_CN',
-      images: shareImage ? [shareImage] : [],
+      images: shareImage ? [{ url: shareImage, width: 1200, height: 630, alt: `${siteName} 社区` }] : [],
     },
     twitter: {
       card: 'summary_large_image',
