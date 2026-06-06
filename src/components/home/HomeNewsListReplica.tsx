@@ -64,8 +64,13 @@ export default function HomeNewsListReplica({
           <h3 className="text-xl font-black tracking-tight text-[#1f2428] dark:text-[#edf2fb] sm:text-2xl">{title}</h3>
           <p className="mt-1 text-sm font-medium text-[#687076] dark:text-[#9ca6b8]">{subtitle}</p>
         </div>
-        <Link href={moreHref} className="text-sm font-bold text-[#005e9f] hover:underline dark:text-[#7fc1ff] dark:hover:text-[#a9d6ff]">
+        <Link
+          href={moreHref}
+          className="text-sm font-bold text-[#005e9f] hover:underline dark:text-[#7fc1ff] dark:hover:text-[#a9d6ff]"
+          aria-label={`查看更多${title}`}
+        >
           更多
+          <span className="sr-only">{title}</span>
         </Link>
       </div>
 

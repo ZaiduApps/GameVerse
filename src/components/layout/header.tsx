@@ -130,7 +130,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
               <span className="text-lg font-bold sm:text-xl tracking-wide">{siteName}</span>
             </Link>
             {/* Tablet nav: primary items + "更多" dropdown */}
-            <nav className="hidden md:flex lg:hidden items-center gap-1">
+            <nav className="hidden md:flex lg:hidden items-center gap-1" aria-label="平板主导航">
               {navItems.filter((i) => i.priority === 'primary').map((item) => (
                 <Link
                   key={item.label}
@@ -174,7 +174,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
             </nav>
 
             {/* Desktop nav: all items */}
-            <nav className="hidden lg:flex items-center justify-start">
+            <nav className="hidden lg:flex items-center justify-start" aria-label="桌面主导航">
               <ul className="flex items-center justify-start lg:space-x-1 xl:space-x-3 text-left">
                 {navItems.map((item) => (
                   <li key={item.label}>
@@ -331,7 +331,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                     <span>{siteName}</span>
                   </Link>
 
-                  <nav className="flex-grow mt-4">
+                  <nav className="flex-grow mt-4" aria-label="移动主导航">
                     <ul className="flex flex-col space-y-1 px-4">
                       {navItems.map((item) => (
                         <li key={item.label}>

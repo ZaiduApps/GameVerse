@@ -182,6 +182,13 @@ function formatCompactCount(value: number): string {
   return String(value);
 }
 
+function formatA11ySubject(value: string): string {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  const chars = Array.from(normalized);
+  if (chars.length <= 40) return normalized;
+  return `${chars.slice(0, 40).join('')}...`;
+}
+
 interface MultiCellLayout {
   aspectClass: string;
   rowSpan?: boolean;
@@ -383,6 +390,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
         const hashtags = extractHashtags(post);
         const titleText = String(post.title || '').trim();
         const hasMeaningfulTitle = isMeaningfulTitle(titleText);
+        const actionSubject = formatA11ySubject(titleText || previewText || '这条动态');
 
         const appHref = post.app_info?.pkg
           ? `/app/${encodeURIComponent(post.app_info.pkg)}`
@@ -591,7 +599,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
                 )}
                 onClick={() => handleLike(postId)}
                 disabled={Boolean(likePendingMap[postId])}
-                aria-label="点赞"
+                aria-label={`点赞${actionSubject}`}
                 aria-pressed={liked}
               >
                 <Heart className={cn('h-4 w-4', liked && 'fill-[#64748b] dark:fill-[#7fc1ff]')} />
@@ -600,9 +608,10 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
               <Link
                 href={`/community/post/${postId}#comments`}
                 className="inline-flex items-center gap-1 transition-colors hover:text-[#6b7789] dark:hover:text-[#a9b7ca]"
-                aria-label="评论"
+                aria-label={`查看${actionSubject}的评论`}
               >
                 <MessageCircle className="h-4 w-4" />
+                <span className="sr-only">评论</span>
                 <span>{formatCompactCount(Number(post.comment_count || 0))}</span>
               </Link>
               <span className="inline-flex items-center gap-1" aria-label="浏览量">

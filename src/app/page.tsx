@@ -560,6 +560,7 @@ export default async function HomePage() {
                 </div>
                 <Link href={getAlbumHref(heavyweightAlbum)} className="text-sm font-bold text-[#005e9f] hover:underline">
                   查看全部
+                  <span className="sr-only">{heavyweightAlbum.title || '重磅推荐'}</span>
                 </Link>
               </div>
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-3.5">
@@ -617,6 +618,7 @@ export default async function HomePage() {
                 <h3 className="text-xl font-black tracking-tight">{preregAlbum.title || '事前登录'}</h3>
                 <Link href={getAlbumHref(preregAlbum)} className="text-sm font-bold text-[#005e9f] hover:underline">
                   查看全部
+                  <span className="sr-only">{preregAlbum.title || '事前登录'}</span>
                 </Link>
               </div>
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -713,6 +715,7 @@ export default async function HomePage() {
                   </div>
                   <Link href={getAlbumHref(album)} className="text-sm font-bold text-[#005e9f] hover:underline">
                     查看全部
+                    <span className="sr-only">{album.title || '推荐专辑'}</span>
                   </Link>
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -768,6 +771,7 @@ export default async function HomePage() {
                 <div className="flex flex-col items-end gap-2">
                   <Link href={getAlbumHref(rankingAlbum)} className="text-sm font-bold text-[#005e9f] hover:underline">
                     查看全部
+                    <span className="sr-only">{rankingAlbum.title || '热门游戏'}</span>
                   </Link>
                   <div className="rounded-full bg-[#eff1f2] p-1 text-[10px] font-bold text-[#595c5d] dark:bg-[#223043] dark:text-[#9ca6b8]">
                     <span className="rounded-full bg-white px-3 py-1 dark:bg-[#111824]">总榜</span>
@@ -822,6 +826,7 @@ export default async function HomePage() {
                 </h3>
                 <Link href={getAlbumHref(toolsAlbum)} className="text-sm font-bold text-[#005e9f] hover:underline">
                   查看全部
+                  <span className="sr-only">{toolsAlbum.title || '效率工具'}</span>
                 </Link>
               </div>
               <div className="grid grid-cols-2 gap-3">

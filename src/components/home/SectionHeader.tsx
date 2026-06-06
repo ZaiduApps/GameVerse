@@ -20,8 +20,13 @@ export default function SectionHeader({ title, icon: Icon, iconClassName, moreHr
         <Tag className="text-base md:text-lg font-bold text-foreground">{title}</Tag>
       </div>
       {moreHref && (
-        <Link href={moreHref} className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center">
+        <Link
+          href={moreHref}
+          className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center"
+          aria-label={`查看更多${title}`}
+        >
           {moreText}
+          <span className="sr-only">{title}</span>
           <ChevronRight className="w-4 h-4 ml-0.5" />
         </Link>
       )}

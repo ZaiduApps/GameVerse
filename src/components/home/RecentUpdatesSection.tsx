@@ -159,8 +159,13 @@ export default function RecentUpdatesSection({
         <div className="flex items-center gap-3">
           <h3 className="text-xl font-black tracking-tight dark:text-[#edf2fb]">{title || '最近更新'}</h3>
           {viewAllHref ? (
-            <Link href={viewAllHref} className="text-sm font-bold text-[#005e9f] hover:underline">
+            <Link
+              href={viewAllHref}
+              className="text-sm font-bold text-[#005e9f] hover:underline"
+              aria-label={`${viewAllText}${title || '最近更新'}`}
+            >
               {viewAllText}
+              <span className="sr-only">{title || '最近更新'}</span>
             </Link>
           ) : null}
         </div>
