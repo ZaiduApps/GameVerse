@@ -432,7 +432,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
               </button>
             </div>
 
-            <Link href={`/community/post/${postId}`} className="block">
+            <div className="relative">
               {hasMeaningfulTitle ? <p className="line-clamp-2 text-[16px] font-semibold leading-[1.45] text-[#2a3038] dark:text-[#edf2fb]">{titleText}</p> : null}
               <p
                 className={cn(
@@ -448,7 +448,14 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
                 </p>
               ) : null}
               <span className="mt-1.5 inline-block text-[12px] text-[#9aa3af] dark:text-[#7f8da3]">全文</span>
-            </Link>
+              <Link
+                href={`/community/post/${postId}`}
+                className="absolute inset-0 z-30 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                aria-label={`查看动态：${titleText || previewText}`}
+              >
+                <span className="sr-only">查看动态：{titleText || previewText}</span>
+              </Link>
+            </div>
 
             {images.length > 0 && (
               <div className={cn(
@@ -571,10 +578,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
             )}
 
             {post.app_info?.name && appHref ? (
-              <Link
-                href={appHref}
-                className="mt-3 mr-auto inline-flex max-w-[420px] items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#f7f9fc] dark:hover:bg-[#223043]"
-              >
+              <div className="relative mt-3 mr-auto inline-flex max-w-[420px] items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#f7f9fc] dark:hover:bg-[#223043]">
                 <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-md">
                   {post.app_info.icon ? (
                     <Image
@@ -592,7 +596,14 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
                   <p className="truncate text-[13px] font-medium text-[#2c323a] dark:text-[#edf2fb]">{post.app_info.name}</p>
                 </div>
                 <ChevronRight className="h-3.5 w-3.5 text-[#b0b7c3] dark:text-[#7f8da3]" />
-              </Link>
+                <Link
+                  href={appHref}
+                  className="absolute inset-0 z-30 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                  aria-label={`查看${post.app_info.name}`}
+                >
+                  <span className="sr-only">查看{post.app_info.name}</span>
+                </Link>
+              </div>
             ) : null}
 
             <div className="mt-3 flex items-center justify-end gap-5 border-t border-[#f3f4f6] pt-2 text-[12px] font-normal text-[#98a2b3] dark:border-[#223043] dark:text-[#7f8da3]">

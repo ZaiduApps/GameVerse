@@ -237,17 +237,26 @@ function normalizeAnnouncements(
 const AnnouncementWrapper = ({ announcement, children }: { announcement: Announcement; children: React.ReactNode }) => {
   const href = announcement.link?.url?.trim();
   if (!announcement.link || !href) return <>{children}</>;
+  const label = announcement.title || announcement.summary || announcement.content || '公告详情';
+  const linkClassName =
+    'absolute inset-0 z-10 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]';
   if (announcement.link.type === 'outer') {
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className="block">
+      <div className="relative">
+        <a href={href} target="_blank" rel="noopener noreferrer" className={linkClassName} aria-label={`查看公告：${label}`}>
+          <span className="sr-only">查看公告：{label}</span>
+        </a>
         {children}
-      </a>
+      </div>
     );
   }
   return (
-    <Link href={href} className="block">
+    <div className="relative">
+      <Link href={href} className={linkClassName} aria-label={`查看公告：${label}`}>
+        <span className="sr-only">查看公告：{label}</span>
+      </Link>
       {children}
-    </Link>
+    </div>
   );
 };
 

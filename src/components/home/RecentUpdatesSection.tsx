@@ -111,10 +111,9 @@ export default function RecentUpdatesSection({
       ].filter(Boolean);
 
       return (
-        <Link
+        <article
           key={game._id}
-          href={getGameHref(game)}
-          className="flex min-h-[94px] items-center gap-3 rounded-2xl bg-white px-3 py-2.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-[#0f1723] dark:shadow-[0_6px_14px_rgba(0,0,0,0.35)]"
+          className="group relative flex min-h-[94px] items-center gap-3 rounded-2xl bg-white px-3 py-2.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-[#0f1723] dark:shadow-[0_6px_14px_rgba(0,0,0,0.35)]"
         >
           <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-[#dadddf] dark:bg-[#1a2433]">
             <Image src={game.icon || fallbackImage} alt={game.name} fill className="object-cover" sizes="56px" />
@@ -148,7 +147,14 @@ export default function RecentUpdatesSection({
             <Download className="h-3 w-3" />
             查看
           </span>
-        </Link>
+          <Link
+            href={getGameHref(game)}
+            className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+            aria-label={`查看${game.name}更新详情`}
+          >
+            <span className="sr-only">查看{game.name}更新详情</span>
+          </Link>
+        </article>
       );
     })
   );

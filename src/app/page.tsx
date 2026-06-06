@@ -565,9 +565,8 @@ export default async function HomePage() {
               </div>
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-3.5">
                 {heavyweightGames.map((game) => (
-                  <Link
+                  <article
                     key={game._id}
-                    href={getGameHref(game)}
                     className="group relative flex h-full w-full flex-col rounded-[18px] bg-white p-2 shadow-[0_8px_18px_rgba(12,15,16,0.08)] transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_24px_rgba(12,15,16,0.12)] dark:bg-[#111824] dark:shadow-[0_8px_18px_rgba(0,0,0,0.35)] dark:hover:shadow-[0_14px_24px_rgba(0,0,0,0.45)]"
                   >
                     {typeof game.star === 'number' && game.star > 0 && (
@@ -597,7 +596,14 @@ export default async function HomePage() {
                     <span className="mt-1.5 inline-flex w-full items-center justify-center rounded-full bg-[#b3d4ff] py-1 text-[11px] font-black text-[#004a7e] transition-colors group-hover:bg-[#005e9f] group-hover:text-white">
                       下载
                     </span>
-                  </Link>
+                    <Link
+                      href={getGameHref(game)}
+                      className="absolute inset-0 z-30 rounded-[18px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                      aria-label={`查看${game.name}详情`}
+                    >
+                      <span className="sr-only">查看{game.name}详情</span>
+                    </Link>
+                  </article>
                 ))}
               </div>
             </section>
@@ -633,10 +639,9 @@ export default async function HomePage() {
                     const hasMetrics = hasScore || deviceLabels.length > 0;
 
                     return (
-                  <Link
+                  <article
                     key={game._id}
-                    href={getGameHref(game)}
-                      className="group flex h-full flex-col justify-between gap-4 rounded-[22px] bg-[#eff1f2] p-4 transition-colors hover:bg-[#e6e8ea] dark:bg-[#162132] dark:hover:bg-[#1c2b40] sm:h-full sm:flex-row sm:items-center sm:justify-between"
+                    className="group relative flex h-full flex-col justify-between gap-4 rounded-[22px] bg-[#eff1f2] p-4 transition-colors hover:bg-[#e6e8ea] dark:bg-[#162132] dark:hover:bg-[#1c2b40] sm:h-full sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex items-center gap-4">
                       <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl bg-[#dadddf] dark:bg-[#223043]">
@@ -694,7 +699,14 @@ export default async function HomePage() {
                     >
                       预约
                     </span>
-                  </Link>
+                    <Link
+                      href={getGameHref(game)}
+                      className="absolute inset-0 z-30 rounded-[22px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                      aria-label={`查看${game.name}预约详情`}
+                    >
+                      <span className="sr-only">查看{game.name}预约详情</span>
+                    </Link>
+                  </article>
                     );
                   })()
                 ))}
@@ -720,10 +732,9 @@ export default async function HomePage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {extraGames.slice(0, 6).map((game) => (
-                    <Link
+                    <article
                       key={game._id}
-                      href={getGameHref(game)}
-                      className="rounded-2xl bg-white p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-[#111824] dark:shadow-[0_6px_14px_rgba(0,0,0,0.35)]"
+                      className="relative rounded-2xl bg-white p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-[#111824] dark:shadow-[0_6px_14px_rgba(0,0,0,0.35)]"
                     >
                       <div className="relative mb-2.5 aspect-square overflow-hidden rounded-xl bg-[#e6e8ea] dark:bg-[#1a2433]">
                         <Image
@@ -736,7 +747,14 @@ export default async function HomePage() {
                       </div>
                       <p className="line-clamp-1 text-sm font-black">{game.name}</p>
                       <p className="mt-1 line-clamp-1 text-xs text-[#595c5d] dark:text-[#9ca6b8]">{game.tags?.[0] || game.summary || '热门推荐'}</p>
-                    </Link>
+                      <Link
+                        href={getGameHref(game)}
+                        className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                        aria-label={`查看${game.name}详情`}
+                      >
+                        <span className="sr-only">查看{game.name}详情</span>
+                      </Link>
+                    </article>
                   ))}
                 </div>
               </section>
@@ -781,7 +799,7 @@ export default async function HomePage() {
               </div>
               <div className="space-y-4">
                 {rankingGames.slice(0, 8).map((game, index) => (
-                  <Link key={game._id} href={getGameHref(game)} className="group flex items-center gap-3">
+                  <article key={game._id} className="group relative flex items-center gap-3">
                     <span
                       className={`w-8 text-center text-xl font-black italic ${
                         index === 0 ? 'text-[#b71211]' : index === 1 ? 'text-[#b71211]/75' : index === 2 ? 'text-[#b71211]/55' : 'text-[#abadae]'
@@ -805,7 +823,14 @@ export default async function HomePage() {
                       </p>
                     </div>
                     {index < 3 && <Flame className="h-4 w-4 text-[#22c55e]" />}
-                  </Link>
+                    <Link
+                      href={getGameHref(game)}
+                      className="absolute inset-0 z-30 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                      aria-label={`查看${game.name}详情`}
+                    >
+                      <span className="sr-only">查看{game.name}详情</span>
+                    </Link>
+                  </article>
                 ))}
               </div>
               <Link
@@ -831,10 +856,9 @@ export default async function HomePage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {toolGames.slice(0, 6).map((game) => (
-                  <Link
+                  <article
                     key={game._id}
-                    href={getGameHref(game)}
-                    className="rounded-2xl bg-white p-4 text-center shadow-sm transition-shadow hover:shadow-md"
+                    className="relative rounded-2xl bg-white p-4 text-center shadow-sm transition-shadow hover:shadow-md"
                   >
                     <div className="relative mx-auto mb-2.5 h-12 w-12 overflow-hidden rounded-full bg-[#eff1f2]">
                       <Image
@@ -846,7 +870,14 @@ export default async function HomePage() {
                       />
                     </div>
                     <p className="line-clamp-1 text-sm font-black">{game.name}</p>
-                  </Link>
+                    <Link
+                      href={getGameHref(game)}
+                      className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                      aria-label={`查看${game.name}详情`}
+                    >
+                      <span className="sr-only">查看{game.name}详情</span>
+                    </Link>
+                  </article>
                 ))}
               </div>
             </section>

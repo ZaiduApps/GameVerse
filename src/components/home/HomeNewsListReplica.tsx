@@ -87,10 +87,9 @@ export default function HomeNewsListReplica({
           const isRecommended = isTruthyFlag(article.is_recommended);
 
           return (
-            <Link
+            <article
               key={article._id || article.gid || article.name}
-              href={articleHref}
-              className="group flex flex-col overflow-hidden rounded-xl border border-[#edf0f2] bg-white transition-all duration-200 hover:border-[#c8dcee] hover:shadow-[0_8px_20px_rgba(0,94,159,0.08)] dark:border-[#2a3442] dark:bg-[#0f1723] dark:hover:border-[#3a5068] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.42)]"
+              className="group relative flex flex-col overflow-hidden rounded-xl border border-[#edf0f2] bg-white transition-all duration-200 hover:border-[#c8dcee] hover:shadow-[0_8px_20px_rgba(0,94,159,0.08)] dark:border-[#2a3442] dark:bg-[#0f1723] dark:hover:border-[#3a5068] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.42)]"
             >
               <div className="relative aspect-video overflow-hidden bg-[#e6e8ea] dark:bg-[#1a2433]">
                 <Image
@@ -130,7 +129,14 @@ export default function HomeNewsListReplica({
                   {likes > 0 && <span>{likes} 点赞</span>}
                 </div>
               </div>
-            </Link>
+              <Link
+                href={articleHref}
+                className="absolute inset-0 z-30 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                aria-label={`查看社区动态：${article.name}`}
+              >
+                <span className="sr-only">查看社区动态：{article.name}</span>
+              </Link>
+            </article>
           );
         })}
       </div>
