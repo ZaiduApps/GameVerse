@@ -153,7 +153,6 @@ export default async function CommunityPage() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(topicItemListJsonLd) }}
         />
       ) : null}
-      <h1 className="sr-only">{siteName} 社区</h1>
       <CommunityPageView initialData={initialData} />
     </>
   );
