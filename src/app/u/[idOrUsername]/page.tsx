@@ -167,6 +167,30 @@ export default async function PublicUserPage({
       ],
     },
   };
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: '首页',
+        item: absoluteUrl('/'),
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: '社区',
+        item: absoluteUrl('/community'),
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: `${displayName} 的主页`,
+        item: canonicalUrl,
+      },
+    ],
+  };
   const itemListJsonLd =
     data.posts.length > 0
       ? {
@@ -221,6 +245,7 @@ export default async function PublicUserPage({
   return (
     <main className="mx-auto max-w-5xl space-y-6 py-6 md:py-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       {itemListJsonLd ? (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
       ) : null}
