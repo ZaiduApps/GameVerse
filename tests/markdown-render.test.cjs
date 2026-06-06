@@ -120,10 +120,32 @@ function loadCommunitySeoUtils() {
     module: moduleObj,
     exports: moduleObj.exports,
     require: (id) => {
+      if (id === '@/lib/community-profile') return loadCommunityProfileUtils();
       if (id === '@/lib/seo') return loadSeoUtils();
       return require(id);
     },
     process,
+  };
+
+  vm.runInNewContext(compiled, sandbox);
+  return moduleObj.exports;
+}
+
+function loadCommunityProfileUtils() {
+  const filePath = path.join(process.cwd(), 'src/lib/community-profile.ts');
+  const source = fs.readFileSync(filePath, 'utf8');
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2020,
+    },
+  }).outputText;
+
+  const moduleObj = { exports: {} };
+  const sandbox = {
+    module: moduleObj,
+    exports: moduleObj.exports,
+    require,
   };
 
   vm.runInNewContext(compiled, sandbox);
@@ -139,6 +161,7 @@ const {
   toCommentThreads,
   toCommunityPost,
 } = loadCommunityApiUtils();
+const { getCommunityAuthorProfileHref } = loadCommunityProfileUtils();
 const { buildCommunityPostDiscussionJsonLd } = loadCommunitySeoUtils();
 
 function plainJsonValue(value) {
@@ -521,6 +544,37 @@ test('community post mapper: keeps link click ranking stats', () => {
       url: 'https://example.com/body',
     },
   ]);
+});
+
+test('community author profile helper: prefers username over object id', () => {
+  const post = toCommunityPost({
+    _id: 'post-3',
+    author_id: '111111111111111111111111',
+    author_type: 'user',
+    author_username: 'alice',
+    author_name: 'Alice',
+    content: '正文',
+  });
+
+  assert.equal(post.authorId, '111111111111111111111111');
+  assert.equal(post.authorUsername, 'alice');
+  assert.equal(getCommunityAuthorProfileHref(post), '/u/alice');
+  assert.equal(
+    getCommunityAuthorProfileHref({
+      author_id: '222222222222222222222222',
+      authorId: '222222222222222222222222',
+      authorType: 'user',
+    }),
+    '/u/222222222222222222222222',
+  );
+  assert.equal(
+    getCommunityAuthorProfileHref({
+      authorId: 'admin-1',
+      authorType: 'admin',
+      authorUsername: 'admin',
+    }),
+    '',
+  );
 });
 
 test('community link click reporter: sends keepalive payload', async () => {

@@ -1,4 +1,5 @@
 import type { CommunityCommentThread } from '@/lib/community-api';
+import { getCommunityAuthorProfileHref } from '@/lib/community-profile';
 import { absoluteUrl, hasSeoMarkupNoise, normalizeSeoAssetUrl, sanitizeSeoText } from '@/lib/seo';
 import type { CommunityPost } from '@/types';
 
@@ -41,9 +42,8 @@ export function getCommunityPostShareImage(post: CommunityPost, fallbackImage: s
 }
 
 export function getCommunityAuthorProfileUrl(post: CommunityPost): string | undefined {
-  const target = post.authorUsername || post.authorId || '';
-  if (post.authorType !== 'user' || !target) return undefined;
-  return absoluteUrl(`/u/${encodeURIComponent(target)}`);
+  const href = getCommunityAuthorProfileHref(post);
+  return href ? absoluteUrl(href) : undefined;
 }
 
 function getAuthorAvatarImage(post: CommunityPost): string | undefined {

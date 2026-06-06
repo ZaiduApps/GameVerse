@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { trackedApiFetch } from '@/lib/api';
 import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
+import { getCommunityAuthorProfileHref } from '@/lib/community-profile';
 import { useRouter } from 'next/navigation';
 
 interface CommunityPostCardProps {
@@ -185,10 +186,7 @@ export default function CommunityPostCard({
     relatedApp?.regionTag || relatedApp?.tags?.[0] || (relatedApp?.pkg ? '国际服' : '');
   const postId = String(post.id || '').trim();
   const postHref = postId ? `/community/post/${encodeURIComponent(postId)}` : '/community';
-  const authorProfileHref =
-    post.authorType === 'user' && post.authorId
-      ? `/u/${encodeURIComponent(post.authorId)}`
-      : '';
+  const authorProfileHref = getCommunityAuthorProfileHref(post);
   const handleOpenPost = () => {
     if (!postId) return;
     onOpenPost?.(postId);

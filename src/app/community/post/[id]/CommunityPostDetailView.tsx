@@ -10,6 +10,7 @@ import { ArrowLeft, Bookmark, ChevronLeft, ChevronRight, ExternalLink, Eye, Mess
 
 import { buildRenderedMarkdownDocument, cn } from '@/lib/utils';
 import { apiUrl, trackedApiFetch } from '@/lib/api';
+import { getCommunityAuthorProfileHref } from '@/lib/community-profile';
 import { hasValidCommunityReturnIntent, requestCommunityReturnRestore } from '@/lib/community-return';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
@@ -137,11 +138,7 @@ export default function CommunityPostDetailView({
   const [moderationTopicId, setModerationTopicId] = useState('');
   const [activeTocId, setActiveTocId] = useState('');
   const articleRef = useRef<HTMLElement | null>(null);
-  const authorProfileTarget = post.authorUsername || post.authorId || '';
-  const authorProfileHref =
-    post.authorType === 'user' && authorProfileTarget
-      ? `/u/${encodeURIComponent(authorProfileTarget)}`
-      : '';
+  const authorProfileHref = getCommunityAuthorProfileHref(post);
 
   const postTopicIds = useMemo(
     () =>
