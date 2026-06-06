@@ -51,18 +51,24 @@ export default function AppShell({ children, siteName, logoUrl, siteConfig }: Ap
 
   return (
     <>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[10001] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-foreground focus:shadow-lg focus:ring-2 focus:ring-primary"
+      >
+        跳到主要内容
+      </a>
       <Suspense fallback={null}>
         <PageTransitionLoader />
       </Suspense>
 
       {isStandaloneDownloadPage ? (
-        <main className="min-h-screen">{children}</main>
+        <main id="main-content" className="min-h-screen">{children}</main>
       ) : isGameDetailPage ? (
         <>
           <div className="hidden lg:block">
             <Header siteName={siteName} logoUrl={logoUrl} />
           </div>
-          <main className="min-h-screen flex-grow">{children}</main>
+          <main id="main-content" className="min-h-screen flex-grow">{children}</main>
           <div className="hidden lg:block">
             <Footer config={siteConfig} />
           </div>
@@ -70,7 +76,7 @@ export default function AppShell({ children, siteName, logoUrl, siteConfig }: Ap
       ) : (
         <>
           <Header siteName={siteName} logoUrl={logoUrl} />
-          <main className="container mx-auto flex-grow px-4 py-8">{children}</main>
+          <main id="main-content" className="container mx-auto flex-grow px-4 py-8">{children}</main>
           <Footer config={siteConfig} />
         </>
       )}

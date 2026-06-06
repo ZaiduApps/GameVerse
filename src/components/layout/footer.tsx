@@ -60,14 +60,14 @@ export default function Footer({ config }: FooterProps) {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between gap-8 mb-8">
             <div className="md:w-1/3 lg:w-1/4">
-              <h3 className="text-xl font-bold text-foreground mb-3 tracking-wide">{basic.site_name}</h3>
+              <p className="text-xl font-bold text-foreground mb-3 tracking-wide">{basic.site_name}</p>
               <p className="text-sm">{footer.footer_text}</p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
               {quick_links.map((group, groupIndex) => (
                 <div key={group.group_name}>
-                  <h4 className="font-semibold text-foreground mb-3">{group.group_name}</h4>
+                  <p className="font-semibold text-foreground mb-3">{group.group_name}</p>
                   <ul className="space-y-2">
                       {(group.links || [])
                         .filter((link) => isSafeFooterLink(link.url))
@@ -90,7 +90,7 @@ export default function Footer({ config }: FooterProps) {
             <>
               <Separator className="my-6 bg-border/50" />
               <div className="mb-6">
-                <h4 className="text-sm font-semibold text-foreground mb-3 text-center md:text-left">友情链接</h4>
+                <p className="text-sm font-semibold text-foreground mb-3 text-center md:text-left">友情链接</p>
                 <div className="flex flex-wrap justify-center md:justify-start gap-x-4 gap-y-2">
                    {friend_links.filter((link) => isSafeFooterLink(link.url)).sort((a, b) => a.sort - b.sort).map(link => (
                       <Link key={`${link.name}-${link.url}-${link.sort}`} href={link.url} target="_blank" rel="noopener noreferrer"

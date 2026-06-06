@@ -199,6 +199,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
               <Button
                 variant="outline"
                 size="icon"
+                aria-label="打开搜索"
                 className="h-9 w-9 rounded-xl border border-border/20 bg-card/90 shadow-sm transition-colors hover:bg-primary/8 hover:text-foreground hover:border-primary/15"
                 onClick={() => setSearchOverlayOpen(true)}
               >
@@ -229,7 +230,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
             </div>
 
             <div className="md:hidden">
-              <Button variant="ghost" size="icon" onClick={() => setSearchOverlayOpen(true)}>
+              <Button variant="ghost" size="icon" aria-label="打开搜索" onClick={() => setSearchOverlayOpen(true)}>
                 <Search className="h-5 w-5" />
               </Button>
             </div>
@@ -237,7 +238,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0" aria-label="打开用户菜单">
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={user?.avatar} alt={user?.name || user?.username} />
                       <AvatarFallback>{(user?.name || user?.username || 'U').substring(0, 1).toUpperCase()}</AvatarFallback>

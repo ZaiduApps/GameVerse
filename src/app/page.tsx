@@ -26,7 +26,7 @@ import { getClientLandingAppData, type ClientLandingAppData } from '@/lib/client
 import type { Announcement, ApiAlbum, ApiArticle, ApiBanner, ApiDynamicPost, ApiGame, HomeData } from '@/types';
 import { trackedApiFetch } from '@/lib/api';
 import { getPublicSiteConfig } from '@/lib/site-config';
-import { absoluteUrl } from '@/lib/seo';
+import { absoluteUrl, getSiteShareImageUrl } from '@/lib/seo';
 
 const FALLBACK_GAME_IMAGE = '/favicon.ico';
 const FALLBACK_AVATAR = '/favicon.ico';
@@ -281,7 +281,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const siteSlogan = config?.basic?.site_slogan || 'APKScc';
   const seoDescription = config?.seo?.description || 'APKScc - 安卓游戏与应用下载平台';
   const siteName = config?.basic?.site_name || 'APKScc';
-  const shareImage = config?.basic?.share_image || '';
+  const shareImage = getSiteShareImageUrl(config?.basic?.share_image);
   const keywords = (config?.seo?.keywords || 'APKScc')
     .split(',')
     .map((k) => k.trim())
@@ -314,7 +314,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description: seoDescription,
       url: absoluteUrl('/'),
       siteName: siteName,
-      images: shareImage ? [shareImage] : [],
+      images: [{ url: shareImage, width: 1200, height: 630, alt: siteName }],
       type: 'website',
       locale: 'zh_CN',
     },
@@ -322,7 +322,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: 'summary_large_image',
       title: siteSlogan,
       description: seoDescription,
-      images: shareImage ? [shareImage] : [],
+      images: [shareImage],
     },
   };
 }

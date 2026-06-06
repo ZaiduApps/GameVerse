@@ -1345,6 +1345,7 @@ export default function CommunityPostDetailView({
               type="button"
               variant="ghost"
               size="icon"
+              aria-label="缩小图片"
               data-acbox-action="community_post_preview_zoom_out"
               data-acbox-label={post.id}
               className="bg-black/50 text-white hover:bg-black/70"
@@ -1356,6 +1357,7 @@ export default function CommunityPostDetailView({
               type="button"
               variant="ghost"
               size="icon"
+              aria-label="重置图片缩放"
               data-acbox-action="community_post_preview_reset"
               data-acbox-label={post.id}
               className="bg-black/50 text-white hover:bg-black/70"
@@ -1370,6 +1372,7 @@ export default function CommunityPostDetailView({
               type="button"
               variant="ghost"
               size="icon"
+              aria-label="放大图片"
               data-acbox-action="community_post_preview_zoom_in"
               data-acbox-label={post.id}
               className="bg-black/50 text-white hover:bg-black/70"
@@ -1393,6 +1396,7 @@ export default function CommunityPostDetailView({
               type="button"
               variant="ghost"
               size="icon"
+              aria-label="关闭图片预览"
               data-acbox-action="community_post_preview_close"
               data-acbox-label={post.id}
               className="bg-black/50 text-white hover:bg-black/70"
@@ -1407,6 +1411,7 @@ export default function CommunityPostDetailView({
                 type="button"
                 variant="ghost"
                 size="icon"
+                aria-label="上一张图片"
                 data-acbox-action="community_post_preview_prev"
                 data-acbox-label={post.id}
                 className="absolute left-4 top-1/2 z-20 -translate-y-1/2 bg-black/45 text-white hover:bg-black/65"
@@ -1418,6 +1423,7 @@ export default function CommunityPostDetailView({
                 type="button"
                 variant="ghost"
                 size="icon"
+                aria-label="下一张图片"
                 data-acbox-action="community_post_preview_next"
                 data-acbox-label={post.id}
                 className="absolute right-4 top-1/2 z-20 -translate-y-1/2 bg-black/45 text-white hover:bg-black/65"

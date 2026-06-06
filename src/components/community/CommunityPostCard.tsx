@@ -464,7 +464,7 @@ export default function CommunityPostCard({
           </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" aria-label="打开帖子操作菜单">
                 <MoreHorizontal size={20} />
               </Button>
             </DropdownMenuTrigger>
