@@ -672,7 +672,7 @@ test('community seo: builds discussion forum posting json-ld from visible data',
   const comments = [
     {
       id: 'comment-1',
-      user: { name: '评论者', avatarUrl: '/favicon.ico' },
+      user: { name: '评论者', avatarUrl: '/favicon.ico', profileHref: '/u/commenter' },
       timestamp: '06-06 10:20',
       createdAt: '2026-06-06T10:20:30.000Z',
       text: '有效评论',
@@ -680,7 +680,7 @@ test('community seo: builds discussion forum posting json-ld from visible data',
       replies: [
         {
           id: 'reply-1',
-          user: { name: '回复者', avatarUrl: '/favicon.ico' },
+          user: { name: '回复者', avatarUrl: '/favicon.ico', profileHref: '/u/222222222222222222222222' },
           timestamp: '06-06 10:21',
           createdAt: '2026-06-06T10:21:30.000Z',
           text: '有效回复',
@@ -728,6 +728,8 @@ test('community seo: builds discussion forum posting json-ld from visible data',
   assert.equal(jsonLd.sharedContent[0].image, 'https://apks.cc/favicon.ico');
   assert.equal(jsonLd.comment.length, 1);
   assert.equal(jsonLd.comment[0].datePublished, '2026-06-06T10:20:30.000Z');
+  assert.equal(jsonLd.comment[0].author.url, 'https://apks.cc/u/commenter');
   assert.equal(jsonLd.comment[0].comment.length, 1);
   assert.equal(jsonLd.comment[0].comment[0].datePublished, '2026-06-06T10:21:30.000Z');
+  assert.equal(jsonLd.comment[0].comment[0].author.url, 'https://apks.cc/u/222222222222222222222222');
 });

@@ -1,4 +1,4 @@
-import type { CommunityCommentThread } from '@/lib/community-api';
+import type { CommunityCommentItem, CommunityCommentThread } from '@/lib/community-api';
 import { getCommunityAuthorProfileHref } from '@/lib/community-profile';
 import { absoluteUrl, hasSeoMarkupNoise, normalizeSeoAssetUrl, sanitizeSeoText } from '@/lib/seo';
 import type { CommunityPost } from '@/types';
@@ -89,6 +89,23 @@ function buildLinkedPageMentions(post: CommunityPost): LinkedPageMention[] {
     .slice(0, 5);
 }
 
+function normalizeCommentAuthorUrl(href?: string): string | undefined {
+  const value = String(href || '').trim();
+  if (!value) return undefined;
+  if (/^https?:\/\//i.test(value)) return value;
+  if (value.startsWith('/u/')) return absoluteUrl(value);
+  return undefined;
+}
+
+function buildCommentAuthor(user?: CommunityCommentItem['user']) {
+  return {
+    '@type': 'Person',
+    name: sanitizeSeoText(user?.name || '匿名用户') || '匿名用户',
+    url: normalizeCommentAuthorUrl(user?.profileHref),
+    image: normalizeSeoAssetUrl(user?.avatarUrl) || undefined,
+  };
+}
+
 export function buildCommunityPostDiscussionJsonLd(params: {
   post: CommunityPost;
   comments: CommunityCommentThread[];
@@ -159,9 +176,7 @@ export function buildCommunityPostDiscussionJsonLd(params: {
           text,
           datePublished: comment.createdAt || undefined,
           author: {
-            '@type': 'Person',
-            name: sanitizeSeoText(comment.user?.name || '匿名用户') || '匿名用户',
-            image: normalizeSeoAssetUrl(comment.user?.avatarUrl) || undefined,
+            ...buildCommentAuthor(comment.user),
           },
           interactionStatistic: [
             {
@@ -177,9 +192,7 @@ export function buildCommunityPostDiscussionJsonLd(params: {
               text: sanitizeSeoText(reply.text || ''),
               datePublished: reply.createdAt || undefined,
               author: {
-                '@type': 'Person',
-                name: sanitizeSeoText(reply.user?.name || '匿名用户') || '匿名用户',
-                image: normalizeSeoAssetUrl(reply.user?.avatarUrl) || undefined,
+                ...buildCommentAuthor(reply.user),
               },
               interactionStatistic: [
                 {
