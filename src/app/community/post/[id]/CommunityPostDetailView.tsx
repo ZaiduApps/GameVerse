@@ -330,8 +330,9 @@ export default function CommunityPostDetailView({
         preset: 'detail',
         blockedLinkHosts: DETAIL_BLOCKED_LINK_HOSTS,
         injectHeadingAnchors: true,
+        renderFirstHeadingMatchingTextAsPlainBlock: post.title || post.summary,
       }),
-    [post.content],
+    [post.content, post.summary, post.title],
   );
   const linkPreviews = useMemo(() => {
     const byUrl = new Map<string, NonNullable<CommunityPost['linkPreviews']>[number]>();

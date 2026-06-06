@@ -40,6 +40,7 @@ interface RenderMarkdownOptions {
   blockedLinkHosts?: string[];
   preset?: "default" | "detail";
   injectHeadingAnchors?: boolean;
+  renderFirstHeadingMatchingTextAsPlainBlock?: string;
 }
 
 export interface MarkdownHeadingItem {
@@ -460,6 +461,9 @@ const stripHtmlTags = (value: string): string =>
     .replace(/\s+/g, " ")
     .trim();
 
+const normalizeHeadingComparisonText = (value: string): string =>
+  stripHtmlTags(value).replace(/\s+/g, " ").trim().toLowerCase();
+
 const renderListItem = (content: string, className: string): string =>
   className ? `<li class="${className}">${content}</li>` : `<li>${content}</li>`;
 
@@ -690,17 +694,34 @@ export const buildRenderedMarkdownDocument = (
 
     const headings: MarkdownHeadingItem[] = [];
     let headingIndex = 0;
+    let renderedMatchingHeadingAsPlainBlock = false;
+    const headingDemotionTarget = normalizeHeadingComparisonText(
+      String(options?.renderFirstHeadingMatchingTextAsPlainBlock || ""),
+    );
     const htmlWithAnchors = finalHtml.replace(
       /<h([1-4])([^>]*)>([\s\S]*?)<\/h\1>/g,
       (match, level, rawAttrs, inner) => {
         const text = stripHtmlTags(restoreMarkdownTokens(inner, tokens));
         if (!text) return match;
+        const shouldRenderHeadingAsPlainBlock =
+          Number(level) === 1 &&
+          !renderedMatchingHeadingAsPlainBlock &&
+          headingDemotionTarget &&
+          normalizeHeadingComparisonText(text) === headingDemotionTarget;
+        if (shouldRenderHeadingAsPlainBlock) {
+          renderedMatchingHeadingAsPlainBlock = true;
+          const plainAttrs = rawAttrs
+            .replace(/\sdata-toc-source="[^"]*"/g, "")
+            .replace(/\sid="[^"]*"/g, "");
+          return `<p${plainAttrs}>${inner}</p>`;
+        }
+        const nextLevel = level;
         const headingId = `post-heading-${headingIndex}`;
         headingIndex += 1;
         headings.push({
           id: headingId,
           text,
-          level: Number(level),
+          level: Number(nextLevel),
           source: /data-toc-source="inferred"/.test(rawAttrs) ? "inferred" : "heading",
         });
         const nextAttrs = resolveHeadingAttrs(
@@ -708,7 +729,7 @@ export const buildRenderedMarkdownDocument = (
           headingId,
           Boolean(options?.injectHeadingAnchors),
         );
-        return `<h${level}${nextAttrs}>${inner}</h${level}>`;
+        return `<h${nextLevel}${nextAttrs}>${inner}</h${nextLevel}>`;
       },
     );
 

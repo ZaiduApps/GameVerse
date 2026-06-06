@@ -368,6 +368,20 @@ test('markdown document builder: heading toc text restores inline link tokens', 
   assert.match(doc.html, /href="https:\/\/example\.com\/game"/);
 });
 
+test('markdown document builder: renders duplicated detail title heading as plain block', () => {
+  const doc = buildRenderedMarkdownDocument('# 无尽梦回 评价讨论\n\n正文内容', {
+    preset: 'detail',
+    injectHeadingAnchors: true,
+    renderFirstHeadingMatchingTextAsPlainBlock: '无尽梦回 评价讨论',
+  });
+
+  assert.equal(doc.headings.length, 0);
+  assert.doesNotMatch(doc.html, /<h1\b/);
+  assert.doesNotMatch(doc.html, /id="post-heading-0"/);
+  assert.match(doc.html, /<p[^>]*>无尽梦回 评价讨论<\/p>/);
+  assert.match(doc.html, /text-3xl font-semibold/);
+});
+
 test('markdown regression: insecure images render as safe text', () => {
   const input = '![unsafe](http://example.com/image.png)';
   const html = renderMarkdown(input).__html;
