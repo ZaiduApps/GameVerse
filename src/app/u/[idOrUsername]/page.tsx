@@ -267,7 +267,7 @@ export default async function PublicUserPage({
       : null;
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 py-6 md:py-8">
+    <section className="mx-auto max-w-5xl space-y-6 py-6 md:py-8" aria-label={`${displayName} 的社区主页`}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       {itemListJsonLd ? (
@@ -399,6 +399,6 @@ export default async function PublicUserPage({
           })}
         </CardContent>
       </Card>
-    </main>
+    </section>
   );
 }
