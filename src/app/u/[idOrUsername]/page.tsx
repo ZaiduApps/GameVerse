@@ -356,6 +356,10 @@ export default async function PublicUserPage({
                       <img
                         src={images[0]}
                         alt={getPostTitle(post)}
+                        width={96}
+                        height={64}
+                        loading="lazy"
+                        decoding="async"
                         className={images.length === 1 ? 'col-span-2 h-full w-full object-cover' : 'h-full w-full object-cover'}
                       />
                       {images.slice(1, 3).map((image, index) => (
@@ -363,6 +367,10 @@ export default async function PublicUserPage({
                           key={`${post._id}-preview-${image}`}
                           src={image}
                           alt={`${getPostTitle(post)} 配图 ${index + 2}`}
+                          width={48}
+                          height={64}
+                          loading="lazy"
+                          decoding="async"
                           className="h-full w-full object-cover"
                         />
                       ))}

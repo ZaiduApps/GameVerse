@@ -262,6 +262,19 @@ test('markdown regression: defined-image html compatibility', () => {
     '<p class="defined-image"><img src="https://uu.fp.ps.netease.com/file/678df67414dda3f1c43bc49bkJDlgYay06" /></p>';
   const html = renderMarkdown(input).__html;
   assert.match(html, /<img alt="内容配图" src="https:\/\/uu\.fp\.ps\.netease\.com\/file\/678df67414dda3f1c43bc49bkJDlgYay06"/);
+  assert.match(html, /loading="eager" decoding="async"/);
+});
+
+test('markdown regression: first image eager and later images lazy', () => {
+  const input = [
+    '![首图](https://example.com/first.png)',
+    '',
+    '![第二张](https://example.com/second.png)',
+  ].join('\n');
+  const html = renderMarkdown(input).__html;
+
+  assert.match(html, /<img alt="首图" src="https:\/\/example\.com\/first\.png" loading="eager" decoding="async"/);
+  assert.match(html, /<img alt="第二张" src="https:\/\/example\.com\/second\.png" loading="lazy" decoding="async"/);
 });
 
 test('markdown regression: acbox scheme mapped to safe trigger', () => {
@@ -518,7 +531,7 @@ test('markdown detail preset: upgraded section headings and unordered list items
   const listItemClass = html.match(/<li class="([^"]+)">第一条提示<\/li>/)?.[1] || '';
   const quoteClass = html.match(/<blockquote class="([^"]+)">引用说明<\/blockquote>/)?.[1] || '';
   const codeClass = html.match(/<pre class="([^"]+)"><code class="language-ts">/)?.[1] || '';
-  const imageClass = html.match(/<img alt="内容配图" src="https:\/\/example\.com\/image\.png" class="([^"]+)" \/>/)?.[1] || '';
+  const imageClass = html.match(/<img alt="内容配图" src="https:\/\/example\.com\/image\.png" loading="eager" decoding="async" class="([^"]+)" \/>/)?.[1] || '';
   const thClass = html.match(/<th class="([^"]+)">名称<\/th>/)?.[1] || '';
   const tdClass = html.match(/<td class="([^"]+)">评分<\/td>/)?.[1] || '';
   const hrClass = html.match(/<hr class="([^"]+)" \/>/)?.[1] || '';

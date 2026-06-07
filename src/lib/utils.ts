@@ -360,6 +360,7 @@ const replaceMarkdownImageSyntax = (
 ): string => {
   let output = "";
   let index = 0;
+  let renderedImageCount = 0;
 
   while (index < value.length) {
     const start = value.indexOf("![", index);
@@ -384,14 +385,20 @@ const replaceMarkdownImageSyntax = (
     }
 
     output += value.slice(index, start);
+    const rawUrl = value.slice(targetStart, targetEnd);
+    const imageLoading = renderedImageCount === 0 ? "eager" : "lazy";
     output += stashMarkdownToken(
       tokens,
       renderSafeImage(
         value.slice(start + 2, labelEnd),
-        value.slice(targetStart, targetEnd),
+        rawUrl,
         classSet,
+        imageLoading,
       ),
     );
+    if (isSafeHttpsUrl(rawUrl.trim())) {
+      renderedImageCount += 1;
+    }
     index = targetEnd + 1;
   }
 
@@ -465,6 +472,7 @@ const renderSafeImage = (
   alt: string,
   urlRaw: string,
   classSet: MarkdownClassSet,
+  loading: "eager" | "lazy",
 ): string => {
   const url = urlRaw.trim();
   if (!isSafeHttpsUrl(url)) {
@@ -472,7 +480,7 @@ const renderSafeImage = (
   }
   const safeAlt = escapeHtmlAttribute((alt || '').trim() || '内容配图');
   const safeSrc = escapeHtmlAttribute(url);
-  return `<img alt="${safeAlt}" src="${safeSrc}" class="${classSet.image}" />`;
+  return `<img alt="${safeAlt}" src="${safeSrc}" loading="${loading}" decoding="async" class="${classSet.image}" />`;
 };
 
 const stripHtmlTags = (value: string): string =>
