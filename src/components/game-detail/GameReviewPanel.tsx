@@ -542,7 +542,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
       }
       setAdminEmailSwitchEnabled(result.enabled);
       toast({
-        title: checked ? '已开启全站邮件提醒' : '已关闭全站邮件提醒',
+        title: checked ? '已开启社区回复邮件总开关' : '已关闭社区回复邮件总开关',
         description: result.message,
       });
     } finally {
@@ -629,8 +629,8 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Switch
-                checked={effectiveEmailNotifyEnabled}
-                disabled={!isAuthenticated || !adminEmailSwitchEnabled || isSavingEmailNotify}
+                checked={emailNotifyEnabled}
+                disabled={!isAuthenticated || isSavingEmailNotify}
                 onCheckedChange={(checked) => {
                   void handleEmailNotifySwitch(Boolean(checked));
                 }}
@@ -639,7 +639,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
             </div>
             {!adminEmailSwitchEnabled ? (
               <Badge variant="outline" className="text-[10px]">
-                管理员已关闭
+                总开关已关闭
               </Badge>
             ) : null}
           </div>
@@ -650,7 +650,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
                 管理员开关
               </p>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-[#595c5d]">全站游戏评论邮件提醒</span>
+                <span className="text-xs text-[#595c5d]">社区回复邮件总开关</span>
                 <Switch
                   checked={adminEmailSwitchEnabled}
                   disabled={isSavingAdminSwitch}

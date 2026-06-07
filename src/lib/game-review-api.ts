@@ -781,8 +781,8 @@ export async function updateGameReviewEmailPreference(params: {
 export async function getGameReviewAdminEmailSwitch(token: string): Promise<{ enabled: boolean | null; source: 'remote' | 'local' }> {
   const auth = String(token || '').trim();
   if (!auth) return { enabled: readLocalBoolean(ADMIN_EMAIL_SWITCH_LOCAL_KEY), source: 'local' };
-  const result = await requestCandidates<{ game_review_email_enabled?: boolean }>(
-    ['/admin/game-reviews/settings', '/game/reviews/admin/settings'],
+  const result = await requestCandidates<{ community_reply_email_enabled?: boolean; game_review_email_enabled?: boolean }>(
+    ['/admin/community/reply-email/settings', '/admin/game-reviews/settings', '/game/reviews/admin/settings'],
     {
       method: 'GET',
       headers: {
@@ -793,7 +793,7 @@ export async function getGameReviewAdminEmailSwitch(token: string): Promise<{ en
     },
   );
   if (!result.ok) return { enabled: readLocalBoolean(ADMIN_EMAIL_SWITCH_LOCAL_KEY), source: 'local' };
-  const enabled = Boolean(result.data?.game_review_email_enabled);
+  const enabled = Boolean(result.data?.community_reply_email_enabled ?? result.data?.game_review_email_enabled);
   writeLocalBoolean(ADMIN_EMAIL_SWITCH_LOCAL_KEY, enabled);
   return { enabled, source: 'remote' };
 }
@@ -806,9 +806,12 @@ export async function updateGameReviewAdminEmailSwitch(params: {
   if (!auth) {
     return { ok: false, enabled: Boolean(params.enabled), source: 'local', message: '登录状态已失效' };
   }
-  const body = JSON.stringify({ game_review_email_enabled: Boolean(params.enabled) });
+  const body = JSON.stringify({
+    community_reply_email_enabled: Boolean(params.enabled),
+    game_review_email_enabled: Boolean(params.enabled),
+  });
   const result = await requestCandidates<any>(
-    ['/admin/game-reviews/settings', '/game/reviews/admin/settings'],
+    ['/admin/community/reply-email/settings', '/admin/game-reviews/settings', '/game/reviews/admin/settings'],
     {
       method: 'PATCH',
       headers: {

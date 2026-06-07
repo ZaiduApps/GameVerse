@@ -332,7 +332,7 @@ export default function ProfilePage() {
         return;
       }
       setAdminEmailSwitchEnabled(result.enabled);
-      toast({ title: checked ? '已开启全站邮件提醒' : '已关闭全站邮件提醒', description: result.message });
+      toast({ title: checked ? '已开启社区回复邮件总开关' : '已关闭社区回复邮件总开关', description: result.message });
     } finally {
       setIsSavingAdminEmailSwitch(false);
     }
@@ -805,8 +805,8 @@ export default function ProfilePage() {
                         </p>
                       </div>
                       <Switch
-                        checked={adminEmailSwitchEnabled && emailNotifyEnabled}
-                        disabled={!adminEmailSwitchEnabled || isSavingEmailNotify}
+                        checked={emailNotifyEnabled}
+                        disabled={isSavingEmailNotify}
                         onCheckedChange={(checked) => {
                           void handleToggleEmailNotify(Boolean(checked));
                         }}
@@ -816,7 +816,7 @@ export default function ProfilePage() {
                     </div>
                     {!adminEmailSwitchEnabled ? (
                       <p className="mt-3 text-xs text-amber-600">
-                        管理员当前已关闭全站邮件提醒，个人开关暂不可用。
+                        社区回复邮件总开关当前关闭，系统消息邮件仍按后台消息通知策略处理。
                       </p>
                     ) : null}
                   </div>
@@ -825,9 +825,9 @@ export default function ProfilePage() {
                     <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="font-medium">管理员：全站游戏评论邮件提醒</p>
+                          <p className="font-medium">管理员：社区回复邮件总开关</p>
                           <p className="text-sm text-muted-foreground">
-                            关闭后，全体用户回复与系统消息邮件通知都会暂停。
+                            控制帖子回复与评论回复邮件，系统消息邮件由后台消息通知策略控制。
                           </p>
                         </div>
                         <Switch
@@ -837,7 +837,7 @@ export default function ProfilePage() {
                             void handleToggleAdminEmailSwitch(Boolean(checked));
                           }}
                           data-acbox-action="profile_admin_email_notify_toggle"
-                          data-acbox-label="全站通知邮件提醒"
+                          data-acbox-label="社区回复邮件总开关"
                         />
                       </div>
                     </div>
