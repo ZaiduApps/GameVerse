@@ -30,7 +30,7 @@ export function buildCommunityPostSeoDescription(post: CommunityPost): string {
     (hasSeoMarkupNoise(post.summary) && content.length > summary.length)
       ? content || summary
       : summary || content) || '查看社区帖子详情';
-  return clampCommunitySeoText(source, 180);
+  return clampCommunitySeoText(source, 120);
 }
 
 export function getCommunityPostContentImage(post: CommunityPost): string {

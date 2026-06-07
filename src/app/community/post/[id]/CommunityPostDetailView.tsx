@@ -1645,6 +1645,7 @@ export default function CommunityPostDetailView({
             </CardHeader>
 
             <CardContent className="p-4 pt-2 space-y-4 sm:space-y-5">
+              <h2 className="sr-only">帖子正文与玩家讨论内容</h2>
               <article
                 ref={articleRef}
                 className="mx-auto w-full max-w-[760px] px-1 text-[15px] leading-relaxed text-foreground/90 sm:px-2 sm:text-base"

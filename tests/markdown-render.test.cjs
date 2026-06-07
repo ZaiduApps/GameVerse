@@ -183,7 +183,7 @@ const {
   toCommunityPost,
 } = loadCommunityApiUtils();
 const { getCommunityAuthorProfileHref } = loadCommunityProfileUtils();
-const { buildCommunityPostDiscussionJsonLd } = loadCommunitySeoUtils();
+const { buildCommunityPostDiscussionJsonLd, buildCommunityPostSeoDescription } = loadCommunitySeoUtils();
 const { normalizeNotificationTarget, resolveNotificationTarget } = loadNotificationTargetUtils();
 
 function plainJsonValue(value) {
@@ -768,6 +768,17 @@ test('community seo: builds discussion forum posting json-ld from visible data',
   assert.equal(jsonLd.comment[0].comment.length, 1);
   assert.equal(jsonLd.comment[0].comment[0].datePublished, '2026-06-06T10:21:30.000Z');
   assert.equal(jsonLd.comment[0].comment[0].author.url, 'https://apks.cc/u/222222222222222222222222');
+});
+
+test('community seo: clamps CJK post descriptions for serp width', () => {
+  const description = buildCommunityPostSeoDescription({
+    summary:
+      'Good Smile Company 宣布，与 NEKO WORKs 共同开发的手机游戏《猫娘乐园 世界连结》，将于近日推出可与喜爱角色互动的新功能「交流模式」。此外，游戏内现已推出新猫娘与期间限定活动，时装商店也上架相关的新时装内容，玩家可以透过活动获取奖励并继续关注后续更新。',
+    content: '',
+  });
+
+  assert.ok(description.length <= 120);
+  assert.match(description, /\.\.\.$/);
 });
 
 test('notification target resolver: supports backend and admin target aliases', () => {
