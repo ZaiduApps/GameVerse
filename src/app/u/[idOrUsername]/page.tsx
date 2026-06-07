@@ -352,9 +352,9 @@ export default async function PublicUserPage({
                 href={`/community/post/${post._id}`}
                 className="block rounded-lg border border-border/70 p-4 transition-colors hover:border-primary/30 hover:bg-muted/35"
               >
-                <div className="flex gap-3">
+                <span className="flex gap-3">
                   {images.length > 0 && (
-                    <div className="grid h-16 w-24 shrink-0 grid-cols-2 gap-1 overflow-hidden rounded-md bg-muted">
+                    <span className="grid h-16 w-24 shrink-0 grid-cols-2 gap-1 overflow-hidden rounded-md bg-muted">
                       <img
                         src={images[0]}
                         alt={getPostTitle(post)}
@@ -368,16 +368,16 @@ export default async function PublicUserPage({
                           className="h-full w-full object-cover"
                         />
                       ))}
-                    </div>
+                    </span>
                   )}
-                  <div className="min-w-0 flex-1">
-                    <h2 className="line-clamp-1 font-semibold text-foreground">
+                  <span className="min-w-0 flex-1">
+                    <span className="line-clamp-1 font-semibold text-foreground">
                       {post.title || postPreview(post)}
-                    </h2>
-                    <p className="mt-1 line-clamp-2 text-sm leading-6 text-muted-foreground">
+                    </span>
+                    <span className="mt-1 block line-clamp-2 text-sm leading-6 text-muted-foreground">
                       {postPreview(post)}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                    </span>
+                    <span className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
                       <span>{formatDate(post.publish_at)}</span>
                       <span className="flex items-center gap-1">
                         <Eye className="h-3.5 w-3.5" />
@@ -391,9 +391,9 @@ export default async function PublicUserPage({
                         <MessageSquare className="h-3.5 w-3.5" />
                         {post.comment_count || 0}
                       </span>
-                    </div>
-                  </div>
-                </div>
+                    </span>
+                  </span>
+                </span>
               </Link>
             );
           })}

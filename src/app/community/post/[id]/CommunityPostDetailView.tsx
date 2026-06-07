@@ -940,26 +940,26 @@ export default function CommunityPostDetailView({
         <AvatarImage src={post.user.avatarUrl} alt={post.user.name} />
         <AvatarFallback>{post.user.name.substring(0, 2)}</AvatarFallback>
       </Avatar>
-      <div>
-        <div className="flex items-center gap-2">
-          <p className="text-base font-semibold text-foreground">{post.user.name}</p>
+      <span>
+        <span className="flex items-center gap-2">
+          <span className="text-base font-semibold text-foreground">{post.user.name}</span>
           {post.user.level && (
-            <Badge variant="secondary" className="text-xs px-1.5 py-0.5 font-normal bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200">
+            <span className="inline-flex items-center rounded-full border border-transparent px-1.5 py-0.5 text-xs font-normal bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200">
               Lv.{post.user.level}
-            </Badge>
+            </span>
           )}
-        </div>
-        <p className="text-xs text-muted-foreground">
+        </span>
+        <span className="block text-xs text-muted-foreground">
           {post.timestamp}
           {post.source && ` · ${post.source}`}
           {post.user.location && ` · ${post.user.location}`}
-        </p>
+        </span>
         {canModerateTopic ? (
-          <Badge variant="outline" className="mt-1 text-[10px]">
+          <span className="mt-1 inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold text-foreground">
             版主模式
-          </Badge>
+          </span>
         ) : null}
-      </div>
+      </span>
     </>
   );
   const handleTocJump = (headingId: string) => {
