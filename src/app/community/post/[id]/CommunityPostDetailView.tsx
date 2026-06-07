@@ -1655,7 +1655,14 @@ export default function CommunityPostDetailView({
               <Card className="overflow-hidden border border-white/20 shadow-xl">
                 {relatedApp.icon && (
                   <div className="absolute inset-0">
-                    <Image src={relatedApp.icon} alt={relatedApp.name} fill className="scale-125 object-cover blur-2xl" />
+                    <Image
+                      src={relatedApp.icon}
+                      alt={relatedApp.name}
+                      fill
+                      priority
+                      sizes="320px"
+                      className="scale-125 object-cover blur-2xl"
+                    />
                     <div className="absolute inset-0 bg-black/45 backdrop-blur-xl" />
                   </div>
                 )}
@@ -1663,7 +1670,14 @@ export default function CommunityPostDetailView({
                   <div className="flex items-start gap-3">
                     <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-white/30 bg-white/10">
                       {relatedApp.icon ? (
-                        <Image src={relatedApp.icon} alt={relatedApp.name} fill className="object-cover" />
+                        <Image
+                          src={relatedApp.icon}
+                          alt={relatedApp.name}
+                          fill
+                          priority
+                          sizes="56px"
+                          className="object-cover"
+                        />
                       ) : (
                         <div className="h-full w-full" />
                       )}

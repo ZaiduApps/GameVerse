@@ -386,7 +386,8 @@ const replaceMarkdownImageSyntax = (
 
     output += value.slice(index, start);
     const rawUrl = value.slice(targetStart, targetEnd);
-    const imageLoading = renderedImageCount === 0 ? "eager" : "lazy";
+    const imageLoading = renderedImageCount < 3 ? "eager" : "lazy";
+    const imageFetchPriority = renderedImageCount === 0 ? "high" : undefined;
     output += stashMarkdownToken(
       tokens,
       renderSafeImage(
@@ -394,6 +395,7 @@ const replaceMarkdownImageSyntax = (
         rawUrl,
         classSet,
         imageLoading,
+        imageFetchPriority,
       ),
     );
     if (isSafeHttpsUrl(rawUrl.trim())) {
@@ -473,6 +475,7 @@ const renderSafeImage = (
   urlRaw: string,
   classSet: MarkdownClassSet,
   loading: "eager" | "lazy",
+  fetchPriority?: "high",
 ): string => {
   const url = urlRaw.trim();
   if (!isSafeHttpsUrl(url)) {
@@ -480,7 +483,8 @@ const renderSafeImage = (
   }
   const safeAlt = escapeHtmlAttribute((alt || '').trim() || '内容配图');
   const safeSrc = escapeHtmlAttribute(url);
-  return `<img alt="${safeAlt}" src="${safeSrc}" loading="${loading}" decoding="async" class="${classSet.image}" />`;
+  const priorityAttr = fetchPriority ? ` fetchpriority="${fetchPriority}"` : "";
+  return `<img alt="${safeAlt}" src="${safeSrc}" loading="${loading}" decoding="async"${priorityAttr} class="${classSet.image}" />`;
 };
 
 const stripHtmlTags = (value: string): string =>
