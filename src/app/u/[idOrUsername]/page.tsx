@@ -5,7 +5,7 @@ import { Calendar, CheckCircle2, Eye, Heart, MapPin, MessageSquare, PenLine } fr
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { absoluteUrl, normalizeSeoAssetUrl, sanitizeSeoText } from '@/lib/seo';
 import { getPublicProfile, type PublicProfilePost } from '@/lib/public-profile-api';
 
@@ -52,6 +52,30 @@ function getPostJsonLdImages(post: PublicProfilePost): string[] | undefined {
   return images.length ? images : undefined;
 }
 
+function buildPublicProfileDescription(data: {
+  user: {
+    name?: string;
+    username?: string;
+    signature?: string;
+  };
+  stats: {
+    post_count?: number;
+    view_count?: number;
+    like_count?: number;
+    comment_count?: number;
+  };
+}): string {
+  const name = data.user.name || data.user.username || '社区用户';
+  const signature = sanitizeSeoText(data.user.signature || '');
+  const signatureSafe =
+    signature.length >= 24 &&
+    !/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(signature) &&
+    !/(?:\+?\d[\s-]?){7,}/.test(signature)
+      ? `${signature}。`
+      : '';
+  return `${signatureSafe}${name} 的 APKScc 社区主页，收录 ${Number(data.stats.post_count || 0)} 条公开动态、${Number(data.stats.view_count || 0)} 次浏览、${Number(data.stats.like_count || 0)} 次点赞和 ${Number(data.stats.comment_count || 0)} 条评论互动，展示游戏资讯、资源反馈、下载体验、版本讨论、攻略分享和玩家主页内容，便于关注作者的最新社区动态、公开资料、互动记录和游戏资源观点。`;
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -67,7 +91,7 @@ export async function generateMetadata({
   }
 
   const name = data.user.name || data.user.username || '社区用户';
-  const description = sanitizeSeoText(data.user.signature) || `${name} 的社区主页与公开动态。`;
+  const description = buildPublicProfileDescription(data);
   const canonicalTarget = data.user.username || idOrUsername;
   const canonicalPath = `/u/${encodeURIComponent(canonicalTarget)}`;
   const avatarUrl = normalizeSeoAssetUrl(data.user.avatar);
@@ -125,7 +149,7 @@ export default async function PublicUserPage({
     '@id': `${canonicalUrl}#profile`,
     url: canonicalUrl,
     name: `${displayName} 的社区主页`,
-    description: sanitizeSeoText(user.signature) || `${displayName} 的社区主页与公开动态。`,
+    description: buildPublicProfileDescription(data),
     dateCreated: user.created_at || undefined,
     dateModified: user.updated_at || user.created_at || undefined,
     mainEntity: {
@@ -136,7 +160,7 @@ export default async function PublicUserPage({
       alternateName: profileHandle || undefined,
       identifier: String(user._id || ''),
       image: avatarUrl || undefined,
-      description: sanitizeSeoText(user.signature) || undefined,
+      description: buildPublicProfileDescription(data),
       homeLocation: location
         ? {
             '@type': 'Place',
@@ -310,10 +334,10 @@ export default async function PublicUserPage({
 
       <Card className="border-primary/5 shadow-md">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
+          <h2 className="flex items-center gap-2 text-lg font-semibold leading-none tracking-tight">
             <PenLine className="h-5 w-5 text-primary" />
             公开动态
-          </CardTitle>
+          </h2>
         </CardHeader>
         <CardContent className="space-y-3">
           {data.posts.length === 0 ? (
