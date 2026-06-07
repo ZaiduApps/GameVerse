@@ -465,6 +465,25 @@ test('markdown document builder: renders duplicated detail title heading as plai
   assert.match(doc.html, /text-3xl font-semibold/);
 });
 
+test('markdown document builder: demotes first h1 contained in detail title', () => {
+  const doc = buildRenderedMarkdownDocument(
+    '# 欢迎使用 码世界-TheWorld Codes 使用文档\n\n# 码世界-TheWorld Codes\n\n## 功能概览',
+    {
+      preset: 'detail',
+      injectHeadingAnchors: true,
+      renderFirstHeadingMatchingTextAsPlainBlock: '欢迎使用 码世界-TheWorld Codes 使用文档',
+    },
+  );
+
+  assert.doesNotMatch(doc.html, /<h1\b/);
+  assert.match(doc.html, /<p[^>]*>欢迎使用 码世界-TheWorld Codes 使用文档<\/p>/);
+  assert.match(doc.html, /<p[^>]*>码世界-TheWorld Codes<\/p>/);
+  assert.deepEqual(
+    plainJsonValue(doc.headings.map((item) => item.text)),
+    ['功能概览'],
+  );
+});
+
 test('markdown regression: insecure images render as safe text', () => {
   const input = '![unsafe](http://example.com/image.png)';
   const html = renderMarkdown(input).__html;

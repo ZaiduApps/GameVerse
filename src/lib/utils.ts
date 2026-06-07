@@ -497,6 +497,26 @@ const stripHtmlTags = (value: string): string =>
 const normalizeHeadingComparisonText = (value: string): string =>
   stripHtmlTags(value).replace(/\s+/g, " ").trim().toLowerCase();
 
+const normalizeHeadingLooseComparisonText = (value: string): string =>
+  normalizeHeadingComparisonText(value).replace(
+    /[\s\u3000\-_|:：;；,.，。!?！？'"“”‘’()[\]{}【】《》<>/\\]+/g,
+    "",
+  );
+
+const isFirstHeadingDemotionMatch = (headingText: string, targetText: string): boolean => {
+  const heading = normalizeHeadingComparisonText(headingText);
+  const target = normalizeHeadingComparisonText(targetText);
+  if (!heading || !target) return false;
+  if (heading === target) return true;
+
+  const looseHeading = normalizeHeadingLooseComparisonText(heading);
+  const looseTarget = normalizeHeadingLooseComparisonText(target);
+  if (!looseHeading || !looseTarget) return false;
+  if (looseHeading === looseTarget) return true;
+  if (looseHeading.length < 6 || looseTarget.length < 6) return false;
+  return looseTarget.includes(looseHeading) || looseHeading.includes(looseTarget);
+};
+
 const renderListItem = (content: string, className: string): string =>
   className ? `<li class="${className}">${content}</li>` : `<li>${content}</li>`;
 
@@ -727,10 +747,7 @@ export const buildRenderedMarkdownDocument = (
 
     const headings: MarkdownHeadingItem[] = [];
     let headingIndex = 0;
-    let renderedMatchingHeadingAsPlainBlock = false;
-    const headingDemotionTarget = normalizeHeadingComparisonText(
-      String(options?.renderFirstHeadingMatchingTextAsPlainBlock || ""),
-    );
+    const headingDemotionTarget = String(options?.renderFirstHeadingMatchingTextAsPlainBlock || "");
     const htmlWithAnchors = finalHtml.replace(
       /<h([1-4])([^>]*)>([\s\S]*?)<\/h\1>/g,
       (match, level, rawAttrs, inner) => {
@@ -738,11 +755,9 @@ export const buildRenderedMarkdownDocument = (
         if (!text) return match;
         const shouldRenderHeadingAsPlainBlock =
           Number(level) === 1 &&
-          !renderedMatchingHeadingAsPlainBlock &&
           headingDemotionTarget &&
-          normalizeHeadingComparisonText(text) === headingDemotionTarget;
+          isFirstHeadingDemotionMatch(text, headingDemotionTarget);
         if (shouldRenderHeadingAsPlainBlock) {
-          renderedMatchingHeadingAsPlainBlock = true;
           const plainAttrs = rawAttrs
             .replace(/\sdata-toc-source="[^"]*"/g, "")
             .replace(/\sid="[^"]*"/g, "");
