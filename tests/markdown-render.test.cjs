@@ -221,7 +221,7 @@ function loadNotificationTargetUtils() {
 
 const renderMarkdown = loadRenderMarkdown();
 const buildRenderedMarkdownDocument = loadMarkdownDocumentBuilder();
-const { sanitizeSeoText } = loadSeoUtils();
+const { clampSeoDescription, sanitizeSeoText } = loadSeoUtils();
 const {
   resolveCommunityPostViewSource,
   stripCommunityMarkdownCodeSegments,
@@ -708,6 +708,16 @@ test('public profile signature sanitizer: hides direct contact identifiers', () 
     sanitizePublicProfileSignature('喜欢开放世界、二次元手游与版本更新讨论'),
     '喜欢开放世界、二次元手游与版本更新讨论',
   );
+});
+
+test('seo utilities: clamps public profile descriptions without dangling punctuation', () => {
+  const description = clampSeoDescription(
+    '玩家 的 APKScc 社区主页，收录 12 条公开动态、345 次浏览、67 次点赞和 8 条评论互动，展示游戏资讯、资源反馈、下载体验、版本讨论、攻略分享和玩家主页内容，便于关注作者的最新社区动态、公开资料、互动记录和游戏资源观点，也能沉淀作者长期关注的游戏主题、下载反馈、攻略方向和社区互动偏好，持续呈现每次回复、点赞、浏览、搜索访问来源与公开动态质量变化。',
+  );
+
+  assert.ok(description.length <= 155);
+  assert.match(description, /\.\.\.$/);
+  assert.doesNotMatch(description, /[，。；、]\.\.\.$/);
 });
 
 test('community link click reporter: sends keepalive payload', async () => {

@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { sanitizePublicProfileSignature } from '@/lib/public-profile-safety';
-import { absoluteUrl, normalizeSeoAssetUrl, sanitizeSeoText } from '@/lib/seo';
+import { absoluteUrl, clampSeoDescription, normalizeSeoAssetUrl, sanitizeSeoText } from '@/lib/seo';
 import { getPublicProfile, type PublicProfilePost } from '@/lib/public-profile-api';
 
 function formatDate(value?: string): string {
@@ -69,7 +69,7 @@ function buildPublicProfileDescription(data: {
   const name = data.user.name || data.user.username || '社区用户';
   const signature = sanitizePublicProfileSignature(data.user.signature);
   const signatureSafe = signature.length >= 24 ? `${signature}。` : '';
-  return `${signatureSafe}${name} 的 APKScc 社区主页，收录 ${Number(data.stats.post_count || 0)} 条公开动态、${Number(data.stats.view_count || 0)} 次浏览、${Number(data.stats.like_count || 0)} 次点赞和 ${Number(data.stats.comment_count || 0)} 条评论互动，展示游戏资讯、资源反馈、下载体验、版本讨论、攻略分享和玩家主页内容，便于关注作者的最新社区动态、公开资料、互动记录和游戏资源观点。`;
+  return clampSeoDescription(`${signatureSafe}${name} 的 APKScc 社区主页，收录 ${Number(data.stats.post_count || 0)} 条公开动态、${Number(data.stats.view_count || 0)} 次浏览、${Number(data.stats.like_count || 0)} 次点赞和 ${Number(data.stats.comment_count || 0)} 条评论互动，展示游戏资讯、资源反馈、下载体验、版本讨论、攻略分享和玩家主页内容，便于关注作者的最新社区动态、公开资料、互动记录和游戏资源观点。`);
 }
 
 export async function generateMetadata({
@@ -145,7 +145,8 @@ export default async function PublicUserPage({
     '@type': 'ProfilePage',
     '@id': `${canonicalUrl}#profile`,
     url: canonicalUrl,
-    name: `${displayName} 的社区主页`,
+    name: displayName,
+    alternateName: `${displayName} 的社区主页`,
     description: buildPublicProfileDescription(data),
     dateCreated: user.created_at || undefined,
     dateModified: user.updated_at || user.created_at || undefined,
@@ -207,7 +208,7 @@ export default async function PublicUserPage({
       {
         '@type': 'ListItem',
         position: 3,
-        name: `${displayName} 的主页`,
+        name: displayName,
         item: canonicalUrl,
       },
     ],
@@ -218,7 +219,7 @@ export default async function PublicUserPage({
           '@context': 'https://schema.org',
           '@type': 'ItemList',
           '@id': `${canonicalUrl}#posts`,
-          name: `${displayName} 的公开动态`,
+          name: '公开动态',
           itemListOrder: 'https://schema.org/ItemListOrderDescending',
           numberOfItems: data.posts.length,
           itemListElement: data.posts.map((post, index) => {

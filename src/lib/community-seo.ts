@@ -1,7 +1,7 @@
 import type { CommunityCommentItem, CommunityCommentThread } from '@/lib/community-api';
 import { isBlockedCommunityDetailLink } from '@/lib/community-link-policy';
 import { getCommunityAuthorProfileHref } from '@/lib/community-profile';
-import { absoluteUrl, hasSeoMarkupNoise, normalizeSeoAssetUrl, sanitizeSeoText } from '@/lib/seo';
+import { absoluteUrl, clampSeoDescription, hasSeoMarkupNoise, normalizeSeoAssetUrl, sanitizeSeoText } from '@/lib/seo';
 import type { CommunityPost } from '@/types';
 
 type LinkedPageMention = {
@@ -62,7 +62,7 @@ export function buildCommunityPostSeoDescription(post: CommunityPost): string {
     (hasSeoMarkupNoise(post.summary) && content.length > summary.length)
       ? content || summary
       : summary || content) || '查看社区帖子详情';
-  return clampCommunitySeoText(expandCommunitySeoDescription(post, source), 155);
+  return clampSeoDescription(expandCommunitySeoDescription(post, source));
 }
 
 export function getCommunityPostContentImage(post: CommunityPost): string {

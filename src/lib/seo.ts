@@ -48,6 +48,17 @@ export function sanitizeSeoText(input?: string | null): string {
     .trim();
 }
 
+export function clampSeoDescription(input?: string | null, max = 155): string {
+  const text = sanitizeSeoText(input);
+  if (!text || text.length <= max) return text;
+
+  const sliced = text
+    .slice(0, Math.max(1, max - 3))
+    .replace(/[，。；、\s]+$/u, '')
+    .trim();
+  return `${sliced || text.slice(0, Math.max(1, max - 3)).trim()}...`;
+}
+
 export function getSiteUrl(): string {
   const raw = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || FALLBACK_SITE_URL;
   const normalized = raw.trim().replace(/\/+$/, '');
