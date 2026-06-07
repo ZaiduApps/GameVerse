@@ -1097,12 +1097,12 @@ export default function CommunityPostDetailView({
         {options.includeAnchor ? (
           <h2 className="text-lg font-semibold flex items-center">
             <MessageSquare size={20} className="mr-2 text-primary" />
-            评论 ({totalCommentCount})
+            玩家评论与回复 ({totalCommentCount})
           </h2>
         ) : (
           <div className="text-lg font-semibold flex items-center">
             <MessageSquare size={20} className="mr-2 text-primary" />
-            评论 ({totalCommentCount})
+            玩家评论与回复 ({totalCommentCount})
           </div>
         )}
       </CardHeader>
@@ -1599,7 +1599,7 @@ export default function CommunityPostDetailView({
             {tocItems.length > 0 ? (
               <Card className="border-border/70 shadow-lg">
                 <CardHeader className="px-4 pb-2 pt-4">
-                  <CardTitle className="text-sm font-semibold">文章目录</CardTitle>
+                  <div className="text-sm font-semibold">文章目录</div>
                 </CardHeader>
                 <CardContent className="max-h-[calc(100vh-18rem)] space-y-1 overflow-y-auto px-2 pb-3">
                   {tocItems.map((item) => (
