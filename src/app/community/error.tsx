@@ -16,10 +16,31 @@ export default function CommunityError({
   reset: () => void;
 }) {
   useEffect(() => {
+    const message = String(error?.message || '');
+    const name = String(error?.name || '');
     console.error('[community-route] render error', {
-      message: error?.message || 'unknown error',
+      message: message || 'unknown error',
       digest: error?.digest || null,
     });
+
+    if (
+      typeof window !== 'undefined' &&
+      /ChunkLoadError|Loading chunk|failed to fetch dynamically imported module/i.test(`${name} ${message}`)
+    ) {
+      const storageKey = `community-chunk-reload:${window.location.pathname}`;
+      const fallbackMarker = `community-chunk-reload:${window.location.pathname}`;
+      try {
+        if (window.sessionStorage.getItem(storageKey) !== '1') {
+          window.sessionStorage.setItem(storageKey, '1');
+          window.location.reload();
+        }
+      } catch {
+        if (!window.name.includes(fallbackMarker)) {
+          window.name = `${window.name || ''} ${fallbackMarker}`.trim();
+          window.location.reload();
+        }
+      }
+    }
   }, [error]);
 
   return (

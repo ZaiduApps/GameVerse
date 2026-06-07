@@ -10,6 +10,11 @@ import { ArrowLeft, Bookmark, ChevronLeft, ChevronRight, ExternalLink, Eye, Mess
 
 import { buildRenderedMarkdownDocument, cn } from '@/lib/utils';
 import { apiUrl, trackedApiFetch } from '@/lib/api';
+import {
+  COMMUNITY_DETAIL_BLOCKED_LINK_HOSTS,
+  getCommunityUrlHost,
+  isBlockedCommunityDetailLink,
+} from '@/lib/community-link-policy';
 import { getCommunityAuthorProfileHref } from '@/lib/community-profile';
 import { hasValidCommunityReturnIntent, requestCommunityReturnRestore } from '@/lib/community-return';
 import { useAuth } from '@/context/auth-context';
@@ -41,8 +46,6 @@ interface CommunityPostDetailViewProps {
   initialComments?: CommunityCommentThread[];
 }
 
-const DETAIL_BLOCKED_LINK_HOSTS = ['www.facebook.com', 'acg.gamer.com.tw'];
-
 function normalizeComparableImageUrl(value?: string): string {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -67,27 +70,14 @@ function normalizeHeadingText(value?: string): string {
     .toLowerCase();
 }
 
-function getUrlHost(value: string): string {
-  try {
-    return new URL(value).hostname.trim().toLowerCase();
-  } catch {
-    return '';
-  }
-}
-
 function buildFaviconUrl(value: string): string | undefined {
-  const host = getUrlHost(value).replace(/^www\./, '');
+  const host = getCommunityUrlHost(value).replace(/^www\./, '');
   if (!host) return undefined;
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
 }
 
 function isBlockedDetailLink(value: string): boolean {
-  const host = getUrlHost(value);
-  if (!host) return false;
-  return DETAIL_BLOCKED_LINK_HOSTS.some((blockedHost) => {
-    const normalized = blockedHost.trim().toLowerCase();
-    return host === normalized || host.endsWith(`.${normalized}`);
-  });
+  return isBlockedCommunityDetailLink(value);
 }
 
 function normalizeNonNegativeCount(value: unknown): number {
@@ -349,7 +339,7 @@ export default function CommunityPostDetailView({
     () =>
       buildRenderedMarkdownDocument(post.content, {
         preset: 'detail',
-        blockedLinkHosts: DETAIL_BLOCKED_LINK_HOSTS,
+        blockedLinkHosts: COMMUNITY_DETAIL_BLOCKED_LINK_HOSTS,
         injectHeadingAnchors: true,
         renderFirstHeadingMatchingTextAsPlainBlock: post.title || post.summary,
       }),
@@ -365,7 +355,7 @@ export default function CommunityPostDetailView({
     });
     contentLinkUrls.forEach((url) => {
       if (byUrl.has(url)) return;
-      const host = getUrlHost(url).replace(/^www\./, '');
+      const host = getCommunityUrlHost(url).replace(/^www\./, '');
       byUrl.set(url, {
         url,
         title: host || '外部链接',

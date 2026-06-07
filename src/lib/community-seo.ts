@@ -1,4 +1,5 @@
 import type { CommunityCommentItem, CommunityCommentThread } from '@/lib/community-api';
+import { isBlockedCommunityDetailLink } from '@/lib/community-link-policy';
 import { getCommunityAuthorProfileHref } from '@/lib/community-profile';
 import { absoluteUrl, hasSeoMarkupNoise, normalizeSeoAssetUrl, sanitizeSeoText } from '@/lib/seo';
 import type { CommunityPost } from '@/types';
@@ -16,6 +17,37 @@ export function clampCommunitySeoText(input: string, max: number): string {
   return `${input.slice(0, Math.max(1, max - 3)).trim()}...`;
 }
 
+function joinCommunitySeoDescription(source: string, addition: string): string {
+  const normalizedSource = source.replace(/[，。；、\s]+$/u, '').trim();
+  const normalizedAddition = addition.replace(/^[，。；、\s]+/u, '').trim();
+  if (!normalizedSource) return normalizedAddition;
+  if (!normalizedAddition) return normalizedSource;
+  return `${normalizedSource}。${normalizedAddition}`;
+}
+
+function expandCommunitySeoDescription(post: CommunityPost, source: string): string {
+  const tags = Array.isArray(post.tags)
+    ? post.tags.map((tag) => sanitizeSeoText(tag)).filter(Boolean).slice(0, 3)
+    : [];
+  const relatedAppName = sanitizeSeoText(post.relatedApp?.name || '');
+  const category = sanitizeSeoText(post.category || '');
+  const additions = [
+    relatedAppName && !source.includes(relatedAppName)
+      ? `关联游戏：${relatedAppName}`
+      : '',
+    category && category !== relatedAppName && !source.includes(category)
+      ? `社区话题：${category}`
+      : '',
+    tags.length > 0 ? `涵盖${tags.join('、')}等讨论线索` : '',
+    '查看下载、安装、更新、登录、网络、机型、玩法体验和玩家回复',
+  ].filter(Boolean);
+
+  return additions.reduce((current, addition) => {
+    if (current.length >= 120) return current;
+    return joinCommunitySeoDescription(current, addition);
+  }, source);
+}
+
 export function buildCommunityPostSeoTitle(post: CommunityPost, siteName: string): string {
   const core =
     sanitizeSeoText(post.title || post.summary || '社区帖子') || '社区帖子';
@@ -30,7 +62,7 @@ export function buildCommunityPostSeoDescription(post: CommunityPost): string {
     (hasSeoMarkupNoise(post.summary) && content.length > summary.length)
       ? content || summary
       : summary || content) || '查看社区帖子详情';
-  return clampCommunitySeoText(source, 120);
+  return clampCommunitySeoText(expandCommunitySeoDescription(post, source), 155);
 }
 
 export function getCommunityPostContentImage(post: CommunityPost): string {
@@ -77,6 +109,7 @@ function buildLinkedPageMentions(post: CommunityPost): LinkedPageMention[] {
     .map((preview): LinkedPageMention | null => {
       const url = String(preview.url || '').trim();
       if (!/^https?:\/\//i.test(url)) return null;
+      if (isBlockedCommunityDetailLink(url)) return null;
       return {
         '@type': 'WebPage',
         url,

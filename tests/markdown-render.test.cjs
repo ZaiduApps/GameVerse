@@ -120,11 +120,33 @@ function loadCommunitySeoUtils() {
     module: moduleObj,
     exports: moduleObj.exports,
     require: (id) => {
+      if (id === '@/lib/community-link-policy') return loadCommunityLinkPolicyUtils();
       if (id === '@/lib/community-profile') return loadCommunityProfileUtils();
       if (id === '@/lib/seo') return loadSeoUtils();
       return require(id);
     },
     process,
+  };
+
+  vm.runInNewContext(compiled, sandbox);
+  return moduleObj.exports;
+}
+
+function loadCommunityLinkPolicyUtils() {
+  const filePath = path.join(process.cwd(), 'src/lib/community-link-policy.ts');
+  const source = fs.readFileSync(filePath, 'utf8');
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2020,
+    },
+  }).outputText;
+
+  const moduleObj = { exports: {} };
+  const sandbox = {
+    module: moduleObj,
+    exports: moduleObj.exports,
+    URL,
   };
 
   vm.runInNewContext(compiled, sandbox);
@@ -778,6 +800,10 @@ test('community seo: builds discussion forum posting json-ld from visible data',
         description: '外链摘要',
         icon: '/favicon.ico',
       },
+      {
+        url: 'https://acg.gamer.com.tw/search.php?kw=test',
+        title: '详情页屏蔽链接',
+      },
     ],
   };
   const comments = [
@@ -835,6 +861,7 @@ test('community seo: builds discussion forum posting json-ld from visible data',
   assert.deepEqual(plainJsonValue(jsonLd.image), ['https://example.com/post.png']);
   assert.equal(jsonLd.author.url, 'https://apks.cc/u/alice');
   assert.equal(jsonLd.author.image, undefined);
+  assert.equal(jsonLd.sharedContent.length, 1);
   assert.equal(jsonLd.sharedContent[0].url, 'https://example.com/body');
   assert.equal(jsonLd.sharedContent[0].image, 'https://apks.cc/favicon.ico');
   assert.equal(jsonLd.comment.length, 1);
@@ -845,14 +872,31 @@ test('community seo: builds discussion forum posting json-ld from visible data',
   assert.equal(jsonLd.comment[0].comment[0].author.url, 'https://apks.cc/u/222222222222222222222222');
 });
 
+test('community seo: expands short post descriptions with contextual signals', () => {
+  const description = buildCommunityPostSeoDescription({
+    summary:
+      '《Tanki Online: PvP Tank Battle》在您的手机上加入史诗般的坦克游戏！制定 PvP 坦克战的战争策略。汇总安装、更新、登录、网络、机型、下载资源、玩法体验和评分反馈，帮助玩家判断是否值得下载、更新与长期体验。',
+    content: '',
+    category: 'Tanki Online: PvP Tank Battle',
+    relatedApp: {
+      name: 'Tanki Online: PvP Tank Battle',
+    },
+    tags: ['动作', '射击游戏', '车辆战斗'],
+  });
+
+  assert.ok(description.length >= 120);
+  assert.ok(description.length <= 155);
+  assert.match(description, /涵盖动作、射击游戏、车辆战斗等讨论线索/);
+});
+
 test('community seo: clamps CJK post descriptions for serp width', () => {
   const description = buildCommunityPostSeoDescription({
     summary:
-      'Good Smile Company 宣布，与 NEKO WORKs 共同开发的手机游戏《猫娘乐园 世界连结》，将于近日推出可与喜爱角色互动的新功能「交流模式」。此外，游戏内现已推出新猫娘与期间限定活动，时装商店也上架相关的新时装内容，玩家可以透过活动获取奖励并继续关注后续更新。',
+      'Good Smile Company 宣布，与 NEKO WORKs 共同开发的手机游戏《猫娘乐园 世界连结》，将于近日推出可与喜爱角色互动的新功能「交流模式」。此外，游戏内现已推出新猫娘与期间限定活动，时装商店也上架相关的新时装内容，玩家可以透过活动获取奖励并继续关注后续更新。官方同步说明后续还会开放更多角色互动内容、活动任务与登录奖励。',
     content: '',
   });
 
-  assert.ok(description.length <= 120);
+  assert.ok(description.length <= 155);
   assert.match(description, /\.\.\.$/);
 });
 
