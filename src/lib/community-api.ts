@@ -989,6 +989,36 @@ export async function getCommunityCommentReplies(
   };
 }
 
+export async function getCommunityCommentContext(
+  postId: string,
+  commentId: string,
+): Promise<CommunityCommentThread | null> {
+  const safePostId = String(postId || '').trim();
+  const safeCommentId = String(commentId || '').trim();
+  if (!safePostId || !safeCommentId) return null;
+
+  const data = await getApiData<{
+    root_comment?: ApiCommunityComment | null;
+    list?: ApiCommunityComment[];
+    total?: number;
+    pageSize?: number;
+  }>(
+    `/content/public/${safePostId}/comments/${safeCommentId}/context`,
+  );
+  if (!data?.root_comment) return null;
+
+  const replies = Array.isArray(data.list) ? data.list : [];
+  return toCommentThreads([
+    {
+      ...data.root_comment,
+      replies,
+      reply_total: Math.max(Number(data.total || 0), replies.length),
+      reply_has_more: Number(data.total || 0) > replies.length,
+      reply_page_size: Math.max(1, Number(data.pageSize || replies.length || 20)),
+    },
+  ])[0] || null;
+}
+
 export async function getCommunityPostLikeStatus(params: {
   token: string;
   postId: string;

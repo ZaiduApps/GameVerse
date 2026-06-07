@@ -16,6 +16,7 @@ import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import {
   getCommunityCommentLikeStatuses,
+  getCommunityCommentContext,
   getCommunityCommentReplies,
   getCommunityCommentThreads,
   getCommunityPostLikeStatus,
@@ -95,6 +96,24 @@ function normalizeNonNegativeCount(value: unknown): number {
   return Math.floor(parsed);
 }
 
+function getCommentElementId(commentId?: string): string {
+  const id = String(commentId || '').trim();
+  return id ? `comment-${id}` : '';
+}
+
+function getHashCommentId(): string {
+  if (typeof window === 'undefined') return '';
+  let raw = window.location.hash || '';
+  try {
+    raw = decodeURIComponent(raw);
+  } catch {
+    raw = '';
+  }
+  raw = raw.replace(/^#/, '').trim();
+  const matched = raw.match(/^comment-([a-zA-Z0-9_-]+)$/);
+  return matched?.[1] || '';
+}
+
 export default function CommunityPostDetailView({
   post,
   initialComments = [],
@@ -137,7 +156,9 @@ export default function CommunityPostDetailView({
   const [moderatingCommentId, setModeratingCommentId] = useState('');
   const [moderationTopicId, setModerationTopicId] = useState('');
   const [activeTocId, setActiveTocId] = useState('');
+  const [hashCommentId, setHashCommentId] = useState('');
   const articleRef = useRef<HTMLElement | null>(null);
+  const requestedCommentContextIdsRef = useRef<Set<string>>(new Set());
   const authorProfileHref = getCommunityAuthorProfileHref(post);
 
   const postTopicIds = useMemo(
@@ -388,6 +409,29 @@ export default function CommunityPostDetailView({
     setExpandedReplies({});
   };
 
+  const mergeCommentThread = (nextThread: CommunityCommentThread) => {
+    setComments((prev) => {
+      const existingIndex = prev.findIndex((item) => item.id === nextThread.id);
+      if (existingIndex < 0) return [nextThread, ...prev];
+
+      return prev.map((item, index) => {
+        if (index !== existingIndex) return item;
+        const mergedMap = new Map<string, CommunityCommentThread['replies'][number]>();
+        item.replies.forEach((reply) => mergedMap.set(reply.id, reply));
+        nextThread.replies.forEach((reply) => mergedMap.set(reply.id, reply));
+        const mergedReplies = Array.from(mergedMap.values());
+        return {
+          ...item,
+          ...nextThread,
+          replies: mergedReplies,
+          replyTotal: Math.max(item.replyTotal, nextThread.replyTotal, mergedReplies.length),
+          replyHasMore: item.replyHasMore || nextThread.replyHasMore,
+          replyPageSize: Math.max(item.replyPageSize, nextThread.replyPageSize),
+        };
+      });
+    });
+  };
+
   const recordDetailLinkClick = (url: string) => {
     const targetUrl = String(url || '').trim();
     if (!/^https?:\/\//i.test(targetUrl)) return;
@@ -445,6 +489,61 @@ export default function CommunityPostDetailView({
       return next;
     });
   }, [comments, pendingCommentLikeIds]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    requestedCommentContextIdsRef.current.clear();
+    const syncHashCommentId = () => setHashCommentId(getHashCommentId());
+    syncHashCommentId();
+    window.addEventListener('hashchange', syncHashCommentId);
+    return () => window.removeEventListener('hashchange', syncHashCommentId);
+  }, [post.id]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const targetCommentId = hashCommentId;
+    if (!targetCommentId) return;
+
+    let cancelled = false;
+    const targetElementId = getCommentElementId(targetCommentId);
+    const scrollToTarget = () => {
+      window.requestAnimationFrame(() => {
+        const target = document.getElementById(targetElementId);
+        if (target) {
+          target.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        }
+      });
+    };
+    const loadedRoot = comments.find((comment) => comment.id === targetCommentId);
+    const loadedReplyRoot = comments.find((comment) =>
+      comment.replies.some((reply) => reply.id === targetCommentId),
+    );
+
+    if (loadedRoot) {
+      scrollToTarget();
+      return;
+    }
+    if (loadedReplyRoot) {
+      if (!expandedReplies[loadedReplyRoot.id]) {
+        setExpandedReplies((prev) => ({ ...prev, [loadedReplyRoot.id]: true }));
+      }
+      scrollToTarget();
+      return;
+    }
+    if (requestedCommentContextIdsRef.current.has(targetCommentId)) return;
+
+    requestedCommentContextIdsRef.current.add(targetCommentId);
+    void getCommunityCommentContext(post.id, targetCommentId)
+      .then((thread) => {
+        if (cancelled || !thread) return;
+        mergeCommentThread(thread);
+        setExpandedReplies((prev) => ({ ...prev, [thread.id]: true }));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [comments, expandedReplies, hashCommentId, post.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1159,7 +1258,11 @@ export default function CommunityPostDetailView({
 
         <div className="space-y-4 pt-4 border-t">
           {comments.map((comment) => (
-            <div key={comment.id} className="space-y-2">
+            <div
+              key={comment.id}
+              id={options.includeAnchor ? getCommentElementId(comment.id) : undefined}
+              className="scroll-mt-24 space-y-2"
+            >
               <div className="flex items-start space-x-3">
                 {comment.user.profileHref ? (
                   <Link
@@ -1253,7 +1356,11 @@ export default function CommunityPostDetailView({
               {(comment.replies?.length > 0 || comment.replyHasMore) && (
                 <div className="ml-12 space-y-2">
                   {(expandedReplies[comment.id] ? comment.replies : comment.replies.slice(0, 2)).map((reply) => (
-                    <div key={reply.id} className="flex items-start space-x-2">
+                    <div
+                      key={reply.id}
+                      id={options.includeAnchor ? getCommentElementId(reply.id) : undefined}
+                      className="flex scroll-mt-24 items-start space-x-2"
+                    >
                       {reply.user.profileHref ? (
                         <Link
                           href={reply.user.profileHref}
