@@ -342,8 +342,10 @@ export default async function PublicUserPage({
             <p className="rounded-lg bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
               暂无公开动态
             </p>
-          ) : data.posts.map((post) => {
+          ) : data.posts.map((post, postIndex) => {
             const images = getPostImages(post);
+            const shouldEagerLoadPostImages = postIndex < 2;
+            const shouldPrioritizePostImages = postIndex === 0;
             return (
               <Link
                 key={post._id}
@@ -358,8 +360,9 @@ export default async function PublicUserPage({
                         alt={getPostTitle(post)}
                         width={96}
                         height={64}
-                        loading="lazy"
+                        loading={shouldEagerLoadPostImages ? 'eager' : 'lazy'}
                         decoding="async"
+                        fetchPriority={shouldPrioritizePostImages ? 'high' : undefined}
                         className={images.length === 1 ? 'col-span-2 h-full w-full object-cover' : 'h-full w-full object-cover'}
                       />
                       {images.slice(1, 3).map((image, index) => (
@@ -369,7 +372,7 @@ export default async function PublicUserPage({
                           alt={`${getPostTitle(post)} 配图 ${index + 2}`}
                           width={48}
                           height={64}
-                          loading="lazy"
+                          loading={shouldEagerLoadPostImages ? 'eager' : 'lazy'}
                           decoding="async"
                           className="h-full w-full object-cover"
                         />

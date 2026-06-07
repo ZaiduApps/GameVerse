@@ -348,6 +348,7 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
     item.last_commented_at || item.publish_at || item.created_at,
   );
   const updatedAt = normalizeRawTimestamp(item.updated_at);
+  const authorProfileTarget = String(item.author_username || item.author_id || '').trim();
   return {
     id: String(item._id || ''),
     authorId: String(item.author_id || '').trim() || undefined,
@@ -357,6 +358,7 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
       name: item.author_name?.trim() || '匿名用户',
       avatarUrl: item.author_avatar?.trim() || FALLBACK_AVATAR,
       dataAiHint: 'user avatar',
+      profileHref: authorProfileTarget ? `/u/${encodeURIComponent(authorProfileTarget)}` : undefined,
     },
     timestamp: formatTimestamp(
       item.last_commented_at || item.publish_at || item.created_at,

@@ -7,6 +7,8 @@ import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityFeed, getCommunityTopics } from '@/lib/community-api';
 
 const COMMUNITY_JSONLD_LIMIT = 12;
+const COMMUNITY_PAGE_DESCRIPTION =
+  '浏览 APKScc 社区最新帖子、热门话题、安卓游戏讨论、攻略分享、资源反馈、版本体验和玩家互动动态，查看玩家围绕游戏下载、安装更新、账号登录、机型兼容、网络稳定性和资源可用性的真实反馈，持续发现值得关注的游戏内容、实用经验和社区交流记录。';
 
 function clamp(input: string, max: number): string {
   if (input.length <= max) return input;
@@ -38,8 +40,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const { config } = await getCommunityPageData();
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
   const title = `${siteName} 社区 - 安卓游戏讨论、攻略分享与资源反馈动态`;
-  const description =
-    '浏览 APKScc 社区最新帖子、热门话题、安卓游戏讨论、攻略分享、资源反馈、版本体验和玩家互动动态，发现真实玩家正在关注的内容、实用经验与社区交流记录。';
+  const description = COMMUNITY_PAGE_DESCRIPTION;
   const shareImage = String(config?.basic?.share_image || '').trim();
 
   return {
@@ -92,7 +93,7 @@ export default async function CommunityPage() {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
     name: `${siteName} 社区`,
-    description: '玩家社区帖子与热门话题列表',
+    description: COMMUNITY_PAGE_DESCRIPTION,
     inLanguage: 'zh-CN',
     url: absoluteUrl('/community'),
     isPartOf: {

@@ -66,6 +66,7 @@ export interface CommunityPost {
     dataAiHint?: string;
     level?: number;
     location?: string;
+    profileHref?: string;
   };
   timestamp: string;
   rawTimestamp?: string;
