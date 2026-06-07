@@ -152,6 +152,30 @@ function loadCommunityProfileUtils() {
   return moduleObj.exports;
 }
 
+function loadPublicProfileSafetyUtils() {
+  const filePath = path.join(process.cwd(), 'src/lib/public-profile-safety.ts');
+  const source = fs.readFileSync(filePath, 'utf8');
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2020,
+    },
+  }).outputText;
+
+  const moduleObj = { exports: {} };
+  const sandbox = {
+    module: moduleObj,
+    exports: moduleObj.exports,
+    require: (id) => {
+      if (id === '@/lib/seo') return loadSeoUtils();
+      return require(id);
+    },
+  };
+
+  vm.runInNewContext(compiled, sandbox);
+  return moduleObj.exports;
+}
+
 function loadNotificationTargetUtils() {
   const filePath = path.join(process.cwd(), 'src/lib/notification-target.ts');
   const source = fs.readFileSync(filePath, 'utf8');
@@ -184,6 +208,7 @@ const {
 } = loadCommunityApiUtils();
 const { getCommunityAuthorProfileHref } = loadCommunityProfileUtils();
 const { buildCommunityPostDiscussionJsonLd, buildCommunityPostSeoDescription } = loadCommunitySeoUtils();
+const { sanitizePublicProfileSignature } = loadPublicProfileSafetyUtils();
 const { normalizeNotificationTarget, resolveNotificationTarget } = loadNotificationTargetUtils();
 
 function plainJsonValue(value) {
@@ -291,6 +316,23 @@ test('markdown regression: bare links trim punctuation and autolinks work', () =
   assert.match(html, /href="https:\/\/example\.com\/path\?q=1"/);
   assert.match(html, /href="https:\/\/example\.com\/demo"/);
   assert.match(html, /https:\/\/example\.com\/demo<\/a>\)。/);
+});
+
+test('markdown regression: malformed percent-encoded links stay inert', () => {
+  const input = [
+    '[截断链接](https://example.com/search?q=%E8%B2%9)',
+    '',
+    '裸链 https://example.com/search?q=%E8%B2%9。',
+    '',
+    '![坏图](https://example.com/image-%E8%B2%9.png)',
+  ].join('\n');
+
+  const html = renderMarkdown(input).__html;
+  assert.doesNotMatch(html, /href="https:\/\/example\.com\/search\?q=%E8%B2%9"/);
+  assert.doesNotMatch(html, /src="https:\/\/example\.com\/image-%E8%B2%9\.png"/);
+  assert.match(html, /截断链接 \(https:\/\/example\.com\/search\?q=%E8%B2%9\)/);
+  assert.match(html, /裸链 https:\/\/example\.com\/search\?q=%E8%B2%9。/);
+  assert.match(html, /\[图片链接已拦截: https:\/\/example\.com\/image-%E8%B2%9\.png\]/);
 });
 
 test('markdown regression: code spans and fences do not autolink urls', () => {
@@ -582,6 +624,30 @@ test('community post mapper: keeps link click ranking stats', () => {
   ]);
 });
 
+test('community post mapper: drops malformed link previews from clipped content', () => {
+  const post = toCommunityPost({
+    _id: 'post-malformed-link-preview',
+    content: '正文 [完整链接](https://example.com/search?q=%E8%B2%93)',
+    link_previews: [
+      {
+        url: 'https://example.com/search?q=%E8%B2%9',
+        title: '截断预览',
+      },
+      {
+        url: 'https://example.com/search?q=%E8%B2%93',
+        title: '完整预览',
+      },
+    ],
+  });
+
+  assert.deepEqual(plainJsonValue(post.linkPreviews), [
+    {
+      url: 'https://example.com/search?q=%E8%B2%93',
+      title: '完整预览',
+    },
+  ]);
+});
+
 test('community author profile helper: prefers username over object id', () => {
   const post = toCommunityPost({
     _id: 'post-3',
@@ -610,6 +676,15 @@ test('community author profile helper: prefers username over object id', () => {
       authorUsername: 'admin',
     }),
     '',
+  );
+});
+
+test('public profile signature sanitizer: hides direct contact identifiers', () => {
+  assert.equal(sanitizePublicProfileSignature('2622011721@qq.com'), '');
+  assert.equal(sanitizePublicProfileSignature('联系我 138 0013 8000'), '');
+  assert.equal(
+    sanitizePublicProfileSignature('喜欢开放世界、二次元手游与版本更新讨论'),
+    '喜欢开放世界、二次元手游与版本更新讨论',
   );
 });
 

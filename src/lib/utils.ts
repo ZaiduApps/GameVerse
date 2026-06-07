@@ -32,6 +32,24 @@ const normalizeMarkdownInput = (value: unknown): string => {
 
 const isHttpsUrl = (value: string): boolean => /^https:\/\//i.test(value.trim());
 const isHttpUrl = (value: string): boolean => /^https?:\/\//i.test(value.trim());
+const hasMalformedPercentEncoding = (value: string): boolean =>
+  /%(?![0-9a-fA-F]{2})/.test(value);
+const isSafeHttpUrl = (value: string): boolean => {
+  const url = value.trim();
+  if (!isHttpUrl(url) || hasMalformedPercentEncoding(url)) return false;
+  try {
+    decodeURI(url);
+    if (typeof URL !== "undefined") {
+      const parsed = new URL(url);
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    }
+    return /^https?:\/\/[^/?#:\s]+(?::\d+)?(?:[/?#]|$)/i.test(url);
+  } catch {
+    return false;
+  }
+};
+const isSafeHttpsUrl = (value: string): boolean =>
+  isHttpsUrl(value) && isSafeHttpUrl(value);
 const isAcboxUrl = (value: string): boolean => /^acbox:\/\//i.test(value.trim());
 const isAppDeepLink = (value: string): boolean =>
   /^(acbox|uu-mobile):\/\//i.test(value.trim());
@@ -279,6 +297,9 @@ const renderSafeLink = (
 ): string => {
   const url = urlRaw.trim();
   if (isHttpUrl(url)) {
+    if (!isSafeHttpUrl(url)) {
+      return `<span class="${classSet.invalidLink}">${label} (${url})</span>`;
+    }
     const host = parseHostname(url);
     const safeHref = escapeHtmlAttribute(url);
     if (isBlockedLinkHost(host, blockedHosts)) {
@@ -435,7 +456,7 @@ const renderBareUrls = (
     /(^|[\s>：:])((?:https?:\/\/)[^\s<]+)/gim,
     (match, prefix, rawUrl) => {
       const { url, tail } = normalizeBareMarkdownUrl(String(rawUrl || ""));
-      if (!isHttpUrl(url)) return match;
+      if (!isSafeHttpUrl(url)) return match;
       return `${prefix}${renderSafeLink(url, url, blockedHosts, classSet)}${tail}`;
     },
   );
@@ -446,7 +467,7 @@ const renderSafeImage = (
   classSet: MarkdownClassSet,
 ): string => {
   const url = urlRaw.trim();
-  if (!isHttpsUrl(url)) {
+  if (!isSafeHttpsUrl(url)) {
     return `<span class="${classSet.invalidLink}">[图片链接已拦截: ${url}]</span>`;
   }
   const safeAlt = escapeHtmlAttribute((alt || '').trim() || '内容配图');

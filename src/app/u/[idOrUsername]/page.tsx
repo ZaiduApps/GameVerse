@@ -6,6 +6,7 @@ import { Calendar, CheckCircle2, Eye, Heart, MapPin, MessageSquare, PenLine } fr
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { sanitizePublicProfileSignature } from '@/lib/public-profile-safety';
 import { absoluteUrl, normalizeSeoAssetUrl, sanitizeSeoText } from '@/lib/seo';
 import { getPublicProfile, type PublicProfilePost } from '@/lib/public-profile-api';
 
@@ -66,13 +67,8 @@ function buildPublicProfileDescription(data: {
   };
 }): string {
   const name = data.user.name || data.user.username || '社区用户';
-  const signature = sanitizeSeoText(data.user.signature || '');
-  const signatureSafe =
-    signature.length >= 24 &&
-    !/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(signature) &&
-    !/(?:\+?\d[\s-]?){7,}/.test(signature)
-      ? `${signature}。`
-      : '';
+  const signature = sanitizePublicProfileSignature(data.user.signature);
+  const signatureSafe = signature.length >= 24 ? `${signature}。` : '';
   return `${signatureSafe}${name} 的 APKScc 社区主页，收录 ${Number(data.stats.post_count || 0)} 条公开动态、${Number(data.stats.view_count || 0)} 次浏览、${Number(data.stats.like_count || 0)} 次点赞和 ${Number(data.stats.comment_count || 0)} 条评论互动，展示游戏资讯、资源反馈、下载体验、版本讨论、攻略分享和玩家主页内容，便于关注作者的最新社区动态、公开资料、互动记录和游戏资源观点。`;
 }
 
@@ -143,6 +139,7 @@ export default async function PublicUserPage({
   const canonicalUrl = absoluteUrl(canonicalPath);
   const avatarUrl = normalizeSeoAssetUrl(user.avatar);
   const profileHandle = user.username ? `@${user.username}` : user._id ? `#${user._id}` : '';
+  const publicSignature = sanitizePublicProfileSignature(user.signature);
   const personJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'ProfilePage',
@@ -296,7 +293,7 @@ export default async function PublicUserPage({
                   <p className="text-sm text-muted-foreground">{profileHandle}</p>
                 ) : null}
                 <p className="max-w-2xl text-sm leading-6 text-foreground/80">
-                  {user.signature || '这个用户正在探索社区。'}
+                  {publicSignature || '这个用户正在探索社区。'}
                 </p>
               </div>
             </div>

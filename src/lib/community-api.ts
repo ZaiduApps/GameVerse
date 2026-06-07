@@ -199,6 +199,18 @@ const COMMUNITY_TOPIC_REVALIDATE_SECONDS = 180;
 const SEARCH_ENGINE_HOST_PATTERN =
   /(^|\.)((google|bing|baidu|sogou|yahoo)\.[a-z0-9.-]+|so\.com|360\.cn)$/i;
 
+function isSafePublicHttpUrl(value: string): boolean {
+  const url = String(value || '').trim();
+  if (!/^https?:\/\//i.test(url) || /%(?![0-9a-fA-F]{2})/.test(url)) return false;
+  try {
+    decodeURI(url);
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 function parseApiResponseMessage(json: any, fallback: string) {
   const message = String(json?.message || '').trim();
   return message || fallback;
@@ -390,7 +402,7 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
             icon: String(preview?.icon || '').trim() || undefined,
             site_name: String(preview?.site_name || '').trim() || undefined,
           }))
-          .filter((preview) => /^https?:\/\//i.test(preview.url))
+          .filter((preview) => isSafePublicHttpUrl(preview.url))
           .slice(0, 5)
       : [],
     isTop: Boolean(item.is_top),
