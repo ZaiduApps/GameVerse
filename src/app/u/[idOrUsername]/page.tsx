@@ -1,14 +1,19 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Calendar, CheckCircle2, Eye, Heart, MapPin, MessageSquare, PenLine } from 'lucide-react';
+import { Calendar, CheckCircle2, MapPin, PenLine } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import CommunityFeedPostCard from '@/components/community/CommunityFeedPostCard';
 import { sanitizePublicProfileSignature } from '@/lib/public-profile-safety';
 import { absoluteUrl, clampSeoDescription, normalizeSeoAssetUrl, sanitizeSeoText } from '@/lib/seo';
-import { getPublicProfile, type PublicProfilePost } from '@/lib/public-profile-api';
+import {
+  getPublicProfile,
+  publicProfilePostToCommunityPost,
+  type PublicProfilePost,
+} from '@/lib/public-profile-api';
 
 function formatDate(value?: string): string {
   if (!value) return '未知时间';
@@ -342,70 +347,15 @@ export default async function PublicUserPage({
             <p className="rounded-lg bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
               暂无公开动态
             </p>
-          ) : data.posts.map((post, postIndex) => {
-            const images = getPostImages(post);
-            const shouldEagerLoadPostImages = postIndex < 2;
-            const shouldPrioritizePostImages = postIndex === 0;
-            return (
-              <Link
-                key={post._id}
-                href={`/community/post/${post._id}`}
-                className="block rounded-lg border border-border/70 p-4 transition-colors hover:border-primary/30 hover:bg-muted/35"
-              >
-                <span className="flex gap-3">
-                  {images.length > 0 && (
-                    <span className="grid h-16 w-24 shrink-0 grid-cols-2 gap-1 overflow-hidden rounded-md bg-muted">
-                      <img
-                        src={images[0]}
-                        alt={getPostTitle(post)}
-                        width={96}
-                        height={64}
-                        loading={shouldEagerLoadPostImages ? 'eager' : 'lazy'}
-                        decoding="async"
-                        fetchPriority={shouldPrioritizePostImages ? 'high' : undefined}
-                        className={images.length === 1 ? 'col-span-2 h-full w-full object-cover' : 'h-full w-full object-cover'}
-                      />
-                      {images.slice(1, 3).map((image, index) => (
-                        <img
-                          key={`${post._id}-preview-${image}`}
-                          src={image}
-                          alt={`${getPostTitle(post)} 配图 ${index + 2}`}
-                          width={48}
-                          height={64}
-                          loading={shouldEagerLoadPostImages ? 'eager' : 'lazy'}
-                          decoding="async"
-                          className="h-full w-full object-cover"
-                        />
-                      ))}
-                    </span>
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className="line-clamp-1 font-semibold text-foreground">
-                      {post.title || postPreview(post)}
-                    </span>
-                    <span className="mt-1 block line-clamp-2 text-sm leading-6 text-muted-foreground">
-                      {postPreview(post)}
-                    </span>
-                    <span className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                      <span>{formatDate(post.publish_at)}</span>
-                      <span className="flex items-center gap-1">
-                        <Eye className="h-3.5 w-3.5" />
-                        {post.view_count || 0}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Heart className="h-3.5 w-3.5" />
-                        {post.like_count || 0}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        {post.comment_count || 0}
-                      </span>
-                    </span>
-                  </span>
-                </span>
-              </Link>
-            );
-          })}
+          ) : data.posts.map((post, postIndex) => (
+            <CommunityFeedPostCard
+              key={post._id}
+              post={publicProfilePostToCommunityPost(post, user)}
+              index={postIndex}
+              density="compact"
+              className="border border-border/50 shadow-none"
+            />
+          ))}
         </CardContent>
       </Card>
     </section>

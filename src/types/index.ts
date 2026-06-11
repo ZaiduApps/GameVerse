@@ -102,6 +102,7 @@ export interface CommunityPost {
   category?: string; // e.g., "游戏综合区"
   commentsCount: number;
   likesCount: number;
+  dislikesCount?: number;
   viewsCount?: number;
   isTop?: boolean;
   isRecommended?: boolean;

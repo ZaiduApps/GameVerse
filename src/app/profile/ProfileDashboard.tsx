@@ -23,6 +23,7 @@ import {
 } from '@/lib/profile-dashboard-api';
 import { useToast } from '@/hooks/use-toast';
 import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 function statusText(reviewStatus: string, status: number) {
   const review = String(reviewStatus || '').trim();
@@ -51,22 +52,38 @@ function DashboardPostCard({ item }: { item: DashboardPostItem }) {
   const post = item.post;
   const title = String(post.title || '').trim() || String(post.summary || '').trim() || '未命名动态';
   const previewText = getCommunityPostPreviewText(post, 80, '暂无内容');
+  const cover = post.previewImages?.[0] || post.imageUrl || '';
   return (
-    <div className="rounded-lg border p-3">
-      <div className="flex items-start justify-between gap-2">
-        <Link
-          href={`/community/post/${encodeURIComponent(post.id)}`}
-          className="line-clamp-1 text-sm font-semibold hover:text-primary"
-          data-acbox-action="profile_dashboard_post_detail"
-          data-acbox-label={title}
-        >
-          {title}
-        </Link>
-        <Badge variant="outline" className="text-[10px]">{statusText(item.reviewStatus, item.status)}</Badge>
-      </div>
-      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{previewText}</p>
-      <div className="mt-2 text-[11px] text-muted-foreground">
-        {formatTime(item.updatedAt || post.timestamp)} · 点赞 {post.likesCount} · 评论 {post.commentsCount}
+    <div className="rounded-lg bg-card p-3 shadow-sm">
+      <div className="flex gap-3">
+        <Avatar className="h-8 w-8 shrink-0">
+          <AvatarImage src={post.user.avatarUrl} alt={post.user.name} />
+          <AvatarFallback>{post.user.name.slice(0, 1)}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <Link
+              href={`/community/post/${encodeURIComponent(post.id)}`}
+              className="line-clamp-1 text-sm font-semibold hover:text-primary"
+              data-acbox-action="profile_dashboard_post_detail"
+              data-acbox-label={title}
+            >
+              {title}
+            </Link>
+            <Badge variant="outline" className="shrink-0 text-[10px]">{statusText(item.reviewStatus, item.status)}</Badge>
+          </div>
+          <div className="mt-1 flex gap-3">
+            <p className="line-clamp-2 flex-1 text-xs leading-5 text-muted-foreground">{previewText}</p>
+            {cover ? (
+              <img src={cover} alt={title} className="h-14 w-20 shrink-0 rounded-md object-cover" loading="lazy" decoding="async" />
+            ) : null}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+            <span>{formatTime(item.updatedAt || post.timestamp)}</span>
+            <span>点赞 {post.likesCount}</span>
+            <span>评论 {post.commentsCount}</span>
+          </div>
+        </div>
       </div>
     </div>
   );

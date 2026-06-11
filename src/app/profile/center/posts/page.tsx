@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Loader2, PencilLine, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, Heart, Loader2, MessageCircle, PencilLine, ThumbsDown, Trash2 } from 'lucide-react';
 
 import CreatePostForm from '@/components/community/CreatePostForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { deleteMyCommunityPost, setMyCommunityPostStatus, updateMyCommunityPost } from '@/lib/community-api';
 import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getMyDashboardPosts, type DashboardPostItem } from '@/lib/profile-dashboard-api';
 import CenterAuthRequired from '../CenterAuthRequired';
 import CenterPageHeader from '../CenterPageHeader';
@@ -414,26 +415,59 @@ export default function ProfileCenterPostsPage() {
                           ? '当前动态未通过审核，可调整内容后重新发布。'
                           : '当前内容尚未公开，发布后可查看详情。';
               return (
-                <div key={item.post.id} className="rounded-lg border p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    {isPubliclyViewable ? (
-                      <Link
-                        href={`/community/post/${encodeURIComponent(item.post.id)}`}
-                        className="line-clamp-1 text-sm font-semibold hover:text-primary"
-                        data-acbox-action="profile_center_post_detail"
-                        data-acbox-label={title}
-                      >
-                        {title}
-                      </Link>
-                    ) : (
-                      <span className="line-clamp-1 text-sm font-semibold text-foreground">{title}</span>
-                    )}
-                    <Badge variant={statusTone(item.reviewStatus, item.status)} className="text-[10px]">{statusText(item.reviewStatus, item.status)}</Badge>
+                <div key={item.post.id} className="rounded-lg bg-card p-4 shadow-sm">
+                  <div className="flex gap-3">
+                    <Avatar className="h-9 w-9 shrink-0">
+                      <AvatarImage src={item.post.user.avatarUrl} alt={item.post.user.name} />
+                      <AvatarFallback>{item.post.user.name.slice(0, 1)}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5 text-sm">
+                            <span className="font-semibold">{item.post.user.name}</span>
+                            {item.post.authorUsername ? (
+                              <span className="text-muted-foreground">@{item.post.authorUsername}</span>
+                            ) : null}
+                            <Badge variant={statusTone(item.reviewStatus, item.status)} className="text-[10px]">
+                              {statusText(item.reviewStatus, item.status)}
+                            </Badge>
+                          </div>
+                          <p className="mt-0.5 text-xs text-muted-foreground">{item.updatedAt || item.post.timestamp}</p>
+                        </div>
+                      </div>
+                      {isPubliclyViewable ? (
+                        <Link
+                          href={`/community/post/${encodeURIComponent(item.post.id)}`}
+                          className="mt-2 block line-clamp-2 text-sm font-semibold hover:text-primary"
+                          data-acbox-action="profile_center_post_detail"
+                          data-acbox-label={title}
+                        >
+                          {title}
+                        </Link>
+                      ) : (
+                        <p className="mt-2 line-clamp-2 text-sm font-semibold text-foreground">{title}</p>
+                      )}
+                      <p className="mt-1 whitespace-pre-line line-clamp-3 text-sm leading-6 text-foreground/85">{previewText}</p>
+                      {!isPubliclyViewable ? (
+                        <p className="mt-2 text-[11px] text-muted-foreground">{hiddenReason}</p>
+                      ) : null}
+                      <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1">
+                          <Heart className="h-3.5 w-3.5" />
+                          {item.post.likesCount}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <ThumbsDown className="h-3.5 w-3.5" />
+                          {item.post.dislikesCount || 0}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          {item.post.commentsCount}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{previewText}</p>
-                  {!isPubliclyViewable ? (
-                    <p className="mt-2 text-[11px] text-muted-foreground">{hiddenReason}</p>
-                  ) : null}
                   <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3">
                     {canEdit ? (
                       <Button

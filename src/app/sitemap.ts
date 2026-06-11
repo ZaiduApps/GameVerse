@@ -57,7 +57,7 @@ type PagedList<T> = {
   pageSize?: number;
 };
 
-const FALLBACK_STATIC_PATHS = ['/', '/app', '/community', '/rankings', '/llms.txt'];
+const FALLBACK_STATIC_PATHS = ['/', '/app', '/community', '/community/topics', '/rankings', '/llms.txt'];
 const SITEMAP_PAGE_SIZE = 500;
 const SITEMAP_MAX_PAGES = 200;
 const NEWS_SITEMAP_MAX_PAGES = 80;

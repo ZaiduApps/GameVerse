@@ -1,49 +1,115 @@
-﻿import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollText, Flame } from 'lucide-react';
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
+import { Flame, Hash, ScrollText, Search } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { MOCK_COMMUNITY_POSTS } from '@/lib/constants';
+import type { CommunityTopicItem } from '@/lib/community-api';
 import type { CommunityPost } from '@/types';
 
 interface CommunityInfoPanelProps {
   posts?: CommunityPost[];
+  searchValue?: string;
+  topics?: CommunityTopicItem[];
 }
 
-export default function CommunityInfoPanel({ posts }: CommunityInfoPanelProps) {
+export default function CommunityInfoPanel({ posts, searchValue = '', topics = [] }: CommunityInfoPanelProps) {
+  const [keyword, setKeyword] = useState(searchValue);
   const source = posts && posts.length > 0 ? posts : MOCK_COMMUNITY_POSTS;
-  const hotPosts: CommunityPost[] = [...source].sort((a, b) => b.likesCount - a.likesCount).slice(0, 3);
+  const hotPosts: CommunityPost[] = [...source]
+    .sort((a, b) => Number(b.likesCount || 0) - Number(a.likesCount || 0))
+    .slice(0, 5);
 
   return (
-    <Card className="sticky top-20 shadow-sm">
-      <CardHeader className="px-4 pb-2 pt-3">
+    <Card className="sticky top-24 shadow-sm">
+      <CardHeader className="px-4 pb-2 pt-4">
+        <CardTitle className="flex items-center text-sm font-semibold">
+          <Search size={16} className="mr-2 text-primary" />
+          搜一搜
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-4 pb-4">
+        <form
+          className="flex gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const q = keyword.trim();
+            window.location.href = q ? `/community?q=${encodeURIComponent(q)}` : '/community';
+          }}
+        >
+          <Input
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+            placeholder="搜帖子、链接、话题"
+            className="h-9"
+          />
+          <Button type="submit" size="sm" className="h-9 px-3" aria-label="搜索社区">
+            <Search className="h-4 w-4" />
+          </Button>
+        </form>
+      </CardContent>
+
+      {topics.length > 0 ? (
+        <>
+          <CardHeader className="border-t px-4 pb-2 pt-4">
+            <CardTitle className="flex items-center text-sm font-semibold">
+              <Hash size={16} className="mr-2 text-primary" />
+              热门话题
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1 px-4 pb-4">
+            {topics.slice(0, 12).map((topic) => (
+              <Link
+                key={topic._id || topic.name}
+                href={`/community?topicName=${encodeURIComponent(topic.name || topic.slug || topic._id)}`}
+                className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-muted/60"
+              >
+                <span className="min-w-0 truncate text-primary">#{topic.name}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {Number(topic.post_count || topic.heat_score || 0)}
+                </span>
+              </Link>
+            ))}
+          </CardContent>
+        </>
+      ) : null}
+
+      <CardHeader className="border-t px-4 pb-2 pt-4">
         <CardTitle className="flex items-center text-sm font-semibold">
           <Flame size={16} className="mr-2 text-red-500" />
           热门帖子
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-1.5 px-4 py-2 text-xs">
+      <CardContent className="space-y-2 px-4 pb-4 text-xs">
         {hotPosts.length > 0 ? (
-          <ul className="space-y-1">
+          <ul className="space-y-1.5">
             {hotPosts.map((post, index) => (
               <li key={post.id}>
                 <Link
                   href={`/community/post/${post.id}`}
-                  className="block truncate text-foreground hover:text-primary hover:underline"
+                  className="flex gap-2 rounded-md px-2 py-1.5 text-foreground hover:bg-muted/60 hover:text-primary"
                   title={post.title || post.content.substring(0, 50)}
                 >
                   <span
-                    className={`mr-1 font-semibold ${
+                    className={
                       index === 0
-                        ? 'text-red-500'
+                        ? 'font-semibold text-red-500'
                         : index === 1
-                          ? 'text-orange-500'
+                          ? 'font-semibold text-orange-500'
                           : index === 2
-                            ? 'text-yellow-500'
-                            : ''
-                    }`}
+                            ? 'font-semibold text-yellow-500'
+                            : 'font-semibold text-muted-foreground'
+                    }
                   >
-                    {index + 1}.
+                    {index + 1}
                   </span>
-                  {post.title || post.content.substring(0, 30) + (post.content.length > 30 ? '...' : '')}
+                  <span className="line-clamp-2">
+                    {post.title || post.content.substring(0, 44) + (post.content.length > 44 ? '...' : '')}
+                  </span>
                 </Link>
               </li>
             ))}
@@ -53,23 +119,16 @@ export default function CommunityInfoPanel({ posts }: CommunityInfoPanelProps) {
         )}
       </CardContent>
 
-      <CardHeader className="mt-2 border-t px-4 pb-3 pt-4">
-        <CardTitle className="flex items-center text-base font-semibold">
-          <ScrollText size={18} className="mr-2 text-primary" />
+      <CardHeader className="border-t px-4 pb-3 pt-4">
+        <CardTitle className="flex items-center text-sm font-semibold">
+          <ScrollText size={16} className="mr-2 text-primary" />
           社区发布规范
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 px-4 pb-4 text-xs text-muted-foreground">
-        <p>1. 请文明发言，禁止辱骂、人身攻击和引战内容。</p>
-        <p>2. 严禁发布违法违规、侵权盗版、诈骗引流信息。</p>
-        <p>3. 发帖尽量补充关键信息，便于其他玩家快速理解与回复。</p>
-        <p>4. 对于资源反馈、问题求助，建议附带机型、版本、复现步骤。</p>
-        <p>
-          联系我们：
-          <a href="mailto:service@apks.cc" className="text-primary hover:underline">
-            service@apks.cc
-          </a>
-        </p>
+        <p>1. 文明发言，尊重不同游戏体验。</p>
+        <p>2. 反馈问题时补充机型、版本和复现步骤。</p>
+        <p>3. 分享外链时说明来源和用途。</p>
       </CardContent>
     </Card>
   );

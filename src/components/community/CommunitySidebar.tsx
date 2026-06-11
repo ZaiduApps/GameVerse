@@ -1,13 +1,14 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { CommunityTopicItem } from '@/lib/community-api';
 import { cn } from '@/lib/utils';
-import { Building2, ChevronDown, ChevronUp, Flame, Hash, Heart } from 'lucide-react';
+import { Building2, ChevronDown, ChevronRight, ChevronUp, Flame, Hash, Heart } from 'lucide-react';
 
 interface CommunitySidebarProps {
   hotTopics: CommunityTopicItem[];
@@ -129,9 +130,17 @@ export default function CommunitySidebar({
       </CardHeader>
       <CardContent className="space-y-4 p-3 pt-1">
         <section className="space-y-1">
-          <div className="flex items-center px-1 pb-1 text-xs font-semibold text-muted-foreground">
-            <Flame className="mr-1.5 h-3.5 w-3.5 text-orange-500" />
-            热门话题
+          <div className="flex items-center justify-between gap-2 px-1 pb-1 text-xs font-semibold text-muted-foreground">
+            <span className="inline-flex min-w-0 items-center">
+              <Flame className="mr-1.5 h-3.5 w-3.5 text-orange-500" />
+              热门话题
+            </span>
+            <Button asChild variant="ghost" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
+              <Link href="/community/topics">
+                更多
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
           </div>
           {hotTopics.map(renderTopicButton)}
           {!loading && hotTopics.length === 0 ? (

@@ -57,6 +57,7 @@ export interface ApiCommunityPost {
   author_name?: string;
   author_avatar?: string;
   like_count?: number;
+  dislike_count?: number;
   comment_count?: number;
   view_count?: number;
   publish_at?: string;
@@ -168,6 +169,7 @@ interface TopicListParams {
   sort?: 'activity' | 'hot' | 'manual' | 'new';
   appId?: string;
   type?: 'event' | 'game' | 'general';
+  isOfficial?: boolean;
 }
 
 export interface CommunityReadFetchOptions {
@@ -378,6 +380,7 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
     category: topicNames[0] || item.app_info?.name || '社区',
     commentsCount: Number(item.comment_count || 0),
     likesCount: Number(item.like_count || 0),
+    dislikesCount: Number(item.dislike_count || 0),
     viewsCount: Number(item.view_count || 0),
     heatScore: Number(item.heat_score || 0),
     viewSources: item.view_sources || undefined,
@@ -676,6 +679,7 @@ export async function getCommunityFeed(
   options?: {
     page?: number;
     pageSize?: number;
+    q?: string;
     topicId?: string;
   },
   fetchOptions?: CommunityReadFetchOptions,
@@ -689,7 +693,9 @@ export async function getCommunityFeed(
     view: 'card',
   });
   const topicId = String(options?.topicId || '').trim();
+  const keyword = String(options?.q || '').trim();
   if (topicId) query.set('topic_id', topicId);
+  if (keyword) query.set('q', keyword);
   const data = await getApiData<CommunityFeedData>(
     `/content/feed?${query.toString()}`,
     fetchOptions,
@@ -1106,6 +1112,7 @@ export async function getCommunityTopics(
   if (keyword) query.set('q', keyword);
   if (params.appId) query.set('app_id', params.appId);
   if (params.type) query.set('type', params.type);
+  if (params.isOfficial !== undefined) query.set('is_official', params.isOfficial ? 'true' : 'false');
 
   const data = await getApiData<{
     list?: CommunityTopicItem[];

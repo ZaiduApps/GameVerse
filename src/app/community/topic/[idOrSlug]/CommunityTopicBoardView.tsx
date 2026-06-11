@@ -130,12 +130,14 @@ export default function CommunityTopicBoardView({
   const [moderationIsLocked, setModerationIsLocked] = useState(false);
   const [moderationIsRecommended, setModerationIsRecommended] = useState(false);
   const [moderationSaving, setModerationSaving] = useState(false);
+  const [moderationPanelOpen, setModerationPanelOpen] = useState(false);
   const [moderatorDialogOpen, setModeratorDialogOpen] = useState(false);
   const [topicIconFailed, setTopicIconFailed] = useState(false);
   const [topicBackdropFailed, setTopicBackdropFailed] = useState(false);
   const shouldSkipInitialLoadRef = useRef(hasInitialData);
   const latestLoadMoreAnchorRef = useRef<HTMLDivElement | null>(null);
   const hotLoadMoreAnchorRef = useRef<HTMLDivElement | null>(null);
+  const moderationPanelRef = useRef<HTMLDivElement | null>(null);
 
   const safeIdOrSlug = useMemo(
     () => decodeURIComponent(String(idOrSlug || '').trim()),
@@ -391,6 +393,18 @@ export default function CommunityTopicBoardView({
     });
   }, [toast, topicId]);
 
+  const openModerationPanel = useCallback(() => {
+    if (!canModerateTopicSettings) return;
+    setModeratorDialogOpen(false);
+    setModerationPanelOpen(true);
+    window.requestAnimationFrame(() => {
+      moderationPanelRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  }, [canModerateTopicSettings]);
+
   const handleCreatePost = useCallback(() => {
     if (!topicId) return;
     if (!isAuthenticated) {
@@ -534,6 +548,12 @@ export default function CommunityTopicBoardView({
   }, [topic?._id, topic?.announcement, topic?.pinned_post_id, topic?.is_locked, topic?.is_recommended]);
 
   useEffect(() => {
+    if (!canModerateTopicSettings) {
+      setModerationPanelOpen(false);
+    }
+  }, [canModerateTopicSettings, topicId]);
+
+  useEffect(() => {
     setTopicIconFailed(false);
     setTopicBackdropFailed(false);
   }, [topic?.app_info?.icon, topic?.cover, topic?.icon, topic?._id]);
@@ -564,7 +584,7 @@ export default function CommunityTopicBoardView({
   ) => {
     if (loading) {
       return (
-        <div className="flex items-center justify-center rounded-lg border bg-card py-14 text-sm text-muted-foreground">
+        <div className="flex items-center justify-center rounded-lg bg-card py-14 text-sm text-muted-foreground shadow-sm">
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           正在加载话题内容...
         </div>
@@ -573,7 +593,7 @@ export default function CommunityTopicBoardView({
 
     if (!posts.length) {
       return (
-        <div className="rounded-lg border bg-card py-14 text-center text-sm text-muted-foreground">
+        <div className="rounded-lg bg-card py-14 text-center text-sm text-muted-foreground shadow-sm">
           暂无帖子，稍后再来看看。
         </div>
       );
@@ -584,7 +604,7 @@ export default function CommunityTopicBoardView({
     return (
       <div className="space-y-4">
         {announcementPosts.length ? (
-          <Card className="overflow-hidden border-orange-500/35 bg-orange-50/70 dark:bg-orange-950/20">
+          <Card className="overflow-hidden border-transparent bg-orange-50/70 shadow-sm dark:bg-orange-950/20">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center text-base font-semibold">
                 <Megaphone className="mr-2 h-4 w-4 text-orange-600" />
@@ -603,7 +623,7 @@ export default function CommunityTopicBoardView({
                     href={`/community/post/${postId}`}
                     data-acbox-action="topic_announcement_click"
                     data-acbox-label={extractAnnouncementText(post)}
-                    className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm transition-colors hover:border-primary/35 hover:bg-primary/5"
+                    className="flex items-center gap-2 rounded-md bg-background px-3 py-2 text-sm shadow-sm transition-colors hover:bg-primary/5"
                   >
                     <Badge variant={isPinned ? 'default' : 'secondary'}>
                       {isPinned ? '置顶' : '推荐'}
@@ -637,11 +657,11 @@ export default function CommunityTopicBoardView({
             );
           })
         ) : (
-          <div className="rounded-lg border bg-card py-14 text-center text-sm text-muted-foreground">
+          <div className="rounded-lg bg-card py-14 text-center text-sm text-muted-foreground shadow-sm">
             当前仅有公告帖子，暂无普通帖子。
           </div>
         )}
-        <div className="rounded-md border bg-card px-3 py-3 text-xs text-muted-foreground sm:text-sm">
+        <div className="rounded-md bg-card px-3 py-3 text-xs text-muted-foreground shadow-sm sm:text-sm">
           <div className="flex items-center justify-between">
             <span>已加载 {posts.length} 条</span>
             {options.loadingMore ? (
@@ -674,7 +694,7 @@ export default function CommunityTopicBoardView({
   if (!loading && !topic) {
     return (
       <div className="container mx-auto px-2 py-6 sm:px-4 lg:py-8">
-        <Card>
+        <Card className="border-transparent shadow-sm">
           <CardHeader>
             <CardTitle className="text-xl">话题不存在或已下线</CardTitle>
             <CardDescription>请返回社区页面重新选择话题。</CardDescription>
@@ -725,7 +745,7 @@ export default function CommunityTopicBoardView({
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <section className="space-y-4">
-          <Card className="group relative overflow-hidden rounded-xl border border-border/35 bg-card text-card-foreground shadow-[0_14px_40px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-[0_18px_48px_rgba(15,23,42,0.12)]">
+          <Card className="group relative overflow-hidden rounded-xl border-transparent bg-card text-card-foreground shadow-[0_14px_40px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_48px_rgba(15,23,42,0.12)]">
             {topicBackdrop ? (
               <>
                 <Image
@@ -867,7 +887,7 @@ export default function CommunityTopicBoardView({
           </Card>
 
           {topic?.announcement?.trim() ? (
-            <Card className="border-primary/30 bg-primary/5">
+            <Card className="border-transparent bg-primary/5 shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center text-base">
                   <Hash className="mr-2 h-4 w-4 text-primary" />
@@ -880,11 +900,26 @@ export default function CommunityTopicBoardView({
             </Card>
           ) : null}
 
-          {canModerateTopicSettings ? (
-            <Card>
+          {canModerateTopicSettings && moderationPanelOpen ? (
+            <Card ref={moderationPanelRef} className="scroll-mt-24 border-transparent shadow-sm">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">话题治理面板</CardTitle>
-                <CardDescription>版主和管理员可直接调整公告、锁定、推荐与置顶设置。</CardDescription>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-base">话题治理面板</CardTitle>
+                    <CardDescription>版主和管理员可直接调整公告、锁定、推荐与置顶设置。</CardDescription>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0"
+                    data-acbox-action="topic_moderation_collapse"
+                    data-acbox-label={topic?.name || safeIdOrSlug}
+                    onClick={() => setModerationPanelOpen(false)}
+                  >
+                    收起
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-3 md:grid-cols-2">
@@ -969,7 +1004,7 @@ export default function CommunityTopicBoardView({
             value={activeFeedTab}
             onValueChange={(value) => setActiveFeedTab(value === 'hot' ? 'hot' : 'latest')}
           >
-            <TabsList className="mb-4 border bg-card">
+            <TabsList className="mb-4 border-transparent bg-card shadow-sm">
               <TabsTrigger
                 value="latest"
                 data-acbox-action="topic_tab_latest"
@@ -1005,7 +1040,7 @@ export default function CommunityTopicBoardView({
         </section>
 
         <aside className="hidden space-y-4 lg:block">
-          <Card>
+          <Card className="border-transparent shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -1030,6 +1065,15 @@ export default function CommunityTopicBoardView({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    {canModerateTopicSettings ? (
+                      <DropdownMenuItem
+                        data-acbox-action="topic_open_moderation"
+                        data-acbox-label={topic?.name || safeIdOrSlug}
+                        onClick={openModerationPanel}
+                      >
+                        管理
+                      </DropdownMenuItem>
+                    ) : null}
                     <DropdownMenuItem
                       disabled={!topicId}
                       data-acbox-action="topic_copy_id"
@@ -1043,6 +1087,20 @@ export default function CommunityTopicBoardView({
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
+              {canModerateTopicSettings ? (
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    data-acbox-action="topic_open_moderation_panel"
+                    data-acbox-label={topic?.name || safeIdOrSlug}
+                    onClick={openModerationPanel}
+                  >
+                    管理
+                  </Button>
+                </div>
+              ) : null}
               {hasModerators ? (
                 moderators.map((moderator) => {
                   const moderatorName = String(
@@ -1055,7 +1113,7 @@ export default function CommunityTopicBoardView({
                   return (
                     <div
                       key={String(moderator?._id || moderatorName)}
-                      className="flex items-center gap-3 rounded-md border px-3 py-2"
+                      className="flex items-center gap-3 rounded-md bg-background px-3 py-2 shadow-sm"
                     >
                       <Avatar className="h-9 w-9">
                         <AvatarImage src={avatar} alt={moderatorName} />
@@ -1095,17 +1153,31 @@ export default function CommunityTopicBoardView({
           </DialogHeader>
           <div className="space-y-3">
             <div className="flex justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={!topicId}
-                data-acbox-action="topic_copy_id_dialog"
-                data-acbox-label={topic?.name || safeIdOrSlug}
-                onClick={() => void handleCopyTopicId()}
-              >
-                复制话题 ID
-              </Button>
+              <div className="flex items-center gap-2">
+                {canModerateTopicSettings ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    data-acbox-action="topic_open_moderation_dialog"
+                    data-acbox-label={topic?.name || safeIdOrSlug}
+                    onClick={openModerationPanel}
+                  >
+                    管理
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!topicId}
+                  data-acbox-action="topic_copy_id_dialog"
+                  data-acbox-label={topic?.name || safeIdOrSlug}
+                  onClick={() => void handleCopyTopicId()}
+                >
+                  复制话题 ID
+                </Button>
+              </div>
             </div>
             {hasModerators ? (
               moderators.map((moderator) => {
@@ -1119,7 +1191,7 @@ export default function CommunityTopicBoardView({
                 return (
                   <div
                     key={`topic-dialog-moderator-${String(moderator?._id || moderatorName)}`}
-                    className="flex items-center gap-3 rounded-md border px-3 py-2"
+                    className="flex items-center gap-3 rounded-md bg-background px-3 py-2 shadow-sm"
                   >
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={avatar} alt={moderatorName} />

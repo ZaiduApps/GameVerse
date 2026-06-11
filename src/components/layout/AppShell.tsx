@@ -32,6 +32,7 @@ export default function AppShell({ children, siteName, logoUrl, siteConfig }: Ap
   const lastReportedRef = useRef<string>('');
   const isStandaloneDownloadPage = pathname === '/download/app' || pathname.startsWith('/download/app/');
   const isGameDetailPage = pathname.startsWith('/app/');
+  const isCommunityTopicsPage = pathname === '/community/topics';
   const shellHiddenHeading = pathname === '/community' ? `${siteName || 'APKScc'} 玩家互动社区` : '';
   const communityBreadcrumbJsonLd = shellHiddenHeading
     ? toJsonLd({
@@ -108,7 +109,14 @@ export default function AppShell({ children, siteName, logoUrl, siteConfig }: Ap
       ) : (
         <>
           <Header siteName={siteName} logoUrl={logoUrl} />
-          <main id="main-content" className="container mx-auto flex-grow px-4 py-8">
+          <main
+            id="main-content"
+            className={
+              isCommunityTopicsPage
+                ? 'min-h-screen flex-grow overflow-x-hidden px-0 py-0'
+                : 'container mx-auto flex-grow px-4 py-8'
+            }
+          >
             {communityBreadcrumbJsonLd ? (
               <script
                 type="application/ld+json"

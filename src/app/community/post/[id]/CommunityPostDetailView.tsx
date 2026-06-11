@@ -6,10 +6,10 @@ import Image from 'next/image';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Bookmark, ChevronLeft, ChevronRight, ExternalLink, Eye, MessageSquare, RotateCcw, Send, Share2, ThumbsUp, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { ArrowLeft, Bookmark, ChevronLeft, ChevronRight, ExternalLink, Eye, MessageSquare, RotateCcw, Send, Share2, ThumbsDown, ThumbsUp, X, ZoomIn, ZoomOut } from 'lucide-react';
 
 import { buildRenderedMarkdownDocument, cn } from '@/lib/utils';
-import { apiUrl, trackedApiFetch } from '@/lib/api';
+import { trackedApiFetch } from '@/lib/api';
 import {
   COMMUNITY_DETAIL_BLOCKED_LINK_HOSTS,
   getCommunityUrlHost,
@@ -38,12 +38,48 @@ import AppDownloadGuideDialog from '@/components/app-download-guide-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 
 interface CommunityPostDetailViewProps {
   post: CommunityPost;
   initialComments?: CommunityCommentThread[];
+}
+
+const BOOKMARK_STORAGE_KEY = 'community:bookmarked-posts:v1';
+
+function readStoredIds(key: string): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed)
+      ? parsed.map((item) => String(item || '').trim()).filter(Boolean)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredIds(key: string, ids: string[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(ids));
+  } catch {}
+}
+
+function formatCount(value?: number | null): string {
+  const count = Math.max(0, Number(value || 0));
+  if (count >= 10000) return `${(count / 10000).toFixed(count >= 100000 ? 0 : 1)}万`;
+  if (count >= 1000) return `${(count / 1000).toFixed(count >= 10000 ? 0 : 1)}k`;
+  return String(count);
+}
+
+function getDetailImageCellClass(count: number, index: number) {
+  if (count === 1) return 'aspect-[4/3] max-h-[420px] sm:max-w-[640px]';
+  if (count === 2) return 'aspect-[4/3]';
+  if (count === 3 && index === 0) return 'aspect-[4/3] row-span-2';
+  return 'aspect-square';
 }
 
 function normalizeComparableImageUrl(value?: string): string {
@@ -122,9 +158,12 @@ export default function CommunityPostDetailView({
   const [isSyncingLike, setIsSyncingLike] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likesCount);
+  const [isSyncingDislike, setIsSyncingDislike] = useState(false);
+  const [isDisliked, setIsDisliked] = useState(false);
+  const [dislikeCount, setDislikeCount] = useState(Math.max(0, Number(post.dislikesCount || 0)));
+  const [bookmarked, setBookmarked] = useState(false);
   const [viewCount, setViewCount] = useState<number | null>(null);
-  const [imageRetry, setImageRetry] = useState(0);
-  const [detailImageError, setDetailImageError] = useState(false);
+  const [detailImageErrors, setDetailImageErrors] = useState<Record<string, boolean>>({});
   const [activePreviewImages, setActivePreviewImages] = useState<string[]>([]);
   const [selectedPreviewIndex, setSelectedPreviewIndex] = useState<number | null>(null);
   const [previewZoom, setPreviewZoom] = useState(1);
@@ -150,6 +189,7 @@ export default function CommunityPostDetailView({
   const articleRef = useRef<HTMLElement | null>(null);
   const requestedCommentContextIdsRef = useRef<Set<string>>(new Set());
   const authorProfileHref = getCommunityAuthorProfileHref(post);
+  const postId = String(post.id || '').trim();
 
   const postTopicIds = useMemo(
     () =>
@@ -166,6 +206,16 @@ export default function CommunityPostDetailView({
   useEffect(() => {
     setViewCount(normalizeNonNegativeCount(post.viewsCount));
   }, [post.viewsCount]);
+
+  useEffect(() => {
+    setLikeCount(normalizeNonNegativeCount(post.likesCount));
+    setDislikeCount(normalizeNonNegativeCount(post.dislikesCount));
+  }, [post.dislikesCount, post.id, post.likesCount]);
+
+  useEffect(() => {
+    if (!postId) return;
+    setBookmarked(readStoredIds(BOOKMARK_STORAGE_KEY).includes(postId));
+  }, [postId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -316,6 +366,34 @@ export default function CommunityPostDetailView({
     contentImageUrls.forEach((url) => pushUnique(url));
     return urls;
   }, [contentImageUrls, post.imageUrl]);
+  const detailImages = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [
+            ...(post.previewImages || []),
+            ...previewImages,
+          ]
+            .map((url) => String(url || '').trim())
+            .filter((url) => /^https?:\/\//i.test(url)),
+        ),
+      ).slice(0, 9),
+    [post.previewImages, previewImages],
+  );
+  const detailTopics = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [
+            ...(post.topicNames || []),
+            ...(post.tags || []),
+          ]
+            .map((tag) => String(tag || '').trim())
+            .filter(Boolean),
+        ),
+      ).slice(0, 8),
+    [post.tags, post.topicNames],
+  );
   const contentLinkUrls = useMemo(() => {
     const urls: string[] = [];
     const imageUrlSet = new Set(contentImageUrls.map(normalizeComparableImageUrl));
@@ -384,14 +462,6 @@ export default function CommunityPostDetailView({
     if (tocItems.length === 0) return 2;
     return tocItems.reduce((min, item) => Math.min(min, item.level), tocItems[0].level);
   }, [tocItems]);
-
-  const shouldRenderDetailCover = useMemo(() => {
-    const cover = String(post.imageUrl || '').trim();
-    if (!cover) return false;
-    const normalizedCover = normalizeComparableImageUrl(cover);
-    if (!normalizedCover) return false;
-    return !contentImageUrls.some((url) => normalizeComparableImageUrl(url) === normalizedCover);
-  }, [contentImageUrls, post.imageUrl]);
 
   const reloadComments = async () => {
     const latest = await getCommunityCommentThreads(post.id, 30);
@@ -542,20 +612,32 @@ export default function CommunityPostDetailView({
       if (!isAuthenticated || !token) {
         if (!cancelled) {
           setIsLiked(false);
+          setIsDisliked(false);
           setLikedCommentIds({});
         }
         return;
       }
 
       try {
-        const [postLiked, likedCommentMap] = await Promise.all([
+        const [postLiked, postDisliked, likedCommentMap] = await Promise.all([
           getCommunityPostLikeStatus({ token, postId: post.id }),
+          trackedApiFetch(`/content/${encodeURIComponent(post.id)}/dislike-status`, {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${token}` },
+            cache: 'no-store',
+          })
+            .then((res) => res.json().catch(() => null).then((json) => ({ res, json })))
+            .then(({ res, json }) => (res.ok && json?.code === 0 ? Boolean(json?.data?.disliked) : null))
+            .catch(() => null),
           getCommunityCommentLikeStatuses({ token, commentIds: commentStatusIds }),
         ]);
         if (cancelled) return;
 
         if (postLiked !== null) {
           setIsLiked(postLiked);
+        }
+        if (postDisliked !== null) {
+          setIsDisliked(postDisliked);
         }
         setLikedCommentIds(likedCommentMap);
       } catch {
@@ -583,10 +665,16 @@ export default function CommunityPostDetailView({
 
     const nextLiked = !isLiked;
     const prevLiked = isLiked;
+    const prevDisliked = isDisliked;
     const prevCount = likeCount;
+    const prevDislikeCount = dislikeCount;
 
     setIsLiked(nextLiked);
     setLikeCount((prev) => (nextLiked ? prev + 1 : Math.max(0, prev - 1)));
+    if (nextLiked && isDisliked) {
+      setIsDisliked(false);
+      setDislikeCount((prev) => Math.max(0, prev - 1));
+    }
     setIsSyncingLike(true);
 
     try {
@@ -604,9 +692,17 @@ export default function CommunityPostDetailView({
       }
       setIsLiked(Boolean(json.data.liked));
       setLikeCount(Number(json.data.like_count ?? 0));
+      if (json.data.disliked !== undefined) {
+        setIsDisliked(Boolean(json.data.disliked));
+      }
+      if (json.data.dislike_count !== undefined) {
+        setDislikeCount(normalizeNonNegativeCount(json.data.dislike_count));
+      }
     } catch {
       setIsLiked(prevLiked);
+      setIsDisliked(prevDisliked);
       setLikeCount(prevCount);
+      setDislikeCount(prevDislikeCount);
       toast({
         title: '点赞失败',
         description: '请稍后重试。',
@@ -615,6 +711,78 @@ export default function CommunityPostDetailView({
     } finally {
       setIsSyncingLike(false);
     }
+  };
+
+  const handleDislike = async () => {
+    if (isSyncingDislike) return;
+    if (!isAuthenticated || !token) {
+      toast({
+        title: '需要登录',
+        description: '请先登录后再操作。',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const nextDisliked = !isDisliked;
+    const prevLiked = isLiked;
+    const prevDisliked = isDisliked;
+    const prevLikeCount = likeCount;
+    const prevDislikeCount = dislikeCount;
+
+    setIsDisliked(nextDisliked);
+    setDislikeCount((prev) => (nextDisliked ? prev + 1 : Math.max(0, prev - 1)));
+    if (nextDisliked && isLiked) {
+      setIsLiked(false);
+      setLikeCount((prev) => Math.max(0, prev - 1));
+    }
+    setIsSyncingDislike(true);
+
+    try {
+      const res = await trackedApiFetch(`/content/${post.id}/dislike`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: 'toggle' }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.code !== 0 || !json?.data) {
+        throw new Error(json?.message || `HTTP ${res.status}`);
+      }
+      setIsDisliked(Boolean(json.data.disliked));
+      setDislikeCount(normalizeNonNegativeCount(json.data.dislike_count));
+      if (json.data.liked !== undefined) {
+        setIsLiked(Boolean(json.data.liked));
+      }
+      if (json.data.like_count !== undefined) {
+        setLikeCount(normalizeNonNegativeCount(json.data.like_count));
+      }
+    } catch {
+      setIsLiked(prevLiked);
+      setIsDisliked(prevDisliked);
+      setLikeCount(prevLikeCount);
+      setDislikeCount(prevDislikeCount);
+      toast({
+        title: '操作失败',
+        description: '请稍后重试。',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSyncingDislike(false);
+    }
+  };
+
+  const handleToggleBookmark = () => {
+    if (!postId) return;
+    const ids = new Set(readStoredIds(BOOKMARK_STORAGE_KEY));
+    const nextBookmarked = !ids.has(postId);
+    if (nextBookmarked) ids.add(postId);
+    else ids.delete(postId);
+    writeStoredIds(BOOKMARK_STORAGE_KEY, Array.from(ids));
+    setBookmarked(nextBookmarked);
+    toast({ title: nextBookmarked ? '收藏成功' : '已取消收藏' });
   };
 
   const handleCommentSubmit = async () => {
@@ -1023,34 +1191,6 @@ export default function CommunityPostDetailView({
   const relatedApp = post.relatedApp;
   const relatedAppHref = relatedApp?.pkg ? `/app/${relatedApp.pkg}` : undefined;
   const relatedAppPrimaryTag = relatedApp?.regionTag || relatedApp?.tags?.[0] || (relatedApp?.pkg ? '国际服' : '');
-  const authorSummary = (
-    <>
-      <Avatar className="w-10 h-10">
-        <AvatarImage src={post.user.avatarUrl} alt={post.user.name} />
-        <AvatarFallback>{post.user.name.substring(0, 2)}</AvatarFallback>
-      </Avatar>
-      <span>
-        <span className="flex items-center gap-2">
-          <span className="text-base font-semibold text-foreground">{post.user.name}</span>
-          {post.user.level && (
-            <span className="inline-flex items-center rounded-full border border-transparent px-1.5 py-0.5 text-xs font-normal bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200">
-              Lv.{post.user.level}
-            </span>
-          )}
-        </span>
-        <span className="block text-xs text-muted-foreground">
-          {post.timestamp}
-          {post.source && ` · ${post.source}`}
-          {post.user.location && ` · ${post.user.location}`}
-        </span>
-        {canModerateTopic ? (
-          <span className="mt-1 inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold text-foreground">
-            版主模式
-          </span>
-        ) : null}
-      </span>
-    </>
-  );
   const handleTocJump = (headingId: string) => {
     const element = document.getElementById(headingId);
     if (!element) return;
@@ -1181,312 +1321,324 @@ export default function CommunityPostDetailView({
   }, [tocItems]);
 
   const renderCommentsCard = (options: { includeAnchor?: boolean } = {}) => (
-    <Card id={options.includeAnchor ? 'comments' : undefined} className="scroll-mt-24 shadow-lg">
-      <CardHeader>
-        {options.includeAnchor ? (
-          <h2 className="text-lg font-semibold flex items-center">
-            <MessageSquare size={20} className="mr-2 text-primary" />
-            玩家评论与回复 ({totalCommentCount})
-          </h2>
-        ) : (
-          <div className="text-lg font-semibold flex items-center">
-            <MessageSquare size={20} className="mr-2 text-primary" />
-            玩家评论与回复 ({totalCommentCount})
-          </div>
-        )}
+    <Card id={options.includeAnchor ? 'comments' : undefined} className="scroll-mt-24 overflow-hidden border-border/70 shadow-sm">
+      <CardHeader className="border-b px-4 py-3">
+        <div className="flex items-center justify-between gap-3">
+          {options.includeAnchor ? (
+            <h2 className="flex items-center text-base font-semibold">
+              <MessageSquare size={18} className="mr-2 text-primary" />
+              评论区
+            </h2>
+          ) : (
+            <div className="flex items-center text-base font-semibold">
+              <MessageSquare size={18} className="mr-2 text-primary" />
+              评论区
+            </div>
+          )}
+          <span className="shrink-0 text-xs text-muted-foreground">{formatCount(totalCommentCount)} 条互动</span>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-start space-x-3">
-          <Avatar className="mt-1">
-            <AvatarImage src="/favicon.ico" alt="当前用户" />
-            <AvatarFallback>ME</AvatarFallback>
-          </Avatar>
-          <div className="flex-grow space-y-2">
-            <label htmlFor={options.includeAnchor ? 'comment-input' : 'comment-input-side'} className="sr-only">
-              {replyTarget ? `回复 @${replyTarget.name}` : '写下你的评论'}
-            </label>
-            <Textarea
-              id={options.includeAnchor ? 'comment-input' : 'comment-input-side'}
-              aria-label={replyTarget ? `回复 @${replyTarget.name}` : '写下你的评论'}
-              placeholder={replyTarget ? `回复 @${replyTarget.name}...` : '写下你的评论...'}
-              rows={3}
-              className="text-sm"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-            />
-            {replyTarget && (
-              <div className="text-xs text-muted-foreground">
-                正在回复 @{replyTarget.name}
+      <CardContent className="p-0">
+        <div className="border-b bg-background px-4 py-4">
+          <div className="flex items-start gap-3">
+            <Avatar className="mt-0.5 h-9 w-9">
+              <AvatarImage src={user?.avatar || '/favicon.ico'} alt="当前用户" />
+              <AvatarFallback>{(user?.name || user?.username || 'ME').slice(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1 space-y-2">
+              <label htmlFor={options.includeAnchor ? 'comment-input' : 'comment-input-side'} className="sr-only">
+                {replyTarget ? `回复 @${replyTarget.name}` : '写下你的评论'}
+              </label>
+              <Textarea
+                id={options.includeAnchor ? 'comment-input' : 'comment-input-side'}
+                aria-label={replyTarget ? `回复 @${replyTarget.name}` : '写下你的评论'}
+                placeholder={replyTarget ? `回复 @${replyTarget.name}...` : '写下你的评论...'}
+                rows={3}
+                className="resize-none rounded-lg border-border/70 bg-muted/25 text-sm leading-6 focus-visible:ring-primary/50"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+              />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                {replyTarget ? (
+                  <div className="rounded-full bg-primary/10 px-2.5 py-1 text-xs text-primary">
+                    回复 @{replyTarget.name}
+                    <button
+                      type="button"
+                      data-acbox-action="community_post_reply_cancel"
+                      data-acbox-label={replyTarget.name}
+                      className="ml-2 text-primary/75 hover:text-primary"
+                      onClick={() => setReplyTarget(null)}
+                    >
+                      取消
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">支持评论与楼中楼回复</span>
+                )}
                 <Button
                   type="button"
-                  variant="link"
+                  data-acbox-action="community_post_comment_submit"
+                  data-acbox-label={replyTarget ? 'reply' : 'comment'}
+                  onClick={handleCommentSubmit}
+                  className="h-8 px-3 btn-interactive"
                   size="sm"
-                  data-acbox-action="community_post_reply_cancel"
-                  data-acbox-label={replyTarget.name}
-                  className="h-auto p-0 ml-2"
-                  onClick={() => setReplyTarget(null)}
+                  disabled={!newComment.trim() || isSubmittingComment}
                 >
-                  取消
+                  <Send size={15} className="mr-1.5" /> 发送
                 </Button>
               </div>
-            )}
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                data-acbox-action="community_post_comment_submit"
-                data-acbox-label={replyTarget ? 'reply' : 'comment'}
-                onClick={handleCommentSubmit}
-                className="btn-interactive"
-                size="sm"
-                disabled={!newComment.trim() || isSubmittingComment}
-              >
-                <Send size={16} className="mr-2" /> 发送
-              </Button>
             </div>
           </div>
         </div>
 
-        <div className="space-y-4 pt-4 border-t">
-          {comments.map((comment) => (
-            <div
-              key={comment.id}
-              id={options.includeAnchor ? getCommentElementId(comment.id) : undefined}
-              className="scroll-mt-24 space-y-2"
-            >
-              <div className="flex items-start space-x-3">
-                {comment.user.profileHref ? (
-                  <Link
-                    href={comment.user.profileHref}
-                    aria-label={`查看 ${comment.user.name} 的主页`}
-                    className="shrink-0 rounded-full"
-                  >
-                    <Avatar>
+        <div className="divide-y divide-border/60">
+          {comments.map((comment) => {
+            const visibleReplies = expandedReplies[comment.id]
+              ? comment.replies
+              : comment.replies.slice(0, 2);
+            return (
+              <div
+                key={comment.id}
+                id={options.includeAnchor ? getCommentElementId(comment.id) : undefined}
+                className="scroll-mt-24 px-4 py-4"
+              >
+                <div className="flex items-start gap-3">
+                  {comment.user.profileHref ? (
+                    <Link
+                      href={comment.user.profileHref}
+                      aria-label={`查看 ${comment.user.name} 的主页`}
+                      className="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={comment.user.avatarUrl} alt={comment.user.name} />
+                        <AvatarFallback>{comment.user.name.slice(0, 1)}</AvatarFallback>
+                      </Avatar>
+                    </Link>
+                  ) : (
+                    <Avatar className="h-9 w-9 shrink-0">
                       <AvatarImage src={comment.user.avatarUrl} alt={comment.user.name} />
-                      <AvatarFallback>{comment.user.name.substring(0, 1)}</AvatarFallback>
+                      <AvatarFallback>{comment.user.name.slice(0, 1)}</AvatarFallback>
                     </Avatar>
-                  </Link>
-                ) : (
-                  <Avatar>
-                    <AvatarImage src={comment.user.avatarUrl} alt={comment.user.name} />
-                    <AvatarFallback>{comment.user.name.substring(0, 1)}</AvatarFallback>
-                  </Avatar>
-                )}
-                <div className="flex-grow bg-muted/30 p-3 rounded-md">
-                  <div className="flex items-center justify-between mb-1">
-                    {comment.user.profileHref ? (
-                      <Link
-                        href={comment.user.profileHref}
-                        className="font-semibold text-sm text-foreground hover:text-primary"
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      {comment.user.profileHref ? (
+                        <Link
+                          href={comment.user.profileHref}
+                          className="text-sm font-semibold text-foreground hover:text-primary"
+                        >
+                          {comment.user.name}
+                        </Link>
+                      ) : (
+                        <span className="text-sm font-semibold text-foreground">{comment.user.name}</span>
+                      )}
+                      <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
+                    </div>
+                    <p className="mt-1.5 whitespace-pre-line break-words text-[14px] leading-6 text-foreground/90">{comment.text}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        data-acbox-action="community_post_comment_like"
+                        data-acbox-label={comment.id}
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
+                        disabled={pendingCommentLikeIds[comment.id]}
+                        onClick={() => handleCommentLike(comment.id)}
                       >
-                        {comment.user.name}
-                      </Link>
-                    ) : (
-                      <span className="font-semibold text-sm text-foreground">{comment.user.name}</span>
+                        <ThumbsUp size={14} className={`mr-1 ${likedCommentIds[comment.id] ? 'fill-primary text-primary' : ''}`} />
+                        {formatCount(commentLikeCounts[comment.id] ?? comment.likeCount ?? 0)}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        data-acbox-action="community_post_comment_reply"
+                        data-acbox-label={comment.id}
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
+                        onClick={() => setReplyTarget({ id: comment.id, name: comment.user.name })}
+                      >
+                        回复
+                      </Button>
+                      {canModerateTopic ? (
+                        <>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            data-acbox-action="community_post_comment_offline"
+                            data-acbox-label={comment.id}
+                            className="h-7 px-2 text-xs text-amber-600 hover:text-amber-700"
+                            disabled={moderatingCommentId === comment.id}
+                            onClick={() => void handleModeratorSetCommentStatus(comment.id, 0)}
+                          >
+                            下线
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            data-acbox-action="community_post_comment_delete"
+                            data-acbox-label={comment.id}
+                            className="h-7 px-2 text-xs text-red-600 hover:text-red-700"
+                            disabled={moderatingCommentId === comment.id}
+                            onClick={() => void handleModeratorDeleteComment(comment.id)}
+                          >
+                            删除
+                          </Button>
+                        </>
+                      ) : null}
+                    </div>
+
+                    {(comment.replies?.length > 0 || comment.replyHasMore) && (
+                      <div className="mt-3 space-y-3 rounded-lg bg-muted/30 px-3 py-3">
+                        {visibleReplies.map((reply) => (
+                          <div
+                            key={reply.id}
+                            id={options.includeAnchor ? getCommentElementId(reply.id) : undefined}
+                            className="flex scroll-mt-24 items-start gap-2"
+                          >
+                            {reply.user.profileHref ? (
+                              <Link
+                                href={reply.user.profileHref}
+                                aria-label={`查看 ${reply.user.name} 的主页`}
+                                className="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                              >
+                                <Avatar className="h-7 w-7">
+                                  <AvatarImage src={reply.user.avatarUrl} alt={reply.user.name} />
+                                  <AvatarFallback>{reply.user.name.slice(0, 1)}</AvatarFallback>
+                                </Avatar>
+                              </Link>
+                            ) : (
+                              <Avatar className="h-7 w-7 shrink-0">
+                                <AvatarImage src={reply.user.avatarUrl} alt={reply.user.name} />
+                                <AvatarFallback>{reply.user.name.slice(0, 1)}</AvatarFallback>
+                              </Avatar>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                {reply.user.profileHref ? (
+                                  <Link
+                                    href={reply.user.profileHref}
+                                    className="text-xs font-semibold text-foreground hover:text-primary"
+                                  >
+                                    {reply.user.name}
+                                  </Link>
+                                ) : (
+                                  <span className="text-xs font-semibold text-foreground">{reply.user.name}</span>
+                                )}
+                                <span className="text-[11px] text-muted-foreground">{reply.timestamp}</span>
+                              </div>
+                              <p className="mt-1 whitespace-pre-line break-words text-xs leading-5 text-foreground/90">{reply.text}</p>
+                              <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  data-acbox-action="community_post_comment_like"
+                                  data-acbox-label={reply.id}
+                                  className="h-6 px-1.5 text-[11px] text-muted-foreground hover:text-primary"
+                                  disabled={pendingCommentLikeIds[reply.id]}
+                                  onClick={() => handleCommentLike(reply.id)}
+                                >
+                                  <ThumbsUp
+                                    size={12}
+                                    className={`mr-1 ${likedCommentIds[reply.id] ? 'fill-primary text-primary' : ''}`}
+                                  />
+                                  {formatCount(commentLikeCounts[reply.id] ?? reply.likeCount ?? 0)}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  data-acbox-action="community_post_comment_reply"
+                                  data-acbox-label={reply.id}
+                                  className="h-6 px-1.5 text-[11px] text-muted-foreground hover:text-primary"
+                                  onClick={() => setReplyTarget({ id: comment.id, name: reply.user.name })}
+                                >
+                                  回复
+                                </Button>
+                                {canModerateTopic ? (
+                                  <>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      data-acbox-action="community_post_comment_offline"
+                                      data-acbox-label={reply.id}
+                                      className="h-6 px-1.5 text-[11px] text-amber-600 hover:text-amber-700"
+                                      disabled={moderatingCommentId === reply.id}
+                                      onClick={() => void handleModeratorSetCommentStatus(reply.id, 0)}
+                                    >
+                                      下线
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      data-acbox-action="community_post_comment_delete"
+                                      data-acbox-label={reply.id}
+                                      className="h-6 px-1.5 text-[11px] text-red-600 hover:text-red-700"
+                                      disabled={moderatingCommentId === reply.id}
+                                      onClick={() => void handleModeratorDeleteComment(reply.id)}
+                                    >
+                                      删除
+                                    </Button>
+                                  </>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+
+                        <div className="flex flex-wrap gap-3 pl-9">
+                          {comment.replies.length > 2 && (
+                            <Button
+                              type="button"
+                              variant="link"
+                              size="sm"
+                              data-acbox-action="community_post_reply_expand"
+                              data-acbox-label={comment.id}
+                              className="h-auto p-0 text-xs"
+                              onClick={() =>
+                                setExpandedReplies((prev) => ({
+                                  ...prev,
+                                  [comment.id]: !prev[comment.id],
+                                }))
+                              }
+                            >
+                              {expandedReplies[comment.id]
+                                ? '收起回复'
+                                : `展开 ${comment.replies.length - 2} 条回复`}
+                            </Button>
+                          )}
+                          {comment.replyHasMore && (
+                            <Button
+                              type="button"
+                              variant="link"
+                              size="sm"
+                              data-acbox-action="community_post_reply_load_more"
+                              data-acbox-label={comment.id}
+                              className="h-auto p-0 text-xs"
+                              disabled={replyLoadingMap[comment.id]}
+                              onClick={() => void handleLoadMoreReplies(comment.id)}
+                            >
+                              {replyLoadingMap[comment.id]
+                                ? '加载中...'
+                                : `查看更多回复 (${Math.max(comment.replyTotal - comment.replies.length, 0)})`}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     )}
-                    <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
-                  </div>
-                  <p className="text-sm text-foreground/90 whitespace-pre-line">{comment.text}</p>
-                  <div className="mt-2 flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      data-acbox-action="community_post_comment_like"
-                      data-acbox-label={comment.id}
-                      className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
-                      disabled={pendingCommentLikeIds[comment.id]}
-                      onClick={() => handleCommentLike(comment.id)}
-                    >
-                      <ThumbsUp size={14} className={`mr-1 ${likedCommentIds[comment.id] ? 'fill-primary text-primary' : ''}`} />
-                      {commentLikeCounts[comment.id] ?? comment.likeCount ?? 0}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      data-acbox-action="community_post_comment_reply"
-                      data-acbox-label={comment.id}
-                      className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
-                      onClick={() => setReplyTarget({ id: comment.id, name: comment.user.name })}
-                    >
-                      回复
-                    </Button>
-                    {canModerateTopic ? (
-                      <>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          data-acbox-action="community_post_comment_offline"
-                          data-acbox-label={comment.id}
-                          className="h-7 px-2 text-xs text-amber-600 hover:text-amber-700"
-                          disabled={moderatingCommentId === comment.id}
-                          onClick={() => void handleModeratorSetCommentStatus(comment.id, 0)}
-                        >
-                          下线
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          data-acbox-action="community_post_comment_delete"
-                          data-acbox-label={comment.id}
-                          className="h-7 px-2 text-xs text-red-600 hover:text-red-700"
-                          disabled={moderatingCommentId === comment.id}
-                          onClick={() => void handleModeratorDeleteComment(comment.id)}
-                        >
-                          删除
-                        </Button>
-                      </>
-                    ) : null}
                   </div>
                 </div>
               </div>
-
-              {(comment.replies?.length > 0 || comment.replyHasMore) && (
-                <div className="ml-12 space-y-2">
-                  {(expandedReplies[comment.id] ? comment.replies : comment.replies.slice(0, 2)).map((reply) => (
-                    <div
-                      key={reply.id}
-                      id={options.includeAnchor ? getCommentElementId(reply.id) : undefined}
-                      className="flex scroll-mt-24 items-start space-x-2"
-                    >
-                      {reply.user.profileHref ? (
-                        <Link
-                          href={reply.user.profileHref}
-                          aria-label={`查看 ${reply.user.name} 的主页`}
-                          className="shrink-0 rounded-full"
-                        >
-                          <Avatar className="h-7 w-7">
-                            <AvatarImage src={reply.user.avatarUrl} alt={reply.user.name} />
-                            <AvatarFallback>{reply.user.name.substring(0, 1)}</AvatarFallback>
-                          </Avatar>
-                        </Link>
-                      ) : (
-                        <Avatar className="h-7 w-7">
-                          <AvatarImage src={reply.user.avatarUrl} alt={reply.user.name} />
-                          <AvatarFallback>{reply.user.name.substring(0, 1)}</AvatarFallback>
-                        </Avatar>
-                      )}
-                      <div className="flex-grow rounded-md bg-muted/20 p-2.5">
-                        <div className="flex items-center justify-between mb-1">
-                          {reply.user.profileHref ? (
-                            <Link
-                              href={reply.user.profileHref}
-                              className="font-semibold text-xs text-foreground hover:text-primary"
-                            >
-                              {reply.user.name}
-                            </Link>
-                          ) : (
-                            <span className="font-semibold text-xs text-foreground">{reply.user.name}</span>
-                          )}
-                          <span className="text-[11px] text-muted-foreground">{reply.timestamp}</span>
-                        </div>
-                        <p className="text-xs text-foreground/90 whitespace-pre-line">{reply.text}</p>
-                        <div className="mt-1.5 flex items-center gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            data-acbox-action="community_post_comment_like"
-                            data-acbox-label={reply.id}
-                            className="h-6 px-1.5 text-[11px] text-muted-foreground hover:text-primary"
-                            disabled={pendingCommentLikeIds[reply.id]}
-                            onClick={() => handleCommentLike(reply.id)}
-                          >
-                            <ThumbsUp
-                              size={12}
-                              className={`mr-1 ${likedCommentIds[reply.id] ? 'fill-primary text-primary' : ''}`}
-                            />
-                            {commentLikeCounts[reply.id] ?? reply.likeCount ?? 0}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            data-acbox-action="community_post_comment_reply"
-                            data-acbox-label={reply.id}
-                            className="h-6 px-1.5 text-[11px] text-muted-foreground hover:text-primary"
-                            onClick={() => setReplyTarget({ id: comment.id, name: reply.user.name })}
-                          >
-                            回复
-                          </Button>
-                          {canModerateTopic ? (
-                            <>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                data-acbox-action="community_post_comment_offline"
-                                data-acbox-label={reply.id}
-                                className="h-6 px-1.5 text-[11px] text-amber-600 hover:text-amber-700"
-                                disabled={moderatingCommentId === reply.id}
-                                onClick={() => void handleModeratorSetCommentStatus(reply.id, 0)}
-                              >
-                                下线
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                data-acbox-action="community_post_comment_delete"
-                                data-acbox-label={reply.id}
-                                className="h-6 px-1.5 text-[11px] text-red-600 hover:text-red-700"
-                                disabled={moderatingCommentId === reply.id}
-                                onClick={() => void handleModeratorDeleteComment(reply.id)}
-                              >
-                                删除
-                              </Button>
-                            </>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {comment.replies.length > 2 && (
-                    <Button
-                      type="button"
-                      variant="link"
-                      size="sm"
-                      data-acbox-action="community_post_reply_expand"
-                      data-acbox-label={comment.id}
-                      className="h-auto p-0 text-xs"
-                      onClick={() =>
-                        setExpandedReplies((prev) => ({
-                          ...prev,
-                          [comment.id]: !prev[comment.id],
-                        }))
-                      }
-                    >
-                      {expandedReplies[comment.id]
-                        ? '收起回复'
-                        : `展开更多回复 (${comment.replies.length - 2})`}
-                    </Button>
-                  )}
-                  {comment.replyHasMore && (
-                    <Button
-                      type="button"
-                      variant="link"
-                      size="sm"
-                      data-acbox-action="community_post_reply_load_more"
-                      data-acbox-label={comment.id}
-                      className="h-auto p-0 text-xs"
-                      disabled={replyLoadingMap[comment.id]}
-                      onClick={() => void handleLoadMoreReplies(comment.id)}
-                    >
-                      {replyLoadingMap[comment.id]
-                        ? '加载中...'
-                        : `查看更多回复 (${Math.max(comment.replyTotal - comment.replies.length, 0)})`}
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
 
           {comments.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">暂无评论</p>
+            <p className="py-8 text-center text-sm text-muted-foreground">暂无评论</p>
           )}
         </div>
       </CardContent>
@@ -1738,188 +1890,279 @@ export default function CommunityPostDetailView({
         </aside>
 
         <div className="min-w-0 space-y-6">
-          <Card className="shadow-lg">
-            <CardHeader className="p-4 pb-3">
-              {authorProfileHref ? (
-                <Link
-                  href={authorProfileHref}
-                  className="flex items-start space-x-3 rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary"
-                >
-                  {authorSummary}
-                </Link>
-              ) : (
-                <div className="flex items-start space-x-3 rounded-md">
-                  {authorSummary}
+          <Card className="overflow-hidden border-border/70 shadow-sm">
+            <CardHeader className="border-b p-4">
+              <div className="flex items-start gap-3">
+                {authorProfileHref ? (
+                  <Link
+                    href={authorProfileHref}
+                    aria-label={`查看 ${post.user.name} 的主页`}
+                    className="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={post.user.avatarUrl} alt={post.user.name} />
+                      <AvatarFallback>{post.user.name.slice(0, 2)}</AvatarFallback>
+                    </Avatar>
+                  </Link>
+                ) : (
+                  <Avatar className="h-10 w-10 shrink-0">
+                    <AvatarImage src={post.user.avatarUrl} alt={post.user.name} />
+                    <AvatarFallback>{post.user.name.slice(0, 2)}</AvatarFallback>
+                  </Avatar>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5 text-sm leading-5">
+                    {authorProfileHref ? (
+                      <Link href={authorProfileHref} className="font-semibold text-foreground hover:text-primary">
+                        {post.user.name}
+                      </Link>
+                    ) : (
+                      <span className="font-semibold text-foreground">{post.user.name}</span>
+                    )}
+                    {post.authorUsername ? (
+                      <span className="text-muted-foreground">@{post.authorUsername}</span>
+                    ) : null}
+                    {post.user.level ? (
+                      <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                        Lv.{post.user.level}
+                      </span>
+                    ) : null}
+                    {post.isTop ? <Badge className="h-5 px-1.5 text-[10px]">置顶</Badge> : null}
+                    {post.isRecommended ? <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">推荐</Badge> : null}
+                    {canModerateTopic ? <Badge variant="outline" className="h-5 px-1.5 text-[10px]">版主模式</Badge> : null}
+                  </div>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                    <span>{post.timestamp}</span>
+                    {post.source ? <span>{post.source}</span> : null}
+                    {post.user.location ? <span>{post.user.location}</span> : null}
+                    <span className="inline-flex items-center">
+                      <Eye className="mr-1 h-3.5 w-3.5" />
+                      {viewCount !== null ? formatCount(viewCount) : '...'}
+                    </span>
+                    {post.heatScore ? <span>热度 {formatCount(post.heatScore)}</span> : null}
+                  </div>
                 </div>
-              )}
-              {post.title && <h1 className="mt-3 text-base font-bold md:text-lg">{post.title}</h1>}
+              </div>
             </CardHeader>
 
-            <CardContent className="p-4 pt-2 space-y-4 sm:space-y-5">
+            <CardContent className="space-y-4 p-4">
+              {post.title ? (
+                <h1 className="break-words text-[17px] font-semibold leading-7 text-foreground md:text-lg">{post.title}</h1>
+              ) : null}
+
+              {detailTopics.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {detailTopics.map((topic) => (
+                    <Link
+                      key={`${post.id}-detail-topic-${topic}`}
+                      href={`/community?topicName=${encodeURIComponent(topic)}`}
+                      className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/15"
+                    >
+                      #{topic}
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+
               <h2 className="sr-only">帖子正文与玩家讨论内容</h2>
               <article
                 ref={articleRef}
-                className="mx-auto w-full max-w-[760px] px-1 text-[15px] leading-relaxed text-foreground/90 sm:px-2 sm:text-base"
+                className="max-w-none break-words text-[15px] leading-7 text-foreground/90 [&_img]:hidden"
                 dangerouslySetInnerHTML={{ __html: renderedContent.html }}
                 onPointerDownCapture={handleMarkdownPointerIntent}
                 onClick={handleMarkdownContainerClick}
               />
 
-              {linkPreviews.length > 0 && (
-                <div className="mx-auto w-full max-w-[760px] space-y-2 px-1 sm:px-2">
-                  {linkPreviews.map((preview) => (
-                    <a
-                      key={`${post.id}-link-preview-${preview.url}`}
-                      href={preview.url}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow ugc"
-                      data-acbox-action="community_post_link_preview_click"
-                      data-acbox-label={preview.url}
-                      className="flex gap-3 rounded-lg bg-muted/25 p-3 transition-colors hover:bg-muted/40"
-                      onClick={() => handleLinkPreviewClick(preview.url)}
-                    >
-                      {preview.image ? (
-                        <span className="relative block h-16 w-16 shrink-0 overflow-hidden rounded-md bg-muted">
-                          <Image
-                            src={preview.image}
-                            alt={preview.title || '链接预览'}
-                            fill
-                            className="object-cover"
-                          />
-                        </span>
-                      ) : preview.icon ? (
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-background/80">
-                          <Image
-                            src={preview.icon}
-                            alt={preview.title || preview.site_name || '链接图标'}
-                            width={32}
-                            height={32}
-                            className="h-8 w-8 object-contain"
-                          />
-                        </span>
-                      ) : (
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-background/80 text-muted-foreground">
-                          <ExternalLink className="h-5 w-5" aria-hidden="true" />
-                        </span>
-                      )}
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="line-clamp-1 text-sm font-medium text-foreground">
-                          {preview.title || preview.site_name || preview.url}
-                        </span>
-                        <span className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
-                          {preview.description || preview.url}
-                        </span>
-                        {preview.site_name ? (
-                          <span className="mt-1 block truncate text-[11px] text-muted-foreground/80">
-                            {preview.site_name}
-                          </span>
-                        ) : null}
-                      </span>
-                    </a>
-                  ))}
-                </div>
-              )}
-
-              {post.tags && post.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 pt-2">
-                  {post.tags.map((tag, index) => (
-                    <Badge key={`${post.id}-detail-tag-${index}-${tag}`} variant="outline" className="text-xs font-normal">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-
-              {shouldRenderDetailCover && post.imageUrl && (
-                <div className="mx-auto mt-5 mb-8 w-full max-w-[680px] rounded-lg overflow-hidden aspect-video relative bg-muted sm:mb-10">
-                  {!detailImageError ? (
-                    <Image
-                      key={imageRetry}
-                      src={post.imageUrl}
-                      alt={post.title || '帖子图片'}
-                      fill
-                      priority
-                      sizes="(max-width: 768px) 100vw, 680px"
-                      className="object-contain cursor-zoom-in"
-                      data-ai-hint={post.imageAiHint || 'community post image detail'}
+              {detailImages.length > 0 ? (
+                <div
+                  className={cn(
+                    'grid gap-1.5 overflow-hidden',
+                    detailImages.length === 1
+                      ? 'grid-cols-1'
+                      : detailImages.length === 2
+                        ? 'max-w-[640px] grid-cols-2'
+                        : 'max-w-[640px] grid-cols-3',
+                  )}
+                >
+                  {detailImages.map((image, imageIndex) => (
+                    <button
+                      key={`${post.id}-detail-image-${imageIndex}-${image}`}
+                      type="button"
                       data-acbox-action="community_post_image_preview"
                       data-acbox-label={post.id}
-                      onError={() => setDetailImageError(true)}
-                      onClick={() => openPreviewImage(post.imageUrl || '')}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-muted/40">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        data-acbox-action="community_post_image_retry"
-                        data-acbox-label={post.id}
-                        onClick={() => {
-                          setDetailImageError(false);
-                          setImageRetry((v) => v + 1);
-                        }}
-                      >
-                        图片加载失败，点击重试
-                      </Button>
-                    </div>
-                  )}
+                      className={cn(
+                        'relative overflow-hidden rounded-md bg-muted text-muted-foreground',
+                        getDetailImageCellClass(detailImages.length, imageIndex),
+                      )}
+                      onClick={() => openPreviewImage(image)}
+                    >
+                      {!detailImageErrors[image] ? (
+                        <Image
+                          src={image}
+                          alt={post.title || '帖子图片'}
+                          fill
+                          priority={imageIndex === 0}
+                          sizes={detailImages.length === 1 ? '(max-width: 768px) 92vw, 640px' : '220px'}
+                          className="object-cover transition-transform duration-200 hover:scale-[1.02]"
+                          data-ai-hint={post.imageAiHint || 'community post image detail'}
+                          onError={() => setDetailImageErrors((prev) => ({ ...prev, [image]: true }))}
+                        />
+                      ) : (
+                        <span className="absolute inset-0 flex items-center justify-center px-3 text-xs">
+                          图片加载失败
+                        </span>
+                      )}
+                    </button>
+                  ))}
                 </div>
-              )}
+              ) : null}
+
+              {linkPreviews.length > 0 ? (
+                <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-3">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    链接汇总
+                  </div>
+                  <div className="space-y-2">
+                    {linkPreviews.map((preview) => (
+                      <a
+                        key={`${post.id}-link-preview-${preview.url}`}
+                        href={preview.url}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow ugc"
+                        data-acbox-action="community_post_link_preview_click"
+                        data-acbox-label={preview.url}
+                        className="flex min-w-0 gap-3 rounded-md bg-background/80 p-2.5 transition-colors hover:bg-background"
+                        onClick={() => handleLinkPreviewClick(preview.url)}
+                      >
+                        {preview.image ? (
+                          <span className="relative block h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
+                            <Image
+                              src={preview.image}
+                              alt={preview.title || '链接预览'}
+                              fill
+                              className="object-cover"
+                            />
+                          </span>
+                        ) : preview.icon ? (
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted/60">
+                            <Image
+                              src={preview.icon}
+                              alt={preview.title || preview.site_name || '链接图标'}
+                              width={28}
+                              height={28}
+                              className="h-7 w-7 object-contain"
+                            />
+                          </span>
+                        ) : (
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground">
+                            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                          </span>
+                        )}
+                        <span className="min-w-0 flex-1">
+                          <span className="line-clamp-1 text-sm font-medium text-foreground">
+                            {preview.title || preview.site_name || preview.url}
+                          </span>
+                          <span className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                            {preview.description || preview.url}
+                          </span>
+                          {preview.site_name ? (
+                            <span className="mt-1 block truncate text-[11px] text-muted-foreground/80">
+                              {preview.site_name}
+                            </span>
+                          ) : null}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {relatedApp ? (
+                <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+                      {relatedApp.icon ? (
+                        <Image src={relatedApp.icon} alt={relatedApp.name} fill sizes="48px" className="object-cover" />
+                      ) : null}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-1 text-sm font-semibold text-foreground">{relatedApp.name}</p>
+                      <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                        {relatedApp.summary || relatedApp.pkg || '关联游戏'}
+                      </p>
+                    </div>
+                    {relatedAppHref ? (
+                      <Button asChild size="sm" variant="outline" className="h-8 shrink-0 px-3 text-xs">
+                        <Link
+                          href={relatedAppHref}
+                          data-acbox-action="community_post_related_game_detail"
+                          data-acbox-label={relatedApp?.pkg || post.id}
+                        >
+                          查看
+                        </Link>
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
             </CardContent>
 
-            <CardFooter className="p-4 pt-3 flex flex-col items-start space-y-3">
-              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                <div className="flex items-center">
-                  <Eye size={16} className="mr-1.5" />
-                  {viewCount !== null ? `${viewCount} 次浏览` : '...'}
-                </div>
-                {post.heatScore ? (
-                  <div className="flex items-center">
-                    热度 {post.heatScore}
-                  </div>
-                ) : null}
-              </div>
-              <div className="w-full flex items-center justify-start gap-2 sm:gap-3 border-t pt-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  data-acbox-action="community_post_like"
-                  data-acbox-label={post.id}
-                  className="text-muted-foreground hover:text-primary px-2"
-                  onClick={handleLike}
-                >
-                  <ThumbsUp size={18} className={`mr-1.5 ${isLiked ? 'fill-primary text-primary' : ''}`} /> {likeCount}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
+            <CardFooter className="flex flex-wrap items-center gap-1.5 border-t px-4 py-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                data-acbox-action="community_post_like"
+                data-acbox-label={post.id}
+                className={cn('h-8 px-2 text-muted-foreground hover:text-primary', isLiked && 'text-primary')}
+                disabled={isSyncingLike}
+                onClick={handleLike}
+              >
+                <ThumbsUp size={17} className={`mr-1.5 ${isLiked ? 'fill-primary text-primary' : ''}`} />
+                {formatCount(likeCount)}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                data-acbox-action="community_post_dislike"
+                data-acbox-label={post.id}
+                className={cn('h-8 px-2 text-muted-foreground hover:text-primary', isDisliked && 'text-primary')}
+                disabled={isSyncingDislike}
+                onClick={handleDislike}
+              >
+                <ThumbsDown size={17} className={`mr-1.5 ${isDisliked ? 'fill-primary text-primary' : ''}`} />
+                {formatCount(dislikeCount)}
+              </Button>
+              <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-muted-foreground hover:text-primary">
+                <a
+                  href="#comments"
                   data-acbox-action="community_post_comment_anchor"
                   data-acbox-label={post.id}
-                  className="text-muted-foreground hover:text-primary px-2"
                 >
-                  <MessageSquare size={18} className="mr-1.5" /> {totalCommentCount}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  data-acbox-action="community_post_bookmark"
-                  data-acbox-label={post.id}
-                  className="text-muted-foreground hover:text-primary px-2"
-                >
-                  <Bookmark size={18} className="mr-1.5" /> 收藏
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  data-acbox-action="community_post_share"
-                  data-acbox-label={post.id}
-                  className="text-muted-foreground hover:text-primary px-2 ml-auto"
-                  onClick={handleSharePost}
-                >
-                  <Share2 size={18} className="mr-1.5" /> 分享
-                </Button>
-              </div>
+                  <MessageSquare size={17} className="mr-1.5" /> {formatCount(totalCommentCount)}
+                </a>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                data-acbox-action="community_post_bookmark"
+                data-acbox-label={post.id}
+                className={cn('h-8 px-2 text-muted-foreground hover:text-primary', bookmarked && 'text-primary')}
+                onClick={handleToggleBookmark}
+              >
+                <Bookmark size={17} className={`mr-1.5 ${bookmarked ? 'fill-primary text-primary' : ''}`} />
+                收藏
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                data-acbox-action="community_post_share"
+                data-acbox-label={post.id}
+                className="ml-auto h-8 px-2 text-muted-foreground hover:text-primary"
+                onClick={handleSharePost}
+              >
+                <Share2 size={17} className="mr-1.5" /> 分享
+              </Button>
             </CardFooter>
           </Card>
 

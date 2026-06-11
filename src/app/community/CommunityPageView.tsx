@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import CommunityFeedPostCard from '@/components/community/CommunityFeedPostCard';
 import CommunityInfoPanel from '@/components/community/CommunityInfoPanel';
-import CommunityPostCard from '@/components/community/CommunityPostCard';
 import CommunitySidebar from '@/components/community/CommunitySidebar';
 import CreatePostForm from '@/components/community/CreatePostForm';
 import { Badge } from '@/components/ui/badge';
@@ -78,9 +78,12 @@ interface CommunityPageViewProps {
 
 export default function CommunityPageView({ initialData }: CommunityPageViewProps) {
   const FEED_PAGE_SIZE = 10;
-  const HOT_TOPICS_LIMIT = 10;
+  const HOT_TOPICS_LIMIT = 6;
   const router = useRouter();
   const searchParams = useSearchParams();
+  const feedKeyword = String(searchParams.get('q') || '').trim();
+  const feedTopicName = String(searchParams.get('topicName') || '').trim();
+  const feedSearchText = feedKeyword || feedTopicName;
   const { isAuthenticated, token, user } = useAuth();
   const { toast } = useToast();
 
@@ -408,8 +411,8 @@ export default function CommunityPageView({ initialData }: CommunityPageViewProp
       const targetHotPage = Math.max(1, Number(options?.hotPage || 1));
 
       const [latest, hot] = await Promise.all([
-        getCommunityFeed('latest', { page: targetLatestPage, pageSize: FEED_PAGE_SIZE, topicId }),
-        getCommunityFeed('hot', { page: targetHotPage, pageSize: FEED_PAGE_SIZE, topicId }),
+        getCommunityFeed('latest', { page: targetLatestPage, pageSize: FEED_PAGE_SIZE, topicId, q: feedSearchText }),
+        getCommunityFeed('hot', { page: targetHotPage, pageSize: FEED_PAGE_SIZE, topicId, q: feedSearchText }),
       ]);
 
       if (requestId !== requestIdRef.current) return null;
@@ -433,7 +436,7 @@ export default function CommunityPageView({ initialData }: CommunityPageViewProp
         hotSignature: hot.list.map((item) => String(item.id || '').trim()).filter(Boolean).join('|'),
       };
     },
-    [FEED_PAGE_SIZE],
+    [FEED_PAGE_SIZE, feedSearchText],
   );
 
   const loadMoreByTab = useCallback(
@@ -447,6 +450,7 @@ export default function CommunityPageView({ initialData }: CommunityPageViewProp
           page: nextPage,
           pageSize: FEED_PAGE_SIZE,
           topicId: selectedTopicId || undefined,
+          q: feedSearchText || undefined,
         });
         setLatestLoadingMore(false);
         if (result.page < nextPage) {
@@ -482,6 +486,7 @@ export default function CommunityPageView({ initialData }: CommunityPageViewProp
         page: nextPage,
         pageSize: FEED_PAGE_SIZE,
         topicId: selectedTopicId || undefined,
+        q: feedSearchText || undefined,
       });
       setHotLoadingMore(false);
       if (result.page < nextPage) {
@@ -518,6 +523,7 @@ export default function CommunityPageView({ initialData }: CommunityPageViewProp
       latestLoadingMore,
       latestPage,
       selectedTopicId,
+      feedSearchText,
       toast,
     ],
   );
@@ -924,11 +930,13 @@ export default function CommunityPageView({ initialData }: CommunityPageViewProp
             postTopicIds.some((topicId) => canModerateTopicId(topicId)),
           );
           return (
-            <CommunityPostCard
+            <CommunityFeedPostCard
               key={post.id}
               post={post}
               index={index}
               canManage={canManage}
+              className="border-0"
+              hideLinkShortcuts
               moderationBusy={moderationPostId === String(post.id || '').trim()}
               onHide={handleHidePost}
               onDelete={handleDeletePost}
@@ -936,7 +944,7 @@ export default function CommunityPageView({ initialData }: CommunityPageViewProp
             />
           );
         })}
-        <div className="rounded-md border bg-card px-3 py-3 text-xs text-muted-foreground sm:text-sm">
+        <div className="rounded-lg bg-card px-4 py-3 text-xs text-muted-foreground shadow-sm sm:text-sm">
           <div className="flex items-center justify-between">
             <span>已加载 {posts.length} 条</span>
             {options.loadingMore ? (
@@ -965,26 +973,28 @@ export default function CommunityPageView({ initialData }: CommunityPageViewProp
   };
 
   return (
-    <div className="container mx-auto px-2 py-4 sm:px-4 sm:py-6 lg:py-8">
-      <div className="flex flex-col lg:flex-row lg:gap-x-6">
-        <div className="mb-6 hidden w-full lg:mb-0 lg:block lg:w-1/4 xl:w-1/5">
-          <CommunitySidebar
-            hotTopics={hotTopics}
-            officialTopics={officialTopics}
-            followedTopics={followedTopics}
-            loading={topicsLoading}
-            selectedTopicId={selectedTopicId}
-            followedTopicIds={followedTopicIds}
-            followLoadingTopicId={followLoadingTopicId}
-            onToggleFollow={handleToggleFollow}
-            onSelectTopic={handleSelectTopic}
-            followedCollapsedCount={6}
-            showAllFollowed={showAllFollowedTopics}
-            onToggleFollowedExpand={() => setShowAllFollowedTopics((prev) => !prev)}
-          />
+    <div className="mx-auto w-full max-w-[1440px] px-2 py-4 sm:px-4 sm:py-6 lg:py-8">
+      <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,720px)_320px]">
+        <div className="hidden lg:block">
+          <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-1">
+            <CommunitySidebar
+              hotTopics={hotTopics}
+              officialTopics={officialTopics}
+              followedTopics={followedTopics}
+              loading={topicsLoading}
+              selectedTopicId={selectedTopicId}
+              followedTopicIds={followedTopicIds}
+              followLoadingTopicId={followLoadingTopicId}
+              onToggleFollow={handleToggleFollow}
+              onSelectTopic={handleSelectTopic}
+              followedCollapsedCount={6}
+              showAllFollowed={showAllFollowedTopics}
+              onToggleFollowedExpand={() => setShowAllFollowedTopics((prev) => !prev)}
+            />
+          </div>
         </div>
 
-        <div className="w-full lg:min-w-0 lg:w-1/2 xl:flex-grow">
+        <div className="min-w-0">
           <CreatePostForm
             onPosted={handlePosted}
             selectedTopic={selectedTopic}
@@ -1106,6 +1116,22 @@ export default function CommunityPageView({ initialData }: CommunityPageViewProp
 
           <Separator className="my-6" />
 
+          {(feedKeyword || feedTopicName) ? (
+            <div className="mb-4 flex items-center justify-between rounded-lg bg-primary/5 px-3 py-2 text-sm">
+              <span className="min-w-0 truncate text-primary">
+                正在筛选：{feedTopicName ? `#${feedTopicName}` : feedKeyword}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/community')}
+              >
+                清除
+              </Button>
+            </div>
+          ) : null}
+
           <Tabs
             value={activeFeedTab}
             onValueChange={(value) => setActiveFeedTab(value === 'hot' ? 'hot' : 'latest')}
@@ -1138,8 +1164,12 @@ export default function CommunityPageView({ initialData }: CommunityPageViewProp
           </Tabs>
         </div>
 
-        <div className="mt-6 hidden xl:block xl:w-1/4 lg:mt-0">
-          <CommunityInfoPanel posts={selectedTopicId ? latestPosts : hotPosts} />
+        <div className="hidden xl:block">
+          <CommunityInfoPanel
+            posts={selectedTopicId ? latestPosts : hotPosts}
+            topics={hotTopics}
+            searchValue={feedKeyword}
+          />
         </div>
       </div>
     </div>

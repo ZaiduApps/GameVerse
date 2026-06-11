@@ -208,7 +208,7 @@ export default async function GamesPage({
       <section className="mb-8 rounded-2xl border bg-card p-6 shadow-sm">
         <h1 className="text-2xl font-black text-foreground">{siteName} 游戏库</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
-          这里汇总热门安卓游戏、国际服作品和高热度应用入口。你可以把它当作站内的主题导航页，先看题材方向，再进入详情页核对版本、截图、安装说明与社区讨论。
+          {siteName} 游戏库收录热门安卓游戏、国际服手游、精品应用和高关注度资源，覆盖二次元、MMO、多人联机等常见题材。你可以按分类、关键词和评分筛选目标作品，再进入详情页查看版本信息、游戏截图、安装说明、下载入口与社区讨论。
         </p>
         <div className="mt-5 grid gap-4 md:grid-cols-3">
           {APP_TOPIC_CLUSTERS.map((item) => (
