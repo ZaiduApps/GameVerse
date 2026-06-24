@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { cache } from 'react';
 
 import CommunityTopicBoardView from './CommunityTopicBoardView';
-import { absoluteUrl, sanitizeSeoText } from '@/lib/seo';
+import { absoluteUrl, buildSeoDescription, sanitizeSeoText } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityFeed, getCommunityTopicDetail, type CommunityFeedResult } from '@/lib/community-api';
 
@@ -53,7 +53,7 @@ export async function generateMetadata({
   params: Promise<{ idOrSlug: string }>;
 }): Promise<Metadata> {
   const { idOrSlug } = await params;
-  const { config, topic } = await getTopicPageData(idOrSlug);
+  const { config, topic, latestFeed, hotFeed } = await getTopicPageData(idOrSlug);
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
 
   if (!topic?._id) {
@@ -67,13 +67,19 @@ export async function generateMetadata({
   const canonicalPath = `/community/topic/${encodeURIComponent(String(topic.slug || topic._id).trim())}`;
   const topicName = sanitizeSeoText(topic.name || '社区话题') || '社区话题';
   const title = clamp(`${topicName} 社区话题 | ${siteName}`, 80);
-  const description = clamp(
-    sanitizeSeoText(
-      topic.description ||
-        topic.announcement ||
-        `${topicName} 最新帖子、攻略讨论与玩家动态。`,
-    ) || `${topicName} 最新帖子、攻略讨论与玩家动态。`,
-    160,
+  const latestPostTitle = sanitizeSeoText(latestFeed.list?.[0]?.title || latestFeed.list?.[0]?.summary || '');
+  const hotPostTitle = sanitizeSeoText(hotFeed.list?.[0]?.title || hotFeed.list?.[0]?.summary || '');
+  const description = buildSeoDescription(
+    sanitizeSeoText(topic.description || topic.announcement) || `${topicName} 最新帖子、攻略讨论与玩家动态`,
+    [
+      `${siteName} 社区话题页汇总 ${topicName} 的最新发帖、热门讨论、攻略经验、资源反馈和评论互动`,
+      Number(topic.post_count || 0) > 0 ? `当前收录 ${Number(topic.post_count || 0)} 条相关帖子` : '',
+      Number(topic.followers_count || 0) > 0 ? `${Number(topic.followers_count || 0)} 位用户关注该话题` : '',
+      latestPostTitle ? `最新动态：${latestPostTitle}` : '',
+      hotPostTitle && hotPostTitle !== latestPostTitle ? `热门讨论：${hotPostTitle}` : '',
+      '适合继续查看游戏下载、安装更新、活动奖励、机型兼容、网络稳定性和玩家回复中的实用线索',
+    ],
+    { max: 160 },
   );
   const image = String(topic.cover || topic.icon || config?.basic?.share_image || '').trim();
   const hasContent = Number(topic.post_count || 0) > 0 || Number(topic.followers_count || 0) > 0;

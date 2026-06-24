@@ -420,6 +420,7 @@ export default function CommunityPostDetailView({
         blockedLinkHosts: COMMUNITY_DETAIL_BLOCKED_LINK_HOSTS,
         injectHeadingAnchors: true,
         renderFirstHeadingMatchingTextAsPlainBlock: post.title || post.summary,
+        hiddenHeadingTexts: ['Excerpt'],
       }),
     [post.content, post.summary, post.title],
   );
@@ -1890,8 +1891,8 @@ export default function CommunityPostDetailView({
         </aside>
 
         <div className="min-w-0 space-y-6">
-          <Card className="overflow-hidden border-border/70 shadow-sm">
-            <CardHeader className="border-b p-4">
+          <Card className="overflow-hidden border-0 bg-card shadow-sm">
+            <CardHeader className="bg-muted/15 p-4">
               <div className="flex items-start gap-3">
                 {authorProfileHref ? (
                   <Link
@@ -2018,7 +2019,7 @@ export default function CommunityPostDetailView({
               ) : null}
 
               {linkPreviews.length > 0 ? (
-                <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-3">
+                <div className="space-y-2 rounded-lg bg-muted/25 p-3 shadow-[inset_0_0_0_1px_hsl(var(--border)/0.18)]">
                   <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                     <ExternalLink className="h-3.5 w-3.5" />
                     链接汇总
@@ -2079,7 +2080,7 @@ export default function CommunityPostDetailView({
               ) : null}
 
               {relatedApp ? (
-                <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+                <div className="rounded-lg bg-muted/25 p-3 shadow-[inset_0_0_0_1px_hsl(var(--border)/0.18)]">
                   <div className="flex items-center gap-3">
                     <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
                       {relatedApp.icon ? (
@@ -2108,7 +2109,7 @@ export default function CommunityPostDetailView({
               ) : null}
             </CardContent>
 
-            <CardFooter className="flex flex-wrap items-center gap-1.5 border-t px-4 py-3">
+            <CardFooter className="flex flex-wrap items-center gap-1.5 bg-muted/15 px-4 py-3">
               <Button
                 variant="ghost"
                 size="sm"

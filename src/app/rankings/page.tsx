@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ArrowRight, BarChartBig, Clock3, Flame, Star, TrendingUp } from 'lucide-react';
 
 import { trackedApiFetch } from '@/lib/api';
-import { absoluteUrl } from '@/lib/seo';
+import { absoluteUrl, buildSeoDescription } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import type { ApiGame } from '@/types';
 import { Badge } from '@/components/ui/badge';
@@ -223,8 +223,22 @@ export async function generateMetadata({
     ? `${siteName} ${activeTag} ${tabLabel}`
     : `${siteName} 热门安卓游戏排行榜`;
   const description = activeTag
-    ? `查看 ${siteName} ${activeTag} 相关游戏${tabLabel}，快速筛选高评分、热门下载与近期更新作品。`
-    : '查看 APKScc 热门安卓游戏排行榜，按评分与下载热度筛选热门作品，快速找到近期值得下载的游戏。';
+    ? buildSeoDescription(
+        `查看 ${siteName} ${activeTag} 相关游戏${tabLabel}`,
+        [
+          '快速筛选高评分、热门下载与近期更新作品',
+          '页面汇总版本、分类标签、资源入口和详情页链接，帮助比较同题材安卓游戏的下载价值与活跃度',
+          '适合继续查看 APK 信息、截图、更新时间、玩家社区反馈、版本变化和同类作品比较',
+        ],
+      )
+    : buildSeoDescription(
+        `查看 ${siteName} 热门安卓游戏排行榜`,
+        [
+          '按评分榜、下载热度、近期更新和热门作品整理安卓游戏',
+          '支持标签筛选并跳转详情页查看 APK 版本、更新时间、截图素材、资源入口和社区反馈',
+          '适合快速发现近期活跃、口碑较高、下载热度上升的国际服手游和精品安卓应用，并继续查看安装前需要核对的版本信息、资源入口和玩家反馈',
+        ],
+      );
   const shareImage = String(config?.basic?.share_image || '').trim();
 
   return {

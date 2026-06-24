@@ -2,13 +2,18 @@ import type { Metadata } from 'next';
 import { cache } from 'react';
 
 import CommunityPageView, { type CommunityPageInitialData } from './CommunityPageView';
-import { absoluteUrl } from '@/lib/seo';
+import { absoluteUrl, buildSeoDescription } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityFeed, getCommunityTopics } from '@/lib/community-api';
 
 const COMMUNITY_JSONLD_LIMIT = 12;
-const COMMUNITY_PAGE_DESCRIPTION =
-  '浏览 APKScc 社区最新帖子、热门话题、安卓游戏讨论、攻略分享、资源反馈、版本体验和玩家互动动态，查看玩家围绕游戏下载、安装更新、账号登录、机型兼容、网络稳定性和资源可用性的真实反馈，持续发现值得关注的游戏内容、实用经验和社区交流记录。';
+const COMMUNITY_PAGE_DESCRIPTION = buildSeoDescription(
+  '浏览 APKScc 社区最新帖子、热门话题、安卓游戏讨论、攻略分享、资源反馈、版本体验和玩家互动动态',
+  [
+    '查看玩家围绕游戏下载、安装更新、账号登录、机型兼容、网络稳定性和资源可用性的真实反馈',
+    '持续发现值得关注的游戏内容、实用经验、评论回复、外部链接、图片线索和社区交流记录，便于跟踪资源变化与玩家反馈',
+  ],
+);
 
 function clamp(input: string, max: number): string {
   if (input.length <= max) return input;

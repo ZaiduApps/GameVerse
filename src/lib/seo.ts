@@ -59,6 +59,40 @@ export function clampSeoDescription(input?: string | null, max = 155): string {
   return `${sliced || text.slice(0, Math.max(1, max - 3)).trim()}...`;
 }
 
+function trimSeoDescriptionPart(input?: string | null): string {
+  return sanitizeSeoText(input)
+    .replace(/^[\s,，、。；;：:]+/u, '')
+    .replace(/[\s,，、。；;：:]+$/u, '')
+    .trim();
+}
+
+function appendSeoDescriptionPart(source: string, addition: string): string {
+  const current = trimSeoDescriptionPart(source);
+  const next = trimSeoDescriptionPart(addition);
+  if (!current) return next;
+  if (!next || current.includes(next)) return current;
+  const separator = /[。！？]$/u.test(current) ? '' : /[.!?]$/u.test(current) ? ' ' : '。';
+  return `${current}${separator}${next}`;
+}
+
+export function buildSeoDescription(
+  input?: string | null,
+  additions: Array<string | null | undefined> = [],
+  options: { min?: number; max?: number } = {},
+): string {
+  const min = Math.max(0, options.min ?? 120);
+  const max = Math.max(1, options.max ?? 155);
+  const parts = [input, ...additions].map(trimSeoDescriptionPart).filter(Boolean);
+  let description = '';
+
+  for (const part of parts) {
+    description = appendSeoDescriptionPart(description, part);
+    if (description.length >= min) break;
+  }
+
+  return clampSeoDescription(description, max);
+}
+
 export function getSiteUrl(): string {
   const raw = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || FALLBACK_SITE_URL;
   const normalized = raw.trim().replace(/\/+$/, '');

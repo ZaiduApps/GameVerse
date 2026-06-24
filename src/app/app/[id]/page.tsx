@@ -7,6 +7,7 @@ import { trackedApiFetch } from '@/lib/api';
 import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
 import {
   absoluteUrl,
+  buildSeoDescription,
   getSiteShareImageUrl,
   resolveGameSeoImage,
   sanitizeSeoText,
@@ -266,17 +267,18 @@ export async function generateMetadata({
   titleSegments.push(siteName);
   const title = clampText(titleSegments.filter(Boolean).join(' | '), MAX_TITLE_LENGTH);
 
-  const description = clampText(
+  const description = buildSeoDescription(
+    normalizedVersion ? `下载 ${normalizedName} 安卓最新版 ${normalizedVersion}` : `下载 ${normalizedName} 安卓版`,
     [
-      normalizedVersion ? `下载 ${normalizedName} 安卓最新版 ${normalizedVersion}。` : `下载 ${normalizedName} 安卓版。`,
       normalizedSummary || normalizedDescription,
-      category ? `适合关注 ${category} 的用户。` : '',
-      normalizeText(game.developer) ? `开发者：${normalizeText(game.developer)}。` : '',
-      dateLabel ? `最近更新于 ${dateLabel}。` : '',
-    ]
-      .filter(Boolean)
-      .join(' ') || normalizeText(seo.description),
-    MAX_DESCRIPTION_LENGTH,
+      category ? `适合关注 ${category} 的用户` : '',
+      normalizeText(game.developer) ? `开发者：${normalizeText(game.developer)}` : '',
+      dateLabel ? `最近更新于 ${dateLabel}` : '',
+      game.pkg ? `包名 ${game.pkg}` : '',
+      '页面提供 APK 资源入口、版本信息、文件大小、更新记录、截图素材、相关社区讨论和安装前检查线索',
+      normalizeText(seo.description),
+    ],
+    { max: MAX_DESCRIPTION_LENGTH },
   );
 
   const heroImage = resolveGameSeoImage(game, basic.share_image);

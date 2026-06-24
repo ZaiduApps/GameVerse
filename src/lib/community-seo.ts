@@ -1,7 +1,7 @@
 import type { CommunityCommentItem, CommunityCommentThread } from '@/lib/community-api';
 import { isBlockedCommunityDetailLink } from '@/lib/community-link-policy';
 import { getCommunityAuthorProfileHref } from '@/lib/community-profile';
-import { absoluteUrl, clampSeoDescription, hasSeoMarkupNoise, normalizeSeoAssetUrl, sanitizeSeoText } from '@/lib/seo';
+import { absoluteUrl, buildSeoDescription, hasSeoMarkupNoise, normalizeSeoAssetUrl, sanitizeSeoText } from '@/lib/seo';
 import type { CommunityPost } from '@/types';
 
 type LinkedPageMention = {
@@ -17,21 +17,13 @@ export function clampCommunitySeoText(input: string, max: number): string {
   return `${input.slice(0, Math.max(1, max - 3)).trim()}...`;
 }
 
-function joinCommunitySeoDescription(source: string, addition: string): string {
-  const normalizedSource = source.replace(/[，。；、\s]+$/u, '').trim();
-  const normalizedAddition = addition.replace(/^[，。；、\s]+/u, '').trim();
-  if (!normalizedSource) return normalizedAddition;
-  if (!normalizedAddition) return normalizedSource;
-  return `${normalizedSource}。${normalizedAddition}`;
-}
-
-function expandCommunitySeoDescription(post: CommunityPost, source: string): string {
+function buildCommunitySeoDescriptionAdditions(post: CommunityPost, source: string): string[] {
   const tags = Array.isArray(post.tags)
     ? post.tags.map((tag) => sanitizeSeoText(tag)).filter(Boolean).slice(0, 3)
     : [];
   const relatedAppName = sanitizeSeoText(post.relatedApp?.name || '');
   const category = sanitizeSeoText(post.category || '');
-  const additions = [
+  return [
     relatedAppName && !source.includes(relatedAppName)
       ? `关联游戏：${relatedAppName}`
       : '',
@@ -40,12 +32,8 @@ function expandCommunitySeoDescription(post: CommunityPost, source: string): str
       : '',
     tags.length > 0 ? `涵盖${tags.join('、')}等讨论线索` : '',
     '查看下载、安装、更新、登录、网络、机型、玩法体验和玩家回复',
+    'APKScc 社区同步整理正文内容、图片线索、外部链接与评论互动，方便继续判断资源可用性、版本变化和后续讨论价值',
   ].filter(Boolean);
-
-  return additions.reduce((current, addition) => {
-    if (current.length >= 120) return current;
-    return joinCommunitySeoDescription(current, addition);
-  }, source);
 }
 
 export function buildCommunityPostSeoTitle(post: CommunityPost, siteName: string): string {
@@ -62,7 +50,7 @@ export function buildCommunityPostSeoDescription(post: CommunityPost): string {
     (hasSeoMarkupNoise(post.summary) && content.length > summary.length)
       ? content || summary
       : summary || content) || '查看社区帖子详情';
-  return clampSeoDescription(expandCommunitySeoDescription(post, source));
+  return buildSeoDescription(source, buildCommunitySeoDescriptionAdditions(post, source));
 }
 
 export function getCommunityPostContentImage(post: CommunityPost): string {

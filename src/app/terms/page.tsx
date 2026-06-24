@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: { absolute: '用户协议 | APKScc' },
-  description: '查看 APKScc 的用户协议与站点使用说明。',
+  description:
+    '查看 APKScc 用户协议与站点使用说明，了解安卓游戏与应用下载信息、社区内容、账号互动、资源反馈、外部链接、数据更新、使用前核对责任、违规处理方式和服务边界，帮助用户在浏览、下载、提交反馈、发布评论和参与讨论前确认基本规则、注意事项、内容处理流程、资源核对要求、反馈工单处理方式和站内通知记录。',
   alternates: { canonical: '/terms' },
 };
 

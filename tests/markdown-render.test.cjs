@@ -221,7 +221,7 @@ function loadNotificationTargetUtils() {
 
 const renderMarkdown = loadRenderMarkdown();
 const buildRenderedMarkdownDocument = loadMarkdownDocumentBuilder();
-const { clampSeoDescription, sanitizeSeoText } = loadSeoUtils();
+const { buildSeoDescription, clampSeoDescription, sanitizeSeoText } = loadSeoUtils();
 const {
   resolveCommunityPostViewSource,
   stripCommunityMarkdownCodeSegments,
@@ -578,6 +578,28 @@ test('markdown detail preset: upgraded section headings and unordered list items
   assert.match(hrClass, /bg-gradient-to-r/);
 });
 
+test('markdown detail preset: hides configured excerpt heading', () => {
+  const input = [
+    '> ## Excerpt',
+    '',
+    '> 最近在寻找存储空间，3天前找到了 100GB 的免费 WebDAV 空间，',
+    '',
+    '## 正文',
+    '',
+    '实际内容',
+  ].join('\n');
+
+  const doc = buildRenderedMarkdownDocument(input, {
+    preset: 'detail',
+    hiddenHeadingTexts: ['Excerpt'],
+    injectHeadingAnchors: true,
+  });
+
+  assert.doesNotMatch(doc.html, /Excerpt/);
+  assert.match(doc.html, /最近在寻找存储空间/);
+  assert.equal(doc.headings.map((item) => item.text).join('|'), '正文');
+});
+
 test('seo text sanitizer: strips markdown links, images and bare urls', () => {
   const input = [
     '由《[灌籃高手](https://acg.gamer.com.tw/search.php?kw=test)》團隊打造',
@@ -756,6 +778,18 @@ test('seo utilities: clamps public profile descriptions without dangling punctua
   assert.ok(description.length <= 155);
   assert.match(description, /\.\.\.$/);
   assert.doesNotMatch(description, /[，。；、]\.\.\.$/);
+});
+
+test('seo utilities: expands short meta descriptions with supplemental context', () => {
+  const description = buildSeoDescription('查看 APKScc 用户协议与站点使用说明', [
+    '了解安卓游戏与应用下载信息、社区内容、账号互动、资源反馈、外部链接、数据更新和使用前核对责任等规则',
+    '页面说明社区发帖评论规范、账号功能边界、外部链接访问提示、内容更新节奏、免责声明、用户反馈入口和审核处理方式',
+  ]);
+
+  assert.ok(description.length >= 120);
+  assert.ok(description.length <= 155);
+  assert.match(description, /用户协议/);
+  assert.match(description, /资源反馈/);
 });
 
 test('community link click reporter: sends keepalive payload', async () => {

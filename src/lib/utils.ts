@@ -59,6 +59,7 @@ interface RenderMarkdownOptions {
   preset?: "default" | "detail";
   injectHeadingAnchors?: boolean;
   renderFirstHeadingMatchingTextAsPlainBlock?: string;
+  hiddenHeadingTexts?: string[];
 }
 
 export interface MarkdownHeadingItem {
@@ -517,6 +518,18 @@ const isFirstHeadingDemotionMatch = (headingText: string, targetText: string): b
   return looseTarget.includes(looseHeading) || looseHeading.includes(looseTarget);
 };
 
+const isHiddenHeadingMatch = (
+  headingText: string,
+  hiddenHeadingTexts: readonly string[],
+): boolean => {
+  const heading = normalizeHeadingLooseComparisonText(headingText);
+  if (!heading) return false;
+  return hiddenHeadingTexts.some((item) => {
+    const hidden = normalizeHeadingLooseComparisonText(item);
+    return Boolean(hidden && heading === hidden);
+  });
+};
+
 const renderListItem = (content: string, className: string): string =>
   className ? `<li class="${className}">${content}</li>` : `<li>${content}</li>`;
 
@@ -748,11 +761,15 @@ export const buildRenderedMarkdownDocument = (
     const headings: MarkdownHeadingItem[] = [];
     let headingIndex = 0;
     const headingDemotionTarget = String(options?.renderFirstHeadingMatchingTextAsPlainBlock || "");
+    const hiddenHeadingTexts = (options?.hiddenHeadingTexts || [])
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
     const htmlWithAnchors = finalHtml.replace(
       /<h([1-4])([^>]*)>([\s\S]*?)<\/h\1>/g,
       (match, level, rawAttrs, inner) => {
         const text = stripHtmlTags(restoreMarkdownTokens(inner, tokens));
         if (!text) return match;
+        if (isHiddenHeadingMatch(text, hiddenHeadingTexts)) return "";
         const shouldRenderHeadingAsPlainBlock =
           Number(level) === 1 &&
           headingDemotionTarget &&

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 import AppLibraryView from './AppLibraryView';
 import { trackedApiFetch } from '@/lib/api';
-import { absoluteUrl } from '@/lib/seo';
+import { absoluteUrl, buildSeoDescription } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import type { ApiGame } from '@/types';
 
@@ -88,8 +88,14 @@ export async function generateMetadata({
   const params = await searchParams;
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
   const title = `${siteName} 游戏库 - 热门安卓游戏与应用下载`;
-  const description =
-    '浏览 APKScc 游戏库，发现热门国际服与精品安卓应用。支持按分类、评分和关键词快速查找，一键直达下载页。';
+  const description = buildSeoDescription(
+    '浏览 APKScc 游戏库，发现热门国际服与精品安卓游戏、应用下载资源',
+    [
+      '支持按分类、评分、关键词和热度快速筛选作品',
+      '每个详情页提供 APK 版本、更新时间、截图素材、资源入口和社区反馈，方便比较近期值得安装与持续关注的内容',
+      '适合查找国际服手游、热门应用、二次元 RPG、射击竞技、MMO、休闲益智和更新活跃的安卓资源',
+    ],
+  );
   const shareImage = String(config?.basic?.share_image || '').trim();
   const hasQuery = Boolean(
     String(params?.q || '').trim() ||
