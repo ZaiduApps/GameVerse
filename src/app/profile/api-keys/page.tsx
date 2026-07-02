@@ -96,6 +96,11 @@ function formatTime(input?: null | string) {
   return format(date, 'yyyy-MM-dd HH:mm:ss');
 }
 
+function formatExpiryTime(input?: null | string) {
+  if (!input) return '永久有效';
+  return formatTime(input);
+}
+
 function createIdempotencyKeySample() {
   return `post-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -474,7 +479,7 @@ export default function ProfileApiKeysPage() {
       return;
     }
 
-    let normalizedExpiresAt: string | undefined;
+    let normalizedExpiresAt: string | null = null;
     if (expiresAt) {
       const parsed = new Date(expiresAt);
       if (!Number.isFinite(parsed.getTime())) {
@@ -713,6 +718,7 @@ export default function ProfileApiKeysPage() {
                 data-acbox-action="profile_api_keys_expire_input"
                 data-acbox-label="过期时间"
               />
+              <p className="text-xs text-muted-foreground">留空表示永久有效。</p>
             </div>
             <div className="flex items-end md:col-span-1">
               <Button
@@ -740,7 +746,7 @@ export default function ProfileApiKeysPage() {
         <CardFooter className="text-xs text-muted-foreground">
           {reachedKeyLimit
             ? '已达到 5 个密钥上限，需先吊销不再使用的密钥后才能继续创建。'
-            : '创建的是内容发布密钥（content:write）。创建成功后只展示一次明文，建议立即保存。'}
+            : '创建的是内容发布密钥（content:write）。过期时间留空将永久有效，创建成功后只展示一次明文，建议立即保存。'}
         </CardFooter>
       </Card>
 
@@ -1121,7 +1127,7 @@ export default function ProfileApiKeysPage() {
                       类型：{item.key_type || 'legacy'} · 能力：{(item.capabilities || []).join(', ') || '-'} · 风险：{item.risk_level || 'low'}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      过期：{formatTime(item.expires_at)} · 最近使用：{formatTime(item.last_used_at)} ·
+                      过期：{formatExpiryTime(item.expires_at)} · 最近使用：{formatTime(item.last_used_at)} ·
                       调用次数：{item.usage_count}
                     </div>
                   </div>
