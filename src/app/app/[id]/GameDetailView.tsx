@@ -556,7 +556,14 @@ export default function GameDetailView({
           }
         }
       } catch {
-        if (!cancelled) setHasError(true);
+        if (!cancelled) {
+          if (hasInitialMatch && initialGameData) {
+            setGameData(initialGameData);
+            setHasError(false);
+          } else {
+            setHasError(true);
+          }
+        }
       } finally {
         if (!cancelled) setIsLoading(false);
       }
