@@ -299,6 +299,8 @@ test('markdown regression: uu-mobile scheme mapped to app prompt', () => {
 
 test('markdown regression: link tracking attributes are emitted', () => {
   const input = [
+    '[Internal](/contact?from=about#team)',
+    '',
     '[HTTPS](https://example.com/page?q=1)',
     '',
     '[HTTP](http://example.com/page)',
@@ -307,6 +309,8 @@ test('markdown regression: link tracking attributes are emitted', () => {
   ].join('\n');
 
   const html = renderMarkdown(input).__html;
+  assert.match(html, /data-acbox-action="markdown_internal_link"/);
+  assert.match(html, /href="\/contact\?from=about#team"/);
   assert.match(html, /data-acbox-action="markdown_https_link"/);
   assert.match(html, /data-acbox-label="https:\/\/example\.com\/page\?q=1"/);
   assert.match(html, /rel="noopener noreferrer ugc"/);
@@ -317,10 +321,12 @@ test('markdown regression: link tracking attributes are emitted', () => {
 });
 
 test('markdown regression: non-whitelisted scheme rendered as text only', () => {
-  const input = '[危险链接](javascript:evil)';
+  const input = '[危险链接](javascript:evil)\n\n[协议相对](//evil.example/path)';
   const html = renderMarkdown(input).__html;
   assert.match(html, /\(javascript:evil\)/);
   assert.doesNotMatch(html, /href="javascript:/);
+  assert.match(html, /\(\/\/evil\.example\/path\)/);
+  assert.doesNotMatch(html, /href="\/\/evil\.example/);
 });
 
 test('markdown regression: blocked hosts cover http and subdomains', () => {
@@ -1032,4 +1038,48 @@ test('notification target resolver: prefers explicit url and blocks unsafe schem
   );
   assert.equal(resolveNotificationTarget({ target_type: 'url', target_id: 'javascript:alert(1)' }), null);
   assert.equal(normalizeNotificationTarget('ftp://example.com/file'), null);
+});
+
+test('static pages use configurable site content helper', () => {
+  const routeCases = [
+    ['about', 'about'],
+    ['contact', 'contact'],
+    ['privacy-policy', 'privacy_policy'],
+    ['terms', 'terms'],
+  ];
+
+  for (const [route, key] of routeCases) {
+    const source = fs.readFileSync(
+      path.join(process.cwd(), `src/app/${route}/page.tsx`),
+      'utf8',
+    );
+    assert.match(source, new RegExp(`generateStaticPageMetadata\\('${key}'\\)`));
+    assert.match(source, new RegExp(`StaticConfigPage pageKey="${key}"`));
+  }
+
+  const helperSource = fs.readFileSync(
+    path.join(
+      process.cwd(),
+      'src/app/(static-pages)/static-page-config.tsx',
+    ),
+    'utf8',
+  );
+  assert.match(helperSource, /config\?\.static_pages\?\.\[key\]/);
+  assert.match(helperSource, /renderMarkdown\(contentMarkdown\)/);
+});
+
+test('static page configured markdown renders rich html', () => {
+  const html = renderMarkdown([
+    '# 关于我们',
+    '',
+    '- 游戏内容',
+    '- 应用资源',
+    '',
+    '[联系我们](/contact)',
+  ].join('\n')).__html;
+
+  assert.match(html, /<h1[^>]*>关于我们<\/h1>/);
+  assert.match(html, /<ul[^>]*>/);
+  assert.match(html, /<li[^>]*>游戏内容<\/li>/);
+  assert.match(html, /href="\/contact"/);
 });

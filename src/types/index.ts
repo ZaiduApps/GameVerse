@@ -386,6 +386,13 @@ export interface ApiRecommendedGame {
 }
 
 
+export interface StaticPageConfig {
+  content_markdown?: string;
+  seo_description?: string;
+  seo_title?: string;
+  title?: string;
+}
+
 // New type for Global Site Configuration
 export interface SiteConfig {
   key?: string;
@@ -436,6 +443,12 @@ export interface SiteConfig {
   app_seo?: {
     app_title_template: string;
     app_description_template: string;
+  };
+  static_pages?: {
+    about?: StaticPageConfig;
+    contact?: StaticPageConfig;
+    privacy_policy?: StaticPageConfig;
+    terms?: StaticPageConfig;
   };
   is_active?: boolean;
   is_maintenance?: boolean;

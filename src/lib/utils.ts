@@ -34,6 +34,21 @@ const isHttpsUrl = (value: string): boolean => /^https:\/\//i.test(value.trim())
 const isHttpUrl = (value: string): boolean => /^https?:\/\//i.test(value.trim());
 const hasMalformedPercentEncoding = (value: string): boolean =>
   /%(?![0-9a-fA-F]{2})/.test(value);
+const isSafeSiteRelativeUrl = (value: string): boolean => {
+  const url = value.trim();
+  if (!url.startsWith("/") || url.startsWith("//") || url.startsWith("/\\")) {
+    return false;
+  }
+  if (hasMalformedPercentEncoding(url) || /[\u0000-\u001F\u007F\s<>"']/.test(url)) {
+    return false;
+  }
+  try {
+    decodeURI(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
 const isSafeHttpUrl = (value: string): boolean => {
   const url = value.trim();
   if (!isHttpUrl(url) || hasMalformedPercentEncoding(url)) return false;
@@ -297,6 +312,10 @@ const renderSafeLink = (
   classSet: MarkdownClassSet,
 ): string => {
   const url = urlRaw.trim();
+  if (isSafeSiteRelativeUrl(url)) {
+    const safeHref = escapeHtmlAttribute(url);
+    return `<a href="${safeHref}" class="${classSet.link}" data-acbox-action="markdown_internal_link" data-acbox-label="${safeHref}">${label}</a>`;
+  }
   if (isHttpUrl(url)) {
     if (!isSafeHttpUrl(url)) {
       return `<span class="${classSet.invalidLink}">${label} (${url})</span>`;
