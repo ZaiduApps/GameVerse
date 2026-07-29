@@ -55,6 +55,32 @@ function loadMarkdownDocumentBuilder() {
   return moduleObj.exports.buildRenderedMarkdownDocument;
 }
 
+function loadGameFaqUtils() {
+  const filePath = path.join(process.cwd(), 'src/lib/game-faq.ts');
+  const source = fs.readFileSync(filePath, 'utf8');
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2020,
+    },
+  }).outputText;
+
+  const moduleObj = { exports: {} };
+  const sandbox = {
+    module: moduleObj,
+    exports: moduleObj.exports,
+    require: (id) => {
+      if (id === './utils') {
+        return { renderMarkdown: loadRenderMarkdown() };
+      }
+      return require(id);
+    },
+  };
+
+  vm.runInNewContext(compiled, sandbox);
+  return moduleObj.exports;
+}
+
 function loadSeoUtils() {
   const filePath = path.join(process.cwd(), 'src/lib/seo.ts');
   const source = fs.readFileSync(filePath, 'utf8');
@@ -221,6 +247,7 @@ function loadNotificationTargetUtils() {
 
 const renderMarkdown = loadRenderMarkdown();
 const buildRenderedMarkdownDocument = loadMarkdownDocumentBuilder();
+const { faqMarkdownToPlainText, normalizeGameFaqItems } = loadGameFaqUtils();
 const { buildSeoDescription, clampSeoDescription, sanitizeSeoText } = loadSeoUtils();
 const {
   resolveCommunityPostViewSource,
@@ -327,6 +354,36 @@ test('markdown regression: non-whitelisted scheme rendered as text only', () => 
   assert.doesNotMatch(html, /href="javascript:/);
   assert.match(html, /\(\/\/evil\.example\/path\)/);
   assert.doesNotMatch(html, /href="\/\/evil\.example/);
+});
+
+test('game faq: keeps backend merge order and drops invalid entries', () => {
+  const items = normalizeGameFaqItems({
+    items: [
+      { id: 'global-1', question: '通用问题', answer_markdown: '通用答案', source: 'global' },
+      { id: 'invalid', question: '', answer_markdown: '无问题', source: 'global' },
+      { id: 'game-1', question: '专属问题', answer_markdown: '专属答案', source: 'game' },
+    ],
+  });
+
+  assert.deepEqual(
+    plainJsonValue(items.map((item) => `${item.source}:${item.id}`)),
+    ['global:global-1', 'game:game-1'],
+  );
+  assert.deepEqual(plainJsonValue(normalizeGameFaqItems(undefined)), []);
+});
+
+test('game faq: converts sanitized markdown to JSON-LD plain text', () => {
+  const text = faqMarkdownToPlainText([
+    '**推荐渠道** [官方页面](https://example.com/download)',
+    '',
+    '![安装截图](https://example.com/install.png)',
+    '',
+    '<script>alert(1)</script>',
+  ].join('\n'));
+
+  assert.equal(text, '推荐渠道 官方页面 alert(1)');
+  assert.doesNotMatch(text, /https?:\/\//);
+  assert.doesNotMatch(text, /[<>\[\]!*]/);
 });
 
 test('markdown regression: blocked hosts cover http and subdomains', () => {

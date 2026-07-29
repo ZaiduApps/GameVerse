@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import AuthModal from '@/components/auth/auth-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -32,12 +33,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import GameAnnouncements from '@/components/game-announcements';
 import GameDownloadDialog from '@/components/game-download-dialog';
 import GameReviewPanel from '@/components/game-detail/GameReviewPanel';
+import GameFaqSection from '@/components/game-detail/GameFaqSection';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { trackedApiFetch } from '@/lib/api';
 import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
 import { getCommunityPostsByGame } from '@/lib/community-api';
 import { buildFeedbackCommonFields, submitFeedbackTicket } from '@/lib/feedback';
+import { normalizeGameFaqItems } from '@/lib/game-faq';
 import { cn } from '@/lib/utils';
 
 interface GameDetailViewProps {
@@ -272,28 +275,6 @@ function resolveSupportItems(cardConfig: Record<string, CardConfigItem[] | undef
   return deduped.slice(0, 6);
 }
 
-function buildFaqItems(game: GameDetailData['app']) {
-  const name = String(game.name || '该应用').trim() || '该应用';
-  const version = String(game.version || '最新版').trim() || '最新版';
-  const packageName = String(game.pkg || '').trim() || '未提供';
-  const system = String(game.metadata?.region || 'Android').trim() || 'Android';
-
-  return [
-    {
-      question: `${name} 推荐下载哪个版本？`,
-      answer: `当前页面推荐版本为 ${version}。如果你更关注稳定性，建议优先查看页面中的更新时间、文件大小和下载渠道说明后再安装。`,
-    },
-    {
-      question: `${name} 对设备有什么要求？`,
-      answer: `${name} 面向 ${system} 设备提供下载。安装前建议预留可用存储空间，并确认系统环境支持对应安装包。`,
-    },
-    {
-      question: `${name} 安装失败怎么处理？`,
-      answer: `遇到安装失败时，可先检查存储空间、网络环境，以及包名 ${packageName} 是否与本机旧版本冲突，再重新下载安装。`,
-    },
-  ];
-}
-
 function buildInstallSteps(game: GameDetailData['app']) {
   const name = String(game.name || '该应用').trim() || '该应用';
   return [
@@ -392,7 +373,7 @@ export default function GameDetailView({
   initialRelatedNews,
   initialDataMode = 'full',
 }: GameDetailViewProps) {
-  const { token, user } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
   const { toast } = useToast();
 
   const [gameData, setGameData] = useState<GameDetailData | null | undefined>(initialGameData);
@@ -404,6 +385,7 @@ export default function GameDetailView({
   const [isLoading, setIsLoading] = useState(!initialGameData);
   const [hasError, setHasError] = useState(false);
   const [isSubmittingUrge, setIsSubmittingUrge] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [sort, setSort] = useState<'latest' | 'hot'>('latest');
   const [isFavorite, setIsFavorite] = useState(false);
@@ -433,7 +415,7 @@ export default function GameDetailView({
   const cardConfig = (gameData?.cardConfig || {}) as Record<string, CardConfigItem[] | undefined>;
   const supportItems = useMemo(() => resolveSupportItems(cardConfig), [cardConfig]);
   const downloadNotices = (cardConfig.download_notice || []) as CardConfigItem[];
-  const faqItems = useMemo(() => buildFaqItems(gameData?.app || ({} as GameDetailData['app'])), [gameData?.app]);
+  const faqItems = useMemo(() => normalizeGameFaqItems(gameData?.faq), [gameData?.faq]);
   const installSteps = useMemo(() => buildInstallSteps(gameData?.app || ({} as GameDetailData['app'])), [gameData?.app]);
   const riskNotes = useMemo(() => buildRiskNotes(gameData?.app || ({} as GameDetailData['app'])), [gameData?.app]);
 
@@ -754,6 +736,15 @@ export default function GameDetailView({
 
   const handleUrge = useCallback(async () => {
     if (!game || isSubmittingUrge) return;
+    if (!isAuthenticated || !token) {
+      setAuthModalOpen(true);
+      toast({
+        title: '请先登录或注册',
+        description: '登录账号后即可提交催更请求。',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setIsSubmittingUrge(true);
     try {
@@ -784,7 +775,7 @@ export default function GameDetailView({
     } finally {
       setIsSubmittingUrge(false);
     }
-  }, [game, isSubmittingUrge, token, user, toast]);
+  }, [game, isAuthenticated, isSubmittingUrge, token, user, toast]);
 
   const handleReminderToggle = useCallback(() => {
     if (!game) return;
@@ -1320,23 +1311,7 @@ export default function GameDetailView({
 
               {renderTagSection()}
 
-              <section>
-                <h2 className="mb-6 flex items-center gap-3 text-xl font-bold">
-                  <span className="h-8 w-2 rounded-full bg-[#2e7d32]" />
-                  常见问题 FAQ
-                </h2>
-                {renderFaqIntro()}
-                <div className="grid gap-4">
-                  {faqItems.map((item, index) => (
-                    <Card key={`faq-${index}`} className="rounded-[1.75rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75">
-                      <CardContent className="p-6">
-                        <h3 className="text-base font-bold text-[#2c2f30] dark:text-foreground">{item.question}</h3>
-                        <p className="mt-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">{item.answer}</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </section>
+              <GameFaqSection items={faqItems} intro={renderFaqIntro()} />
 
               <section className="pb-8">
                 <div className="mb-4 flex items-center justify-between">
@@ -1708,23 +1683,7 @@ export default function GameDetailView({
 
         {renderTagSection(true)}
 
-        <section className="mt-10">
-          <h2 className="mb-4 flex items-center gap-2 text-xl font-black">
-            <span className="h-6 w-1.5 rounded-full bg-[#2e7d32]" />
-            常见问题 FAQ
-          </h2>
-          {renderFaqIntro(true)}
-          <div className="space-y-4">
-            {faqItems.map((item, index) => (
-              <Card key={`mobile-faq-${index}`} className="border-[#abadae]/10 bg-white">
-                <CardContent className="p-5">
-                  <h3 className="text-base font-bold text-[#0f1720]">{item.question}</h3>
-                  <p className="mt-3 text-sm leading-6 text-[#595c5d]">{item.answer}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
+        <GameFaqSection items={faqItems} mobile intro={renderFaqIntro(true)} />
 
         <section className="mt-10">
           <div className="mb-4 flex items-center justify-between">
@@ -2054,6 +2013,7 @@ export default function GameDetailView({
             document.body,
           )
         : null}
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </div>
   );
 }

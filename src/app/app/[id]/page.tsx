@@ -16,6 +16,7 @@ import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityPostsByGame } from '@/lib/community-api';
 import { getGameReviewSummary } from '@/lib/game-review-api';
 import { normalizeToFiveStar } from '@/lib/game-rating';
+import { faqMarkdownToPlainText, normalizeGameFaqItems } from '@/lib/game-faq';
 import type { CommunityPost, GameDetailData, SiteConfig } from '@/types';
 
 const DETAIL_REVALIDATE_SECONDS = 900;
@@ -115,28 +116,6 @@ function formatFileSize(bytes?: number | null): string | undefined {
   return `${value.toFixed(index === 0 ? 0 : 2)} ${units[index]}`;
 }
 
-function buildGameFaqEntries(game: GameDetailData['app']) {
-  const name = normalizeText(game.name) || '这款应用';
-  const version = normalizeText(game.version) || '最新版';
-  const region = normalizeText(game.metadata?.region) || 'Android';
-  const pkg = normalizeText(game.pkg) || '未提供';
-
-  return [
-    {
-      question: `${name} 当前推荐下载哪个版本？`,
-      answer: `${name} 当前详情页展示的推荐版本为 ${version}，下载前可优先核对更新时间、文件大小和下载渠道信息。`,
-    },
-    {
-      question: `${name} 适合什么设备安装？`,
-      answer: `${name} 面向 ${region} 设备用户，建议在安装前预留足够存储空间，并确认系统版本与网络环境稳定。`,
-    },
-    {
-      question: `${name} 安装失败时应该先检查什么？`,
-      answer: `如果 ${name} 安装失败，建议先检查安装包是否完整、设备存储空间是否充足，以及包名 ${pkg} 是否与已安装旧版本冲突。`,
-    },
-  ];
-}
-
 function buildKeywords(gameData: GameDetailData['app'], seoKeywordsRaw?: string): string[] {
   const candidates = [
     gameData.name,
@@ -215,6 +194,9 @@ function buildInitialGameDataForHydration(gameData: GameDetailData): GameDetailD
       description: String(gameData.app.description || '').slice(0, 1200),
     },
     resources: Array.isArray(gameData.resources) ? gameData.resources : [],
+    faq: {
+      items: normalizeGameFaqItems(gameData.faq),
+    },
   };
 }
 
@@ -432,15 +414,16 @@ export default async function GameDetailPage({
     ],
   };
 
+  const faqItems = normalizeGameFaqItems(initialGameData.faq);
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: buildGameFaqEntries(game).map((item) => ({
+    mainEntity: faqItems.map((item) => ({
       '@type': 'Question',
       name: item.question,
       acceptedAnswer: {
         '@type': 'Answer',
-        text: item.answer,
+        text: faqMarkdownToPlainText(item.answer_markdown),
       },
     })),
   };
@@ -449,7 +432,9 @@ export default async function GameDetailPage({
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(detailJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      {faqItems.length > 0 && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      )}
       <GameDetailView
         id={id}
         initialGameData={buildInitialGameDataForHydration(initialGameData)}

@@ -351,6 +351,14 @@ export interface CardConfigItem {
 export interface GameDetailData {
   app: ApiGameDetail;
   resources: ApiDownloadResource[];
+  faq?: {
+    items: Array<{
+      id: string;
+      question: string;
+      answer_markdown: string;
+      source: 'global' | 'game';
+    }>;
+  };
   Announcements?: {
     popup?: Announcement[];
     normal?: Announcement[];
