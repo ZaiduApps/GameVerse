@@ -50,6 +50,7 @@ interface CommunityFeedPostCardProps {
   density?: 'default' | 'compact';
   hideAuthor?: boolean;
   hideLinkShortcuts?: boolean;
+  imageLayout?: 'cropped' | 'natural';
   moderationBusy?: boolean;
   onDelete?: (post: CommunityPost) => void;
   onHide?: (post: CommunityPost) => void;
@@ -118,6 +119,16 @@ function getImageCellClass(count: number, index: number) {
   return 'aspect-square';
 }
 
+function getNaturalImageButtonClass(count: number) {
+  if (count === 1) {
+    return 'max-w-full sm:max-w-[640px]';
+  }
+  if (count === 2) {
+    return 'max-w-[calc(50%_-_0.25rem)] sm:max-w-[300px]';
+  }
+  return 'max-w-[calc(33.333%_-_0.25rem)] sm:max-w-[204px]';
+}
+
 export default function CommunityFeedPostCard({
   post,
   index = 0,
@@ -126,6 +137,7 @@ export default function CommunityFeedPostCard({
   density = 'default',
   hideAuthor = false,
   hideLinkShortcuts = false,
+  imageLayout = 'cropped',
   moderationBusy = false,
   onDelete,
   onHide,
@@ -442,12 +454,49 @@ export default function CommunityFeedPostCard({
           ) : null}
 
           {images.length > 0 ? (
-            <div
-              className={cn(
-                'mt-3 grid gap-1.5 overflow-hidden',
-                images.length === 1 ? 'grid-cols-1' : images.length === 2 ? 'max-w-[520px] grid-cols-2' : 'max-w-[520px] grid-cols-3',
-              )}
-            >
+            imageLayout === 'natural' ? (
+              <div className="mt-3 flex max-w-full flex-wrap items-start gap-2 overflow-hidden">
+                {images.map((image, imageIndex) => {
+                  const overflow = images.length > 9 && imageIndex === 8 ? images.length - 9 : 0;
+                  const visible = imageIndex < 9;
+                  if (!visible) return null;
+                  return (
+                    <button
+                      key={`${postId}-image-${imageIndex}-${image}`}
+                      type="button"
+                      className={cn(
+                        'relative inline-flex max-h-[220px] min-h-11 min-w-11 items-center justify-center overflow-hidden rounded-md bg-muted text-muted-foreground transition-[filter] hover:brightness-[0.98]',
+                        images.length === 1 && 'max-h-[520px]',
+                        getNaturalImageButtonClass(images.length),
+                      )}
+                      onClick={() => setPreviewState({ images, index: imageIndex })}
+                    >
+                      <img
+                        src={image}
+                        alt={post.title || '帖子图片'}
+                        loading={index < 2 && imageIndex === 0 ? 'eager' : 'lazy'}
+                        fetchPriority={index < 2 && imageIndex === 0 ? 'high' : 'auto'}
+                        className={cn(
+                          'block h-auto w-auto max-w-full rounded-md object-contain',
+                          images.length === 1 ? 'max-h-[520px]' : 'max-h-[220px]',
+                        )}
+                      />
+                      {overflow > 0 ? (
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-sm font-semibold text-white">
+                          +{overflow}
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div
+                className={cn(
+                  'mt-3 grid gap-1.5 overflow-hidden',
+                  images.length === 1 ? 'grid-cols-1' : images.length === 2 ? 'max-w-[520px] grid-cols-2' : 'max-w-[520px] grid-cols-3',
+                )}
+              >
               {images.map((image, imageIndex) => {
                 const overflow = images.length > 9 && imageIndex === 8 ? images.length - 9 : 0;
                 const visible = imageIndex < 9;
@@ -478,7 +527,8 @@ export default function CommunityFeedPostCard({
                   </button>
                 );
               })}
-            </div>
+              </div>
+            )
           ) : null}
 
           {!hideLinkShortcuts && links.length > 0 ? (

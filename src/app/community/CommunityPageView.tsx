@@ -937,6 +937,7 @@ export default function CommunityPageView({ initialData }: CommunityPageViewProp
               canManage={canManage}
               className="border-0"
               hideLinkShortcuts
+              imageLayout="natural"
               moderationBusy={moderationPostId === String(post.id || '').trim()}
               onHide={handleHidePost}
               onDelete={handleDeletePost}
