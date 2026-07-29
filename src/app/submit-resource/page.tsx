@@ -4,6 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import * as z from 'zod';
 
+import { useState } from 'react';
+
+import AuthModal from '@/components/auth/auth-modal';
 import { useAuth } from '@/context/auth-context';
 import { buildFeedbackCommonFields, submitFeedbackTicket } from '@/lib/feedback';
 import { useToast } from '@/hooks/use-toast';
@@ -65,7 +68,19 @@ type AuthorSubmissionFormValues = z.infer<typeof authorSubmissionSchema>;
 
 export default function SubmitResourcePage() {
   const { toast } = useToast();
-  const { user, token } = useAuth();
+  const { isAuthenticated, isLoading, user, token } = useAuth();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+
+  const requireLogin = () => {
+    if (isAuthenticated && token) return true;
+    setAuthModalOpen(true);
+    toast({
+      title: '请先登录或注册',
+      description: '登录账号后即可提交资源请求和作者投稿。',
+      variant: 'destructive',
+    });
+    return false;
+  };
 
   const requestForm = useForm<RequestResourceFormValues>({
     resolver: zodResolver(requestResourceSchema),
@@ -95,6 +110,8 @@ export default function SubmitResourcePage() {
     });
 
   const onRequestSubmit = async (data: RequestResourceFormValues) => {
+    if (!requireLogin()) return;
+
     const common = buildFeedbackCommonFields(user || undefined, data.sourceUrl || '');
     const payload = {
       type: 'missing',
@@ -126,6 +143,8 @@ export default function SubmitResourcePage() {
   };
 
   const onAuthorSubmit = async (data: AuthorSubmissionFormValues) => {
+    if (!requireLogin()) return;
+
     const common = buildFeedbackCommonFields(user || undefined, data.downloadUrl);
     const imageUrls = (data.imageUrls || [])
       .map((item) => item?.value?.trim())
@@ -242,10 +261,16 @@ export default function SubmitResourcePage() {
                   <Button
                     type="submit"
                     className="w-full md:w-auto btn-interactive"
+                    disabled={isLoading}
+                    onClick={(event) => {
+                      if (!requireLogin()) {
+                        event.preventDefault();
+                      }
+                    }}
                     data-acbox-action="submit_resource_request_submit"
                     data-acbox-label="提交资源请求"
                   >
-                    提交请求
+                    {isAuthenticated ? '提交请求' : '登录后提交请求'}
                   </Button>
                 </CardFooter>
               </form>
@@ -448,10 +473,16 @@ export default function SubmitResourcePage() {
                   <Button
                     type="submit"
                     className="w-full md:w-auto btn-interactive"
+                    disabled={isLoading}
+                    onClick={(event) => {
+                      if (!requireLogin()) {
+                        event.preventDefault();
+                      }
+                    }}
                     data-acbox-action="submit_resource_author_submit"
                     data-acbox-label="提交作者投稿"
                   >
-                    提交投稿
+                    {isAuthenticated ? '提交投稿' : '登录后提交投稿'}
                   </Button>
                 </CardFooter>
               </form>
@@ -459,6 +490,7 @@ export default function SubmitResourcePage() {
           </Card>
         </TabsContent>
       </Tabs>
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </div>
   );
 }
