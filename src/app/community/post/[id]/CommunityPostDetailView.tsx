@@ -75,13 +75,6 @@ function formatCount(value?: number | null): string {
   return String(count);
 }
 
-function getDetailImageCellClass(count: number, index: number) {
-  if (count === 1) return 'aspect-[4/3] max-h-[420px] sm:max-w-[640px]';
-  if (count === 2) return 'aspect-[4/3]';
-  if (count === 3 && index === 0) return 'aspect-[4/3] row-span-2';
-  return 'aspect-square';
-}
-
 function normalizeComparableImageUrl(value?: string): string {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -1975,41 +1968,28 @@ export default function CommunityPostDetailView({
               />
 
               {detailImages.length > 0 ? (
-                <div
-                  className={cn(
-                    'grid gap-1.5 overflow-hidden',
-                    detailImages.length === 1
-                      ? 'grid-cols-1'
-                      : detailImages.length === 2
-                        ? 'max-w-[640px] grid-cols-2'
-                        : 'max-w-[640px] grid-cols-3',
-                  )}
-                >
+                <div className="flex max-w-full flex-col items-start gap-3 overflow-hidden">
                   {detailImages.map((image, imageIndex) => (
                     <button
                       key={`${post.id}-detail-image-${imageIndex}-${image}`}
                       type="button"
                       data-acbox-action="community_post_image_preview"
                       data-acbox-label={post.id}
-                      className={cn(
-                        'relative overflow-hidden rounded-md bg-muted text-muted-foreground',
-                        getDetailImageCellClass(detailImages.length, imageIndex),
-                      )}
+                      className="relative inline-flex min-h-11 min-w-11 max-w-full items-center justify-center overflow-hidden rounded-md bg-muted text-muted-foreground transition-[filter] hover:brightness-[0.98] sm:max-w-[760px]"
                       onClick={() => openPreviewImage(image)}
                     >
                       {!detailImageErrors[image] ? (
-                        <Image
+                        <img
                           src={image}
                           alt={post.title || '帖子图片'}
-                          fill
-                          priority={imageIndex === 0}
-                          sizes={detailImages.length === 1 ? '(max-width: 768px) 92vw, 640px' : '220px'}
-                          className="object-cover transition-transform duration-200 hover:scale-[1.02]"
+                          loading={imageIndex === 0 ? 'eager' : 'lazy'}
+                          fetchPriority={imageIndex === 0 ? 'high' : 'auto'}
+                          className="block h-auto w-auto max-h-[680px] max-w-full rounded-md object-contain"
                           data-ai-hint={post.imageAiHint || 'community post image detail'}
                           onError={() => setDetailImageErrors((prev) => ({ ...prev, [image]: true }))}
                         />
                       ) : (
-                        <span className="absolute inset-0 flex items-center justify-center px-3 text-xs">
+                        <span className="flex min-h-28 min-w-44 items-center justify-center px-3 text-xs">
                           图片加载失败
                         </span>
                       )}
