@@ -171,6 +171,51 @@ function formatDateText(value?: string | null) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+type GameFactItem = {
+  label: string;
+  value: string;
+};
+
+function buildGameFactItems(
+  game: GameDetailData['app'],
+  options: {
+    category: string;
+    resourceCount: number;
+  },
+): GameFactItem[] {
+  const facts: GameFactItem[] = [];
+  const pushFact = (label: string, value?: string | number | null) => {
+    const text = cleanText(String(value || ''));
+    if (!text || text === '未知') return;
+    facts.push({ label, value: text });
+  };
+
+  pushFact('包名', game.pkg);
+  pushFact('当前版本', game.version);
+  pushFact('更新日期', formatDateText(game.latest_at));
+  pushFact('安装包大小', formatBytes(game.file_size));
+  pushFact('开发者', game.developer);
+  pushFact('区服/地区', game.metadata?.region);
+  pushFact('游戏分类', options.category);
+  if (options.resourceCount > 0) pushFact('可用下载渠道', `${options.resourceCount} 个`);
+
+  return facts.slice(0, 8);
+}
+
+function extractRecommendedGamesPayload(payload: unknown): ApiRecommendedGame[] {
+  const list = Array.isArray(payload)
+    ? payload
+    : Array.isArray((payload as { data?: unknown } | null)?.data)
+      ? (payload as { data: unknown[] }).data
+      : [];
+
+  return list.filter((item): item is ApiRecommendedGame => {
+    if (!item || typeof item !== 'object') return false;
+    const candidate = item as Partial<ApiRecommendedGame>;
+    return Boolean(cleanText(candidate.name) && cleanText(candidate.pkg));
+  });
+}
+
 function formatCompactCount(input?: number | string | null) {
   const value = Number(input || 0);
   if (!Number.isFinite(value) || value <= 0) return '0';
@@ -435,6 +480,16 @@ export default function GameDetailView({
   }, [game?.metadata?.region, game?.tags, game?.type]);
   const primaryCategory = useMemo(() => getPrimaryCategory(game, tags), [game, tags]);
   const isPreregGame = useMemo(() => isPreregGameLike(game), [game]);
+  const factSummaryItems = useMemo(
+    () =>
+      game
+        ? buildGameFactItems(game, {
+            category: primaryCategory,
+            resourceCount: resources.length,
+          })
+        : [],
+    [game, primaryCategory, resources.length],
+  );
 
   const screenshots = useMemo(() => {
     const list = (game?.detail_images || []).filter(Boolean);
@@ -535,8 +590,9 @@ export default function GameDetailView({
           });
           if (recRes.ok) {
             const recJson = await recRes.json();
-            if (recJson?.code === 0 && Array.isArray(recJson?.data)) {
-              setRecommendedGames(recJson.data.slice(0, MAX_RECOMMENDED_GAMES));
+            const nextRecommendedGames = extractRecommendedGamesPayload(recJson);
+            if (nextRecommendedGames.length > 0) {
+              setRecommendedGames(nextRecommendedGames.slice(0, MAX_RECOMMENDED_GAMES));
             }
           }
         }
@@ -902,6 +958,77 @@ export default function GameDetailView({
     </section>
   );
 
+  const renderFactSummary = (isMobile = false) => {
+    if (factSummaryItems.length === 0) return null;
+
+    return (
+      <section className={cn(isMobile ? 'mt-8' : 'mb-12')}>
+        <h2 className={cn('mb-4 flex items-center gap-2 font-black', isMobile ? 'text-xl' : 'gap-3 text-xl font-bold')}>
+          <span className={cn('rounded-full bg-[#005e9f]', isMobile ? 'h-6 w-1.5' : 'h-8 w-2')} />
+          版本与资源信息
+        </h2>
+        <dl className={cn(
+          'grid gap-3 rounded-[1.75rem] border border-[#abadae]/10 bg-white/80 p-5 shadow-sm dark:border-border/45 dark:bg-card/75',
+          isMobile ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-4',
+        )}>
+          {factSummaryItems.map((item) => (
+            <div key={`${isMobile ? 'mobile-' : ''}fact-${item.label}`} className="min-w-0">
+              <dt className="text-xs font-bold text-[#757778] dark:text-muted-foreground">{item.label}</dt>
+              <dd className="mt-1 break-words text-sm font-black text-[#0f1720] dark:text-foreground">
+                {item.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+    );
+  };
+
+  const renderRecommendationSection = (isMobile = false) => {
+    if (recommendationList.length === 0) return null;
+
+    return (
+      <section className={cn(isMobile && 'mt-10')}>
+        <h2 className={cn('mb-4 flex items-center gap-2 font-black', isMobile ? 'text-xl' : 'mb-6 text-xl font-bold')}>
+          <span className={cn('rounded-full bg-[#fdc003]', isMobile ? 'h-6 w-1.5' : 'h-8 w-2')} />
+          相似推荐
+        </h2>
+        <div className={cn(isMobile ? 'space-y-3' : 'space-y-4')}>
+          {recommendationList.map((item) => {
+            const href = `/app/${encodeURIComponent(item.pkg)}`;
+            return (
+              <Link
+                key={`${isMobile ? 'mobile-' : ''}rec-${item._id}-${item.pkg}`}
+                href={href}
+                className={cn(
+                  'flex items-center gap-4 rounded-2xl p-3 transition-colors',
+                  isMobile
+                    ? 'border border-[#abadae]/10 bg-white shadow-sm dark:border-border/45 dark:bg-card/75'
+                    : 'hover:bg-[#e0e3e4]/70 dark:hover:bg-card/80',
+                )}
+              >
+                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl shadow-md">
+                  {item.icon ? (
+                    <Image src={item.icon} alt={`${item.name} icon`} fill sizes="56px" className="object-cover" />
+                  ) : (
+                    <div className="h-full w-full bg-[#dadddf]" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-[#0f1720] dark:text-foreground">{item.name}</p>
+                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#595c5d] dark:text-muted-foreground">
+                    {cleanText(item.summary) || '同类热门推荐'}
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-[#595c5d] dark:text-muted-foreground" />
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+    );
+  };
+
   const renderFaqIntro = (isMobile = false) => (
     <div className={cn('grid', isMobile ? 'mb-4 gap-4' : 'mb-6 gap-6 xl:grid-cols-2')}>
       <Card className={cn(
@@ -1033,7 +1160,6 @@ export default function GameDetailView({
 
   return (
     <div className="game-detail-stitch relative min-h-screen overflow-x-hidden bg-[#f5f6f7] text-[#2c2f30] dark:bg-[#080d14] dark:text-[#f3f6fb]">
-      <h1 className="sr-only">{game.name}</h1>
       {hasDetailAnnouncements && (
         <div className="relative z-20 px-4 pt-20 sm:px-6 lg:px-16 lg:pt-6 2xl:px-20">
           <div className="mx-auto max-w-7xl">
@@ -1152,9 +1278,9 @@ export default function GameDetailView({
                       ))}
                     </div>
 
-                    <h2 className="line-clamp-2 text-3xl font-black leading-tight tracking-tight text-white [text-shadow:0_12px_30px_rgba(0,0,0,0.62)] xl:text-5xl">
+                    <h1 className="line-clamp-2 text-3xl font-black leading-tight tracking-tight text-white [text-shadow:0_12px_30px_rgba(0,0,0,0.62)] xl:text-5xl">
                       {game.name}
-                    </h2>
+                    </h1>
 
                     <div className="flex flex-wrap gap-5 text-sm text-white/95 [text-shadow:0_3px_10px_rgba(0,0,0,0.45)]">
                       <span className="inline-flex items-center gap-1">
@@ -1270,6 +1396,8 @@ export default function GameDetailView({
               </CardContent>
             </Card>
           </section>
+
+          {renderFactSummary()}
 
           <section className="grid gap-12 lg:grid-cols-[minmax(0,2fr)_minmax(360px,1fr)]">
             <div className="space-y-12">
@@ -1492,38 +1620,7 @@ export default function GameDetailView({
                 ) : null}
               </section>
 
-              <section>
-                {recommendationList.length > 0 ? (
-                  <>
-                    <h2 className="mb-6 text-xl font-bold">相似推荐</h2>
-                    <div className="space-y-4">
-                      {recommendationList.map((item) => {
-                        const href = `/app/${encodeURIComponent(item.pkg)}`;
-                        return (
-                          <Link
-                            key={`rec-${item._id}-${item.pkg}`}
-                            href={href}
-                            className="flex items-center gap-4 rounded-2xl p-3 transition-colors hover:bg-[#e0e3e4]/70"
-                          >
-                            <div className="relative h-14 w-14 overflow-hidden rounded-2xl shadow-md">
-                              {item.icon ? (
-                                <Image src={item.icon} alt={item.name} fill sizes="56px" className="object-cover" />
-                              ) : (
-                                <div className="h-full w-full bg-[#dadddf]" />
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-bold">{item.name}</p>
-                              <p className="truncate text-xs text-[#595c5d]">{cleanText(item.summary) || '同类热门推荐'}</p>
-                            </div>
-                            <ChevronRight className="h-4 w-4 text-[#595c5d]" />
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </>
-                ) : null}
-              </section>
+              {renderRecommendationSection()}
             </aside>
           </section>
         </div>
@@ -1596,7 +1693,7 @@ export default function GameDetailView({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="line-clamp-2 text-2xl font-black leading-tight text-[#0f1720] dark:text-[#f4f7fc]">{game.name}</h2>
+              <h1 className="line-clamp-2 text-2xl font-black leading-tight text-[#0f1720] dark:text-[#f4f7fc]">{game.name}</h1>
               <div className="mt-1 inline-flex items-center gap-1 text-[#b71211]">
                 <Star className="h-4 w-4 fill-current" />
                 <span className="text-base font-bold">{normalizeScore(game.star)}</span>
@@ -1652,6 +1749,8 @@ export default function GameDetailView({
             </CardContent>
           </Card>
         </section>
+
+        {renderFactSummary(true)}
 
         <section className="mt-10">
           <h2 className="mb-4 flex items-center gap-2 text-xl font-black">
@@ -1800,6 +1899,8 @@ export default function GameDetailView({
             <GameReviewPanel game={game} compact />
           ) : null}
         </section>
+
+        {renderRecommendationSection(true)}
 
         <section className="mt-10">
           <h2 className="mb-4 text-xl font-black">资源与支持</h2>

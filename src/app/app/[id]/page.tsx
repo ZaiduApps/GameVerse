@@ -17,11 +17,12 @@ import { getCommunityPostsByGame } from '@/lib/community-api';
 import { getGameReviewSummary } from '@/lib/game-review-api';
 import { normalizeToFiveStar } from '@/lib/game-rating';
 import { faqMarkdownToPlainText, normalizeGameFaqItems } from '@/lib/game-faq';
-import type { CommunityPost, GameDetailData, SiteConfig } from '@/types';
+import type { ApiRecommendedGame, CommunityPost, GameDetailData, SiteConfig } from '@/types';
 
 const DETAIL_REVALIDATE_SECONDS = 900;
-const MAX_TITLE_LENGTH = 72;
+const MAX_TITLE_LENGTH = 68;
 const MAX_DESCRIPTION_LENGTH = 160;
+const MAX_SERVER_RECOMMENDED_GAMES = 5;
 export const dynamicParams = true;
 export const revalidate = 900;
 
@@ -116,6 +117,38 @@ function formatFileSize(bytes?: number | null): string | undefined {
   return `${value.toFixed(index === 0 ? 0 : 2)} ${units[index]}`;
 }
 
+function isRecommendedGame(input: unknown): input is ApiRecommendedGame {
+  if (!input || typeof input !== 'object') return false;
+  const item = input as Partial<ApiRecommendedGame>;
+  return Boolean(normalizeText(item.name) && normalizeText(item.pkg));
+}
+
+function normalizeRecommendedGamesPayload(
+  payload: unknown,
+  currentGame: GameDetailData['app'],
+): ApiRecommendedGame[] {
+  const list = Array.isArray(payload)
+    ? payload
+    : Array.isArray((payload as { data?: unknown } | null)?.data)
+      ? (payload as { data: unknown[] }).data
+      : [];
+  const currentId = normalizeText(currentGame._id);
+  const currentPkg = normalizeText(currentGame.pkg).toLowerCase();
+  const seenPackages = new Set<string>();
+
+  return list
+    .filter(isRecommendedGame)
+    .filter((item) => {
+      const itemId = normalizeText(item._id);
+      const itemPkg = normalizeText(item.pkg).toLowerCase();
+      if (!itemPkg || itemId === currentId || itemPkg === currentPkg) return false;
+      if (seenPackages.has(itemPkg)) return false;
+      seenPackages.add(itemPkg);
+      return true;
+    })
+    .slice(0, MAX_SERVER_RECOMMENDED_GAMES);
+}
+
 function buildKeywords(gameData: GameDetailData['app'], seoKeywordsRaw?: string): string[] {
   const candidates = [
     gameData.name,
@@ -184,6 +217,30 @@ const getGameDetails = cache(async (id: string): Promise<GameDetailData | null> 
   }
 });
 
+const getRecommendedGames = cache(async (
+  currentGame: GameDetailData['app'],
+): Promise<ApiRecommendedGame[]> => {
+  const param = normalizeText(currentGame.pkg || currentGame._id);
+  if (!param) return [];
+
+  try {
+    const res = await trackedApiFetch(`/game/recommendedApp?param=${encodeURIComponent(param)}`, {
+      cache: 'force-cache',
+      next: { revalidate: DETAIL_REVALIDATE_SECONDS },
+      timeoutMs: 10000,
+    });
+    if (!res.ok) return [];
+    return normalizeRecommendedGamesPayload(await res.json(), currentGame);
+  } catch (error) {
+    console.error('[game-detail] recommended games request failed', {
+      app_id: currentGame._id,
+      pkg: currentGame.pkg,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return [];
+  }
+});
+
 function buildInitialGameDataForHydration(gameData: GameDetailData): GameDetailData {
   return {
     app: {
@@ -242,22 +299,28 @@ export async function generateMetadata({
   const category = humanizeCategory(game.type);
   const dateLabel = toSeoDateLabel(game.latest_at);
 
-  const titleSegments = [normalizedName];
-  if (region) titleSegments.push(region);
-  titleSegments.push('APK 下载');
-  if (normalizedVersion) titleSegments.push(`最新版本 ${normalizedVersion}`);
-  titleSegments.push(siteName);
-  const title = clampText(titleSegments.filter(Boolean).join(' | '), MAX_TITLE_LENGTH);
+  const titleCore = [
+    `${normalizedName} APK下载`,
+    normalizedVersion ? `v${normalizedVersion}` : '',
+    region ? `(${region})` : '',
+  ].filter(Boolean).join(' ');
+  const title = clampText(`${titleCore} - ${siteName}`, MAX_TITLE_LENGTH);
+  const faqItems = normalizeGameFaqItems(gameData.faq);
+  const screenshotCount = Array.isArray(game.detail_images)
+    ? game.detail_images.filter((item) => normalizeText(item)).length
+    : 0;
 
   const description = buildSeoDescription(
-    normalizedVersion ? `下载 ${normalizedName} 安卓最新版 ${normalizedVersion}` : `下载 ${normalizedName} 安卓版`,
+    normalizedSummary || normalizedDescription || `下载 ${normalizedName} 安卓版`,
     [
-      normalizedSummary || normalizedDescription,
+      normalizedVersion ? `当前版本 ${normalizedVersion}` : '',
+      formatFileSize(game.file_size) ? `安装包大小 ${formatFileSize(game.file_size)}` : '',
+      dateLabel ? `最近更新 ${dateLabel}` : '',
+      game.pkg ? `包名 ${game.pkg}` : '',
       category ? `适合关注 ${category} 的用户` : '',
       normalizeText(game.developer) ? `开发者：${normalizeText(game.developer)}` : '',
-      dateLabel ? `最近更新于 ${dateLabel}` : '',
-      game.pkg ? `包名 ${game.pkg}` : '',
-      '页面提供 APK 资源入口、版本信息、文件大小、更新记录、截图素材、相关社区讨论和安装前检查线索',
+      screenshotCount > 0 ? `包含 ${screenshotCount} 张截图` : '',
+      faqItems.length > 0 ? `整理 ${faqItems.length} 条安装与使用问题` : '',
       normalizeText(seo.description),
     ],
     { max: MAX_DESCRIPTION_LENGTH },
@@ -337,7 +400,7 @@ export default async function GameDetailPage({
   const heroImage = resolveGameSeoImage(game, getSiteShareImageUrl());
   const description = normalizeText(game.summary || game.description);
 
-  const [relatedNews, reviewSummary] = await Promise.all([
+  const [relatedNews, reviewSummary, recommendedGames] = await Promise.all([
     getRelatedNews(game),
     getGameReviewSummary({
       appId: game._id,
@@ -345,6 +408,7 @@ export default async function GameDetailPage({
       gameName: game.name,
       manualScore: game.star,
     }).catch(() => null),
+    getRecommendedGames(game),
   ]);
   const ratingCount = Math.max(0, Number(reviewSummary?.ratingCount || 0));
   const ratingValue = Number(
@@ -428,6 +492,18 @@ export default async function GameDetailPage({
     })),
   };
 
+  const relatedAppsJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `${game.name} 相似推荐`,
+    itemListElement: recommendedGames.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      url: absoluteUrl(`/app/${encodeURIComponent(item.pkg)}`),
+    })),
+  };
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(detailJsonLd) }} />
@@ -435,9 +511,13 @@ export default async function GameDetailPage({
       {faqItems.length > 0 && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       )}
+      {recommendedGames.length > 0 && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(relatedAppsJsonLd) }} />
+      )}
       <GameDetailView
         id={id}
         initialGameData={buildInitialGameDataForHydration(initialGameData)}
+        initialRecommendedGames={recommendedGames}
         initialRelatedNews={relatedNews}
         initialDataMode="partial"
       />
