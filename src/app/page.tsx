@@ -30,8 +30,8 @@ import { absoluteUrl, getSiteShareImageUrl } from '@/lib/seo';
 
 const FALLBACK_GAME_IMAGE = '/favicon.ico';
 const FALLBACK_AVATAR = '/favicon.ico';
-const HOME_ISR_REVALIDATE_SECONDS = 120;
-export const revalidate = 120;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 function toNumber(value: string | undefined, fallback: number): number {
   const n = Number(value);
@@ -165,8 +165,7 @@ async function fetchHomeDataWithRetry(
     const startedAt = Date.now();
     try {
       const res = await trackedApiFetch(requestPath, {
-        cache: 'force-cache',
-        next: { revalidate: HOME_ISR_REVALIDATE_SECONDS },
+        cache: 'no-store',
         signal: AbortSignal.timeout(timeoutMs),
       });
       const durationMs = Date.now() - startedAt;
@@ -261,7 +260,7 @@ async function getHomeAndNewsData(): Promise<CombinedHomeData> {
         timeoutMs: 12000,
         retries: 1,
       }),
-      getClientLandingAppData(120).catch(() => null),
+      getClientLandingAppData('no-store').catch(() => null),
     ]);
     const safeArticles = Array.isArray(homeData?.articles) ? homeData.articles : [];
     const safeDynamicPosts = Array.isArray(homeData?.dynamic_posts) ? homeData.dynamic_posts : [];

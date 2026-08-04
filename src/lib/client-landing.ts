@@ -60,12 +60,14 @@ function buildLandingPath() {
 }
 
 export async function getClientLandingAppData(
-  revalidate = 120,
+  cacheMode: number | 'no-store' = 120,
 ): Promise<ClientLandingAppData | null> {
   try {
-    const res = await trackedApiFetch(buildLandingPath(), {
-      next: { revalidate },
-    });
+    const requestInit: RequestInit & { next?: { revalidate: number } } =
+      cacheMode === 'no-store'
+        ? { cache: 'no-store' }
+        : { next: { revalidate: cacheMode } };
+    const res = await trackedApiFetch(buildLandingPath(), requestInit);
     if (!res.ok) return null;
     const json: ApiResponse<ClientLandingAppData> = await res.json();
     if (json.code !== 0 || !json.data) return null;
@@ -74,4 +76,3 @@ export async function getClientLandingAppData(
     return null;
   }
 }
-
