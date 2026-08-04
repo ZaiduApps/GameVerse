@@ -22,7 +22,7 @@ import type { CommunityPost, GameDetailData, SiteConfig } from '@/types';
 const DETAIL_REVALIDATE_SECONDS = 900;
 const MAX_TITLE_LENGTH = 72;
 const MAX_DESCRIPTION_LENGTH = 160;
-export const dynamic = 'force-static';
+export const dynamicParams = true;
 export const revalidate = 900;
 
 function normalizeText(input?: string | null): string {

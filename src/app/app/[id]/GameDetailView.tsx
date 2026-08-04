@@ -471,21 +471,24 @@ export default function GameDetailView({
   const shortDescriptionHtml = formatDescriptionHtml(shortDescription);
 
   const recommendationList = useMemo(() => {
-    if (recommendedGames.length > 0) return recommendedGames;
-    if (!game) return [];
-    return [
-      {
-        _id: game._id,
-        name: `${game.name} 同类推荐`,
-        pkg: game.pkg,
-        summary: game.summary || '',
-        star: Number(game.star || 0),
-        icon: game.icon,
-        match_score: 100,
-        tags: [{ id: 'fallback', name: tags[0] || '游戏' }],
-      },
-    ] as ApiRecommendedGame[];
-  }, [recommendedGames, game, tags]);
+    if (!game || recommendedGames.length === 0) return [];
+
+    const currentId = String(game._id || '').trim();
+    const currentPackage = String(game.pkg || '').trim().toLowerCase();
+    const seenPackages = new Set<string>();
+
+    return recommendedGames.filter((item) => {
+      const itemId = String(item._id || '').trim();
+      const itemPackage = String(item.pkg || '').trim();
+      const normalizedPackage = itemPackage.toLowerCase();
+      if (!itemPackage || itemId === currentId || normalizedPackage === currentPackage) {
+        return false;
+      }
+      if (seenPackages.has(normalizedPackage)) return false;
+      seenPackages.add(normalizedPackage);
+      return true;
+    });
+  }, [recommendedGames, game]);
 
   const previewUrl = previewIndex !== null ? previewScreenshots[previewIndex] : '';
   const canPreviewNavigate = previewScreenshots.length > 1;
@@ -1490,32 +1493,36 @@ export default function GameDetailView({
               </section>
 
               <section>
-                <h2 className="mb-6 text-xl font-bold">相似推荐</h2>
-                <div className="space-y-4">
-                  {recommendationList.map((item) => {
-                    const href = item.pkg || item._id ? `/app/${encodeURIComponent(item.pkg || item._id)}` : '/app';
-                    return (
-                      <Link
-                        key={`rec-${item._id}-${item.pkg}`}
-                        href={href}
-                        className="flex items-center gap-4 rounded-2xl p-3 transition-colors hover:bg-[#e0e3e4]/70"
-                      >
-                        <div className="relative h-14 w-14 overflow-hidden rounded-2xl shadow-md">
-                          {item.icon ? (
-                            <Image src={item.icon} alt={item.name} fill sizes="56px" className="object-cover" />
-                          ) : (
-                            <div className="h-full w-full bg-[#dadddf]" />
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-bold">{item.name}</p>
-                          <p className="truncate text-xs text-[#595c5d]">{cleanText(item.summary) || '同类热门推荐'}</p>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-[#595c5d]" />
-                      </Link>
-                    );
-                  })}
-                </div>
+                {recommendationList.length > 0 ? (
+                  <>
+                    <h2 className="mb-6 text-xl font-bold">相似推荐</h2>
+                    <div className="space-y-4">
+                      {recommendationList.map((item) => {
+                        const href = `/app/${encodeURIComponent(item.pkg)}`;
+                        return (
+                          <Link
+                            key={`rec-${item._id}-${item.pkg}`}
+                            href={href}
+                            className="flex items-center gap-4 rounded-2xl p-3 transition-colors hover:bg-[#e0e3e4]/70"
+                          >
+                            <div className="relative h-14 w-14 overflow-hidden rounded-2xl shadow-md">
+                              {item.icon ? (
+                                <Image src={item.icon} alt={item.name} fill sizes="56px" className="object-cover" />
+                              ) : (
+                                <div className="h-full w-full bg-[#dadddf]" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-bold">{item.name}</p>
+                              <p className="truncate text-xs text-[#595c5d]">{cleanText(item.summary) || '同类热门推荐'}</p>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-[#595c5d]" />
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : null}
               </section>
             </aside>
           </section>

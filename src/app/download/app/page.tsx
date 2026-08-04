@@ -69,6 +69,14 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: {
       canonical: '/download/app',
     },
+    robots: {
+      index: false,
+      follow: true,
+      googleBot: {
+        index: false,
+        follow: true,
+      },
+    },
     openGraph: {
       title,
       description,
