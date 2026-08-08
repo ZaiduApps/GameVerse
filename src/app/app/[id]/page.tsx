@@ -23,6 +23,8 @@ const MAX_DESCRIPTION_LENGTH = 160;
 const MAX_SERVER_RECOMMENDED_GAMES = 5;
 const STATIC_PARAMS_PAGE_SIZE = 500;
 const STATIC_PARAMS_MAX_PAGES = 200;
+const STRICT_STATIC_BUILD =
+  process.env.NODE_ENV === 'production' || process.env.GAMEVERSE_REQUIRE_SEO_SNAPSHOT === '1';
 export const dynamicParams = false;
 export const revalidate = 900;
 
@@ -75,7 +77,10 @@ export async function generateStaticParams(): Promise<Array<{ id: string }>> {
       const deleted = item?.is_deleted === true || Number(item?.is_deleted || 0) === 1;
       if (!pkg || deleted || (item?.status !== undefined && ![0, 1].includes(Number(item.status)))) continue;
       if (!isCanonicalPackageName(pkg)) {
-        throw new Error(`游戏静态参数包含非法包名: ${pkg}`);
+        if (STRICT_STATIC_BUILD) {
+          throw new Error(`游戏静态参数包含非法包名: ${pkg}`);
+        }
+        continue;
       }
       packages.add(pkg);
     }
@@ -92,7 +97,7 @@ export async function generateStaticParams(): Promise<Array<{ id: string }>> {
   if (packages.size === 0) {
     throw new Error('游戏静态参数为空，终止构建');
   }
-  if (expectedTotal > 0 && packages.size !== expectedTotal) {
+  if (STRICT_STATIC_BUILD && expectedTotal > 0 && packages.size !== expectedTotal) {
     throw new Error(`游戏静态参数数量异常: unique=${packages.size}, total=${expectedTotal}`);
   }
 
@@ -377,7 +382,7 @@ const getPageData = cache(async (id: string): Promise<GamePageSnapshot | null> =
   if (snapshot) return snapshot;
 
   // 生产构建必须依赖统一快照，开发环境保留旧接口以支持滚动发布。
-  if (process.env.NODE_ENV === 'production' || process.env.GAMEVERSE_REQUIRE_SEO_SNAPSHOT === '1') {
+  if (STRICT_STATIC_BUILD) {
     throw new Error(`游戏 SEO 快照缺失: ${id}`);
   }
   return getGameDetails(id);
