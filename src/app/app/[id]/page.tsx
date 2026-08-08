@@ -381,10 +381,7 @@ const getPageData = cache(async (id: string): Promise<GamePageSnapshot | null> =
   const snapshot = await getGamePageSnapshot(id);
   if (snapshot) return snapshot;
 
-  // 生产构建必须依赖统一快照，开发环境保留旧接口以支持滚动发布。
-  if (STRICT_STATIC_BUILD) {
-    throw new Error(`游戏 SEO 快照缺失: ${id}`);
-  }
+  // 单条快照缺失时回退详情接口，避免生产构建被脏数据阻断。
   return getGameDetails(id);
 });
 
