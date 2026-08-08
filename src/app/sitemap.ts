@@ -122,7 +122,7 @@ function toGameEntry(item: GameSitemapItem): MetadataRoute.Sitemap[number] | nul
   if (!pkg) return null;
   const isDeleted = item?.is_deleted === true || Number(item?.is_deleted || 0) === 1;
   if (isDeleted) return null;
-  if (item?.status !== undefined && Number(item.status) !== 1) return null;
+  if (item?.status !== undefined && ![0, 1].includes(Number(item.status))) return null;
 
   const lastmod = parseDate(item.updated_at) || parseDate(item.latest_at) || parseDate(item.created_at);
   return {
@@ -217,26 +217,6 @@ async function fetchGamesFromSeoEndpoint(): Promise<MetadataRoute.Sitemap[number
 
     if (total && page * (pageSize || SITEMAP_PAGE_SIZE) >= total) break;
     if (safeList.length < SITEMAP_PAGE_SIZE) break;
-  }
-
-  return result;
-}
-
-async function fetchGamesFromListFallback(): Promise<MetadataRoute.Sitemap[number][]> {
-  const json = await fetchJson('/game/list');
-  if (!json || (json.code !== 0 && json.code !== undefined)) return [];
-
-  const { list } = normalizeListData<GameSitemapItem>(json);
-  const safeList = Array.isArray(list) ? list : [];
-  const result: MetadataRoute.Sitemap[number][] = [];
-  const seen = new Set<string>();
-
-  for (const item of safeList) {
-    const entry = toGameEntry(item);
-    if (!entry) continue;
-    if (seen.has(entry.url)) continue;
-    seen.add(entry.url);
-    result.push(entry);
   }
 
   return result;
@@ -367,10 +347,8 @@ async function fetchUserEntries(): Promise<MetadataRoute.Sitemap[number][]> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
   const staticEntries: MetadataRoute.Sitemap = FALLBACK_STATIC_PATHS.map((path) => ({
     url: absoluteUrl(path),
-    lastModified: now,
     changeFrequency: path === '/' ? 'hourly' : 'daily',
     priority: path === '/' ? 1 : 0.7,
   }));
@@ -381,12 +359,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const topicEntries = await fetchTopicEntries();
   const userEntries = await fetchUserEntries();
 
-  const safeGameEntries = gameEntries.length > 0 ? gameEntries : await fetchGamesFromListFallback();
-
   return [
     ...staticEntries,
     ...albumEntries,
-    ...safeGameEntries,
+    ...gameEntries,
     ...topicEntries,
     ...userEntries,
     ...communityPostEntries,

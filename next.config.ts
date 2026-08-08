@@ -54,6 +54,12 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: '/app/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, s-maxage=900, stale-while-revalidate=86400' },
+        ],
+      },
+      {
         source: '/:path*',
         headers: [
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },

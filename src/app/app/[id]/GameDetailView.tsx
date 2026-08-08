@@ -984,6 +984,38 @@ export default function GameDetailView({
     );
   };
 
+  const renderSeoContent = (isMobile = false) => {
+    const highlights = Array.isArray(game?.seo?.highlights)
+      ? game.seo.highlights.map((item) => cleanText(item)).filter(Boolean).slice(0, 8)
+      : [];
+    const latestContent = cleanText(game?.latest_content);
+    if (highlights.length === 0 && !latestContent) return null;
+    return (
+      <section className={cn(isMobile ? 'mt-8' : 'mb-12')}>
+        {highlights.length > 0 && (
+          <>
+            <h2 className={cn('mb-4 flex items-center gap-2 font-black', isMobile ? 'text-xl' : 'gap-3 text-xl font-bold')}>
+              <span className={cn('rounded-full bg-[#2e7d32]', isMobile ? 'h-6 w-1.5' : 'h-8 w-2')} />
+              游戏特色
+            </h2>
+            <ul className={cn('grid gap-2 rounded-[1.75rem] border border-[#abadae]/10 bg-white/80 p-5 text-sm leading-6 dark:border-border/45 dark:bg-card/75', isMobile ? 'grid-cols-1' : 'sm:grid-cols-2')}>
+              {highlights.map((highlight, index) => <li key={`${highlight}-${index}`} className="list-inside list-disc">{highlight}</li>)}
+            </ul>
+          </>
+        )}
+        {latestContent && (
+          <div className={cn(highlights.length > 0 && 'mt-8')}>
+            <h2 className={cn('mb-3 flex items-center gap-2 font-black', isMobile ? 'text-xl' : 'gap-3 text-xl font-bold')}>
+              <span className={cn('rounded-full bg-[#005e9f]', isMobile ? 'h-6 w-1.5' : 'h-8 w-2')} />
+              最新更新
+            </h2>
+            <p className="rounded-2xl border border-[#abadae]/10 bg-white/70 p-4 text-sm leading-6 text-[#595c5d] dark:border-border/45 dark:bg-card/60 dark:text-muted-foreground">{latestContent}</p>
+          </div>
+        )}
+      </section>
+    );
+  };
+
   const renderRecommendationSection = (isMobile = false) => {
     if (recommendationList.length === 0) return null;
 
@@ -1240,6 +1272,7 @@ export default function GameDetailView({
         </Button>
       </div>
 
+      {(!isMounted || isDesktopViewport) && (
       <div className="relative z-10 hidden px-4 pb-20 sm:px-6 lg:block lg:px-16 2xl:px-20">
         <div className="pointer-events-none absolute inset-x-0 top-0 hidden h-16 bg-gradient-to-b from-[#080d14]/72 via-[#080d14]/36 to-transparent dark:block" />
         <div className="mx-auto max-w-7xl">
@@ -1398,6 +1431,8 @@ export default function GameDetailView({
           </section>
 
           {renderFactSummary()}
+
+          {renderSeoContent()}
 
           <section className="grid gap-12 lg:grid-cols-[minmax(0,2fr)_minmax(360px,1fr)]">
             <div className="space-y-12">
@@ -1625,6 +1660,7 @@ export default function GameDetailView({
           </section>
         </div>
       </div>
+      )}
 
       <div className="fixed left-0 top-0 z-[70] flex h-16 w-full items-center justify-between bg-white/80 px-4 shadow-sm backdrop-blur-xl lg:hidden">
         <div className="flex items-center gap-3">
@@ -1652,6 +1688,7 @@ export default function GameDetailView({
         </button>
       </div>
 
+      {isMounted && !isDesktopViewport && (
       <div className="relative z-10 px-4 pb-32 pt-20 lg:hidden">
         <section className="relative h-[340px] overflow-hidden rounded-[2rem]">
           {heroBackdropSrc ? (
@@ -1751,6 +1788,8 @@ export default function GameDetailView({
         </section>
 
         {renderFactSummary(true)}
+
+        {renderSeoContent(true)}
 
         <section className="mt-10">
           <h2 className="mb-4 flex items-center gap-2 text-xl font-black">
@@ -1913,7 +1952,7 @@ export default function GameDetailView({
                   <div key={`mobile-support-${item._id}`} className="flex items-center justify-between rounded-2xl bg-white p-4">
                     <p className="truncate text-sm font-bold">{title}</p>
                     {href ? (
-                      <a href={href} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-[#005e9f]">
+                      <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`打开${title}`} className="text-xs font-bold text-[#005e9f]">
                         打开
                       </a>
                     ) : (
@@ -1928,6 +1967,7 @@ export default function GameDetailView({
           </div>
         </section>
       </div>
+      )}
 
       <div
         className="fixed inset-x-0 z-50 rounded-t-2xl bg-white/90 px-4 pt-3 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] backdrop-blur-2xl lg:hidden"
@@ -1939,6 +1979,7 @@ export default function GameDetailView({
         <div className="flex items-center gap-3">
           <Link
             href="/community"
+            aria-label="前往游戏社区"
             data-acbox-action="game_detail_mobile_community"
             data-acbox-label={gameName}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#595c5d] transition-colors hover:bg-black/5 hover:text-[#b71211]"

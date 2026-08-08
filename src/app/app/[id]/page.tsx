@@ -14,17 +14,90 @@ import {
 } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityPostsByGame } from '@/lib/community-api';
-import { getGameReviewSummary } from '@/lib/game-review-api';
-import { normalizeToFiveStar } from '@/lib/game-rating';
 import { faqMarkdownToPlainText, normalizeGameFaqItems } from '@/lib/game-faq';
-import type { ApiRecommendedGame, CommunityPost, GameDetailData, SiteConfig } from '@/types';
+import type { ApiRecommendedGame, CommunityPost, GameDetailData, GamePageSnapshot, SiteConfig } from '@/types';
 
 const DETAIL_REVALIDATE_SECONDS = 900;
 const MAX_TITLE_LENGTH = 68;
 const MAX_DESCRIPTION_LENGTH = 160;
 const MAX_SERVER_RECOMMENDED_GAMES = 5;
-export const dynamicParams = true;
+const STATIC_PARAMS_PAGE_SIZE = 500;
+const STATIC_PARAMS_MAX_PAGES = 200;
+export const dynamicParams = false;
 export const revalidate = 900;
+
+type StaticGameItem = {
+  pkg?: string;
+  status?: number;
+  is_deleted?: number | boolean;
+};
+
+function isCanonicalPackageName(input: string): boolean {
+  return /^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+$/.test(input);
+}
+
+export async function generateStaticParams(): Promise<Array<{ id: string }>> {
+  const packages = new Set<string>();
+  let expectedTotal = 0;
+  let completed = false;
+
+  for (let page = 1; page <= STATIC_PARAMS_MAX_PAGES; page += 1) {
+    const response = await trackedApiFetch(
+      `/seo/sitemap/games?page=${page}&pageSize=${STATIC_PARAMS_PAGE_SIZE}`,
+      {
+        cache: 'force-cache',
+        next: { revalidate: DETAIL_REVALIDATE_SECONDS },
+        timeoutMs: 20000,
+        logKey: 'game-static-params',
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`游戏静态参数接口失败: page=${page}, status=${response.status}`);
+    }
+
+    const payload = await response.json();
+    if (payload?.code !== undefined && payload.code !== 0) {
+      throw new Error(`游戏静态参数接口返回错误: page=${page}, code=${payload.code}`);
+    }
+
+    const data = payload?.data;
+    const list: StaticGameItem[] = Array.isArray(data)
+      ? data
+      : Array.isArray(data?.list)
+        ? data.list
+        : [];
+    const total = Number(data?.total || 0);
+    const pageSize = Number(data?.pageSize || STATIC_PARAMS_PAGE_SIZE);
+    if (total > 0) expectedTotal = total;
+
+    for (const item of list) {
+      const pkg = String(item?.pkg || '').trim();
+      const deleted = item?.is_deleted === true || Number(item?.is_deleted || 0) === 1;
+      if (!pkg || deleted || (item?.status !== undefined && ![0, 1].includes(Number(item.status)))) continue;
+      if (!isCanonicalPackageName(pkg)) {
+        throw new Error(`游戏静态参数包含非法包名: ${pkg}`);
+      }
+      packages.add(pkg);
+    }
+
+    if (list.length === 0 || (total > 0 && page * pageSize >= total) || list.length < pageSize) {
+      completed = true;
+      break;
+    }
+  }
+
+  if (!completed) {
+    throw new Error(`游戏静态参数超过分页上限: ${STATIC_PARAMS_MAX_PAGES}`);
+  }
+  if (packages.size === 0) {
+    throw new Error('游戏静态参数为空，终止构建');
+  }
+  if (expectedTotal > 0 && packages.size !== expectedTotal) {
+    throw new Error(`游戏静态参数数量异常: unique=${packages.size}, total=${expectedTotal}`);
+  }
+
+  return Array.from(packages, (id) => ({ id }));
+}
 
 function normalizeText(input?: string | null): string {
   return String(input || '')
@@ -117,6 +190,24 @@ function formatFileSize(bytes?: number | null): string | undefined {
   return `${value.toFixed(index === 0 ? 0 : 2)} ${units[index]}`;
 }
 
+function normalizeRelatedNewsPayload(payload: unknown): RelatedNewsItem[] {
+  if (!Array.isArray(payload)) return [];
+  return payload.map((value) => {
+    const item = value as Partial<CommunityPost> & {
+      _id?: unknown;
+      publish_at?: string;
+    };
+    const id = normalizeText(item.id || String(item._id || ''));
+    if (!id) return null;
+    return {
+      id,
+      title: sanitizeSeoText(item.title || item.summary) || '社区帖子',
+      excerpt: sanitizeSeoText(item.summary) || '查看这篇相关资讯的完整内容。',
+      date: formatNewsDate(item.rawTimestamp || item.publish_at || item.timestamp),
+    };
+  }).filter((item): item is RelatedNewsItem => Boolean(item)).slice(0, 4);
+}
+
 function isRecommendedGame(input: unknown): input is ApiRecommendedGame {
   if (!input || typeof input !== 'object') return false;
   const item = input as Partial<ApiRecommendedGame>;
@@ -149,15 +240,13 @@ function normalizeRecommendedGamesPayload(
     .slice(0, MAX_SERVER_RECOMMENDED_GAMES);
 }
 
-function buildKeywords(gameData: GameDetailData['app'], seoKeywordsRaw?: string): string[] {
+function buildKeywords(gameData: GameDetailData['app']): string[] {
   const candidates = [
     gameData.name,
     gameData.pkg,
     gameData.metadata?.region,
     ...(gameData.tags || []),
-    ...String(seoKeywordsRaw || '')
-      .split(',')
-      .map((item) => item.trim()),
+    ...(Array.isArray(gameData.seo?.keywords) ? gameData.seo.keywords : []),
   ];
 
   const deduped = new Set<string>();
@@ -173,6 +262,48 @@ function buildKeywords(gameData: GameDetailData['app'], seoKeywordsRaw?: string)
 async function getSiteConfig(): Promise<SiteConfig | null> {
   return getPublicSiteConfig(300);
 }
+
+const getGamePageSnapshot = cache(async (id: string): Promise<GamePageSnapshot | null> => {
+  try {
+    const response = await trackedApiFetch(`/seo/game-page?pkg=${encodeURIComponent(id)}`, {
+      cache: 'force-cache',
+      next: { revalidate: DETAIL_REVALIDATE_SECONDS },
+      timeoutMs: 20000,
+      logKey: 'game-page-snapshot',
+    });
+    if (!response.ok) return null;
+    const payload = await response.json();
+    if (payload?.code !== undefined && payload.code !== 0) return null;
+    const data = payload?.data;
+    if (!data?.app) return null;
+    const snapshot = data as Record<string, unknown>;
+    const rawApp = (snapshot.app || {}) as Record<string, unknown>;
+    const rawReview = (snapshot.reviewSummary || snapshot.review_summary || null) as Record<string, unknown> | null;
+    // 兼容后端 snake_case 字段，前端内部统一使用 camelCase。
+    return {
+      ...snapshot,
+      app: {
+        ...rawApp,
+        latest_content: rawApp.latest_content || rawApp.latestContent,
+        seo: rawApp.seo || rawApp.seo_content || rawApp.seoContent,
+      },
+      recommendedGames: (snapshot.recommendedGames || snapshot.recommended_games) as GamePageSnapshot['recommendedGames'],
+      relatedNews: (snapshot.relatedNews || snapshot.related_news) as GamePageSnapshot['relatedNews'],
+      reviewSummary: rawReview
+        ? {
+            displayScore: rawReview.displayScore ?? rawReview.display_score ?? rawReview.rating,
+            ratingCount: rawReview.ratingCount ?? rawReview.rating_count,
+          }
+        : null,
+    } as GamePageSnapshot;
+  } catch (error) {
+    console.error('[game-detail] SEO 快照请求失败', {
+      id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+});
 
 const getGameDetails = cache(async (id: string): Promise<GameDetailData | null> => {
   try {
@@ -241,6 +372,17 @@ const getRecommendedGames = cache(async (
   }
 });
 
+const getPageData = cache(async (id: string): Promise<GamePageSnapshot | null> => {
+  const snapshot = await getGamePageSnapshot(id);
+  if (snapshot) return snapshot;
+
+  // 生产构建必须依赖统一快照，开发环境保留旧接口以支持滚动发布。
+  if (process.env.NODE_ENV === 'production' || process.env.GAMEVERSE_REQUIRE_SEO_SNAPSHOT === '1') {
+    throw new Error(`游戏 SEO 快照缺失: ${id}`);
+  }
+  return getGameDetails(id);
+});
+
 function buildInitialGameDataForHydration(gameData: GameDetailData): GameDetailData {
   return {
     app: {
@@ -263,7 +405,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const [siteConfig, gameData] = await Promise.all([getSiteConfig(), getGameDetails(id)]);
+  const [siteConfig, gameData] = await Promise.all([getSiteConfig(), getPageData(id)]);
 
   if (!gameData) {
     return {
@@ -284,12 +426,6 @@ export async function generateMetadata({
     favicon_url: '',
     share_image: '',
   };
-  const seo = siteConfig?.seo || {
-    title_suffix: '',
-    keywords: '',
-    description: '',
-  };
-
   const siteName = normalizeText(basic.site_name) || 'APKScc';
   const normalizedName = normalizeText(game.name);
   const normalizedVersion = normalizeText(game.version);
@@ -300,7 +436,7 @@ export async function generateMetadata({
   const dateLabel = toSeoDateLabel(game.latest_at);
 
   const titleCore = [
-    `${normalizedName} APK下载`,
+    normalizeText(game.seo?.title) || `${normalizedName} APK下载`,
     normalizedVersion ? `v${normalizedVersion}` : '',
     region ? `(${region})` : '',
   ].filter(Boolean).join(' ');
@@ -311,7 +447,7 @@ export async function generateMetadata({
     : 0;
 
   const description = buildSeoDescription(
-    normalizedSummary || normalizedDescription || `下载 ${normalizedName} 安卓版`,
+    normalizeText(game.seo?.description) || normalizedSummary || normalizedDescription || `下载 ${normalizedName} 安卓版`,
     [
       normalizedVersion ? `当前版本 ${normalizedVersion}` : '',
       formatFileSize(game.file_size) ? `安装包大小 ${formatFileSize(game.file_size)}` : '',
@@ -321,13 +457,12 @@ export async function generateMetadata({
       normalizeText(game.developer) ? `开发者：${normalizeText(game.developer)}` : '',
       screenshotCount > 0 ? `包含 ${screenshotCount} 张截图` : '',
       faqItems.length > 0 ? `整理 ${faqItems.length} 条安装与使用问题` : '',
-      normalizeText(seo.description),
     ],
     { max: MAX_DESCRIPTION_LENGTH },
   );
 
   const heroImage = resolveGameSeoImage(game, basic.share_image);
-  const keywords = buildKeywords(game, seo.keywords);
+  const keywords = buildKeywords(game);
 
   return {
     title: { absolute: title },
@@ -389,7 +524,7 @@ export default async function GameDetailPage({
     notFound();
   }
 
-  const initialGameData = await getGameDetails(id);
+  const initialGameData = await getPageData(id);
   if (!initialGameData) {
     notFound();
   }
@@ -400,22 +535,16 @@ export default async function GameDetailPage({
   const heroImage = resolveGameSeoImage(game, getSiteShareImageUrl());
   const description = normalizeText(game.summary || game.description);
 
-  const [relatedNews, reviewSummary, recommendedGames] = await Promise.all([
-    getRelatedNews(game),
-    getGameReviewSummary({
-      appId: game._id,
-      pkg: game.pkg,
-      gameName: game.name,
-      manualScore: game.star,
-    }).catch(() => null),
-    getRecommendedGames(game),
+  const [relatedNews, recommendedGames] = await Promise.all([
+    Array.isArray(initialGameData.relatedNews)
+      ? normalizeRelatedNewsPayload(initialGameData.relatedNews)
+      : getRelatedNews(game),
+    Array.isArray(initialGameData.recommendedGames)
+      ? normalizeRecommendedGamesPayload(initialGameData.recommendedGames, game)
+      : getRecommendedGames(game),
   ]);
-  const ratingCount = Math.max(0, Number(reviewSummary?.ratingCount || 0));
-  const ratingValue = Number(
-    reviewSummary?.displayScore ??
-      normalizeToFiveStar(game.star) ??
-      4.2,
-  );
+  const ratingCount = Math.max(0, Number(initialGameData.reviewSummary?.ratingCount || 0));
+  const ratingValue = Number(initialGameData.reviewSummary?.displayScore || 0);
 
   const detailJsonLd = {
     '@context': 'https://schema.org',
@@ -437,13 +566,17 @@ export default async function GameDetailPage({
           name: normalizeText(game.developer),
         }
       : undefined,
-    offers: {
-      '@type': 'Offer',
-      url: canonicalUrl,
-      price: '0',
-      priceCurrency: 'CNY',
-      availability: 'https://schema.org/InStock',
-    },
+    ...(initialGameData.resources.length > 0
+      ? {
+          offers: {
+            '@type': 'Offer',
+            url: canonicalUrl,
+            price: '0',
+            priceCurrency: 'CNY',
+            availability: 'https://schema.org/InStock',
+          },
+        }
+      : {}),
     aggregateRating: ratingValue > 0 && ratingCount > 0
       ? {
           '@type': 'AggregateRating',

@@ -294,9 +294,18 @@ export interface ApiGameDetail {
   tags: string[];
   version: string;
   file_size: number | null;
+  latest_content?: string;
+  seo?: GameSeoContent;
   metadata: {
     region: string;
   };
+}
+
+export interface GameSeoContent {
+  title?: string;
+  description?: string;
+  keywords?: string[];
+  highlights?: string[];
 }
 
 export interface ApiDownloadResource {
@@ -399,6 +408,15 @@ export interface StaticPageConfig {
   seo_description?: string;
   seo_title?: string;
   title?: string;
+}
+
+export interface GamePageSnapshot extends GameDetailData {
+  recommendedGames?: ApiRecommendedGame[];
+  relatedNews?: CommunityPost[];
+  reviewSummary?: {
+    displayScore?: number | null;
+    ratingCount?: number;
+  } | null;
 }
 
 // New type for Global Site Configuration
