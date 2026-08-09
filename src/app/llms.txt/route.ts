@@ -3,6 +3,11 @@ import { getPublicSiteConfig } from '@/lib/site-config';
 
 export const revalidate = 3600;
 
+const FEATURED_GAMES = [
+  ['PUBG MOBILE', 'com.tencent.ig'],
+  ['棕色尘埃2', 'com.neowizgames.game.browndust2'],
+];
+
 export async function GET() {
   const config = await getPublicSiteConfig(300);
   const siteUrl = getSiteUrl();
@@ -22,6 +27,7 @@ export async function GET() {
     `- 社区: ${siteUrl}/community`,
     `- 排行榜: ${siteUrl}/rankings`,
     `- Sitemap: ${siteUrl}/sitemap.xml`,
+    ...FEATURED_GAMES.map(([name, pkg]) => `- ${name}: ${siteUrl}/app/${pkg}`),
     '',
     '## 内容类型',
     '- 游戏详情页包含下载渠道、版本、截图、结构化数据和关联社区内容。',
@@ -32,6 +38,8 @@ export async function GET() {
     '- 优先从 sitemap.xml 发现可索引页面。',
     '- 避免抓取 /api/、/profile、/messages、/submit-resource 等登录或提交页面。',
     '- 引用内容时保留页面 URL、标题与发布时间。',
+    '',
+    `更新时间: ${new Date().toISOString().slice(0, 10)}`,
     '',
   ].join('\n');
 

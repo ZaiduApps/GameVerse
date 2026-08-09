@@ -195,6 +195,12 @@ function formatFileSize(bytes?: number | null): string | undefined {
   return `${value.toFixed(index === 0 ? 0 : 2)} ${units[index]}`;
 }
 
+function schemaApplicationCategory(input?: string | null): string {
+  const value = normalizeText(input).toLowerCase();
+  const applicationTypes = new Set(['app', 'application', 'tool', 'software']);
+  return applicationTypes.has(value) ? 'UtilitiesApplication' : 'GameApplication';
+}
+
 function normalizeRelatedNewsPayload(payload: unknown): RelatedNewsItem[] {
   if (!Array.isArray(payload)) return [];
   return payload.map((value) => {
@@ -300,6 +306,7 @@ const getGamePageSnapshot = cache(async (id: string): Promise<GamePageSnapshot |
             ratingCount: rawReview.ratingCount ?? rawReview.rating_count,
           }
         : null,
+      quality: snapshot.quality as GamePageSnapshot['quality'],
     } as GamePageSnapshot;
   } catch (error) {
     console.error('[game-detail] SEO 快照请求失败', {
@@ -465,16 +472,17 @@ export async function generateMetadata({
 
   const heroImage = resolveGameSeoImage(game, basic.share_image);
   const keywords = buildKeywords(game);
+  const isIndexable = gameData.quality?.indexable !== false;
 
   return {
     title: { absolute: title },
     description,
     keywords,
     robots: {
-      index: true,
+      index: isIndexable,
       follow: true,
       googleBot: {
-        index: true,
+        index: isIndexable,
         follow: true,
         'max-image-preview': 'large',
         'max-snippet': -1,
@@ -552,7 +560,7 @@ export default async function GameDetailPage({
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
     name: game.name,
-    applicationCategory: normalizeText(game.type) || 'GameApplication',
+    applicationCategory: schemaApplicationCategory(game.type),
     operatingSystem: 'Android',
     inLanguage: 'zh-CN',
     image: heroImage || undefined,

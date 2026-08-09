@@ -411,6 +411,12 @@ export interface StaticPageConfig {
 }
 
 export interface GamePageSnapshot extends GameDetailData {
+  quality?: {
+    score: number;
+    indexable: boolean;
+    thin_page: boolean;
+    reasons: string[];
+  };
   recommendedGames?: ApiRecommendedGame[];
   relatedNews?: CommunityPost[];
   reviewSummary?: {

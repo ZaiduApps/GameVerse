@@ -253,6 +253,24 @@ async function fetchCommunityPostsFromFeed(): Promise<MetadataRoute.Sitemap[numb
   return result;
 }
 
+async function fetchIndexableGamePackages(): Promise<Set<string> | null> {
+  const result = new Set<string>();
+  for (let page = 1; page <= SITEMAP_MAX_PAGES; page += 1) {
+    const json = await fetchJson(`/seo/audit/games?page=${page}&pageSize=${SITEMAP_PAGE_SIZE}`);
+    if (!json || (json.code !== 0 && json.code !== undefined)) return null;
+    const data = json?.data || json;
+    const list = Array.isArray(data?.list) ? data.list : [];
+    for (const item of list) {
+      const pkg = String(item?.pkg || '').trim();
+      if (pkg && item?.quality?.indexable === true) result.add(pkg);
+    }
+    const total = Number(data?.total || 0);
+    const pageSize = Number(data?.pageSize || SITEMAP_PAGE_SIZE);
+    if (list.length === 0 || (total > 0 && page * pageSize >= total) || list.length < pageSize) break;
+  }
+  return result;
+}
+
 function toUserEntry(item: UserSitemapItem): MetadataRoute.Sitemap[number] | null {
   const username = String(item?.username || '').trim();
   const id = String(item?._id || '').trim();
@@ -353,7 +371,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: path === '/' ? 1 : 0.7,
   }));
 
-  const gameEntries = await fetchGamesFromSeoEndpoint();
+  const [allGameEntries, indexablePackages] = await Promise.all([
+    fetchGamesFromSeoEndpoint(),
+    fetchIndexableGamePackages(),
+  ]);
+  const gameEntries = indexablePackages
+    ? allGameEntries.filter((entry) => {
+        const pkg = decodeURIComponent(new URL(entry.url).pathname.split('/').pop() || '');
+        return indexablePackages.has(pkg);
+      })
+    : allGameEntries;
   const communityPostEntries = await fetchCommunityPostsFromFeed();
   const albumEntries = await fetchHomeAlbumEntries();
   const topicEntries = await fetchTopicEntries();
