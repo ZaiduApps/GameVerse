@@ -47,13 +47,29 @@ echo "[deploy] verify pm2 process"
 pm2 show game-ve >/dev/null
 
 echo "[deploy] verify listening port 3002"
-if ! ss -lntp | grep -q ':3002'; then
+PORT_READY=0
+for attempt in $(seq 1 30); do
+  if ss -lntp | grep -q ':3002'; then
+    PORT_READY=1
+    break
+  fi
+  sleep 2
+done
+if [ "${PORT_READY}" -ne 1 ]; then
   echo "[deploy] ERROR: port 3002 is not listening"
   exit 1
 fi
 
 echo "[deploy] verify app health"
-if ! curl -sS -m 8 http://127.0.0.1:3002/ >/dev/null; then
+HEALTH_READY=0
+for attempt in $(seq 1 15); do
+  if curl -fsS -m 8 http://127.0.0.1:3002/ >/dev/null; then
+    HEALTH_READY=1
+    break
+  fi
+  sleep 2
+done
+if [ "${HEALTH_READY}" -ne 1 ]; then
   echo "[deploy] health check failed; restoring previous build"
   rm -rf .next
   if [ -d "${BACKUP_DIR}/.next" ]; then
