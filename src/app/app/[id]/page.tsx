@@ -18,6 +18,7 @@ import { faqMarkdownToPlainText, normalizeGameFaqItems } from '@/lib/game-faq';
 import type { ApiRecommendedGame, CommunityPost, GameDetailData, GamePageSnapshot, SiteConfig } from '@/types';
 
 const DETAIL_REVALIDATE_SECONDS = 900;
+const SEO_SNAPSHOT_VERSION = '2';
 const MAX_TITLE_LENGTH = 68;
 const MAX_DESCRIPTION_LENGTH = 160;
 const MAX_SERVER_RECOMMENDED_GAMES = 5;
@@ -276,12 +277,15 @@ async function getSiteConfig(): Promise<SiteConfig | null> {
 
 const getGamePageSnapshot = cache(async (id: string): Promise<GamePageSnapshot | null> => {
   try {
-    const response = await trackedApiFetch(`/seo/game-page?pkg=${encodeURIComponent(id)}`, {
+    const response = await trackedApiFetch(
+      `/seo/game-page?pkg=${encodeURIComponent(id)}&qualityVersion=${SEO_SNAPSHOT_VERSION}`,
+      {
       cache: 'force-cache',
       next: { revalidate: DETAIL_REVALIDATE_SECONDS },
       timeoutMs: 20000,
       logKey: 'game-page-snapshot',
-    });
+      },
+    );
     if (!response.ok) return null;
     const payload = await response.json();
     if (payload?.code !== undefined && payload.code !== 0) return null;

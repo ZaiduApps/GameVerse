@@ -22,6 +22,9 @@ if [ -d .next ]; then
   cp -a .next "${BACKUP_DIR}/.next"
 fi
 
+# 后端 SEO 快照语义变化时，构建必须读取最新索引资格。
+rm -rf .next/cache
+
 echo "[deploy] pnpm build"
 if ! pnpm build; then
   echo "[deploy] build failed; preserving the previous .next artifact"
