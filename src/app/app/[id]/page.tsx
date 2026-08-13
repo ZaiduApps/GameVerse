@@ -15,6 +15,7 @@ import {
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityPostsByGame } from '@/lib/community-api';
 import { faqMarkdownToPlainText, normalizeGameFaqItems } from '@/lib/game-faq';
+import { isWebGameType } from '@/lib/game-resource-type';
 import type { ApiRecommendedGame, CommunityPost, GameDetailData, GamePageSnapshot, SiteConfig } from '@/types';
 
 const DETAIL_REVALIDATE_SECONDS = 900;
@@ -26,11 +27,13 @@ const STATIC_PARAMS_PAGE_SIZE = 500;
 const STATIC_PARAMS_MAX_PAGES = 200;
 const STRICT_STATIC_BUILD =
   process.env.NODE_ENV === 'production' || process.env.GAMEVERSE_REQUIRE_SEO_SNAPSHOT === '1';
-export const dynamicParams = false;
+export const dynamicParams = true;
 export const revalidate = 900;
 
 type StaticGameItem = {
+  _id?: string;
   pkg?: string;
+  type?: string;
   status?: number;
   is_deleted?: number | boolean;
 };
@@ -40,7 +43,7 @@ function isCanonicalPackageName(input: string): boolean {
 }
 
 export async function generateStaticParams(): Promise<Array<{ id: string }>> {
-  const packages = new Set<string>();
+  const targets = new Set<string>();
   let expectedTotal = 0;
   let completed = false;
 
@@ -75,15 +78,19 @@ export async function generateStaticParams(): Promise<Array<{ id: string }>> {
 
     for (const item of list) {
       const pkg = String(item?.pkg || '').trim();
+      const id = String(item?._id || '').trim();
       const deleted = item?.is_deleted === true || Number(item?.is_deleted || 0) === 1;
-      if (!pkg || deleted || (item?.status !== undefined && ![0, 1].includes(Number(item.status)))) continue;
-      if (!isCanonicalPackageName(pkg)) {
+      if (deleted || (item?.status !== undefined && ![0, 1].includes(Number(item.status)))) continue;
+      const target = pkg || id;
+      if (!target) continue;
+      if (!pkg && String(item?.type || '').trim().toLowerCase() !== 'web') continue;
+      if (pkg && !isCanonicalPackageName(pkg)) {
         if (STRICT_STATIC_BUILD) {
           throw new Error(`游戏静态参数包含非法包名: ${pkg}`);
         }
         continue;
       }
-      packages.add(pkg);
+      targets.add(target);
     }
 
     if (list.length === 0 || (total > 0 && page * pageSize >= total) || list.length < pageSize) {
@@ -95,14 +102,14 @@ export async function generateStaticParams(): Promise<Array<{ id: string }>> {
   if (!completed) {
     throw new Error(`游戏静态参数超过分页上限: ${STATIC_PARAMS_MAX_PAGES}`);
   }
-  if (packages.size === 0) {
+  if (targets.size === 0) {
     throw new Error('游戏静态参数为空，终止构建');
   }
-  if (STRICT_STATIC_BUILD && expectedTotal > 0 && packages.size !== expectedTotal) {
-    throw new Error(`游戏静态参数数量异常: unique=${packages.size}, total=${expectedTotal}`);
+  if (STRICT_STATIC_BUILD && expectedTotal > 0 && targets.size !== expectedTotal) {
+    throw new Error(`游戏静态参数数量异常: unique=${targets.size}, total=${expectedTotal}`);
   }
 
-  return Array.from(packages, (id) => ({ id }));
+  return Array.from(targets, (id) => ({ id }));
 }
 
 function normalizeText(input?: string | null): string {
@@ -138,6 +145,7 @@ function humanizeCategory(input?: string | null): string {
   if (!value) return '安卓应用';
   if (value === 'game') return '安卓游戏';
   if (value === 'app') return '安卓应用';
+  if (value === 'web') return '网页游戏';
   return normalizeText(input);
 }
 
@@ -176,7 +184,7 @@ async function getRelatedNews(game: GameDetailData['app']): Promise<RelatedNewsI
       sort: 'latest',
       pageSize: 8,
       appId: game._id,
-      pkg: game.pkg,
+      pkg: game.pkg || undefined,
       gameName: game.name,
     });
     return posts
@@ -429,6 +437,7 @@ export async function generateMetadata({
   }
 
   const game = gameData.app;
+  const isWebGame = isWebGameType(game.type);
   const canonicalPath = `/app/${encodeURIComponent(game.pkg || id)}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
 
@@ -449,8 +458,8 @@ export async function generateMetadata({
   const dateLabel = toSeoDateLabel(game.latest_at);
 
   const titleCore = [
-    normalizeText(game.seo?.title) || `${normalizedName} APK下载`,
-    normalizedVersion ? `v${normalizedVersion}` : '',
+    normalizeText(game.seo?.title) || (isWebGame ? `${normalizedName} 网页游戏` : `${normalizedName} APK下载`),
+    !isWebGame && normalizedVersion ? `v${normalizedVersion}` : '',
     region ? `(${region})` : '',
   ].filter(Boolean).join(' ');
   const title = clampText(`${titleCore} - ${siteName}`, MAX_TITLE_LENGTH);
@@ -460,16 +469,22 @@ export async function generateMetadata({
     : 0;
 
   const description = buildSeoDescription(
-    normalizeText(game.seo?.description) || normalizedSummary || normalizedDescription || `下载 ${normalizedName} 安卓版`,
+    normalizeText(game.seo?.description) ||
+      normalizedSummary ||
+      normalizedDescription ||
+      (isWebGame ? `在 AC 盒子中游玩 ${normalizedName}` : `下载 ${normalizedName} 安卓版`),
     [
-      normalizedVersion ? `当前版本 ${normalizedVersion}` : '',
-      formatFileSize(game.file_size) ? `安装包大小 ${formatFileSize(game.file_size)}` : '',
+      !isWebGame && normalizedVersion ? `当前版本 ${normalizedVersion}` : '',
+      !isWebGame && formatFileSize(game.file_size) ? `安装包大小 ${formatFileSize(game.file_size)}` : '',
       dateLabel ? `最近更新 ${dateLabel}` : '',
-      game.pkg ? `包名 ${game.pkg}` : '',
+      !isWebGame && game.pkg ? `包名 ${game.pkg}` : '',
       category ? `适合关注 ${category} 的用户` : '',
+      isWebGame ? '请在 AC 盒子 App 中开始游玩' : '',
       normalizeText(game.developer) ? `开发者：${normalizeText(game.developer)}` : '',
       screenshotCount > 0 ? `包含 ${screenshotCount} 张截图` : '',
-      faqItems.length > 0 ? `整理 ${faqItems.length} 条安装与使用问题` : '',
+      faqItems.length > 0
+        ? `整理 ${faqItems.length} 条${isWebGame ? '游玩与使用' : '安装与使用'}问题`
+        : '',
     ],
     { max: MAX_DESCRIPTION_LENGTH },
   );
@@ -544,6 +559,7 @@ export default async function GameDetailPage({
   }
 
   const game = initialGameData.app;
+  const isWebGame = isWebGameType(game.type);
   const canonicalPath = `/app/${encodeURIComponent(game.pkg || id)}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
   const heroImage = resolveGameSeoImage(game, getSiteShareImageUrl());
@@ -565,13 +581,13 @@ export default async function GameDetailPage({
     '@type': 'SoftwareApplication',
     name: game.name,
     applicationCategory: schemaApplicationCategory(game.type),
-    operatingSystem: 'Android',
+    operatingSystem: isWebGame ? 'Web Browser' : 'Android',
     inLanguage: 'zh-CN',
     image: heroImage || undefined,
     description: description || undefined,
     url: canonicalUrl,
-    softwareVersion: normalizeText(game.version) || undefined,
-    fileSize: formatFileSize(game.file_size),
+    softwareVersion: isWebGame ? undefined : normalizeText(game.version) || undefined,
+    fileSize: isWebGame ? undefined : formatFileSize(game.file_size),
     datePublished: toIsoDate(game.release_at),
     dateModified: toIsoDate(game.latest_at),
     publisher: game.developer
@@ -580,7 +596,7 @@ export default async function GameDetailPage({
           name: normalizeText(game.developer),
         }
       : undefined,
-    ...(initialGameData.resources.length > 0
+    ...(!isWebGame && initialGameData.resources.length > 0
       ? {
           offers: {
             '@type': 'Offer',

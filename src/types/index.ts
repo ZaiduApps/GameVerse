@@ -278,8 +278,9 @@ export interface HomeAnnouncements {
 export interface ApiGameDetail {
   _id: string;
   name: string;
-  pkg: string;
-  type: string;
+  pkg?: string | null;
+  type: 'game' | 'app' | 'web' | string;
+  original_url?: string | null;
   description: string;
   summary: string;
   download_count_show: string;

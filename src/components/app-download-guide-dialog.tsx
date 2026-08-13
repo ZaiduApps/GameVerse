@@ -21,6 +21,9 @@ interface AppDownloadGuideDialogProps {
   mobileDescription?: string;
   desktopDescription?: string;
   appUrl?: string;
+  mobileFeatureText?: string;
+  desktopQrCaption?: string;
+  primaryActionLabel?: string;
 }
 
 const DEFAULT_APP_URL = 'https://app.apks.cc';
@@ -29,6 +32,11 @@ const DEFAULT_MOBILE_DESCRIPTION =
   '当前资源使用 AC 盒子可一键下载最新版本游戏资源并帮您安装，一步到位。是否先前往下载盒子？';
 const DEFAULT_DESKTOP_DESCRIPTION =
   '当前资源建议使用 AC 盒子扫码打开，在 App 内可一键下载并完成安装。';
+const DEFAULT_MOBILE_FEATURE_TEXT =
+  'AC 盒子支持资源直装、版本更新提醒与安装辅助，移动端体验更完整。';
+const DEFAULT_DESKTOP_QR_CAPTION =
+  '使用手机扫码后，在 AC 盒子中继续下载与安装。';
+const DEFAULT_PRIMARY_ACTION_LABEL = '前往下载盒子';
 
 export default function AppDownloadGuideDialog({
   open,
@@ -37,6 +45,9 @@ export default function AppDownloadGuideDialog({
   mobileDescription = DEFAULT_MOBILE_DESCRIPTION,
   desktopDescription = DEFAULT_DESKTOP_DESCRIPTION,
   appUrl = DEFAULT_APP_URL,
+  mobileFeatureText = DEFAULT_MOBILE_FEATURE_TEXT,
+  desktopQrCaption = DEFAULT_DESKTOP_QR_CAPTION,
+  primaryActionLabel = DEFAULT_PRIMARY_ACTION_LABEL,
 }: AppDownloadGuideDialogProps) {
   const [isNarrowScreen, setIsNarrowScreen] = useState(false);
 
@@ -76,7 +87,7 @@ export default function AppDownloadGuideDialog({
 
         {isNarrowScreen ? (
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-foreground/85">
-            AC 盒子支持资源直装、版本更新提醒与安装辅助，移动端体验更完整。
+            {mobileFeatureText}
           </div>
         ) : (
           <div className="space-y-3">
@@ -89,7 +100,7 @@ export default function AppDownloadGuideDialog({
               />
             </div>
             <p className="text-center text-xs text-muted-foreground">
-              使用手机扫码后，在 AC 盒子中继续下载与安装。
+              {desktopQrCaption}
             </p>
           </div>
         )}
@@ -99,7 +110,7 @@ export default function AppDownloadGuideDialog({
             稍后再说
           </Button>
           <Button type="button" className="btn-interactive" onClick={handleOpenAppSite}>
-            前往下载盒子
+            {primaryActionLabel}
             <ExternalLink className="ml-2 h-4 w-4" />
           </Button>
         </DialogFooter>

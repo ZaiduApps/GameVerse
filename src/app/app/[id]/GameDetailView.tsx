@@ -16,6 +16,7 @@ import {
   Link as LinkIcon,
   MessageSquare,
   RotateCcw,
+  Smartphone,
   Star,
   ThumbsUp,
   Users,
@@ -31,6 +32,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import GameAnnouncements from '@/components/game-announcements';
+import AppDownloadGuideDialog from '@/components/app-download-guide-dialog';
 import GameDownloadDialog from '@/components/game-download-dialog';
 import GameReviewPanel from '@/components/game-detail/GameReviewPanel';
 import GameFaqSection from '@/components/game-detail/GameFaqSection';
@@ -41,6 +43,7 @@ import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
 import { getCommunityPostsByGame } from '@/lib/community-api';
 import { buildFeedbackCommonFields, submitFeedbackTicket } from '@/lib/feedback';
 import { normalizeGameFaqItems } from '@/lib/game-faq';
+import { getGamePrimaryActionKind, isWebGameType } from '@/lib/game-resource-type';
 import { cn } from '@/lib/utils';
 
 interface GameDetailViewProps {
@@ -181,6 +184,7 @@ function buildGameFactItems(
   options: {
     category: string;
     resourceCount: number;
+    isWebGame: boolean;
   },
 ): GameFactItem[] {
   const facts: GameFactItem[] = [];
@@ -190,14 +194,20 @@ function buildGameFactItems(
     facts.push({ label, value: text });
   };
 
-  pushFact('包名', game.pkg);
-  pushFact('当前版本', game.version);
+  if (!options.isWebGame) {
+    pushFact('包名', game.pkg);
+    pushFact('当前版本', game.version);
+  }
   pushFact('更新日期', formatDateText(game.latest_at));
-  pushFact('安装包大小', formatBytes(game.file_size));
+  if (!options.isWebGame) {
+    pushFact('安装包大小', formatBytes(game.file_size));
+  }
   pushFact('开发者', game.developer);
   pushFact('区服/地区', game.metadata?.region);
   pushFact('游戏分类', options.category);
-  if (options.resourceCount > 0) pushFact('可用下载渠道', `${options.resourceCount} 个`);
+  if (!options.isWebGame && options.resourceCount > 0) {
+    pushFact('可用下载渠道', `${options.resourceCount} 个`);
+  }
 
   return facts.slice(0, 8);
 }
@@ -431,6 +441,7 @@ export default function GameDetailView({
   const [hasError, setHasError] = useState(false);
   const [isSubmittingUrge, setIsSubmittingUrge] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [appGuideOpen, setAppGuideOpen] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [sort, setSort] = useState<'latest' | 'hot'>('latest');
   const [isFavorite, setIsFavorite] = useState(false);
@@ -456,13 +467,21 @@ export default function GameDetailView({
 
   const game = gameData?.app;
   const gameName = game?.name || '游戏';
+  const isWebGame = isWebGameType(game?.type);
+  const primaryActionKind = getGamePrimaryActionKind(game?.type);
   const resources = gameData?.resources || [];
   const cardConfig = (gameData?.cardConfig || {}) as Record<string, CardConfigItem[] | undefined>;
   const supportItems = useMemo(() => resolveSupportItems(cardConfig), [cardConfig]);
   const downloadNotices = (cardConfig.download_notice || []) as CardConfigItem[];
   const faqItems = useMemo(() => normalizeGameFaqItems(gameData?.faq), [gameData?.faq]);
-  const installSteps = useMemo(() => buildInstallSteps(gameData?.app || ({} as GameDetailData['app'])), [gameData?.app]);
-  const riskNotes = useMemo(() => buildRiskNotes(gameData?.app || ({} as GameDetailData['app'])), [gameData?.app]);
+  const installSteps = useMemo(
+    () => (isWebGame ? [] : buildInstallSteps(gameData?.app || ({} as GameDetailData['app']))),
+    [gameData?.app, isWebGame],
+  );
+  const riskNotes = useMemo(
+    () => (isWebGame ? [] : buildRiskNotes(gameData?.app || ({} as GameDetailData['app']))),
+    [gameData?.app, isWebGame],
+  );
 
   const tags = useMemo(() => {
     const list = Array.isArray(game?.tags)
@@ -480,15 +499,17 @@ export default function GameDetailView({
   }, [game?.metadata?.region, game?.tags, game?.type]);
   const primaryCategory = useMemo(() => getPrimaryCategory(game, tags), [game, tags]);
   const isPreregGame = useMemo(() => isPreregGameLike(game), [game]);
+  const showPreregReminder = isPreregGame && !isWebGame;
   const factSummaryItems = useMemo(
     () =>
       game
         ? buildGameFactItems(game, {
             category: primaryCategory,
             resourceCount: resources.length,
+            isWebGame,
           })
         : [],
-    [game, primaryCategory, resources.length],
+    [game, isWebGame, primaryCategory, resources.length],
   );
 
   const screenshots = useMemo(() => {
@@ -583,9 +604,11 @@ export default function GameDetailView({
         if (cancelled) return;
         setGameData(detailJson.data as GameDetailData);
 
-        const pkg = String(detailJson.data?.app?.pkg || '').trim();
-        if (pkg) {
-          const recRes = await trackedApiFetch(`/game/recommendedApp?param=${encodeURIComponent(pkg)}`, {
+        const recommendationParam = String(
+          detailJson.data?.app?.pkg || detailJson.data?.app?._id || '',
+        ).trim();
+        if (recommendationParam) {
+          const recRes = await trackedApiFetch(`/game/recommendedApp?param=${encodeURIComponent(recommendationParam)}`, {
             cache: 'force-cache',
           });
           if (recRes.ok) {
@@ -648,7 +671,7 @@ export default function GameDetailView({
         sort,
         pageSize: 20,
         appId: game._id,
-        pkg: game.pkg,
+        pkg: game.pkg || undefined,
         gameName: game.name,
       }).catch(() => []);
 
@@ -682,7 +705,7 @@ export default function GameDetailView({
           sort: 'latest',
           pageSize: 8,
           appId: game._id,
-          pkg: game.pkg,
+          pkg: game.pkg || undefined,
           gameName: game.name,
         });
         const mapped = list.map(toRelatedNewsItem).filter((item): item is RelatedNewsItem => Boolean(item));
@@ -965,7 +988,7 @@ export default function GameDetailView({
       <section className={cn(isMobile ? 'mt-8' : 'mb-12')}>
         <h2 className={cn('mb-4 flex items-center gap-2 font-black', isMobile ? 'text-xl' : 'gap-3 text-xl font-bold')}>
           <span className={cn('rounded-full bg-[#005e9f]', isMobile ? 'h-6 w-1.5' : 'h-8 w-2')} />
-          版本与资源信息
+          {isWebGame ? '基本信息' : '版本与资源信息'}
         </h2>
         <dl className={cn(
           'grid gap-3 rounded-[1.75rem] border border-[#abadae]/10 bg-white/80 p-5 shadow-sm dark:border-border/45 dark:bg-card/75',
@@ -1098,6 +1121,42 @@ export default function GameDetailView({
       </Card>
     </div>
   );
+
+  const renderPrimaryAction = (isMobile = false) => {
+    if (!game) return null;
+
+    const triggerClassName = cn(
+      'stitch-primary-btn h-12 w-full rounded-full border-none font-bold text-white',
+      isMobile ? 'text-sm' : 'text-base',
+      showPreregReminder && 'flex-1',
+    );
+
+    if (primaryActionKind === 'app-guide') {
+      return (
+        <Button
+          type="button"
+          data-acbox-action="web_game_app_guide_open"
+          data-acbox-label={gameName}
+          className={triggerClassName}
+          onClick={() => setAppGuideOpen(true)}
+        >
+          <Smartphone className="mr-2 h-5 w-5" />
+          在 App 中游玩
+        </Button>
+      );
+    }
+
+    return (
+      <GameDownloadDialog
+        appId={game._id}
+        pkg={game.pkg}
+        resources={resources}
+        downloadNotices={downloadNotices}
+        triggerClassName={triggerClassName}
+        triggerLabel="立即下载"
+      />
+    );
+  };
 
   const getScreenshotAspect = useCallback(
     (url: string): ScreenshotAspectKind => screenshotAspectMap[url] || inferredScreenshotAspectMap[url] || 'landscape',
@@ -1324,16 +1383,18 @@ export default function GameDetailView({
                         <Star className="h-4 w-4 fill-[#fdc003] text-[#fdc003]" />
                         评分：{normalizeScore(game.star)}
                       </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Download className="h-4 w-4 text-white/80" />
-                        {game.download_count_show || '50W+'} 下载
-                      </span>
+                      {!isWebGame && (
+                        <span className="inline-flex items-center gap-1">
+                          <Download className="h-4 w-4 text-white/80" />
+                          {game.download_count_show || '50W+'} 下载
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  <div className={cn('w-56', isPreregGame && 'w-[440px]')}>
-                    <div className={cn('flex items-center', isPreregGame ? 'gap-3' : '')}>
-                      {isPreregGame && (
+                  <div className={cn('w-56', showPreregReminder && 'w-[440px]')}>
+                    <div className={cn('flex items-center', showPreregReminder ? 'gap-3' : '')}>
+                      {showPreregReminder && (
                         <Button
                           type="button"
                           data-acbox-action="game_detail_reminder_toggle"
@@ -1348,17 +1409,7 @@ export default function GameDetailView({
                           {isReminderEnabled ? '已提醒' : '上线提醒'}
                         </Button>
                       )}
-                      <GameDownloadDialog
-                        appId={game._id}
-                        pkg={game.pkg}
-                        resources={resources}
-                        downloadNotices={downloadNotices}
-                        triggerClassName={cn(
-                          'stitch-primary-btn h-12 w-full rounded-full border-none text-base font-bold text-white',
-                          isPreregGame && 'flex-1',
-                        )}
-                        triggerLabel="立即下载"
-                      />
+                      {renderPrimaryAction()}
                     </div>
                   </div>
                 </div>
@@ -1367,7 +1418,7 @@ export default function GameDetailView({
           </section>
 
           <section className="mb-10 rounded-[2rem] border border-[#abadae]/10 bg-[#eff1f2]/60 p-6 backdrop-blur-sm dark:border-border/45 dark:bg-card/50">
-            <div className="grid grid-cols-2 gap-8 lg:grid-cols-4">
+            <div className={cn('grid grid-cols-2 gap-8', !isWebGame && 'lg:grid-cols-4')}>
               <div className="space-y-1">
                 <p className="text-xs font-bold uppercase tracking-wider text-[#595c5d]">发布日期</p>
                 <p className="text-lg font-bold">{formatDateText(game.release_at)}</p>
@@ -1378,28 +1429,32 @@ export default function GameDetailView({
                 <p className="text-lg font-bold">{formatDateText(game.latest_at)}</p>
               </div>
 
-              <div className="space-y-1 border-l border-[#abadae]/20 pl-8 dark:border-border/45">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#595c5d]">文件大小</p>
-                <p className="text-lg font-bold">{formatBytes(game.file_size)}</p>
-              </div>
+              {!isWebGame && (
+                <>
+                  <div className="space-y-1 border-l border-[#abadae]/20 pl-8 dark:border-border/45">
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#595c5d]">文件大小</p>
+                    <p className="text-lg font-bold">{formatBytes(game.file_size)}</p>
+                  </div>
 
-              <div className="flex items-center justify-between border-l border-[#abadae]/20 pl-8 dark:border-border/45">
-                <div className="space-y-1">
-                  <p className="text-xs font-bold uppercase tracking-wider text-[#595c5d]">当前版本</p>
-                  <p className="text-lg font-bold">{game.version || '未知'}</p>
-                </div>
-                <Button
-                  type="button"
-                  data-acbox-action="game_detail_urge_update"
-                  data-acbox-label={gameName}
-                  onClick={handleUrge}
-                  disabled={isSubmittingUrge}
-                  className="flex items-center gap-2 rounded-full border border-[#b71211] bg-transparent px-4 py-2 text-sm font-bold text-[#b71211] transition-colors hover:bg-[#b71211]/5 dark:border-primary dark:text-primary dark:hover:bg-primary/10"
-                >
-                  <BellRing className="h-4 w-4" />
-                  {isSubmittingUrge ? '提交中...' : '催更'}
-                </Button>
-              </div>
+                  <div className="flex items-center justify-between border-l border-[#abadae]/20 pl-8 dark:border-border/45">
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#595c5d]">当前版本</p>
+                      <p className="text-lg font-bold">{game.version || '未知'}</p>
+                    </div>
+                    <Button
+                      type="button"
+                      data-acbox-action="game_detail_urge_update"
+                      data-acbox-label={gameName}
+                      onClick={handleUrge}
+                      disabled={isSubmittingUrge}
+                      className="flex items-center gap-2 rounded-full border border-[#b71211] bg-transparent px-4 py-2 text-sm font-bold text-[#b71211] transition-colors hover:bg-[#b71211]/5 dark:border-primary dark:text-primary dark:hover:bg-primary/10"
+                    >
+                      <BellRing className="h-4 w-4" />
+                      {isSubmittingUrge ? '提交中...' : '催更'}
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </section>
 
@@ -1418,14 +1473,18 @@ export default function GameDetailView({
             </Card>
             <Card className="rounded-[2rem] border-[#abadae]/10 bg-white/70 dark:border-border/45 dark:bg-card/70">
               <CardContent className="flex flex-col items-center justify-center gap-2 p-8 text-center">
-                <p className="text-sm text-[#595c5d]">下载总量</p>
-                <p className="text-xl font-black">{game.download_count_show || '0'}</p>
+                <p className="text-sm text-[#595c5d]">{isWebGame ? '开发者' : '下载总量'}</p>
+                <p className="line-clamp-2 text-xl font-black">
+                  {isWebGame ? game.developer || '未提供' : game.download_count_show || '0'}
+                </p>
               </CardContent>
             </Card>
             <Card className="rounded-[2rem] border-[#abadae]/10 bg-white/70 dark:border-border/45 dark:bg-card/70">
               <CardContent className="flex flex-col items-center justify-center gap-2 p-8 text-center">
-                <p className="text-sm text-[#595c5d]">适配系统</p>
-                <p className="text-xl font-black">{game.metadata?.region || 'Android'}</p>
+                <p className="text-sm text-[#595c5d]">{isWebGame ? '游玩方式' : '适配系统'}</p>
+                <p className="text-xl font-black">
+                  {isWebGame ? 'AC 盒子' : game.metadata?.region || 'Android'}
+                </p>
               </CardContent>
             </Card>
           </section>
@@ -1477,7 +1536,7 @@ export default function GameDetailView({
 
               {renderTagSection()}
 
-              <GameFaqSection items={faqItems} intro={renderFaqIntro()} />
+              <GameFaqSection items={faqItems} intro={isWebGame ? undefined : renderFaqIntro()} />
 
               <section className="pb-8">
                 <div className="mb-4 flex items-center justify-between">
@@ -1611,7 +1670,7 @@ export default function GameDetailView({
               <section className="rounded-[2rem] border border-[#abadae]/10 bg-[#dadddf]/20 p-8">
                 <h2 className="mb-6 flex items-center gap-2 text-xl font-bold">
                   <LinkIcon className="h-6 w-6 text-[#b71211]" />
-                  资源与支持
+                  {isWebGame ? '支持与服务' : '资源与支持'}
                 </h2>
 
                 <div className="space-y-4">
@@ -1736,28 +1795,32 @@ export default function GameDetailView({
                 <span className="text-base font-bold">{normalizeScore(game.star)}</span>
               </div>
               <p className="mt-2 text-xs text-[#757778] dark:text-[#9ca6b8]">
-                {game.download_count_show || '0'} 下载 · {formatBytes(game.file_size)}
+                {isWebGame
+                  ? `页游 · ${game.developer || '开发者未提供'}`
+                  : `${game.download_count_show || '0'} 下载 · ${formatBytes(game.file_size)}`}
               </p>
             </div>
           </div>
 
-          <div className="mt-5 flex items-center justify-between rounded-full bg-[#eff1f2] p-3 dark:bg-[#1a2433]">
-            <div className="ml-2 flex flex-col">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#757778] dark:text-[#9ca6b8]">当前版本</span>
-              <span className="text-sm font-bold text-[#1a1f26] dark:text-[#edf2fb]">v {game.version || '未知'}</span>
+          {!isWebGame && (
+            <div className="mt-5 flex items-center justify-between rounded-full bg-[#eff1f2] p-3 dark:bg-[#1a2433]">
+              <div className="ml-2 flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#757778] dark:text-[#9ca6b8]">当前版本</span>
+                <span className="text-sm font-bold text-[#1a1f26] dark:text-[#edf2fb]">v {game.version || '未知'}</span>
+              </div>
+              <Button
+                type="button"
+                data-acbox-action="game_detail_urge_update"
+                data-acbox-label={gameName}
+                onClick={handleUrge}
+                disabled={isSubmittingUrge}
+                className="rounded-full bg-[#b3d4ff] px-4 py-2 text-sm font-bold text-[#004a7e] hover:opacity-90"
+              >
+                <BellRing className="mr-1 h-4 w-4" />
+                催更
+              </Button>
             </div>
-            <Button
-              type="button"
-              data-acbox-action="game_detail_urge_update"
-              data-acbox-label={gameName}
-              onClick={handleUrge}
-              disabled={isSubmittingUrge}
-              className="rounded-full bg-[#b3d4ff] px-4 py-2 text-sm font-bold text-[#004a7e] hover:opacity-90"
-            >
-              <BellRing className="mr-1 h-4 w-4" />
-              催更
-            </Button>
-          </div>
+          )}
         </section>
 
         <section className="mt-8 grid grid-cols-4 gap-2">
@@ -1775,14 +1838,22 @@ export default function GameDetailView({
           </Card>
           <Card className="border-[#abadae]/10 bg-white">
             <CardContent className="p-2 text-center">
-              <p className="text-[9px] font-bold uppercase tracking-tight text-[#757778]">下载总量</p>
-              <p className="mt-0.5 truncate text-[11px] font-black">{game.download_count_show || '0'}</p>
+              <p className="text-[9px] font-bold uppercase tracking-tight text-[#757778]">
+                {isWebGame ? '开发者' : '下载总量'}
+              </p>
+              <p className="mt-0.5 truncate text-[11px] font-black">
+                {isWebGame ? game.developer || '未提供' : game.download_count_show || '0'}
+              </p>
             </CardContent>
           </Card>
           <Card className="border-[#abadae]/10 bg-white">
             <CardContent className="p-2 text-center">
-              <p className="text-[9px] font-bold uppercase tracking-tight text-[#757778]">操作系统</p>
-              <p className="mt-0.5 truncate text-[11px] font-black">安卓</p>
+              <p className="text-[9px] font-bold uppercase tracking-tight text-[#757778]">
+                {isWebGame ? '游玩方式' : '操作系统'}
+              </p>
+              <p className="mt-0.5 truncate text-[11px] font-black">
+                {isWebGame ? 'AC 盒子' : '安卓'}
+              </p>
             </CardContent>
           </Card>
         </section>
@@ -1828,7 +1899,7 @@ export default function GameDetailView({
 
         {renderTagSection(true)}
 
-        <GameFaqSection items={faqItems} mobile intro={renderFaqIntro(true)} />
+        <GameFaqSection items={faqItems} mobile intro={isWebGame ? undefined : renderFaqIntro(true)} />
 
         <section className="mt-10">
           <div className="mb-4 flex items-center justify-between">
@@ -1942,7 +2013,7 @@ export default function GameDetailView({
         {renderRecommendationSection(true)}
 
         <section className="mt-10">
-          <h2 className="mb-4 text-xl font-black">资源与支持</h2>
+          <h2 className="mb-4 text-xl font-black">{isWebGame ? '支持与服务' : '资源与支持'}</h2>
           <div className="space-y-2">
             {supportItems.length > 0 ? (
               supportItems.slice(0, 4).map((item) => {
@@ -1999,7 +2070,7 @@ export default function GameDetailView({
           >
             <Heart className={cn('h-5 w-5', isFavorite && 'fill-current')} />
           </button>
-          {isPreregGame && (
+          {showPreregReminder && (
             <Button
               type="button"
               data-acbox-action="game_detail_reminder_toggle"
@@ -2014,17 +2085,7 @@ export default function GameDetailView({
               {isReminderEnabled ? '已提醒' : '上线提醒'}
             </Button>
           )}
-          <GameDownloadDialog
-            appId={game._id}
-            pkg={game.pkg}
-            resources={resources}
-            downloadNotices={downloadNotices}
-            triggerClassName={cn(
-              'stitch-primary-btn h-12 w-full rounded-full border-none text-sm font-bold text-white',
-              isPreregGame && 'flex-1',
-            )}
-            triggerLabel="立即下载"
-          />
+          {renderPrimaryAction(true)}
         </div>
       </div>
 
@@ -2162,6 +2223,16 @@ export default function GameDetailView({
             document.body,
           )
         : null}
+      <AppDownloadGuideDialog
+        open={appGuideOpen}
+        onOpenChange={setAppGuideOpen}
+        title="请在 AC 盒子中游玩"
+        mobileDescription={`${gameName} 为页游，请先安装或打开 AC 盒子，在 App 内开始游玩。`}
+        desktopDescription={`请使用手机扫码下载 AC 盒子，在 App 内搜索 ${gameName} 并开始游玩。`}
+        mobileFeatureText="AC 盒子会在 App 内打开页游，并应用现有 WebView 加速策略。"
+        desktopQrCaption="使用手机扫码下载 AC 盒子，安装后在 App 内开始游玩。"
+        primaryActionLabel="前往下载 AC 盒子"
+      />
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </div>
   );

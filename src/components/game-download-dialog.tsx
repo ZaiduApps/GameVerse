@@ -31,7 +31,7 @@ import AppDownloadGuideDialog from '@/components/app-download-guide-dialog';
 interface GameDownloadDialogProps {
   resources: ApiDownloadResource[];
   appId?: string;
-  pkg?: string;
+  pkg?: string | null;
   downloadNotices?: CardConfigItem[];
   triggerClassName?: string;
   triggerLabel?: string;
