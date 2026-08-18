@@ -6283,6 +6283,244 @@ export interface paths {
         patch: operations["WebGamesAdminController_updateSort"];
         trace?: never;
     };
+    "/internal/resource-worker/v1/workers/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 注册或刷新资源 Worker */
+        post: operations["ResourceWorkerGatewayController_register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/resource-worker/v1/workers/heartbeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 更新资源 Worker 心跳 */
+        post: operations["ResourceWorkerGatewayController_heartbeat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/resource-worker/v1/tasks/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 原子领取远程资源任务 */
+        post: operations["ResourceWorkerGatewayController_claim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/resource-worker/v1/tasks/{taskId}/heartbeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 续租并更新任务进度 */
+        post: operations["ResourceWorkerGatewayController_heartbeatTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/resource-worker/v1/tasks/{taskId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 提交幂等任务事件 */
+        post: operations["ResourceWorkerGatewayController_events"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/resource-worker/v1/tasks/{taskId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 提交任务成功结果并由接口写入资源 */
+        post: operations["ResourceWorkerGatewayController_complete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/resource-worker/v1/tasks/{taskId}/fail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 提交任务失败并进入服务端重试状态机 */
+        post: operations["ResourceWorkerGatewayController_fail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/resource-worker/v1/tasks/{taskId}/abandon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Worker 主动放弃任务并释放租约 */
+        post: operations["ResourceWorkerGatewayController_abandon"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/resource-worker/v1/detection/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 原子领取 GP 检测快照项 */
+        post: operations["ResourceWorkerGatewayController_claimDetection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/resource-worker/v1/detection/{itemId}/heartbeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 续租 GP 检测快照项 */
+        post: operations["ResourceWorkerGatewayController_heartbeatDetection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/resource-worker/v1/detection/{itemId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 提交 GP 检测结果 */
+        post: operations["ResourceWorkerGatewayController_completeDetection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/resource-worker/v1/detection/{itemId}/fail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 提交 GP 检测失败 */
+        post: operations["ResourceWorkerGatewayController_failDetection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/remote-detection-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 创建固定快照的远程 GP 检测批次 */
+        post: operations["ResourceWorkerAdminController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/remote-detection-runs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 查询远程 GP 检测批次进度 */
+        get: operations["ResourceWorkerAdminController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7721,6 +7959,18 @@ export interface components {
         WebGameImportDto: Record<string, never>;
         WebGameConfigDto: Record<string, never>;
         WebGameSortDto: Record<string, never>;
+        RegisterResourceWorkerDto: Record<string, never>;
+        ResourceWorkerHeartbeatDto: Record<string, never>;
+        ClaimResourceTasksDto: Record<string, never>;
+        HeartbeatResourceTaskDto: Record<string, never>;
+        ResourceTaskEventDto: Record<string, never>;
+        CompleteResourceTaskDto: Record<string, never>;
+        FailResourceTaskDto: Record<string, never>;
+        AbandonResourceTaskDto: Record<string, never>;
+        ClaimDetectionItemsDto: Record<string, never>;
+        CompleteDetectionItemDto: Record<string, never>;
+        FailDetectionItemDto: Record<string, never>;
+        CreateDetectionRunDto: Record<string, never>;
     };
     responses: never;
     parameters: never;
@@ -21645,6 +21895,350 @@ export interface operations {
                 "application/json": components["schemas"]["WebGameSortDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerGatewayController_register: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
+                "X-API-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterResourceWorkerDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerGatewayController_heartbeat: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
+                "X-API-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResourceWorkerHeartbeatDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerGatewayController_claim: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
+                "X-API-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimResourceTasksDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerGatewayController_heartbeatTask: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
+                "X-API-Key": string;
+            };
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HeartbeatResourceTaskDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerGatewayController_events: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
+                "X-API-Key": string;
+            };
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResourceTaskEventDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerGatewayController_complete: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
+                "X-API-Key": string;
+            };
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteResourceTaskDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerGatewayController_fail: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
+                "X-API-Key": string;
+            };
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FailResourceTaskDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerGatewayController_abandon: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
+                "X-API-Key": string;
+            };
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AbandonResourceTaskDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerGatewayController_claimDetection: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
+                "X-API-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimDetectionItemsDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerGatewayController_heartbeatDetection: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
+                "X-API-Key": string;
+            };
+            path: {
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HeartbeatResourceTaskDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerGatewayController_completeDetection: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
+                "X-API-Key": string;
+            };
+            path: {
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteDetectionItemDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerGatewayController_failDetection: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
+                "X-API-Key": string;
+            };
+            path: {
+                itemId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FailDetectionItemDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerAdminController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDetectionRunDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerAdminController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
