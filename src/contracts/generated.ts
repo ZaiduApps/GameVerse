@@ -1,5 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
+ * @contract-sha256 6fc78e2d9cb8cc057ed4cd082cc7d1a83704935e95b8d1eb902348acd3b6e34a
  */
 
 export interface paths {
@@ -6676,11 +6677,7 @@ export interface components {
              * @example content_user
              * @enum {string}
              */
-            key_type?:
-                | "content_user"
-                | "admin_agent"
-                | "integration"
-                | "legacy";
+            key_type?: "content_user" | "admin_agent" | "integration" | "legacy";
             /**
              * @description 能力列表，默认由 key_type 决定
              * @example [
@@ -7205,33 +7202,7 @@ export interface components {
              * @example link_click
              * @enum {string}
              */
-            event_name?:
-                | "client_action"
-                | "screen_view"
-                | "search_submit"
-                | "link_click"
-                | "webview_action"
-                | "route_decision"
-                | "accel_hit"
-                | "external_open"
-                | "fail_reason"
-                | "game_detail_view"
-                | "download_click"
-                | "download_url_issued"
-                | "splash_ad_impression"
-                | "splash_ad_click"
-                | "splash_ad_skip"
-                | "download_task_pause"
-                | "download_task_resume"
-                | "download_task_retry"
-                | "download_task_delete"
-                | "download_file_open"
-                | "download_file_missing"
-                | "install_click"
-                | "install_submitted"
-                | "install_success"
-                | "install_failed"
-                | "install_cancelled";
+            event_name?: "client_action" | "screen_view" | "search_submit" | "link_click" | "webview_action" | "route_decision" | "accel_hit" | "external_open" | "fail_reason" | "game_detail_view" | "download_click" | "download_url_issued" | "splash_ad_impression" | "splash_ad_click" | "splash_ad_skip" | "download_task_pause" | "download_task_resume" | "download_task_retry" | "download_task_delete" | "download_file_open" | "download_file_missing" | "install_click" | "install_submitted" | "install_success" | "install_failed" | "install_cancelled";
             /**
              * @description 客户端生成的幂等事件 ID
              * @example evt-m3abc-xyz
@@ -7602,18 +7573,7 @@ export interface components {
              * @example admin.content.update
              * @enum {string}
              */
-            task_key?:
-                | "system.daily-log"
-                | "tracking.daily-rollup"
-                | "tracking.daily-rollup-yesterday"
-                | "admin.post-gp"
-                | "admin.content.update"
-                | "admin.update.all-gp"
-                | "admin.update.one-gp"
-                | "admin.get-gp"
-                | "admin.get-qoo"
-                | "admin.resource.audit"
-                | "system.task-run-log-retention";
+            task_key?: "system.daily-log" | "tracking.daily-rollup" | "tracking.daily-rollup-yesterday" | "admin.post-gp" | "admin.content.update" | "admin.update.all-gp" | "admin.update.one-gp" | "admin.get-gp" | "admin.get-qoo" | "admin.resource.audit" | "system.task-run-log-retention";
             /** @description 任务名称 */
             name?: string;
             /** @description 任务说明 */
@@ -7701,13 +7661,7 @@ export interface components {
              * @example combined
              * @enum {string}
              */
-            source:
-                | "combined"
-                | "error"
-                | "tracking"
-                | "import"
-                | "task_scheduler"
-                | "upload";
+            source: "combined" | "error" | "tracking" | "import" | "task_scheduler" | "upload";
             /** @example 2026-03-22T10:30:08.348Z */
             timestamp: string;
             /** @example warn */
@@ -9111,11 +9065,7 @@ export interface operations {
                 /** @description 每页数量 */
                 pageSize?: string;
                 /** @description 密钥类型 */
-                key_type?:
-                    | "content_user"
-                    | "admin_agent"
-                    | "integration"
-                    | "legacy";
+                key_type?: "content_user" | "admin_agent" | "integration" | "legacy";
                 /** @description 风险等级 */
                 risk_level?: "low" | "medium" | "high";
             };
@@ -20672,14 +20622,7 @@ export interface operations {
                 /** @description Page size */
                 pageSize?: number;
                 /** @description all | combined | error | tracking | import | task_scheduler | upload */
-                source?:
-                    | "all"
-                    | "combined"
-                    | "error"
-                    | "tracking"
-                    | "import"
-                    | "task_scheduler"
-                    | "upload";
+                source?: "all" | "combined" | "error" | "tracking" | "import" | "task_scheduler" | "upload";
                 /** @description error | warn | info | debug | verbose */
                 level?: "error" | "warn" | "info" | "debug" | "verbose";
                 /** @description Log context */
@@ -20789,14 +20732,7 @@ export interface operations {
                 /** @description Page size */
                 pageSize?: number;
                 /** @description all | combined | error | tracking | import | task_scheduler | upload */
-                source?:
-                    | "all"
-                    | "combined"
-                    | "error"
-                    | "tracking"
-                    | "import"
-                    | "task_scheduler"
-                    | "upload";
+                source?: "all" | "combined" | "error" | "tracking" | "import" | "task_scheduler" | "upload";
                 /** @description error | warn | info | debug | verbose */
                 level?: "error" | "warn" | "info" | "debug" | "verbose";
                 /** @description Log context */
