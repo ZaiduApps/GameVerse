@@ -10,6 +10,8 @@
     "start": "node scripts/next-runner.mjs start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "contract:check": "node scripts/check-api-contract.mjs",
+    "contract:sync": "node scripts/sync-api-contract.mjs",
     "test:markdown": "node --test tests/markdown-render.test.cjs",
     "seo:audit": "node scripts/seo-daily-audit.mjs"
   },
