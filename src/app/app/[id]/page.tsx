@@ -23,6 +23,7 @@ const SEO_SNAPSHOT_VERSION = '2';
 const MAX_TITLE_LENGTH = 68;
 const MAX_DESCRIPTION_LENGTH = 160;
 const MAX_SERVER_RECOMMENDED_GAMES = 5;
+const RECOMMENDED_GAMES_TIMEOUT_MS = 2500;
 const STATIC_PARAMS_PAGE_SIZE = 500;
 const STATIC_PARAMS_MAX_PAGES = 200;
 const STRICT_STATIC_BUILD =
@@ -383,7 +384,8 @@ const getRecommendedGames = cache(async (
     const res = await trackedApiFetch(`/game/recommendedApp?param=${encodeURIComponent(param)}`, {
       cache: 'force-cache',
       next: { revalidate: DETAIL_REVALIDATE_SECONDS },
-      timeoutMs: 10000,
+      // 推荐内容不是详情页 SEO 的必要数据，构建时快速失败可避免单个上游拖住整批静态页面。
+      timeoutMs: RECOMMENDED_GAMES_TIMEOUT_MS,
     });
     if (!res.ok) return [];
     return normalizeRecommendedGamesPayload(await res.json(), currentGame);
