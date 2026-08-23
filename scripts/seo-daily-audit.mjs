@@ -1,8 +1,45 @@
 import { writeFile } from 'node:fs/promises';
+import { closeSync, openSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const siteUrl = (process.env.SITE_URL || 'https://apks.cc').replace(/\/$/, '');
 const apiUrl = (process.env.API_BASE_URL || 'https://api.hk.apks.cc').replace(/\/$/, '');
 const output = process.env.SEO_AUDIT_OUTPUT || `seo-audit-${new Date().toISOString().slice(0, 10)}.json`;
+const runId = process.env.SEO_RUN_ID || new Date().toISOString().replace(/[:.]/g, '-');
+const lockPath = resolve(process.env.SEO_AUDIT_LOCK || '.seo-audit.lock');
+let lockFd;
+
+try {
+  lockFd = openSync(lockPath, 'wx');
+  writeFileSync(lockFd, `${JSON.stringify({ runId, startedAt: new Date().toISOString(), pid: process.pid })}\n`, 'utf8');
+} catch {
+  let activeRun = '';
+  try {
+    activeRun = readFileSync(lockPath, 'utf8').trim();
+  } catch {
+    activeRun = '锁文件不可读';
+  }
+  throw new Error(`已有 SEO 审计运行，拒绝并发执行: ${activeRun}`);
+}
+
+const releaseLock = () => {
+  if (lockFd === undefined) return;
+  try {
+    closeSync(lockFd);
+  } finally {
+    lockFd = undefined;
+    try {
+      unlinkSync(lockPath);
+    } catch {
+      // 进程退出时锁可能已由运维清理。
+    }
+  }
+};
+
+process.once('exit', releaseLock);
+process.once('SIGINT', () => { releaseLock(); process.exit(130); });
+process.once('SIGTERM', () => { releaseLock(); process.exit(143); });
+
 const userAgents = {
   browser: 'Mozilla/5.0 GameVerseSeoAudit/1.0',
   googlebot: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
@@ -60,8 +97,10 @@ for (const url of urls) {
 }
 
 const report = {
+  runId,
   generatedAt: new Date().toISOString(),
   evidenceLevel: 'observed',
+  lockPath,
   inventory: {
     total: auditTotal,
     indexable: auditRows.filter((item) => item.quality?.indexable === true).length,
