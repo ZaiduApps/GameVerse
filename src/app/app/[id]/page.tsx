@@ -27,7 +27,8 @@ const STATIC_PARAMS_PAGE_SIZE = 500;
 const STATIC_PARAMS_MAX_PAGES = 200;
 const STRICT_STATIC_BUILD =
   process.env.NODE_ENV === 'production' || process.env.GAMEVERSE_REQUIRE_SEO_SNAPSHOT === '1';
-export const dynamicParams = true;
+// 详情页只允许静态参数清单中的规范包名，避免未知参数渲染成 200 软 404。
+export const dynamicParams = false;
 export const revalidate = 900;
 
 type StaticGameItem = {
