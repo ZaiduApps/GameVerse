@@ -387,6 +387,9 @@ const getRecommendedGames = cache(async (
   const param = normalizeText(currentGame.pkg || currentGame._id);
   if (!param) return [];
 
+  // 推荐内容不参与详情页 SEO；静态构建阶段跳过外部推荐请求，避免 4853 个页面被非关键超时拖慢。
+  if (process.env.NEXT_PHASE === 'phase-production-build') return [];
+
   try {
     const res = await trackedApiFetch(`/game/recommendedApp?param=${encodeURIComponent(param)}`, {
       cache: 'force-cache',
