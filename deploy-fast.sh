@@ -35,7 +35,16 @@ echo "[deploy-fast] verify pm2 process"
 pm2 show game-ve >/dev/null
 
 echo "[deploy-fast] verify listening port 3002"
-if ! ss -lntp | grep -q ':3002'; then
+# PM2 重载后 Next 进程需要短暂时间绑定端口，有限重试避免把启动竞态误报为部署失败。
+port_ready=false
+for attempt in $(seq 1 30); do
+  if ss -lntp | grep -q ':3002'; then
+    port_ready=true
+    break
+  fi
+  sleep 1
+done
+if [ "${port_ready}" != "true" ]; then
   echo "[deploy-fast] ERROR: port 3002 is not listening"
   exit 1
 fi
