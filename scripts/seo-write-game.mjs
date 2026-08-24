@@ -84,6 +84,21 @@ function pickSeo(payload) {
   return game?.seo && typeof game.seo === 'object' ? game.seo : {};
 }
 
+function pickBusinessSnapshot(payload) {
+  const game = pickGame(payload);
+  const fields = [
+    'pkg', 'packageName', 'version', 'developer', 'description', 'summary',
+    'icon', 'header_image', 'video_image', 'resource', 'resources',
+    'category', 'category_name', 'type', 'status',
+  ];
+  return Object.fromEntries(fields.filter((key) => game?.[key] !== undefined).map((key) => [key, game[key]]));
+}
+
+function changedKeys(before, after) {
+  return [...new Set([...Object.keys(before), ...Object.keys(after)])]
+    .filter((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]));
+}
+
 function pickToken(payload) {
   const data = unwrap(payload);
   return String(data?.access_token || data?.accessToken || data?.token || '').trim();
@@ -186,14 +201,26 @@ async function main() {
   if (info.status !== 200 || !objectId) fail(`游戏详情读取失败或缺少 objectId: HTTP ${info.status}`);
   const infoPkg = pickPackage(info.body);
   if (infoPkg && infoPkg !== pkg) fail(`objectId 对应包名不一致: ${infoPkg}`);
-  record.beforeInfo = { objectId, packageName: infoPkg || pkg, seo: pickSeo(info.body) };
+  record.beforeInfo = {
+    objectId,
+    packageName: infoPkg || pkg,
+    seo: pickSeo(info.body),
+    business: pickBusinessSnapshot(info.body),
+  };
   const update = await curlJson('PUT', `${apiUrl}/game/${encodeURIComponent(objectId)}`, { token, body: { seo } });
   record.response = { status: update.status, body: update.body };
   const afterPage = await curlJson('GET', `${apiUrl}/seo/game-page?pkg=${encodeURIComponent(pkg)}&qualityVersion=2`);
   record.after = afterPage.body;
   const afterSeo = pickSeo(afterPage.body);
   record.changedFields = Object.keys(seo).filter((key) => JSON.stringify(afterSeo[key]) !== JSON.stringify(seo[key]));
-  record.status = update.status >= 200 && update.status < 300 && afterPage.status >= 200 && !record.changedFields.length
+  const afterInfo = await curlJson('GET', `${apiUrl}/game/info?pkg=${encodeURIComponent(pkg)}`, { token });
+  record.afterInfo = {
+    status: afterInfo.status,
+    business: pickBusinessSnapshot(afterInfo.body),
+  };
+  record.businessChangedFields = changedKeys(record.beforeInfo.business, record.afterInfo.business);
+  record.status = update.status >= 200 && update.status < 300 && afterPage.status >= 200
+    && afterInfo.status === 200 && !record.changedFields.length && !record.businessChangedFields.length
     ? 'processed'
     : 'implemented but not observable';
   await writeFile(outputPath, `${JSON.stringify(record, null, 2)}\n`, 'utf8');
