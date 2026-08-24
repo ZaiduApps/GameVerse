@@ -7,15 +7,27 @@ import { execFile } from 'node:child_process';
 
 const siteUrl = (process.env.SITE_URL || 'https://apks.cc').replace(/\/$/, '');
 const apiUrl = (process.env.API_BASE_URL || 'https://api.hk.apks.cc').replace(/\/$/, '');
-const output = process.env.SEO_AUDIT_OUTPUT || `seo-audit-${new Date().toISOString().slice(0, 10)}.json`;
-const runId = process.env.SEO_RUN_ID || new Date().toISOString().replace(/[:.]/g, '-');
+const auditTimezone = process.env.SEO_TIMEZONE || 'Asia/Shanghai';
+function localDateStamp(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: auditTimezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+const dateStamp = localDateStamp();
+const output = process.env.SEO_AUDIT_OUTPUT || `seo-audit-${dateStamp}.json`;
+const runId = process.env.SEO_RUN_ID || `${dateStamp}-${new Date().toISOString().replace(/[:.]/g, '-')}`;
 const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || 'socks5h://127.0.0.1:7897';
 const proxy = new URL(proxyUrl);
 if (proxy.protocol !== 'socks5:' && proxy.protocol !== 'socks5h:') {
   throw new Error(`SEO 审计只支持 SOCKS5 VPN 代理: ${proxyUrl}`);
 }
 const execFileAsync = promisify(execFile);
-const lockPath = resolve(process.env.SEO_AUDIT_LOCK || '.seo-audit.lock');
+const lockPath = resolve(process.env.SEO_AUDIT_LOCK || `.seo-audit-${dateStamp}.lock`);
 let lockFd;
 
 try {
@@ -142,6 +154,7 @@ for (const url of urls) {
 const report = {
   runId,
   generatedAt: new Date().toISOString(),
+  timezone: auditTimezone,
   evidenceLevel: 'observed',
   proxy: proxyUrl.replace(/:\/\/.*@/, '://<redacted>@'),
   lockPath,
