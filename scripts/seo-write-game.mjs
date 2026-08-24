@@ -207,6 +207,18 @@ async function main() {
     seo: pickSeo(info.body),
     business: pickBusinessSnapshot(info.body),
   };
+  const existingSeo = record.beforeInfo.seo;
+  const requestedChanges = Object.keys(seo).filter(
+    (key) => JSON.stringify(existingSeo[key]) !== JSON.stringify(seo[key]),
+  );
+  if (!requestedChanges.length) {
+    record.status = 'unchanged';
+    record.skippedReason = 'requested SEO equals current SEO; PUT and IndexNow skipped';
+    await writeFile(outputPath, `${JSON.stringify(record, null, 2)}\n`, 'utf8');
+    console.log(`SEO 未变化，已跳过写入并记录 ${outputPath}`);
+    return;
+  }
+  record.requested.changedFields = requestedChanges;
   const update = await curlJson('PUT', `${apiUrl}/game/${encodeURIComponent(objectId)}`, { token, body: { seo } });
   record.response = { status: update.status, body: update.body };
   const afterPage = await curlJson('GET', `${apiUrl}/seo/game-page?pkg=${encodeURIComponent(pkg)}&qualityVersion=2`);
