@@ -13,7 +13,8 @@
     "contract:check": "node scripts/check-api-contract.mjs",
     "contract:sync": "node scripts/sync-api-contract.mjs",
     "test:markdown": "node --test tests/markdown-render.test.cjs",
-    "seo:audit": "node scripts/seo-daily-audit.mjs"
+    "seo:audit": "node scripts/seo-daily-audit.mjs",
+    "seo:write-game": "node scripts/seo-write-game.mjs"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.8.0",
