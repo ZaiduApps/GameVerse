@@ -16,6 +16,7 @@ import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityPostsByGame } from '@/lib/community-api';
 import { faqMarkdownToPlainText, normalizeGameFaqItems } from '@/lib/game-faq';
 import { isWebGameType } from '@/lib/game-resource-type';
+import { gamePageCacheTag } from '@/lib/game-page-cache';
 import type { ApiRecommendedGame, CommunityPost, GameDetailData, GamePageSnapshot, SiteConfig } from '@/types';
 
 const DETAIL_REVALIDATE_SECONDS = 900;
@@ -291,7 +292,10 @@ const getGamePageSnapshot = cache(async (id: string): Promise<GamePageSnapshot |
       `/seo/game-page?pkg=${encodeURIComponent(id)}&qualityVersion=${SEO_SNAPSHOT_VERSION}`,
       {
       cache: 'force-cache',
-      next: { revalidate: DETAIL_REVALIDATE_SECONDS },
+      next: {
+        revalidate: DETAIL_REVALIDATE_SECONDS,
+        tags: [gamePageCacheTag(id)],
+      },
       timeoutMs: 20000,
       logKey: 'game-page-snapshot',
       },
@@ -345,7 +349,10 @@ const getGameDetails = cache(async (id: string): Promise<GameDetailData | null> 
 
     const res = await trackedApiFetch(`/game/details?${query.toString()}`, {
       cache: 'force-cache',
-      next: { revalidate: DETAIL_REVALIDATE_SECONDS },
+      next: {
+        revalidate: DETAIL_REVALIDATE_SECONDS,
+        tags: [gamePageCacheTag(id)],
+      },
       timeoutMs: 12000,
     });
     if (!res.ok) return null;
@@ -383,7 +390,10 @@ const getRecommendedGames = cache(async (
   try {
     const res = await trackedApiFetch(`/game/recommendedApp?param=${encodeURIComponent(param)}`, {
       cache: 'force-cache',
-      next: { revalidate: DETAIL_REVALIDATE_SECONDS },
+      next: {
+        revalidate: DETAIL_REVALIDATE_SECONDS,
+        tags: [gamePageCacheTag(param)],
+      },
       // 推荐内容不是详情页 SEO 的必要数据，构建时快速失败可避免单个上游拖住整批静态页面。
       timeoutMs: RECOMMENDED_GAMES_TIMEOUT_MS,
     });

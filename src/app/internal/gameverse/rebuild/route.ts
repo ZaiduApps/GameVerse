@@ -1,4 +1,4 @@
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import {
@@ -6,6 +6,7 @@ import {
   parseGameVerseRebuildPayload,
   verifyGameVerseSignature,
 } from '@/lib/gameverse-revalidation';
+import { gamePageCacheTag } from '@/lib/game-page-cache';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -38,6 +39,7 @@ export async function POST(request: NextRequest) {
   for (const pkg of payload.packages) {
     // 只失效规范包名详情页，避免 webhook 被利用来清空任意 Next 路由缓存。
     revalidatePath(`/app/${pkg}`, 'page');
+    revalidateTag(gamePageCacheTag(pkg));
   }
 
   return NextResponse.json({
