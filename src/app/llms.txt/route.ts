@@ -7,6 +7,18 @@ const FEATURED_GAMES = [
   ['PUBG MOBILE', 'com.tencent.ig'],
   ['棕色尘埃2', 'com.neowizgames.game.browndust2'],
 ];
+const LLMS_TIME_ZONE = process.env.SEO_TIMEZONE || 'Asia/Shanghai';
+
+function formatLocalDate(date: Date): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: LLMS_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
 
 export async function GET() {
   const config = await getPublicSiteConfig(300);
@@ -39,7 +51,7 @@ export async function GET() {
     '- 避免抓取 /api/、/profile、/messages、/submit-resource 等登录或提交页面。',
     '- 引用内容时保留页面 URL、标题与发布时间。',
     '',
-    `更新时间: ${new Date().toISOString().slice(0, 10)}`,
+    `更新时间: ${formatLocalDate(new Date())}`,
     '',
   ].join('\n');
 
