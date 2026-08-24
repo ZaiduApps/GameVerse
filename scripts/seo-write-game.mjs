@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 const apiUrl = (process.env.API_BASE_URL || 'https://api.hk.apks.cc').replace(/\/$/, '');
+const siteUrl = (process.env.SITE_URL || 'https://apks.cc').replace(/\/$/, '');
 const runId = process.env.SEO_RUN_ID || `seo-write-${new Date().toISOString().replace(/[:.]/g, '-')}`;
 const outputPath = resolve(process.env.SEO_WRITE_OUTPUT || `seo-write-${runId}.json`);
 const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || 'socks5h://127.0.0.1:7897';
@@ -143,10 +144,35 @@ async function curlJson(method, url, { token, body } = {}) {
     const raw = await readFile(bodyPath, 'utf8');
     let parsed;
     try { parsed = JSON.parse(raw); } catch { parsed = { raw: raw.slice(0, 2000) }; }
-    return { status: Number(stdout.trim()), body: parsed };
+    return { status: Number(stdout.trim()), body: parsed, raw };
   } finally {
     await rm(temp, { recursive: true, force: true });
   }
+}
+
+function decodeHtml(value) {
+  return String(value || '')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .trim();
+}
+
+function readHtmlMeta(html, name) {
+  const pattern = new RegExp(`<meta\\b[^>]*\\bname=["']${name}["'][^>]*\\bcontent=["']([^"']*)["'][^>]*>`, 'i');
+  const reversePattern = new RegExp(`<meta\\b[^>]*\\bcontent=["']([^"']*)["'][^>]*\\bname=["']${name}["'][^>]*>`, 'i');
+  return decodeHtml(html.match(pattern)?.[1] || html.match(reversePattern)?.[1] || '');
+}
+
+function readHtmlCanonical(html) {
+  return decodeHtml(html.match(/<link\b[^>]*\brel=["']canonical["'][^>]*\bhref=["']([^"']+)["'][^>]*>/i)?.[1]
+    || html.match(/<link\b[^>]*\bhref=["']([^"']+)["'][^>]*\brel=["']canonical["'][^>]*>/i)?.[1] || '');
+}
+
+function readHtmlTitle(html) {
+  return decodeHtml(html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1] || '');
 }
 
 async function main() {
@@ -225,6 +251,22 @@ async function main() {
   record.after = afterPage.body;
   const afterSeo = pickSeo(afterPage.body);
   record.changedFields = Object.keys(seo).filter((key) => JSON.stringify(afterSeo[key]) !== JSON.stringify(seo[key]));
+  const ssrResponse = await curlJson('GET', `${siteUrl}/app/${encodeURIComponent(pkg)}?seo_run=${encodeURIComponent(runId)}`);
+  const html = ssrResponse.raw || '';
+  record.ssr = {
+    status: ssrResponse.status,
+    title: readHtmlTitle(html),
+    description: readHtmlMeta(html, 'description'),
+    canonical: readHtmlCanonical(html),
+    robots: readHtmlMeta(html, 'robots'),
+  };
+  record.ssrMatches = {
+    status: ssrResponse.status === 200,
+    title: seo.title === undefined || record.ssr.title === seo.title,
+    description: seo.description === undefined || record.ssr.description === seo.description,
+    canonical: record.ssr.canonical === `${siteUrl}/app/${pkg}`,
+    robots: !record.ssr.robots || !/noindex/i.test(record.ssr.robots),
+  };
   const afterInfo = await curlJson('GET', `${apiUrl}/game/info?pkg=${encodeURIComponent(pkg)}`, { token });
   record.afterInfo = {
     status: afterInfo.status,
@@ -233,6 +275,7 @@ async function main() {
   record.businessChangedFields = changedKeys(record.beforeInfo.business, record.afterInfo.business);
   record.status = update.status >= 200 && update.status < 300 && afterPage.status >= 200
     && afterInfo.status === 200 && !record.changedFields.length && !record.businessChangedFields.length
+    && Object.values(record.ssrMatches).every(Boolean)
     ? 'processed'
     : 'implemented but not observable';
   await writeFile(outputPath, `${JSON.stringify(record, null, 2)}\n`, 'utf8');
