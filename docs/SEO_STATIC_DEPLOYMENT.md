@@ -4,8 +4,8 @@
 
 1. 发布 `AC-interface`，确认 `GET /seo/sitemap/games` 仅返回合法包名，`GET /seo/game-page?pkg=...` 可用。
 2. 在 Web 构建环境设置 `API_BASE_URL` 和 `GAMEVERSE_REQUIRE_SEO_SNAPSHOT=1`。
-3. 执行 `./deploy.sh main`。脚本会备份 `.next`、构建、校验产物、切换 `game-ve`、执行健康检查。
-4. 健康检查失败时脚本恢复上一份 `.next` 并重新加载 `game-ve`。
+3. 回到 `D:\APKSCC\AC-interface` 执行 `pwsh -NoProfile -File .\scripts\production-release.ps1` 预检；确认四端提交、产物 SHA256、服务器磁盘和 PM2 状态后，再显式加 `-Apply`。
+4. 统一入口在本地构建 `.next`（排除 `.next/cache`），上传后由服务器校验、备份、切换并等待 `3002` HTTP 健康；失败会恢复当前 GameVerse 备份。
 
 ## 自动重建
 
@@ -21,8 +21,8 @@
 
 请求头 `x-gameverse-signature` 是原始 JSON 请求体使用
 `GAMEVERSE_REBUILD_WEBHOOK_SECRET` 计算的 HMAC-SHA256 十六进制摘要。Webhook
-接收端必须执行恒定时间签名校验、限制来源、合并短时间内的重复请求，并在受控部署机执行
-`/root/home/GameVerse/deploy.sh main`。
+接收端必须执行恒定时间签名校验、限制来源、合并短时间内的重复请求。Webhook 只创建带包名和提交号的发布请求，不应直接在生产机执行 shell、`git pull` 或构建；发布仍由受控部署机执行
+`AC-interface/scripts/production-release.ps1`，并保留人工审批和回滚点。
 
 ## 必需配置
 
