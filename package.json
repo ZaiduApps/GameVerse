@@ -13,7 +13,7 @@
     "contract:check": "node scripts/check-api-contract.mjs",
     "contract:sync": "node scripts/sync-api-contract.mjs",
     "test:markdown": "node --test tests/markdown-render.test.cjs",
-    "test:seo-runner": "node --test tests/seo-write-game.test.mjs",
+    "test:seo-runner": "node --test tests/seo-write-game.test.mjs tests/seo-indexnow-boundary.test.mjs",
     "seo:audit": "node scripts/seo-daily-audit.mjs",
     "seo:write-game": "node scripts/seo-write-game.mjs"
   },
