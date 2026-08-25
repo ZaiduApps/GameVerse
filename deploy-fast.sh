@@ -4,6 +4,7 @@ set -euo pipefail
 
 APP_DIR="/root/home/GameVerse"
 BRANCH="${1:-main}"
+BUILD_DIR=".next-build"
 
 echo "[deploy-fast] app dir: ${APP_DIR}"
 echo "[deploy-fast] branch: ${BRANCH}"
@@ -13,20 +14,41 @@ cd "${APP_DIR}"
 echo "[deploy-fast] git pull origin ${BRANCH}"
 git pull origin "${BRANCH}"
 
-BACKUP_DIR="${APP_DIR}/.deploy-backups/$(date +%Y%m%d%H%M%S)"
-mkdir -p "${BACKUP_DIR}"
-if [ -d .next ]; then cp -a .next "${BACKUP_DIR}/.next"; fi
-
-echo "[deploy-fast] pnpm build"
-if ! pnpm build; then
-  echo "[deploy-fast] build failed; preserving the previous .next artifact"
-  rm -rf .next
-  if [ -d "${BACKUP_DIR}/.next" ]; then cp -a "${BACKUP_DIR}/.next" .next; fi
+echo "[deploy-fast] build into ${BUILD_DIR}"
+rm -rf "${BUILD_DIR}"
+if ! NEXT_DIST_DIR="${BUILD_DIR}" pnpm build; then
+  echo "[deploy-fast] build failed; active .next was not modified"
+  rm -rf "${BUILD_DIR}"
+  exit 1
+fi
+if [ ! -s "${BUILD_DIR}/BUILD_ID" ]; then
+  echo "[deploy-fast] ERROR: staged build has no BUILD_ID"
+  rm -rf "${BUILD_DIR}"
   exit 1
 fi
 
+BACKUP_DIR="${APP_DIR}/.deploy-backups/$(date +%Y%m%d%H%M%S)"
+mkdir -p "${BACKUP_DIR}"
+
+rollback() {
+  echo "[deploy-fast] restoring previous build"
+  pm2 stop game-ve >/dev/null 2>&1 || true
+  rm -rf .next
+  if [ -d "${BACKUP_DIR}/.next" ]; then cp -a "${BACKUP_DIR}/.next" .next; fi
+  pm2 startOrReload ecosystem.prod.config.js --only game-ve --update-env
+  pm2 save
+}
+
+echo "[deploy-fast] activate staged build"
+pm2 stop game-ve
+if [ -d .next ]; then mv .next "${BACKUP_DIR}/.next"; fi
+mv "${BUILD_DIR}" .next
+
 echo "[deploy-fast] pm2 startOrReload ecosystem.prod.config.js --only game-ve --update-env"
-pm2 startOrReload ecosystem.prod.config.js --only game-ve --update-env
+if ! pm2 startOrReload ecosystem.prod.config.js --only game-ve --update-env; then
+  rollback
+  exit 1
+fi
 
 echo "[deploy-fast] pm2 save"
 pm2 save
@@ -46,17 +68,14 @@ for attempt in $(seq 1 30); do
 done
 if [ "${port_ready}" != "true" ]; then
   echo "[deploy-fast] ERROR: port 3002 is not listening"
+  rollback
   exit 1
 fi
 
 echo "[deploy-fast] verify app health"
 if ! curl -sS -m 8 http://127.0.0.1:3002/ >/dev/null; then
-  echo "[deploy-fast] health check failed; restoring previous build"
-  rm -rf .next
-  if [ -d "${BACKUP_DIR}/.next" ]; then
-    cp -a "${BACKUP_DIR}/.next" .next
-    pm2 reload game-ve --update-env
-  fi
+  echo "[deploy-fast] health check failed"
+  rollback
   exit 1
 fi
 

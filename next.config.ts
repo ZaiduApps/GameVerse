@@ -3,6 +3,7 @@ import type { NextConfig } from 'next';
 const appEnv = (process.env.APP_ENV || process.env.NODE_ENV || 'development').toLowerCase();
 const isDevRuntime = process.env.NODE_ENV !== 'production';
 const disableWebpackCache = process.env.DISABLE_WEBPACK_CACHE === '1';
+const configuredDistDir = String(process.env.NEXT_DIST_DIR || '').trim();
 const backendBaseUrl = (
   process.env.API_BASE_URL ||
   (appEnv === 'production'
@@ -13,7 +14,7 @@ const backendBaseUrl = (
 const nextConfig: NextConfig = {
   /* config options here */
   // Separate dev and prod artifacts to avoid stale chunk manifest conflicts.
-  distDir: isDevRuntime ? '.next-dev' : '.next',
+  distDir: configuredDistDir || (isDevRuntime ? '.next-dev' : '.next'),
   typescript: {
     ignoreBuildErrors: true,
   },
