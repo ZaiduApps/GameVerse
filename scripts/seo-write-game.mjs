@@ -1,6 +1,7 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -34,9 +35,10 @@ function fail(message) {
   throw new Error(message);
 }
 
-function normalizeSeo(value) {
+export function normalizeSeo(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) fail('SEO 文件必须是对象或包含 seo 对象的对象');
-  const source = value.seo && typeof value.seo === 'object' && !Array.isArray(value.seo) ? value.seo : value;
+  const candidates = [value.seo, value.candidateSeo, value.requested?.seo];
+  const source = candidates.find((candidate) => candidate && typeof candidate === 'object' && !Array.isArray(candidate)) || value;
   const allowed = ['title', 'description', 'keywords', 'highlights'];
   const unknown = Object.keys(source).filter((key) => !allowed.includes(key));
   if (unknown.length) fail(`SEO 文件包含不允许的字段: ${unknown.join(', ')}`);
@@ -98,6 +100,42 @@ function pickBusinessSnapshot(payload) {
 function changedKeys(before, after) {
   return [...new Set([...Object.keys(before), ...Object.keys(after)])]
     .filter((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]));
+}
+
+function isSuccessfulHttpStatus(status) {
+  return Number.isInteger(status) && status >= 200 && status < 300;
+}
+
+export function evaluateWriteOutcome({
+  updateStatus,
+  afterPageStatus,
+  afterInfoStatus,
+  seoMismatchFields,
+  businessChangedFields,
+  ssrMatches,
+}) {
+  const implemented = isSuccessfulHttpStatus(updateStatus)
+    && isSuccessfulHttpStatus(afterPageStatus)
+    && isSuccessfulHttpStatus(afterInfoStatus)
+    && seoMismatchFields.length === 0
+    && businessChangedFields.length === 0;
+  const staticSsrObservable = implemented && Object.values(ssrMatches).every(Boolean);
+
+  return {
+    status: !implemented
+      ? 'failed'
+      : staticSsrObservable
+        ? 'implemented'
+        : 'implemented but not observable',
+    lifecycle: {
+      implemented,
+      interfaceReadback: implemented,
+      staticSsrObservable,
+      browserDom: 'missing evidence',
+      searchPlatform: 'not submitted',
+      outcome: 'missing evidence',
+    },
+  };
 }
 
 function pickToken(payload) {
@@ -273,17 +311,27 @@ async function main() {
     business: pickBusinessSnapshot(afterInfo.body),
   };
   record.businessChangedFields = changedKeys(record.beforeInfo.business, record.afterInfo.business);
-  record.status = update.status >= 200 && update.status < 300 && afterPage.status >= 200
-    && afterInfo.status === 200 && !record.changedFields.length && !record.businessChangedFields.length
-    && Object.values(record.ssrMatches).every(Boolean)
-    ? 'processed'
-    : 'implemented but not observable';
+  const outcome = evaluateWriteOutcome({
+    updateStatus: update.status,
+    afterPageStatus: afterPage.status,
+    afterInfoStatus: afterInfo.status,
+    seoMismatchFields: record.changedFields,
+    businessChangedFields: record.businessChangedFields,
+    ssrMatches: record.ssrMatches,
+  });
+  record.status = outcome.status;
+  record.lifecycle = outcome.lifecycle;
   await writeFile(outputPath, `${JSON.stringify(record, null, 2)}\n`, 'utf8');
   console.log(`SEO 写入记录已写入 ${outputPath}`);
-  if (record.status !== 'processed') process.exitCode = 2;
+  if (record.status === 'failed' || record.status === 'implemented but not observable') process.exitCode = 2;
 }
 
-main().catch((error) => {
-  console.error(`[seo-write-game] ${error.message}`);
-  process.exitCode = 1;
-});
+const isDirectExecution = process.argv[1]
+  && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+
+if (isDirectExecution) {
+  main().catch((error) => {
+    console.error(`[seo-write-game] ${error.message}`);
+    process.exitCode = 1;
+  });
+}
