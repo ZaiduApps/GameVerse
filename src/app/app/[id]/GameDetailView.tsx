@@ -580,11 +580,8 @@ export default function GameDetailView({
         setGameData(initialGameData);
         setRecommendedGames((initialRecommendedGames || []).slice(0, MAX_RECOMMENDED_GAMES));
         setIsLoading(false);
-        if (
-          initialDataMode === 'full' &&
-          Array.isArray(initialRecommendedGames) &&
-          initialRecommendedGames.length > 0
-        ) {
+        // 完整快照中的空推荐也是权威结果，不应触发详情与推荐接口补请求。
+        if (initialDataMode === 'full' && Array.isArray(initialRecommendedGames)) {
           return;
         }
       }

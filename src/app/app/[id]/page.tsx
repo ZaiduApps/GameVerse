@@ -29,8 +29,8 @@ const STATIC_PARAMS_PAGE_SIZE = 500;
 const STATIC_PARAMS_MAX_PAGES = 200;
 const STRICT_STATIC_BUILD =
   process.env.NODE_ENV === 'production' || process.env.GAMEVERSE_REQUIRE_SEO_SNAPSHOT === '1';
-// 详情页只允许静态参数清单中的规范包名，避免未知参数渲染成 200 软 404。
-export const dynamicParams = false;
+// 构建后新入库的规范包名允许按需生成；不存在的应用仍由数据查询返回真实 404。
+export const dynamicParams = true;
 export const revalidate = 900;
 
 type StaticGameItem = {
@@ -43,6 +43,10 @@ type StaticGameItem = {
 
 function isCanonicalPackageName(input: string): boolean {
   return /^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+$/.test(input);
+}
+
+function isValidGameIdentifier(input: string): boolean {
+  return isCanonicalPackageName(input) || /^[a-fA-F0-9]{24}$/.test(input);
 }
 
 export async function generateStaticParams(): Promise<Array<{ id: string }>> {
@@ -422,12 +426,13 @@ const getPageData = cache(async (id: string): Promise<GamePageSnapshot | null> =
 
 function buildInitialGameDataForHydration(gameData: GameDetailData): GameDetailData {
   return {
+    ...gameData,
     app: {
       ...gameData.app,
       detail_images: Array.isArray(gameData.app.detail_images)
         ? gameData.app.detail_images.slice(0, 5)
         : [],
-      description: String(gameData.app.description || '').slice(0, 1200),
+      description: String(gameData.app.description || ''),
     },
     resources: Array.isArray(gameData.resources) ? gameData.resources : [],
     faq: {
@@ -442,6 +447,9 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
+  if (!isValidGameIdentifier(id)) {
+    notFound();
+  }
   const [siteConfig, gameData] = await Promise.all([getSiteConfig(), getPageData(id)]);
 
   if (!gameData) {
@@ -565,7 +573,7 @@ export default async function GameDetailPage({
 }) {
   const { id } = await params;
 
-  if (!id) {
+  if (!isValidGameIdentifier(id)) {
     notFound();
   }
 
@@ -698,7 +706,7 @@ export default async function GameDetailPage({
         initialGameData={buildInitialGameDataForHydration(initialGameData)}
         initialRecommendedGames={recommendedGames}
         initialRelatedNews={relatedNews}
-        initialDataMode="partial"
+        initialDataMode="full"
       />
     </>
   );
