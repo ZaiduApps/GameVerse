@@ -63,7 +63,9 @@ const SITEMAP_MAX_PAGES = 200;
 const NEWS_SITEMAP_MAX_PAGES = 80;
 const SITEMAP_REVALIDATE_SECONDS = 1800;
 
-export const revalidate = 1800;
+// sitemap 依赖生产 API，运行时生成，避免构建阶段失败被预渲染为空。
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 function getServerApiBaseUrl() {
   const appEnv = (process.env.APP_ENV || process.env.NODE_ENV || 'development').toLowerCase();
@@ -198,25 +200,16 @@ function toTopicEntry(item: TopicSitemapItem): MetadataRoute.Sitemap[number] | n
 async function fetchGamesFromSeoEndpoint(): Promise<MetadataRoute.Sitemap[number][]> {
   const result: MetadataRoute.Sitemap[number][] = [];
   const seen = new Set<string>();
-
-  for (let page = 1; page <= SITEMAP_MAX_PAGES; page += 1) {
-    const json = await fetchJson(`/seo/sitemap/games?page=${page}&pageSize=${SITEMAP_PAGE_SIZE}`);
-    if (!json || (json.code !== 0 && json.code !== undefined)) break;
-
-    const { list, total, pageSize } = normalizeListData<GameSitemapItem>(json);
-    const safeList = Array.isArray(list) ? list : [];
-    if (safeList.length === 0) break;
-
-    for (const item of safeList) {
-      const entry = toGameEntry(item);
-      if (!entry) continue;
-      if (seen.has(entry.url)) continue;
-      seen.add(entry.url);
-      result.push(entry);
-    }
-
-    if (total && page * (pageSize || SITEMAP_PAGE_SIZE) >= total) break;
-    if (safeList.length < SITEMAP_PAGE_SIZE) break;
+  const items = await fetchPagedJson<GameSitemapItem>(
+    (page) => `/seo/sitemap/games?page=${page}&pageSize=${SITEMAP_PAGE_SIZE}`,
+    SITEMAP_MAX_PAGES,
+  );
+  for (const item of items) {
+    const entry = toGameEntry(item);
+    if (!entry) continue;
+    if (seen.has(entry.url)) continue;
+    seen.add(entry.url);
+    result.push(entry);
   }
 
   return result;
@@ -226,47 +219,65 @@ async function fetchCommunityPostsFromFeed(): Promise<MetadataRoute.Sitemap[numb
   const result: MetadataRoute.Sitemap[number][] = [];
   const seen = new Set<string>();
 
-  for (const postType of ['news', 'post']) {
-    for (let page = 1; page <= NEWS_SITEMAP_MAX_PAGES; page += 1) {
-      const json = await fetchJson(
-        `/content/feed?page=${page}&pageSize=${SITEMAP_PAGE_SIZE}&post_type=${postType}&sort=latest&view=card`,
-      );
-      if (!json || (json.code !== 0 && json.code !== undefined)) break;
-
-      const { list, total, pageSize } = normalizeListData<ContentPostSitemapItem>(json);
-      const safeList = Array.isArray(list) ? list : [];
-      if (safeList.length === 0) break;
-
-      for (const item of safeList) {
+  const itemsByType = await Promise.all(['news', 'post'].map((postType) => fetchPagedJson<ContentPostSitemapItem>(
+    (page) => `/content/feed?page=${page}&pageSize=${SITEMAP_PAGE_SIZE}&post_type=${postType}&sort=latest&view=card`,
+    NEWS_SITEMAP_MAX_PAGES,
+  )));
+  for (const items of itemsByType) {
+      for (const item of items) {
         const entry = toCommunityPostEntry(item);
         if (!entry) continue;
         if (seen.has(entry.url)) continue;
         seen.add(entry.url);
         result.push(entry);
       }
-
-      if (total && page * (pageSize || SITEMAP_PAGE_SIZE) >= total) break;
-      if (safeList.length < SITEMAP_PAGE_SIZE) break;
-    }
   }
 
   return result;
 }
 
+type PageFetcher<T> = (page: number) => Promise<PagedList<T> | null>;
+
+// 先探测第一页，再按接口返回的 total 并发拉取其余页，避免长链式串行等待。
+async function fetchPaged<T>(fetchPage: PageFetcher<T>, maxPages: number): Promise<T[]> {
+  const first = await fetchPage(1);
+  if (!first || !Array.isArray(first.list) || first.list.length === 0) return [];
+  const pageSize = Math.max(first.pageSize || first.list.length, 1);
+  const totalPages = Math.min(maxPages, first.total && first.total > 0 ? Math.ceil(first.total / pageSize) : 1);
+  if (totalPages === 1) return first.list;
+  const rest = await Promise.all(Array.from({ length: totalPages - 1 }, (_, index) => fetchPage(index + 2)));
+  return [...first.list, ...rest.flatMap((page) => (page?.list && Array.isArray(page.list) ? page.list : []))];
+}
+
+async function fetchPagedJson<T>(pathForPage: (page: number) => string, maxPages: number): Promise<T[]> {
+  return fetchPaged(async (page) => {
+    const json = await fetchJson(pathForPage(page));
+    if (!json || (json.code !== 0 && json.code !== undefined)) return null;
+    return normalizeListData<T>(json);
+  }, maxPages);
+}
+
 async function fetchIndexableGamePackages(): Promise<Set<string> | null> {
   const result = new Set<string>();
-  for (let page = 1; page <= SITEMAP_MAX_PAGES; page += 1) {
-    const json = await fetchJson(`/seo/audit/games?page=${page}&pageSize=${SITEMAP_PAGE_SIZE}`);
-    if (!json || (json.code !== 0 && json.code !== undefined)) return null;
-    const data = json?.data || json;
-    const list = Array.isArray(data?.list) ? data.list : [];
-    for (const item of list) {
+  const first = await fetchJson(`/seo/audit/games?page=1&pageSize=${SITEMAP_PAGE_SIZE}`);
+  if (!first || (first.code !== 0 && first.code !== undefined)) return null;
+  const firstPage = normalizeListData<any>(first);
+  const pageSize = Math.max(firstPage.pageSize || firstPage.list?.length || 1, 1);
+  const totalPages = Math.min(SITEMAP_MAX_PAGES, firstPage.total ? Math.ceil(firstPage.total / pageSize) : 1);
+  const pages = totalPages > 1
+    ? await Promise.all(Array.from({ length: totalPages - 1 }, (_, index) => fetchJson(`/seo/audit/games?page=${index + 2}&pageSize=${SITEMAP_PAGE_SIZE}`)))
+    : [];
+  for (const item of firstPage.list || []) {
+    const pkg = String(item?.pkg || '').trim();
+    if (pkg && item?.quality?.indexable === true) result.add(pkg);
+  }
+  for (const json of pages) {
+    if (!json || (json.code !== 0 && json.code !== undefined)) continue;
+    const data = normalizeListData<any>(json);
+    for (const item of data.list || []) {
       const pkg = String(item?.pkg || '').trim();
       if (pkg && item?.quality?.indexable === true) result.add(pkg);
     }
-    const total = Number(data?.total || 0);
-    const pageSize = Number(data?.pageSize || SITEMAP_PAGE_SIZE);
-    if (list.length === 0 || (total > 0 && page * pageSize >= total) || list.length < pageSize) break;
   }
   return result;
 }
@@ -381,10 +392,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         return indexablePackages.has(pkg);
       })
     : allGameEntries;
-  const communityPostEntries = await fetchCommunityPostsFromFeed();
-  const albumEntries = await fetchHomeAlbumEntries();
-  const topicEntries = await fetchTopicEntries();
-  const userEntries = await fetchUserEntries();
+  const [communityPostEntries, albumEntries, topicEntries, userEntries] = await Promise.all([
+    fetchCommunityPostsFromFeed(),
+    fetchHomeAlbumEntries(),
+    fetchTopicEntries(),
+    fetchUserEntries(),
+  ]);
 
   return [
     ...staticEntries,
