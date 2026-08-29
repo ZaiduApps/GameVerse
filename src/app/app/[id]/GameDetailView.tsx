@@ -1786,7 +1786,7 @@ export default function GameDetailView({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="line-clamp-2 text-2xl font-black leading-tight text-[#0f1720] dark:text-[#f4f7fc]">{game.name}</h1>
+              <h2 className="line-clamp-2 text-2xl font-black leading-tight text-[#0f1720] dark:text-[#f4f7fc]">{game.name}</h2>
               <div className="mt-1 inline-flex items-center gap-1 text-[#b71211]">
                 <Star className="h-4 w-4 fill-current" />
                 <span className="text-base font-bold">{normalizeScore(game.star)}</span>
