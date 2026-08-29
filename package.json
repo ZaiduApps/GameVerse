@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "dev": "node scripts/next-runner.mjs dev",
+    "dev": "node scripts/set-console-title.mjs \"AC-GameVerse dev :9002\" && node scripts/next-runner.mjs dev",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build",
