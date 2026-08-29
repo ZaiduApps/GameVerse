@@ -66,11 +66,7 @@ export async function generateMetadata({
   const [config, album] = await Promise.all([getPublicSiteConfig(300), getAlbumDetail(id, revalidate)]);
 
   if (!album) {
-    return {
-      title: '专题不存在',
-      description: '当前专题页暂时无法访问。',
-      robots: { index: false, follow: false },
-    };
+    notFound();
   }
 
   const siteName = normalizeText(config?.basic?.site_name) || 'APKScc';

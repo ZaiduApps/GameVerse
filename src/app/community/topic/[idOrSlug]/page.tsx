@@ -57,11 +57,7 @@ export async function generateMetadata({
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
 
   if (!topic?._id) {
-    return {
-      title: '社区话题不存在',
-      description: '未找到对应社区话题。',
-      robots: { index: false, follow: false },
-    };
+    notFound();
   }
 
   const canonicalPath = `/community/topic/${encodeURIComponent(String(topic.slug || topic._id).trim())}`;

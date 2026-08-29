@@ -453,11 +453,7 @@ export async function generateMetadata({
   const [siteConfig, gameData] = await Promise.all([getSiteConfig(), getPageData(id)]);
 
   if (!gameData) {
-    return {
-      title: 'Game Not Found',
-      description: 'The requested game could not be found.',
-      robots: { index: false, follow: false },
-    };
+    notFound();
   }
 
   const game = gameData.app;

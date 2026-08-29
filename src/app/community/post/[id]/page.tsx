@@ -42,11 +42,7 @@ export async function generateMetadata({
   const [config, post] = await Promise.all([getPublicSiteConfig(300), getPostById(id)]);
 
   if (!post) {
-    return {
-      title: '帖子不存在',
-      description: '未找到对应社区帖子。',
-      robots: { index: false, follow: false },
-    };
+    notFound();
   }
 
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
