@@ -73,10 +73,16 @@ export async function generateStaticPageMetadata(
     title: { absolute: textOrFallback(page?.seo_title, defaults.seoTitle) },
     description: buildSeoDescription(
       textOrFallback(page?.seo_description, defaults.description),
-      [
-        key === 'contact' ? '可提交页面链接、应用包名、问题描述和截图，便于快速定位内容与资源问题' : '',
-        key === 'privacy_policy' ? '说明信息收集、使用、存储和用户权利等站点数据处理范围' : '',
-        key === 'about' ? '了解站点内容来源、服务边界、版本信息和社区互动方向' : '',
+        [
+        key === 'contact'
+          ? '可提交页面链接、应用包名、问题描述和截图，便于快速定位内容与资源问题；反馈内容会由运营人员核对后处理，并尽量同步处理进展'
+          : '',
+        key === 'privacy_policy'
+          ? '说明信息收集、使用、存储和用户权利等站点数据处理范围；同时介绍账号、反馈、访问统计和外部服务相关的数据使用边界'
+          : '',
+        key === 'about'
+          ? '了解站点内容来源、服务边界、版本信息和社区互动方向；我们持续整理安卓游戏与应用资料，帮助用户核对资源和更新信息'
+          : '',
         key === 'terms' ? '浏览、下载、投稿、评论和反馈前请先确认适用规则与使用边界' : '',
       ],
       { min: 120, max: 160 },
