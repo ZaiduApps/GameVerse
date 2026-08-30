@@ -3,6 +3,16 @@ const FALLBACK_SITE_URL = 'https://apks.cc';
 const DEFAULT_SITE_SHARE_IMAGE = '/opengraph-image.png';
 const FIRST_PARTY_FAVICON = '/favicon.ico';
 
+export type GameDetailSeoInput = {
+  name?: string | null;
+  pkg?: string | null;
+  type?: string | null;
+  region?: string | null;
+  manualTitle?: string | null;
+  manualDescription?: string | null;
+  manualKeywords?: Array<string | null | undefined> | null;
+};
+
 const SEO_MARKUP_NOISE_PATTERN =
   /!\[[^\]]*\]\(|\[[^\]]+\]\(|\b(?:https?|acbox|uu-mobile):\/\/|<[^>]+>|[`*_~]/i;
 
@@ -91,6 +101,51 @@ export function buildSeoDescription(
   }
 
   return clampSeoDescription(description, max);
+}
+
+/** 详情页使用稳定下载意图文案，版本、日期、大小等易过期字段不进入主描述。 */
+export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc') {
+  const name = sanitizeSeoText(input.name) || sanitizeSeoText(input.pkg) || '安卓游戏';
+  const pkg = sanitizeSeoText(input.pkg);
+  const type = sanitizeSeoText(input.type).toLowerCase();
+  const region = sanitizeSeoText(input.region);
+  const isWebGame = type === 'web';
+  const manualTitle = sanitizeSeoText(input.manualTitle);
+  const manualDescription = sanitizeSeoText(input.manualDescription);
+  const normalizedSiteName = sanitizeSeoText(siteName) || 'APKScc';
+  const regionPhrase = region ? `，提供${region}相关下载信息` : '';
+  const titleCore = manualTitle || (
+    isWebGame
+      ? `${name} 网页游戏${region ? ` ${region}` : ''} - 在线游玩`
+      : `${name} APK下载${region ? ` - ${region}下载` : ''}`
+  );
+  const titleWithSite = titleCore.includes(normalizedSiteName)
+    ? titleCore
+    : `${titleCore} | ${normalizedSiteName}`;
+  const title = clampSeoText(titleWithSite, 68);
+  const description = manualDescription || (
+    isWebGame
+      ? `获取${name}网页游戏入口，查看游戏介绍、玩法特色和社区资讯${regionPhrase}。通过 APKScc 快速找到${name}并开始游玩。`
+      : `下载${name}安卓版 APK，获取安全可靠的游戏下载入口${regionPhrase}。在 APKScc 查看游戏介绍、玩法特色和可用资源，快速安装并开始游玩。`
+  );
+  const keywordCandidates = [
+    name,
+    pkg,
+    isWebGame ? `${name}网页游戏` : `${name}游戏下载`,
+    isWebGame ? `${name}在线游玩` : `${name} APK下载`,
+    isWebGame ? '网页游戏' : '安卓游戏下载',
+    isWebGame ? '在线游玩' : '安卓APK',
+    region,
+    ...(Array.isArray(input.manualKeywords) ? input.manualKeywords : []),
+  ];
+  const keywords = Array.from(new Set(keywordCandidates.map((item) => sanitizeSeoText(item)).filter(Boolean))).slice(0, 20);
+  return { title, description: clampSeoText(description, 160), keywords };
+}
+
+function clampSeoText(input: string, maxLength: number): string {
+  const text = sanitizeSeoText(input);
+  if (!text || text.length <= maxLength) return text;
+  return `${text.slice(0, Math.max(1, maxLength - 3)).trim()}...`;
 }
 
 export function getSiteUrl(): string {

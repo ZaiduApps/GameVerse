@@ -7,7 +7,7 @@ import { trackedApiFetch } from '@/lib/api';
 import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
 import {
   absoluteUrl,
-  buildSeoDescription,
+  buildGameDetailSeo,
   getSiteShareImageUrl,
   resolveGameSeoImage,
   sanitizeSeoText,
@@ -21,8 +21,6 @@ import type { ApiRecommendedGame, CommunityPost, GameDetailData, GamePageSnapsho
 
 const DETAIL_REVALIDATE_SECONDS = 900;
 const SEO_SNAPSHOT_VERSION = '2';
-const MAX_TITLE_LENGTH = 68;
-const MAX_DESCRIPTION_LENGTH = 160;
 const MAX_SERVER_RECOMMENDED_GAMES = 5;
 const RECOMMENDED_GAMES_TIMEOUT_MS = 2500;
 const STATIC_PARAMS_PAGE_SIZE = 500;
@@ -127,33 +125,11 @@ function normalizeText(input?: string | null): string {
     .trim();
 }
 
-function clampText(input: string, maxLength: number): string {
-  const text = normalizeText(input);
-  if (!text) return '';
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, Math.max(1, maxLength - 3)).trim()}...`;
-}
-
 function toIsoDate(input?: string | null): string | undefined {
   if (!input) return undefined;
   const date = new Date(input);
   if (Number.isNaN(date.getTime())) return undefined;
   return date.toISOString();
-}
-
-function toSeoDateLabel(input?: string | null): string {
-  const date = new Date(input || '');
-  if (Number.isNaN(date.getTime())) return '';
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
-function humanizeCategory(input?: string | null): string {
-  const value = normalizeText(input).toLowerCase();
-  if (!value) return '安卓应用';
-  if (value === 'game') return '安卓游戏';
-  if (value === 'app') return '安卓应用';
-  if (value === 'web') return '网页游戏';
-  return normalizeText(input);
 }
 
 type RelatedNewsItem = {
@@ -265,25 +241,6 @@ function normalizeRecommendedGamesPayload(
       return true;
     })
     .slice(0, MAX_SERVER_RECOMMENDED_GAMES);
-}
-
-function buildKeywords(gameData: GameDetailData['app']): string[] {
-  const candidates = [
-    gameData.name,
-    gameData.pkg,
-    gameData.metadata?.region,
-    ...(gameData.tags || []),
-    ...(Array.isArray(gameData.seo?.keywords) ? gameData.seo.keywords : []),
-  ];
-
-  const deduped = new Set<string>();
-  for (const item of candidates) {
-    const keyword = normalizeText(item);
-    if (!keyword) continue;
-    deduped.add(keyword);
-    if (deduped.size >= 24) break;
-  }
-  return Array.from(deduped);
 }
 
 async function getSiteConfig(): Promise<SiteConfig | null> {
@@ -470,48 +427,21 @@ export async function generateMetadata({
   };
   const siteName = normalizeText(basic.site_name) || 'APKScc';
   const normalizedName = normalizeText(game.name);
-  const normalizedVersion = normalizeText(game.version);
-  const normalizedSummary = normalizeText(game.summary || game.description);
-  const normalizedDescription = normalizeText(game.description || game.summary);
-  const region = normalizeText(game.metadata?.region);
-  const category = humanizeCategory(game.type);
-  const dateLabel = toSeoDateLabel(game.latest_at);
-
-  const titleCore = [
-    normalizeText(game.seo?.title) || (isWebGame ? `${normalizedName} 网页游戏` : `${normalizedName} APK下载`),
-    !isWebGame && normalizedVersion ? `v${normalizedVersion}` : '',
-    region ? `(${region})` : '',
-  ].filter(Boolean).join(' ');
-  const title = clampText(`${titleCore} - ${siteName}`, MAX_TITLE_LENGTH);
+  const detailSeo = buildGameDetailSeo({
+    name: normalizedName,
+    pkg: game.pkg,
+    type: game.type,
+    region: game.metadata?.region,
+    manualTitle: game.seo?.title,
+    manualDescription: game.seo?.description,
+    manualKeywords: game.seo?.keywords,
+  }, siteName);
+  const title = detailSeo.title;
   const faqItems = normalizeGameFaqItems(gameData.faq);
-  const screenshotCount = Array.isArray(game.detail_images)
-    ? game.detail_images.filter((item) => normalizeText(item)).length
-    : 0;
-
-  const description = buildSeoDescription(
-    normalizeText(game.seo?.description) ||
-      normalizedSummary ||
-      normalizedDescription ||
-      (isWebGame ? `在 AC 盒子中游玩 ${normalizedName}` : `下载 ${normalizedName} 安卓版`),
-    [
-      !isWebGame && normalizedVersion ? `当前版本 ${normalizedVersion}` : '',
-      !isWebGame && formatFileSize(game.file_size) ? `安装包大小 ${formatFileSize(game.file_size)}` : '',
-      dateLabel ? `最近更新 ${dateLabel}` : '',
-      !isWebGame && game.pkg ? `包名 ${game.pkg}` : '',
-      category ? `适合关注 ${category} 的用户` : '',
-      isWebGame ? '请在 AC 盒子 App 中开始游玩' : '',
-      normalizeText(game.developer) ? `开发者：${normalizeText(game.developer)}` : '',
-      screenshotCount > 0 ? `包含 ${screenshotCount} 张截图` : '',
-      faqItems.length > 0
-        ? `整理 ${faqItems.length} 条${isWebGame ? '游玩与使用' : '安装与使用'}问题`
-        : '',
-      '提供版本信息、安装包详情、截图、更新时间与玩家反馈，下载前可核对设备兼容性和资源状态',
-    ],
-    { max: MAX_DESCRIPTION_LENGTH },
-  );
+  const description = detailSeo.description;
 
   const heroImage = resolveGameSeoImage(game, basic.share_image);
-  const keywords = buildKeywords(game);
+  const keywords = detailSeo.keywords;
   const isIndexable = gameData.quality?.indexable !== false;
 
   return {
@@ -584,7 +514,15 @@ export default async function GameDetailPage({
   const canonicalPath = `/app/${encodeURIComponent(game.pkg || id)}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
   const heroImage = resolveGameSeoImage(game, getSiteShareImageUrl());
-  const description = normalizeText(game.summary || game.description);
+  const description = buildGameDetailSeo({
+    name: game.name,
+    pkg: game.pkg,
+    type: game.type,
+    region: game.metadata?.region,
+    manualTitle: game.seo?.title,
+    manualDescription: game.seo?.description,
+    manualKeywords: game.seo?.keywords,
+  }).description;
 
   const [relatedNews, recommendedGames] = await Promise.all([
     Array.isArray(initialGameData.relatedNews)
