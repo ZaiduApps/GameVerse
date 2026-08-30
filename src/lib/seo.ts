@@ -125,8 +125,8 @@ export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc
   const title = clampSeoText(titleWithSite, 68);
   const description = manualDescription || (
     isWebGame
-      ? `获取${name}网页游戏入口，查看游戏介绍、玩法特色和社区资讯${regionPhrase}。通过 APKScc 快速找到${name}并开始游玩。`
-      : `下载${name}安卓版 APK，获取安全可靠的游戏下载入口${regionPhrase}。在 APKScc 查看游戏介绍、玩法特色和可用资源，快速安装并开始游玩。`
+      ? `获取${name}网页游戏入口，查看游戏介绍、玩法特色和社区资讯${regionPhrase}。通过${normalizedSiteName}快速找到${name}并开始游玩。`
+      : `下载${name}安卓版 APK，获取安全可靠的游戏下载入口${regionPhrase}。在${normalizedSiteName}查看游戏介绍、玩法特色和可用资源，快速安装并开始游玩。`
   );
   const keywordCandidates = [
     name,
