@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { renderMarkdown, cn } from '@/lib/utils';
+import { buildSeoDescription } from '@/lib/seo';
 
 type StaticPageKey = 'about' | 'contact' | 'privacy_policy' | 'terms';
 
@@ -70,7 +71,16 @@ export async function generateStaticPageMetadata(
 
   return {
     title: { absolute: textOrFallback(page?.seo_title, defaults.seoTitle) },
-    description: textOrFallback(page?.seo_description, defaults.description),
+    description: buildSeoDescription(
+      textOrFallback(page?.seo_description, defaults.description),
+      [
+        key === 'contact' ? '可提交页面链接、应用包名、问题描述和截图，便于快速定位内容与资源问题' : '',
+        key === 'privacy_policy' ? '说明信息收集、使用、存储和用户权利等站点数据处理范围' : '',
+        key === 'about' ? '了解站点内容来源、服务边界、版本信息和社区互动方向' : '',
+        key === 'terms' ? '浏览、下载、投稿、评论和反馈前请先确认适用规则与使用边界' : '',
+      ],
+      { min: 120, max: 160 },
+    ),
     alternates: { canonical: defaults.canonical },
   };
 }

@@ -505,6 +505,7 @@ export async function generateMetadata({
       faqItems.length > 0
         ? `整理 ${faqItems.length} 条${isWebGame ? '游玩与使用' : '安装与使用'}问题`
         : '',
+      '提供版本信息、安装包详情、截图、更新时间与玩家反馈，下载前可核对设备兼容性和资源状态',
     ],
     { max: MAX_DESCRIPTION_LENGTH },
   );
