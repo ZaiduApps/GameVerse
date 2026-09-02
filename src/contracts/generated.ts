@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 c8c4e5ff374ef3d47f9951e7b0a8af152c69759223875effe7553b035427285a
+ * @contract-sha256 272e8c1f2dcb026b0561b86dbbc29343fa2ee779c30183ae8b1c8f118cd6b2cc
  */
 
 export interface paths {
@@ -5706,6 +5706,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource-update/admin/remote-detection-runs/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 取消卡住的远程 GP 检测批次 */
+        post: operations["ResourceWorkerAdminController_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource-update/admin/remote-workers": {
         parameters: {
             query?: never;
@@ -5734,7 +5751,8 @@ export interface paths {
         get: operations["ResourceWorkerManagementController_get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** 软删除离线且无有效租约的远程资源 Worker */
+        delete: operations["ResourceWorkerManagementController_remove"];
         options?: never;
         head?: never;
         patch?: never;
@@ -5751,6 +5769,57 @@ export interface paths {
         put?: never;
         /** 设置远程资源 Worker 的领取状态 */
         post: operations["ResourceWorkerManagementController_setStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/remote-workers/{workerId}/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 设置远程资源 Worker 的来源优先顺序 */
+        post: operations["ResourceWorkerManagementController_setSources"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/remote-workers/{workerId}/task-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 设置 Worker 任务画像，限制检测或资源任务 */
+        post: operations["ResourceWorkerManagementController_setTaskProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/realtime/worker-progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 订阅 Worker 实时进度，支持 Last-Event-ID 断线补发 */
+        get: operations["ResourceWorkerRealtimeController_stream"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6230,6 +6299,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource-update/admin/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 查询资源检测与更新日/周统计 */
+        get: operations["ResourceUpdateController_stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource-update/admin/source-policies": {
         parameters: {
             query?: never;
@@ -6310,6 +6396,23 @@ export interface paths {
         put?: never;
         /** 创建单包或小批资源更新作业 */
         post: operations["ResourceUpdateController_createJobs"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/jobs/package/{pkg}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 查询单个包名的完整更新作业历史 */
+        get: operations["ResourceUpdateController_packageHistory"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6472,6 +6575,76 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["ResourceUpdateController_cleanupWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/apkeep/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 分页查询 apkeep 账号 */
+        get: operations["ApkeepAccountController_list"];
+        put?: never;
+        /** 创建 apkeep 账号 */
+        post: operations["ApkeepAccountController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/apkeep/accounts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 软删除 apkeep 账号 */
+        delete: operations["ApkeepAccountController_remove"];
+        options?: never;
+        head?: never;
+        /** 更新 apkeep 账号 */
+        patch: operations["ApkeepAccountController_update"];
+        trace?: never;
+    };
+    "/resource-update/admin/apkeep/accounts/{id}/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 启用 apkeep 账号 */
+        post: operations["ApkeepAccountController_enable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/apkeep/accounts/{id}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 禁用 apkeep 账号 */
+        post: operations["ApkeepAccountController_disable"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7357,6 +7530,7 @@ export interface components {
             url: string;
         };
         SaveFaqConfigDto: Record<string, never>;
+        CreateTagDto: Record<string, never>;
         CreateFeedbackDto: {
             /**
              * @description 反馈类型
@@ -7719,6 +7893,7 @@ export interface components {
         FailDetectionItemDto: Record<string, never>;
         CreateDetectionRunDto: Record<string, never>;
         UpdateResourceWorkerStatusDto: Record<string, never>;
+        UpdateResourceWorkerTaskProfileDto: Record<string, never>;
         SystemLogItemDto: {
             /** @example combined-123-2026-03-22T10:30:08.000Z */
             id: string;
@@ -7973,6 +8148,42 @@ export interface components {
             articles: components["schemas"]["GlobalSearchSectionDto"];
             posts: components["schemas"]["GlobalSearchSectionDto"];
             topics: components["schemas"]["GlobalSearchSectionDto"];
+        };
+        UpsertApkeepAccountDto: {
+            account_id: string;
+            label?: string;
+            email: string;
+            /** @enum {string} */
+            auth_mode: "aas" | "auth";
+            aas_token?: string;
+            auth_token?: string;
+            oauth_token?: string;
+            device?: string;
+            locale?: string;
+            timezone?: string;
+            split_apk?: boolean;
+            accept_tos?: boolean;
+            weight?: number;
+            /** @enum {string} */
+            status?: "active" | "disabled" | "cooldown" | "invalid";
+        };
+        UpdateApkeepAccountDto: {
+            account_id?: string;
+            label?: string;
+            email?: string;
+            /** @enum {string} */
+            auth_mode?: "aas" | "auth";
+            aas_token?: string;
+            auth_token?: string;
+            oauth_token?: string;
+            device?: string;
+            locale?: string;
+            timezone?: string;
+            split_apk?: boolean;
+            accept_tos?: boolean;
+            weight?: number;
+            /** @enum {string} */
+            status?: "active" | "disabled" | "cooldown" | "invalid";
         };
         WebGameImportPreviewDto: Record<string, never>;
         WebGameImportDto: Record<string, never>;
@@ -17178,7 +17389,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTagDto"];
+            };
+        };
         responses: {
             /** @description 创建标签成功 */
             201: {
@@ -20671,8 +20886,8 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
-                "X-API-Key": string;
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
             };
             path?: never;
             cookie?: never;
@@ -20695,8 +20910,8 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
-                "X-API-Key": string;
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
             };
             path?: never;
             cookie?: never;
@@ -20719,8 +20934,8 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
-                "X-API-Key": string;
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
             };
             path?: never;
             cookie?: never;
@@ -20743,8 +20958,8 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
-                "X-API-Key": string;
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
             };
             path: {
                 taskId: string;
@@ -20769,8 +20984,8 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
-                "X-API-Key": string;
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
             };
             path: {
                 taskId: string;
@@ -20795,8 +21010,8 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
-                "X-API-Key": string;
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
             };
             path: {
                 taskId: string;
@@ -20821,8 +21036,8 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
-                "X-API-Key": string;
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
             };
             path: {
                 taskId: string;
@@ -20847,8 +21062,8 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
-                "X-API-Key": string;
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
             };
             path: {
                 taskId: string;
@@ -20873,8 +21088,8 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
-                "X-API-Key": string;
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
             };
             path?: never;
             cookie?: never;
@@ -20897,8 +21112,8 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
-                "X-API-Key": string;
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
             };
             path: {
                 itemId: string;
@@ -20923,8 +21138,8 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
-                "X-API-Key": string;
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
             };
             path: {
                 itemId: string;
@@ -20949,8 +21164,8 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 仅允许 integration 类型且具备 resource-worker:operate 的密钥 */
-                "X-API-Key": string;
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
             };
             path: {
                 itemId: string;
@@ -21028,6 +21243,25 @@ export interface operations {
             };
         };
     };
+    ResourceWorkerAdminController_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ResourceWorkerManagementController_list: {
         parameters: {
             query?: never;
@@ -21064,6 +21298,25 @@ export interface operations {
             };
         };
     };
+    ResourceWorkerManagementController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ResourceWorkerManagementController_setStatus: {
         parameters: {
             query?: never;
@@ -21080,6 +21333,65 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerManagementController_setSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerManagementController_setTaskProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateResourceWorkerTaskProfileDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerRealtimeController_stream: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21903,6 +22215,23 @@ export interface operations {
             };
         };
     };
+    ResourceUpdateController_stats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ResourceUpdateController_sourcePolicies: {
         parameters: {
             query?: never;
@@ -22000,6 +22329,25 @@ export interface operations {
         requestBody?: never;
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_packageHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pkg: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -22173,6 +22521,130 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                status?: "active" | "disabled" | "cooldown" | "invalid";
+                auth_mode?: "aas" | "auth";
+                keyword?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertApkeepAccountDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateApkeepAccountDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_enable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_disable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
