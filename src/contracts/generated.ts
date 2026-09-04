@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 272e8c1f2dcb026b0561b86dbbc29343fa2ee779c30183ae8b1c8f118cd6b2cc
+ * @contract-sha256 45243c2c44df6f25395942cd38e94a1894f20faae0dc32d143e22954defe8a6a
  */
 
 export interface paths {
@@ -5569,6 +5569,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/resource-worker/v1/tasks/{taskId}/apkeep-exchange/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 提交 apkeep OAuth 换 AAS 结果 */
+        post: operations["ResourceWorkerGatewayController_completeApkeepExchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/resource-worker/v1/tasks/{taskId}/fail": {
         parameters: {
             query?: never;
@@ -6651,6 +6668,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource-update/admin/apkeep/accounts/{id}/exchange": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 创建 apkeep OAuth 换 AAS 维护任务 */
+        post: operations["ApkeepAccountController_exchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/web-games/discover": {
         parameters: {
             query?: never;
@@ -6902,7 +6936,11 @@ export interface components {
              * @example content_user
              * @enum {string}
              */
-            key_type?: "content_user" | "admin_agent" | "integration" | "legacy";
+            key_type?:
+                | "content_user"
+                | "admin_agent"
+                | "integration"
+                | "legacy";
             /**
              * @description 能力列表，默认由 key_type 决定
              * @example [
@@ -7427,7 +7465,33 @@ export interface components {
              * @example link_click
              * @enum {string}
              */
-            event_name?: "client_action" | "screen_view" | "search_submit" | "link_click" | "webview_action" | "route_decision" | "accel_hit" | "external_open" | "fail_reason" | "game_detail_view" | "download_click" | "download_url_issued" | "splash_ad_impression" | "splash_ad_click" | "splash_ad_skip" | "download_task_pause" | "download_task_resume" | "download_task_retry" | "download_task_delete" | "download_file_open" | "download_file_missing" | "install_click" | "install_submitted" | "install_success" | "install_failed" | "install_cancelled";
+            event_name?:
+                | "client_action"
+                | "screen_view"
+                | "search_submit"
+                | "link_click"
+                | "webview_action"
+                | "route_decision"
+                | "accel_hit"
+                | "external_open"
+                | "fail_reason"
+                | "game_detail_view"
+                | "download_click"
+                | "download_url_issued"
+                | "splash_ad_impression"
+                | "splash_ad_click"
+                | "splash_ad_skip"
+                | "download_task_pause"
+                | "download_task_resume"
+                | "download_task_retry"
+                | "download_task_delete"
+                | "download_file_open"
+                | "download_file_missing"
+                | "install_click"
+                | "install_submitted"
+                | "install_success"
+                | "install_failed"
+                | "install_cancelled";
             /**
              * @description 客户端生成的幂等事件 ID
              * @example evt-m3abc-xyz
@@ -7799,7 +7863,18 @@ export interface components {
              * @example admin.content.update
              * @enum {string}
              */
-            task_key?: "system.daily-log" | "tracking.daily-rollup" | "tracking.daily-rollup-yesterday" | "admin.post-gp" | "admin.content.update" | "admin.update.all-gp" | "admin.update.one-gp" | "admin.get-gp" | "admin.get-qoo" | "admin.resource.audit" | "system.task-run-log-retention";
+            task_key?:
+                | "system.daily-log"
+                | "tracking.daily-rollup"
+                | "tracking.daily-rollup-yesterday"
+                | "admin.post-gp"
+                | "admin.content.update"
+                | "admin.update.all-gp"
+                | "admin.update.one-gp"
+                | "admin.get-gp"
+                | "admin.get-qoo"
+                | "admin.resource.audit"
+                | "system.task-run-log-retention";
             /** @description 任务名称 */
             name?: string;
             /** @description 任务说明 */
@@ -7886,6 +7961,25 @@ export interface components {
         HeartbeatResourceTaskDto: Record<string, never>;
         ResourceTaskEventDto: Record<string, never>;
         CompleteResourceTaskDto: Record<string, never>;
+        CompleteApkeepAuthExchangeDto: {
+            /** @description 执行任务的 Worker 标识 */
+            worker_id: string;
+            /** @description 当前任务租约令牌 */
+            lease_token: string;
+            /** @description 任务尝试序号 */
+            attempt_no: number;
+            /** @description Interface 分配的 apkeep 账号标识 */
+            account_id: string;
+            /**
+             * @description OAuth 兑换结果
+             * @enum {string}
+             */
+            status: "succeeded" | "failed";
+            /** @description 兑换成功得到的 AAS token，仅成功时提交，服务端不会返回 */
+            aas_token?: string;
+            /** @description 失败错误分类，不得包含凭证或邮箱 */
+            error_category?: string;
+        };
         FailResourceTaskDto: Record<string, never>;
         AbandonResourceTaskDto: Record<string, never>;
         ClaimDetectionItemsDto: Record<string, never>;
@@ -7901,7 +7995,13 @@ export interface components {
              * @example combined
              * @enum {string}
              */
-            source: "combined" | "error" | "tracking" | "import" | "task_scheduler" | "upload";
+            source:
+                | "combined"
+                | "error"
+                | "tracking"
+                | "import"
+                | "task_scheduler"
+                | "upload";
             /** @example 2026-03-22T10:30:08.348Z */
             timestamp: string;
             /** @example warn */
@@ -9329,7 +9429,11 @@ export interface operations {
                 /** @description 每页数量 */
                 pageSize?: string;
                 /** @description 密钥类型 */
-                key_type?: "content_user" | "admin_agent" | "integration" | "legacy";
+                key_type?:
+                    | "content_user"
+                    | "admin_agent"
+                    | "integration"
+                    | "legacy";
                 /** @description 风险等级 */
                 risk_level?: "low" | "medium" | "high";
             };
@@ -21032,6 +21136,32 @@ export interface operations {
             };
         };
     };
+    ResourceWorkerGatewayController_completeApkeepExchange: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
+            };
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteApkeepAuthExchangeDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ResourceWorkerGatewayController_fail: {
         parameters: {
             query?: never;
@@ -21407,7 +21537,14 @@ export interface operations {
                 /** @description Page size */
                 pageSize?: number;
                 /** @description all | combined | error | tracking | import | task_scheduler | upload */
-                source?: "all" | "combined" | "error" | "tracking" | "import" | "task_scheduler" | "upload";
+                source?:
+                    | "all"
+                    | "combined"
+                    | "error"
+                    | "tracking"
+                    | "import"
+                    | "task_scheduler"
+                    | "upload";
                 /** @description error | warn | info | debug | verbose */
                 level?: "error" | "warn" | "info" | "debug" | "verbose";
                 /** @description Log context */
@@ -21517,7 +21654,14 @@ export interface operations {
                 /** @description Page size */
                 pageSize?: number;
                 /** @description all | combined | error | tracking | import | task_scheduler | upload */
-                source?: "all" | "combined" | "error" | "tracking" | "import" | "task_scheduler" | "upload";
+                source?:
+                    | "all"
+                    | "combined"
+                    | "error"
+                    | "tracking"
+                    | "import"
+                    | "task_scheduler"
+                    | "upload";
                 /** @description error | warn | info | debug | verbose */
                 level?: "error" | "warn" | "info" | "debug" | "verbose";
                 /** @description Log context */
@@ -22639,6 +22783,25 @@ export interface operations {
         };
     };
     ApkeepAccountController_disable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_exchange: {
         parameters: {
             query?: never;
             header?: never;
