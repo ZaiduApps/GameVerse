@@ -1,7 +1,6 @@
 ﻿
 import type { Metadata, Viewport } from 'next';
 import { GeistMono } from 'geist/font/mono';
-import localFont from 'next/font/local';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/context/auth-context';
@@ -14,13 +13,6 @@ import AppShell from '@/components/layout/AppShell';
 
 const siteStyle = resolveSiteStylePreset(process.env.NEXT_PUBLIC_SITE_STYLE);
 
-const bodyFont = localFont({
-  src: '../fonts/NotoSansSC-VariableFont_wght.ttf',
-  weight: '100 900',
-  style: 'normal',
-  variable: '--font-body',
-  display: 'swap',
-});
 async function getSiteConfig(): Promise<SiteConfig | null> {
   return getPublicSiteConfig(300);
 }
@@ -125,7 +117,7 @@ export default async function RootLayout({
           />
         )}
       </head>
-      <body id="Top" className={`${bodyFont.variable} ${GeistMono.variable} antialiased flex flex-col min-h-screen`}>
+      <body id="Top" className={`${GeistMono.variable} antialiased flex flex-col min-h-screen`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

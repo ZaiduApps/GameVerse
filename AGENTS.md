@@ -24,7 +24,7 @@
 
 ## Code Map
 
-- `src/app/layout.tsx` is the root shell. It loads the local Noto Sans SC font, fetches public site config on the server, injects site-config-driven head scripts and CSS, and wraps the app with theme and auth providers.
+- `src/app/layout.tsx` is the root shell. It uses the system Chinese font stack, fetches public site config on the server, injects site-config-driven head scripts and CSS, and wraps the app with theme and auth providers.
 - `src/components/layout/AppShell.tsx` controls page chrome. `/download/app` renders without header/footer, `/app/[id]` hides header/footer on small screens, and all other routes use the standard container layout.
 - `src/app/page.tsx` is the main landing page and a good representative SSR entrypoint. It fetches site config plus backend home data, applies SEO filtering, and uses ISR with `revalidate = 120`.
 - SEO endpoints are real app surfaces here: `src/app/robots.ts`, `src/app/sitemap.ts`, and the client-side `/api/seo/push` beacon call in `AppShell.tsx`.

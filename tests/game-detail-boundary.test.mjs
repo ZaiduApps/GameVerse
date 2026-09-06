@@ -16,6 +16,8 @@ const [
   reviewSource,
   downloadDialogSource,
   nextConfigSource,
+  layoutSource,
+  globalsSource,
 ] = await Promise.all([
   readSource('../src/app/app/[id]/page.tsx'),
   readSource('../src/app/app/[id]/GameDetailView.tsx'),
@@ -28,6 +30,8 @@ const [
   readSource('../src/app/app/[id]/DeferredGameReviewPanel.client.tsx'),
   readSource('../src/components/game-download-dialog.tsx'),
   readSource('../next.config.ts'),
+  readSource('../src/app/layout.tsx'),
+  readSource('../src/app/globals.css'),
 ]);
 
 test('详情路由允许新包名按需生成并兼容页游 ObjectId', () => {
@@ -73,6 +77,15 @@ test('首屏样式确定且非首屏截图不声明高优先级', () => {
   assert.match(viewSource, /TAG_STYLE_PALETTES\[index % TAG_STYLE_PALETTES\.length\]/);
   assert.doesNotMatch(presenterSource, /Math\.random|shuffleArray/);
   assert.doesNotMatch(gallerySource, /\bpriority\b|fetchPriority/);
+});
+
+test('中文正文使用系统字体栈且不加载站点级中文 WebFont', () => {
+  assert.doesNotMatch(layoutSource, /noto-sans-sc\.css|\/fonts\/NotoSansSC-/);
+  assert.doesNotMatch(globalsSource, /["']NotoSansSC["']/);
+  assert.match(
+    globalsSource,
+    /--font-body:\s*"Noto Sans SC",\s*"PingFang SC",\s*"Microsoft YaHei"/,
+  );
 });
 
 test('重型弹窗和截图灯箱只在交互后挂载', () => {
