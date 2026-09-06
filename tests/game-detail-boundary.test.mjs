@@ -120,6 +120,10 @@ test('社区内容通过服务端 Suspense 区块获取，客户端岛只负责�
 test('评价模块与整页状态解耦并按视口延迟加载', () => {
   assert.match(reviewSource, /dynamic\(\(\) => import\('@\/components\/game-detail\/GameReviewPanel'\)/);
   assert.match(reviewSource, /ssr: false/);
+  assert.match(reviewSource, /new IntersectionObserver/);
+  assert.match(reviewSource, /rootMargin: '600px 0px'/);
+  assert.match(reviewSource, /isNearViewport && compact !== null/);
+  assert.match(reviewSource, /min-h-\[31rem\]/);
   assert.match(reviewSource, /window\.matchMedia\('\(max-width: 1023px\)'\)/);
   assert.match(viewSource, /summary=\{gameData\.reviewSummary\}/);
 });
