@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 23efae9a495df2ba778063b22dc955ba965d1bf615abc5a29ad709ab349d19c3
+ * @contract-sha256 942099d2d430cfcd40b2c8a70d22a22cf2e63f00c7faf7b0e051b51dfebf50e4
  */
 
 export interface paths {
@@ -5586,6 +5586,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/resource-worker/v1/tasks/{taskId}/apkeep-account-test/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 提交 apkeep 账号测试结果 */
+        post: operations["ResourceWorkerGatewayController_completeApkeepAccountTest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/resource-worker/v1/tasks/{taskId}/fail": {
         parameters: {
             query?: never;
@@ -8306,6 +8323,31 @@ export interface components {
         WebGameImportDto: Record<string, never>;
         WebGameConfigDto: Record<string, never>;
         WebGameSortDto: Record<string, never>;
+        ApkeepAccountTestResultDto: {
+            /** @description 用于账号测试的公开 Android 包名 */
+            package_name: string;
+            /**
+             * @description apkeep 产物形态
+             * @enum {string}
+             */
+            artifact_mode: "single" | "bundle" | "split_directory";
+            /** @description 已验证的输出文件数 */
+            output_file_count: number;
+            /** @description 账号测试耗时（毫秒） */
+            elapsed_ms: number;
+        };
+        CompleteApkeepAccountTestDto: {
+            /** @description Interface 分配的 apkeep 账号标识 */
+            account_id: string;
+            /**
+             * @description 账号测试结果
+             * @enum {string}
+             */
+            status: "succeeded" | "failed";
+            result?: components["schemas"]["ApkeepAccountTestResultDto"];
+            /** @description 失败错误分类，不得包含凭证或邮箱 */
+            error_category?: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -21168,6 +21210,32 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CompleteApkeepAuthExchangeDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerGatewayController_completeApkeepAccountTest: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
+            };
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteApkeepAccountTestDto"];
             };
         };
         responses: {
