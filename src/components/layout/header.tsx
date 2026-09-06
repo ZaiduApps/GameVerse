@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -58,6 +58,7 @@ interface HeaderProps {
 export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
   const { user, token, isAuthenticated, logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
@@ -67,6 +68,11 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
   const isNavItemActive = (href: string) => {
     if (href === '/') return pathname === '/';
     return pathname === href || pathname.startsWith(`${href}/`);
+  };
+  const deferNavigationPrefetch = pathname.startsWith('/app/');
+  const navigationPrefetch = deferNavigationPrefetch ? false : null;
+  const prefetchOnIntent = (href: string) => {
+    if (deferNavigationPrefetch) router.prefetch(href);
   };
 
   useEffect(() => {
@@ -115,7 +121,13 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
       <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-2 text-primary hover:opacity-90 transition-opacity">
+            <Link
+              href="/"
+              prefetch={navigationPrefetch}
+              onMouseEnter={() => prefetchOnIntent('/')}
+              onFocus={() => prefetchOnIntent('/')}
+              className="flex items-center gap-2 text-primary hover:opacity-90 transition-opacity"
+            >
               {logoUrl && !logoLoadFailed ? (
                 <Image
                   src={logoUrl}
@@ -137,6 +149,9 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                 <Link
                   key={item.label}
                   href={item.href}
+                  prefetch={navigationPrefetch}
+                  onMouseEnter={() => prefetchOnIntent(item.href)}
+                  onFocus={() => prefetchOnIntent(item.href)}
                   className={`inline-flex items-center justify-start gap-1 rounded-full px-2.5 py-1.5 text-sm font-semibold transition-colors ${
                     isNavItemActive(item.href)
                       ? 'bg-primary text-primary-foreground shadow-sm'
@@ -165,7 +180,13 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                 <DropdownMenuContent align="start" className="min-w-[140px]">
                   {navItems.filter((i) => i.priority === 'secondary').map((item) => (
                     <DropdownMenuItem key={item.label} asChild>
-                      <Link href={item.href} className="flex items-center gap-2">
+                      <Link
+                        href={item.href}
+                        prefetch={navigationPrefetch}
+                        onMouseEnter={() => prefetchOnIntent(item.href)}
+                        onFocus={() => prefetchOnIntent(item.href)}
+                        className="flex items-center gap-2"
+                      >
                         <item.icon size={16} />
                         {item.label}
                       </Link>
@@ -182,6 +203,9 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                   <li key={item.label}>
                     <Link
                       href={item.href}
+                      prefetch={navigationPrefetch}
+                      onMouseEnter={() => prefetchOnIntent(item.href)}
+                      onFocus={() => prefetchOnIntent(item.href)}
                       className={`inline-flex items-center justify-start gap-1.5 rounded-full lg:px-2 xl:px-3 py-2 text-sm font-semibold transition-colors ${
                         isNavItemActive(item.href)
                           ? 'bg-primary text-primary-foreground shadow-sm'

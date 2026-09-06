@@ -112,6 +112,18 @@ test('重型弹窗和截图灯箱只在交互后挂载', () => {
   assert.match(headerSource, /authModalOpen \? <AuthModal/);
 });
 
+test('详情页顶部导航仅在用户表达意图后预取', () => {
+  assert.match(headerSource, /const deferNavigationPrefetch = pathname\.startsWith\('\/app\/'\)/);
+  assert.match(headerSource, /const navigationPrefetch = deferNavigationPrefetch \? false : null/);
+  assert.match(headerSource, /if \(deferNavigationPrefetch\) router\.prefetch\(href\)/);
+  assert.ok((headerSource.match(/prefetch=\{navigationPrefetch\}/g) || []).length >= 4);
+  assert.match(headerSource, /onMouseEnter=\{\(\) => prefetchOnIntent\(item\.href\)\}/);
+  assert.match(headerSource, /onFocus=\{\(\) => prefetchOnIntent\(item\.href\)\}/);
+  assert.match(actionsSource, /href="\/community"\s+prefetch=\{false\}/);
+  assert.match(actionsSource, /onMouseEnter=\{\(\) => router\.prefetch\('\/community'\)\}/);
+  assert.match(actionsSource, /onFocus=\{\(\) => router\.prefetch\('\/community'\)\}/);
+});
+
 test('社区内容通过服务端 Suspense 区块获取，客户端岛只负责排序', () => {
   assert.match(viewSource, /<Suspense fallback=\{<GameCommunitySkeleton \/>\}>/);
   assert.match(communitySource, /Promise\.allSettled/);

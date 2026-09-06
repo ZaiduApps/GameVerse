@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, BellRing, Download, Heart, Link as LinkIcon, MessageSquare, Smartphone } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -35,6 +36,7 @@ export default function GameDetailActions({
 }: GameDetailActionsProps) {
   const { isAuthenticated, token, user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isReminderEnabled, setIsReminderEnabled] = useState(false);
   const [isSubmittingUrge, setIsSubmittingUrge] = useState(false);
@@ -206,7 +208,16 @@ export default function GameDetailActions({
 
       <div className="fixed inset-x-0 z-50 rounded-t-2xl bg-white/90 px-4 pt-3 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] backdrop-blur-2xl dark:bg-[#111824]/95 lg:hidden" style={{ bottom: 'max(env(safe-area-inset-bottom), 0px)', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}>
         <div className="flex items-center gap-3">
-          <Link href="/community" aria-label="前往游戏社区" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#595c5d] hover:bg-black/5 hover:text-[#b71211]"><MessageSquare className="h-5 w-5" /></Link>
+          <Link
+            href="/community"
+            prefetch={false}
+            aria-label="前往游戏社区"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#595c5d] hover:bg-black/5 hover:text-[#b71211]"
+            onMouseEnter={() => router.prefetch('/community')}
+            onFocus={() => router.prefetch('/community')}
+          >
+            <MessageSquare className="h-5 w-5" />
+          </Link>
           <button type="button" aria-label={isFavorite ? '取消收藏当前游戏' : '收藏当前游戏'} className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#595c5d] hover:bg-black/5', isFavorite && 'text-[#b71211]')} onClick={handleFavoriteToggle}><Heart className={cn('h-5 w-5', isFavorite && 'fill-current')} /></button>
           {showPreregReminder ? reminderButton() : null}
           {primaryButton('min-w-0 flex-1 px-4 text-sm')}
