@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 45243c2c44df6f25395942cd38e94a1894f20faae0dc32d143e22954defe8a6a
+ * @contract-sha256 23efae9a495df2ba778063b22dc955ba965d1bf615abc5a29ad709ab349d19c3
  */
 
 export interface paths {
@@ -6679,6 +6679,23 @@ export interface paths {
         put?: never;
         /** 创建 apkeep OAuth 换 AAS 维护任务 */
         post: operations["ApkeepAccountController_exchange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/apkeep/accounts/{id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 创建 apkeep 账号认证测试任务 */
+        post: operations["ApkeepAccountController_test"];
         delete?: never;
         options?: never;
         head?: never;
@@ -22802,6 +22819,25 @@ export interface operations {
         };
     };
     ApkeepAccountController_exchange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_test: {
         parameters: {
             query?: never;
             header?: never;
