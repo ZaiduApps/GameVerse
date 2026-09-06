@@ -179,6 +179,7 @@ export interface CommunityReadFetchOptions {
   retries?: number;
   logKey?: string;
   warnStatuses?: number[];
+  warnOnFailure?: boolean;
 }
 
 interface TopicFollowResult {
@@ -538,7 +539,7 @@ function resolveCommunityReadFetchOptions(
   fetchOptions: CommunityReadFetchOptions | undefined,
   defaults?: Partial<CommunityReadFetchOptions>,
 ): Required<Pick<CommunityReadFetchOptions, 'cache' | 'timeoutMs' | 'retries' | 'logKey'>> &
-  Pick<CommunityReadFetchOptions, 'next' | 'warnStatuses'> {
+  Pick<CommunityReadFetchOptions, 'next' | 'warnStatuses' | 'warnOnFailure'> {
   const isServer = typeof window === 'undefined';
   const cache =
     fetchOptions?.cache ??
@@ -559,6 +560,7 @@ function resolveCommunityReadFetchOptions(
       ...(Array.isArray(fetchOptions?.warnStatuses) ? fetchOptions!.warnStatuses : []),
     ]),
   ).filter((status) => Number.isInteger(status) && status >= 100 && status <= 599);
+  const warnOnFailure = fetchOptions?.warnOnFailure ?? defaults?.warnOnFailure ?? false;
 
   return {
     cache,
@@ -567,6 +569,7 @@ function resolveCommunityReadFetchOptions(
     retries: Number.isFinite(retries) && retries >= 0 ? retries : COMMUNITY_READ_RETRIES,
     logKey,
     warnStatuses,
+    warnOnFailure,
   };
 }
 
@@ -597,7 +600,7 @@ async function getApiData<T>(
           statusText: res.statusText,
           durationMs,
         };
-        if (resolved.warnStatuses?.includes(res.status)) {
+        if (resolved.warnOnFailure || resolved.warnStatuses?.includes(res.status)) {
           console.warn(`[${resolved.logKey}] expected non-200 response`, logPayload);
         } else {
           console.error(`[${resolved.logKey}] non-200 response`, logPayload);
@@ -608,7 +611,7 @@ async function getApiData<T>(
 
       const json = await res.json().catch(() => null);
       if (!json || json?.code !== 0) {
-        console.error(`[${resolved.logKey}] invalid-payload`, {
+        const logPayload = {
           path,
           attempt,
           maxAttempts,
@@ -618,7 +621,12 @@ async function getApiData<T>(
             json && typeof json === 'object'
               ? String((json as { message?: unknown }).message || '').trim() || null
               : null,
-        });
+        };
+        if (resolved.warnOnFailure) {
+          console.warn(`[${resolved.logKey}] optional invalid-payload`, logPayload);
+        } else {
+          console.error(`[${resolved.logKey}] invalid-payload`, logPayload);
+        }
         if (attempt < maxAttempts) continue;
         return null;
       }
@@ -635,14 +643,19 @@ async function getApiData<T>(
       return (json?.data ?? null) as T | null;
     } catch (error) {
       const durationMs = Date.now() - startedAt;
-      console.error(`[${resolved.logKey}] request exception`, {
+      const logPayload = {
         path,
         attempt,
         maxAttempts,
         durationMs,
         errorType: isTimeoutLikeError(error) ? 'timeout' : 'exception',
         error: error instanceof Error ? error.message : String(error),
-      });
+      };
+      if (resolved.warnOnFailure) {
+        console.warn(`[${resolved.logKey}] optional request exception`, logPayload);
+      } else {
+        console.error(`[${resolved.logKey}] request exception`, logPayload);
+      }
       if (attempt >= maxAttempts) return null;
     }
   }
@@ -766,6 +779,8 @@ interface GetCommunityPostsByGameOptions {
   appId?: string;
   pkg?: string;
   gameName?: string;
+  fetchOptions?: CommunityReadFetchOptions;
+  maxQueryCandidates?: number;
 }
 
 const matchesRelatedGame = (
@@ -811,9 +826,11 @@ function isSeoSafeRelatedPost(post: CommunityPost): boolean {
 
 async function fetchCommunityFeedByQuery(
   query: URLSearchParams,
+  fetchOptions?: CommunityReadFetchOptions,
 ): Promise<ApiCommunityPost[]> {
   const data = await getApiData<{ list?: ApiCommunityPost[] }>(
     `/content/feed?${query.toString()}`,
+    fetchOptions,
   );
   return data?.list || [];
 }
@@ -836,8 +853,12 @@ export async function getCommunityPostsByGame(
   if (options.gameName) queryCandidates.push(new URLSearchParams([...baseEntries, ['keyword', options.gameName]]));
   queryCandidates.push(new URLSearchParams(baseEntries));
 
-  for (const query of queryCandidates) {
-    const rawList = await fetchCommunityFeedByQuery(query);
+  const maxQueryCandidates = Math.max(
+    1,
+    Math.min(queryCandidates.length, Number(options.maxQueryCandidates || queryCandidates.length)),
+  );
+  for (const query of queryCandidates.slice(0, maxQueryCandidates)) {
+    const rawList = await fetchCommunityFeedByQuery(query, options.fetchOptions);
     if (rawList.length === 0) continue;
 
     const mapped = rawList.map(toCommunityPost).filter((item) => Boolean(item.id));

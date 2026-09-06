@@ -381,23 +381,6 @@ const getPageData = cache(async (id: string): Promise<GamePageSnapshot | null> =
   return getGameDetails(id);
 });
 
-function buildInitialGameDataForHydration(gameData: GameDetailData): GameDetailData {
-  return {
-    ...gameData,
-    app: {
-      ...gameData.app,
-      detail_images: Array.isArray(gameData.app.detail_images)
-        ? gameData.app.detail_images.slice(0, 5)
-        : [],
-      description: String(gameData.app.description || ''),
-    },
-    resources: Array.isArray(gameData.resources) ? gameData.resources : [],
-    faq: {
-      items: normalizeGameFaqItems(gameData.faq),
-    },
-  };
-}
-
 export async function generateMetadata({
   params,
 }: {
@@ -637,11 +620,9 @@ export default async function GameDetailPage({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(relatedAppsJsonLd) }} />
       )}
       <GameDetailView
-        id={id}
-        initialGameData={buildInitialGameDataForHydration(initialGameData)}
-        initialRecommendedGames={recommendedGames}
-        initialRelatedNews={relatedNews}
-        initialDataMode="full"
+        gameData={initialGameData}
+        recommendedGames={recommendedGames}
+        relatedNews={relatedNews}
       />
     </>
   );

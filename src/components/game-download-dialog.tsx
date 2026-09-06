@@ -35,6 +35,9 @@ interface GameDownloadDialogProps {
   downloadNotices?: CardConfigItem[];
   triggerClassName?: string;
   triggerLabel?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }
 
 const iconMap: { [key: string]: React.ReactNode } = {
@@ -52,6 +55,9 @@ export default function GameDownloadDialog({
   downloadNotices,
   triggerClassName,
   triggerLabel,
+  open,
+  onOpenChange,
+  hideTrigger = false,
 }: GameDownloadDialogProps) {
   const [loadingChannelId, setLoadingChannelId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -132,21 +138,25 @@ export default function GameDownloadDialog({
   return (
     <>
       <Dialog
-        onOpenChange={(open) => {
-          if (!open) setError(null);
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setError(null);
+          onOpenChange?.(nextOpen);
         }}
       >
-        <DialogTrigger asChild>
-          <Button
-            size="lg"
-            className={`w-full md:w-auto btn-interactive ${triggerClassName || ''}`}
-            data-acbox-action="game_download_open"
-            data-acbox-label={triggerLabel || '获取游戏'}
-          >
-            <Download className="mr-2 h-5 w-5" />
-            {triggerLabel || '获取游戏'}
-          </Button>
-        </DialogTrigger>
+        {!hideTrigger ? (
+          <DialogTrigger asChild>
+            <Button
+              size="lg"
+              className={`w-full md:w-auto btn-interactive ${triggerClassName || ''}`}
+              data-acbox-action="game_download_open"
+              data-acbox-label={triggerLabel || '获取游戏'}
+            >
+              <Download className="mr-2 h-5 w-5" />
+              {triggerLabel || '获取游戏'}
+            </Button>
+          </DialogTrigger>
+        ) : null}
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle>选择下载渠道</DialogTitle>

@@ -629,6 +629,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Switch
+                aria-label="有人回复评论时发送邮件提醒"
                 checked={emailNotifyEnabled}
                 disabled={!isAuthenticated || isSavingEmailNotify}
                 onCheckedChange={(checked) => {
@@ -652,6 +653,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs text-[#595c5d]">社区回复邮件总开关</span>
                 <Switch
+                  aria-label="社区回复邮件总开关"
                   checked={adminEmailSwitchEnabled}
                   disabled={isSavingAdminSwitch}
                   onCheckedChange={(checked) => {

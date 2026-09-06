@@ -1,1097 +1,102 @@
-'use client';
-
-import type { ApiRecommendedGame, CardConfigItem, CommunityPost, GameDetailData } from '@/types';
 import Image from 'next/image';
 import Link from 'next/link';
-import { createPortal } from 'react-dom';
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent, type SyntheticEvent, type WheelEvent } from 'react';
-import {
-  ArrowLeft,
-  BellRing,
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  ExternalLink,
-  Heart,
-  Link as LinkIcon,
-  MessageSquare,
-  RotateCcw,
-  Smartphone,
-  Star,
-  ThumbsUp,
-  Users,
-  X as CloseIcon,
-  ZoomIn,
-  ZoomOut,
-} from 'lucide-react';
+import { Suspense, type ReactNode } from 'react';
+import { ChevronRight, Download, ExternalLink, Link as LinkIcon, Star, Users } from 'lucide-react';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import AuthModal from '@/components/auth/auth-modal';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import GameAnnouncements from '@/components/game-announcements';
-import AppDownloadGuideDialog from '@/components/app-download-guide-dialog';
-import GameDownloadDialog from '@/components/game-download-dialog';
-import GameReviewPanel from '@/components/game-detail/GameReviewPanel';
 import GameFaqSection from '@/components/game-detail/GameFaqSection';
-import { useAuth } from '@/context/auth-context';
-import { useToast } from '@/hooks/use-toast';
-import { trackedApiFetch } from '@/lib/api';
-import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
-import { getCommunityPostsByGame } from '@/lib/community-api';
-import { buildFeedbackCommonFields, submitFeedbackTicket } from '@/lib/feedback';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { normalizeGameFaqItems } from '@/lib/game-faq';
-import { getGamePrimaryActionKind, isWebGameType } from '@/lib/game-resource-type';
+import { isWebGameType } from '@/lib/game-resource-type';
 import { cn } from '@/lib/utils';
+import type { ApiRecommendedGame, CardConfigItem, GamePageSnapshot } from '@/types';
+import DeferredGameReviewPanel from './DeferredGameReviewPanel.client';
+import GameDetailActions from './GameDetailActions.client';
+import GameCommunitySection, { GameCommunitySkeleton } from './GameCommunitySection';
+import GameHeroArtwork from './GameHeroArtwork.client';
+import GameScreenshotGallery from './GameScreenshotGallery.client';
+import {
+  TAG_STYLE_PALETTES,
+  buildGameFactItems,
+  buildInstallSteps,
+  buildRiskNotes,
+  buildTagFilterHref,
+  cleanText,
+  formatDescriptionHtml,
+  getGameTags,
+  getPrimaryCategory,
+  isPreregGameLike,
+  normalizeScore,
+  resolveSupportItems,
+  toPlainTextWithBreaks,
+  type GameFactItem,
+  type RelatedNewsItem,
+} from './game-detail-presenter';
 
 interface GameDetailViewProps {
-  id: string;
-  initialGameData?: GameDetailData | null;
-  initialRecommendedGames?: ApiRecommendedGame[] | null;
-  initialRelatedNews?: RelatedNewsItem[] | null;
-  initialDataMode?: 'partial' | 'full';
+  gameData: GamePageSnapshot;
+  recommendedGames: ApiRecommendedGame[];
+  relatedNews: RelatedNewsItem[];
 }
 
-interface RelatedNewsItem {
-  id: string;
-  title: string;
-  excerpt: string;
-  date: string;
-}
-
-const MAX_RECOMMENDED_GAMES = 5;
-const CLIENT_PLATFORM = process.env.NEXT_PUBLIC_CLIENT_PLATFORM || 'android';
-const CLIENT_REGION = process.env.NEXT_PUBLIC_CLIENT_REGION || '';
-const CLIENT_VERSION = process.env.NEXT_PUBLIC_CLIENT_VERSION || '';
-
-type DragState = {
-  dragging: boolean;
-  startX: number;
-  startY: number;
-  baseX: number;
-  baseY: number;
-};
-
-type ScreenshotAspectKind = 'portrait' | 'landscape' | 'square' | 'unknown';
-
-function buildGameDetailsUrl(param: string) {
-  const query = new URLSearchParams();
-  query.set('param', param);
-  if (CLIENT_PLATFORM) query.set('platform', CLIENT_PLATFORM);
-  if (CLIENT_REGION) query.set('region', CLIENT_REGION);
-  if (CLIENT_VERSION) query.set('client_version', CLIENT_VERSION);
-  return `/game/details?${query.toString()}`;
-}
-
-function formatBytes(size?: number | null) {
-  if (!size || size <= 0) return '未知';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.min(Math.floor(Math.log(size) / Math.log(1024)), units.length - 1);
-  return `${(size / Math.pow(1024, i)).toFixed(2)} ${units[i]}`;
-}
-
-function cleanText(input?: string | null) {
-  if (!input) return '';
-  return input
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function toPlainTextWithBreaks(input?: string | null) {
-  const raw = String(input || '').replace(/\r\n?/g, '\n').trim();
-  if (!raw) return '';
-  return raw
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(?:p|div|section|article|blockquote|li|ul|ol|h[1-6])>/gi, '\n')
-    .replace(/<li[^>]*>/gi, '• ')
-    .replace(/<[^>]*>/g, '')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n[ \t]+/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
-function extractDescriptionExcerpt(input?: string | null, maxLength = 260) {
-  const normalized = toPlainTextWithBreaks(input);
-  if (!normalized) return '';
-
-  const firstSection = normalized
-    .split(/\n{2,}/)
-    .map((block) => block.trim())
-    .find(Boolean) || '';
-  if (firstSection.length <= maxLength) return firstSection;
-
-  return `${firstSection.slice(0, maxLength).trimEnd()}...`;
-}
-
-function extractSummary(summaryInput?: string | null, contentInput?: string | null, maxLength = 160) {
-  const preferred = toPlainTextWithBreaks(summaryInput);
-  const fallback = toPlainTextWithBreaks(contentInput);
-  const source = preferred || fallback || '暂无摘要';
-  if (source.length <= maxLength) return source;
-  return `${source.slice(0, maxLength).trim()}...`;
-}
-
-function escapeHtml(input: string) {
-  return input
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function sanitizeRichHtml(input: string) {
-  return input
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<\/?(?:script|style|iframe|object|embed|link|meta)[^>]*>/gi, '')
-    .replace(/\son[a-z]+\s*=\s*(".*?"|'.*?'|[^\s>]+)/gi, '')
-    .replace(/\s(href|src)\s*=\s*("|\')\s*javascript:[\s\S]*?\2/gi, ' $1="#"');
-}
-
-function formatDescriptionHtml(input?: string | null) {
-  const raw = String(input || '').replace(/\r\n?/g, '\n').trim();
-  if (!raw) return '';
-
-  const hasHtmlTag = /<\/?[a-z][^>]*>/i.test(raw);
-  if (hasHtmlTag) {
-    return sanitizeRichHtml(raw).replace(/\n/g, '<br />');
-  }
-
-  return escapeHtml(raw)
-    .replace(/\n{2,}/g, '<br /><br />')
-    .replace(/\n/g, '<br />');
-}
-
-function formatDateText(value?: string | null) {
-  if (!value) return '未知';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '未知';
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
-type GameFactItem = {
-  label: string;
-  value: string;
-};
-
-function buildGameFactItems(
-  game: GameDetailData['app'],
-  options: {
-    category: string;
-    resourceCount: number;
-    isWebGame: boolean;
-  },
-): GameFactItem[] {
-  const facts: GameFactItem[] = [];
-  const pushFact = (label: string, value?: string | number | null) => {
-    const text = cleanText(String(value || ''));
-    if (!text || text === '未知') return;
-    facts.push({ label, value: text });
-  };
-
-  if (!options.isWebGame) {
-    pushFact('包名', game.pkg);
-    pushFact('当前版本', game.version);
-  }
-  pushFact('更新日期', formatDateText(game.latest_at));
-  if (!options.isWebGame) {
-    pushFact('安装包大小', formatBytes(game.file_size));
-  }
-  pushFact('开发者', game.developer);
-  pushFact('区服/地区', game.metadata?.region);
-  pushFact('游戏分类', options.category);
-  if (!options.isWebGame && options.resourceCount > 0) {
-    pushFact('可用下载渠道', `${options.resourceCount} 个`);
-  }
-
-  return facts.slice(0, 8);
-}
-
-function extractRecommendedGamesPayload(payload: unknown): ApiRecommendedGame[] {
-  const list = Array.isArray(payload)
-    ? payload
-    : Array.isArray((payload as { data?: unknown } | null)?.data)
-      ? (payload as { data: unknown[] }).data
-      : [];
-
-  return list.filter((item): item is ApiRecommendedGame => {
-    if (!item || typeof item !== 'object') return false;
-    const candidate = item as Partial<ApiRecommendedGame>;
-    return Boolean(cleanText(candidate.name) && cleanText(candidate.pkg));
-  });
-}
-
-function formatCompactCount(input?: number | string | null) {
-  const value = Number(input || 0);
-  if (!Number.isFinite(value) || value <= 0) return '0';
-  if (value >= 10000) return `${(value / 10000).toFixed(1)}w`;
-  if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
-  return String(Math.round(value));
-}
-
-function normalizeScore(raw?: number | string | null, fallback = 9.2) {
-  const value = Number(raw);
-  if (!Number.isFinite(value) || value <= 0) return fallback.toFixed(1);
-  return value.toFixed(1);
-}
-
-function isPreregGameLike(game?: GameDetailData['app'] | null): boolean {
-  if (!game) return false;
-  const typeText = String(game.type || '').toLowerCase();
-  if (/pre[-_ ]?reg|预约|事前|预注册/.test(typeText)) return true;
-  const tagText = (Array.isArray(game.tags) ? game.tags : []).join(' ').toLowerCase();
-  return /pre[-_ ]?reg|预约|事前|预注册|即将上线|coming soon/.test(tagText);
-}
-
-function safeHref(path?: string, fallback = '#') {
-  const value = String(path || '').trim();
-  return value || fallback;
-}
-
-function extractPostImage(post: CommunityPost) {
-  if (post.imageUrl) return post.imageUrl;
-  const markdownMatch = String(post.content || '').match(/!\[[^\]]*]\((https?:\/\/[^)\s]+)(?:\s+[^)]*)?\)/i);
-  if (markdownMatch?.[1]) return markdownMatch[1];
-  const htmlMatch = String(post.content || '').match(/<img[^>]*src=["'](https?:\/\/[^"']+)["'][^>]*>/i);
-  if (htmlMatch?.[1]) return htmlMatch[1];
-  return '';
-}
-
-function normalizePreviewUrl(input?: string | null) {
-  const raw = String(input || '').trim();
-  if (!raw) return '';
-  try {
-    const parsed = new URL(
-      raw,
-      typeof window !== 'undefined' ? window.location.origin : 'http://localhost',
-    );
-    if (parsed.pathname === '/_next/image') {
-      const original = parsed.searchParams.get('url');
-      if (original) return decodeURIComponent(original);
-    }
-    return parsed.toString();
-  } catch {
-    return raw;
-  }
-}
-
-function getScreenshotAspectKindFromRatio(ratio?: number | null): ScreenshotAspectKind {
-  if (!ratio || !Number.isFinite(ratio) || ratio <= 0) return 'unknown';
-  if (ratio < 0.9) return 'portrait';
-  if (ratio < 1.2) return 'square';
-  return 'landscape';
-}
-
-function inferScreenshotAspectFromUrl(input?: string | null): ScreenshotAspectKind {
-  const raw = String(input || '').trim();
-  if (!raw) return 'unknown';
-  const match = raw.match(/(\d{2,5})[xX](\d{2,5})/);
-  if (!match) return 'unknown';
-  const width = Number(match[1]);
-  const height = Number(match[2]);
-  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-    return 'unknown';
-  }
-  return getScreenshotAspectKindFromRatio(width / height);
-}
-
-function resolveSupportItems(cardConfig: Record<string, CardConfigItem[] | undefined>) {
-  const priorityKeys = ['contact', 'partner', 'top', 'middle', 'bottom'];
-  const items: CardConfigItem[] = [];
-  const pushItems = (list?: CardConfigItem[]) => {
-    if (!Array.isArray(list)) return;
-    list.forEach((item) => {
-      if (item && item.content) {
-        items.push(item);
-      }
-    });
-  };
-
-  priorityKeys.forEach((key) => pushItems(cardConfig[key]));
-
-  Object.entries(cardConfig).forEach(([key, list]) => {
-    if (priorityKeys.includes(key) || key === 'download_notice') return;
-    pushItems(list);
-  });
-
-  const deduped: CardConfigItem[] = [];
-  const seen = new Set<string>();
-  items.forEach((item) => {
-    const key = `${item._id}-${item.content?.title || ''}-${item.content?.link || ''}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    deduped.push(item);
-  });
-  return deduped.slice(0, 6);
-}
-
-function buildInstallSteps(game: GameDetailData['app']) {
-  const name = String(game.name || '该应用').trim() || '该应用';
-  return [
-    `点击页面中的“立即下载”，优先选择更新日期较新的渠道资源。`,
-    `下载完成后，确认安装包大小与页面展示信息基本一致，再开始安装 ${name}。`,
-    '首次安装第三方 APK 时，请根据设备系统提示授权安装权限。',
-  ];
-}
-
-function buildRiskNotes(game: GameDetailData['app']) {
-  const packageName = String(game.pkg || '').trim() || '未知包名';
-  return [
-    `安装前请核对包名 ${packageName} 与目标应用是否一致，避免误装非目标版本。`,
-    '若设备已安装同名旧版本，建议先确认版本兼容性，再决定覆盖安装或重新安装。',
-    '如下载来源异常或安装后行为异常，请暂停使用并重新核对下载渠道。',
-  ];
-}
-
-const TAG_STYLE_PALETTES = [
-  'border-[#fdc003]/35 bg-[#fff7d6] text-[#6f4c00] shadow-[0_10px_24px_rgba(253,192,3,0.14)]',
-  'border-[#7fb3ff]/35 bg-[#eaf3ff] text-[#0d4e8f] shadow-[0_10px_24px_rgba(127,179,255,0.18)]',
-  'border-[#ff8f82]/35 bg-[#fff0ed] text-[#8f2018] shadow-[0_10px_24px_rgba(255,119,103,0.16)]',
-  'border-[#83d3af]/35 bg-[#ecfbf4] text-[#166247] shadow-[0_10px_24px_rgba(131,211,175,0.16)]',
-  'border-[#c7a6ff]/35 bg-[#f5efff] text-[#59358c] shadow-[0_10px_24px_rgba(199,166,255,0.16)]',
-  'border-[#8fd7df]/35 bg-[#edf9fb] text-[#155f69] shadow-[0_10px_24px_rgba(143,215,223,0.16)]',
-];
-
-function shuffleArray<T>(list: T[]) {
-  const next = [...list];
-  for (let index = next.length - 1; index > 0; index -= 1) {
-    const target = Math.floor(Math.random() * (index + 1));
-    [next[index], next[target]] = [next[target], next[index]];
-  }
-  return next;
-}
-
-function getPrimaryCategory(game?: GameDetailData['app'] | null, tags?: string[]) {
-  const tagList = Array.isArray(tags) ? tags : [];
-  const preferredTag = tagList.find((tag) => {
-    const value = String(tag || '').trim();
-    if (!value) return false;
-    if (value.startsWith('#')) return false;
-    if (/创收最高|热门免费|人气推荐/i.test(value)) return false;
-    return true;
-  });
-  return preferredTag || String(game?.type || '').trim() || '安卓游戏';
-}
-
-function buildTagFilterHref(tag: string) {
-  const safeTag = String(tag || '').trim();
-  if (!safeTag) return '/app';
-  const params = new URLSearchParams();
-  params.set('category', safeTag);
-  return `/app?${params.toString()}`;
-}
-
-function formatNewsDate(value?: string | null) {
-  if (!value) return '最近更新';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '最近更新';
-  const year = date.getUTCFullYear();
-  if (year < 2005 || year > 2100) return '最近更新';
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
-function toRelatedNewsItem(post: CommunityPost): RelatedNewsItem | null {
-  const id = String(post.id || '').trim();
-  if (!id) return null;
-
-  const title = String(post.title || post.summary || '社区帖子').trim() || '社区帖子';
-
-  return {
-    id,
-    title,
-    excerpt: getCommunityPostPreviewText(post, 120, '查看这篇相关社区帖的完整内容。'),
-    date: formatNewsDate(post.rawTimestamp || post.timestamp),
-  };
-}
-
-function ViewSkeleton() {
+function SectionTitle({ children, color }: { children: ReactNode; color: string }) {
   return (
-    <div className="space-y-6">
-      <Skeleton className="h-[420px] w-full rounded-[2rem]" />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-        <Skeleton className="h-[680px] rounded-[2rem]" />
-        <Skeleton className="h-[680px] rounded-[2rem]" />
-      </div>
-    </div>
+    <h2 className="mb-4 flex items-center gap-2 text-xl font-black lg:mb-6 lg:gap-3 lg:font-bold">
+      <span className={cn('h-6 w-1.5 rounded-full lg:h-8 lg:w-2', color)} aria-hidden="true" />
+      {children}
+    </h2>
   );
 }
 
-export default function GameDetailView({
-  id,
-  initialGameData,
-  initialRecommendedGames,
-  initialRelatedNews,
-  initialDataMode = 'full',
-}: GameDetailViewProps) {
-  const { isAuthenticated, token, user } = useAuth();
-  const { toast } = useToast();
-
-  const [gameData, setGameData] = useState<GameDetailData | null | undefined>(initialGameData);
-  const [recommendedGames, setRecommendedGames] = useState<ApiRecommendedGame[]>(
-    (initialRecommendedGames || []).slice(0, MAX_RECOMMENDED_GAMES),
-  );
-  const [relatedPosts, setRelatedPosts] = useState<CommunityPost[]>([]);
-  const [relatedNews, setRelatedNews] = useState<RelatedNewsItem[]>((initialRelatedNews || []).slice(0, 4));
-  const [isLoading, setIsLoading] = useState(!initialGameData);
-  const [hasError, setHasError] = useState(false);
-  const [isSubmittingUrge, setIsSubmittingUrge] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [appGuideOpen, setAppGuideOpen] = useState(false);
-  const [showFullDescription, setShowFullDescription] = useState(false);
-  const [sort, setSort] = useState<'latest' | 'hot'>('latest');
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [isHeroBackgroundError, setIsHeroBackgroundError] = useState(false);
-  const [isIconBackdropError, setIsIconBackdropError] = useState(false);
-
-  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
-  const [previewZoom, setPreviewZoom] = useState(1);
-  const [previewOffset, setPreviewOffset] = useState({ x: 0, y: 0 });
-  const [isPreviewImageError, setIsPreviewImageError] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
-  const [tagStylePalettes, setTagStylePalettes] = useState(TAG_STYLE_PALETTES);
-  const [screenshotAspectMap, setScreenshotAspectMap] = useState<Record<string, ScreenshotAspectKind>>({});
-  const [isReminderEnabled, setIsReminderEnabled] = useState(false);
-  const dragStateRef = useRef<DragState>({
-    dragging: false,
-    startX: 0,
-    startY: 0,
-    baseX: 0,
-    baseY: 0,
-  });
-
-  const game = gameData?.app;
-  const gameName = game?.name || '游戏';
-  const isWebGame = isWebGameType(game?.type);
-  const primaryActionKind = getGamePrimaryActionKind(game?.type);
-  const resources = gameData?.resources || [];
-  const cardConfig = (gameData?.cardConfig || {}) as Record<string, CardConfigItem[] | undefined>;
-  const supportItems = useMemo(() => resolveSupportItems(cardConfig), [cardConfig]);
-  const downloadNotices = (cardConfig.download_notice || []) as CardConfigItem[];
-  const faqItems = useMemo(() => normalizeGameFaqItems(gameData?.faq), [gameData?.faq]);
-  const installSteps = useMemo(
-    () => (isWebGame ? [] : buildInstallSteps(gameData?.app || ({} as GameDetailData['app']))),
-    [gameData?.app, isWebGame],
-  );
-  const riskNotes = useMemo(
-    () => (isWebGame ? [] : buildRiskNotes(gameData?.app || ({} as GameDetailData['app']))),
-    [gameData?.app, isWebGame],
-  );
-
-  const tags = useMemo(() => {
-    const list = Array.isArray(game?.tags)
-      ? game.tags
-          .map((item) => String(item || '').trim())
-          .filter(Boolean)
-      : [];
-    if (list.length > 0) return Array.from(new Set(list)).slice(0, 8);
-    const fallback = [
-      String(game?.type || '').trim(),
-      String(game?.metadata?.region || '').trim(),
-    ].filter(Boolean);
-    if (fallback.length > 0) return Array.from(new Set(fallback)).slice(0, 4);
-    return ['安卓游戏'];
-  }, [game?.metadata?.region, game?.tags, game?.type]);
-  const primaryCategory = useMemo(() => getPrimaryCategory(game, tags), [game, tags]);
-  const isPreregGame = useMemo(() => isPreregGameLike(game), [game]);
-  const showPreregReminder = isPreregGame && !isWebGame;
-  const factSummaryItems = useMemo(
-    () =>
-      game
-        ? buildGameFactItems(game, {
-            category: primaryCategory,
-            resourceCount: resources.length,
-            isWebGame,
-          })
-        : [],
-    [game, isWebGame, primaryCategory, resources.length],
-  );
-
-  const screenshots = useMemo(() => {
-    const list = (game?.detail_images || []).filter(Boolean);
-    if (list.length > 0) return list;
-    return [game?.header_image, game?.icon].filter(Boolean) as string[];
-  }, [game?.detail_images, game?.header_image, game?.icon]);
-  const previewScreenshots = useMemo(() => {
-    const normalized = screenshots
-      .map((value) => normalizePreviewUrl(value))
-      .filter(Boolean);
-    if (normalized.length > 0) return normalized;
-    return screenshots;
-  }, [screenshots]);
-  const inferredScreenshotAspectMap = useMemo(
-    () =>
-      Object.fromEntries(
-        previewScreenshots.map((url) => [url, inferScreenshotAspectFromUrl(url)]),
-      ) as Record<string, ScreenshotAspectKind>,
-    [previewScreenshots],
-  );
-
-  const heroImage = game?.header_image || screenshots[0] || game?.icon || '';
-  const heroBackdropSrc = !isHeroBackgroundError
-    ? heroImage
-    : isIconBackdropError
-      ? ''
-      : String(game?.icon || '').trim();
-  const isUsingIconBackdrop = isHeroBackgroundError && !isIconBackdropError && Boolean(game?.icon);
-  const rawGameDescription = String(game?.description || game?.summary || '');
-  const gameDescription = toPlainTextWithBreaks(rawGameDescription);
-  const shortDescription = extractDescriptionExcerpt(rawGameDescription, 260);
-  const hasMoreDescription = gameDescription.length > shortDescription.length;
-  const fullDescriptionHtml = formatDescriptionHtml(rawGameDescription);
-  const shortDescriptionHtml = formatDescriptionHtml(shortDescription);
-
-  const recommendationList = useMemo(() => {
-    if (!game || recommendedGames.length === 0) return [];
-
-    const currentId = String(game._id || '').trim();
-    const currentPackage = String(game.pkg || '').trim().toLowerCase();
-    const seenPackages = new Set<string>();
-
-    return recommendedGames.filter((item) => {
-      const itemId = String(item._id || '').trim();
-      const itemPackage = String(item.pkg || '').trim();
-      const normalizedPackage = itemPackage.toLowerCase();
-      if (!itemPackage || itemId === currentId || normalizedPackage === currentPackage) {
-        return false;
-      }
-      if (seenPackages.has(normalizedPackage)) return false;
-      seenPackages.add(normalizedPackage);
-      return true;
-    });
-  }, [recommendedGames, game]);
-
-  const previewUrl = previewIndex !== null ? previewScreenshots[previewIndex] : '';
-  const canPreviewNavigate = previewScreenshots.length > 1;
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadDetails() {
-      const hasInitialMatch = Boolean(
-        initialGameData && (initialGameData.app.pkg === id || String(initialGameData.app._id) === id),
-      );
-      if (hasInitialMatch && initialGameData) {
-        setGameData(initialGameData);
-        setRecommendedGames((initialRecommendedGames || []).slice(0, MAX_RECOMMENDED_GAMES));
-        setIsLoading(false);
-        // 完整快照中的空推荐也是权威结果，不应触发详情与推荐接口补请求。
-        if (initialDataMode === 'full' && Array.isArray(initialRecommendedGames)) {
-          return;
-        }
-      }
-
-      if (!hasInitialMatch) {
-        setIsLoading(true);
-      }
-      setHasError(false);
-
-      try {
-        const detailRes = await trackedApiFetch(buildGameDetailsUrl(id), { cache: 'force-cache' });
-        if (!detailRes.ok) throw new Error('details-request-failed');
-
-        const detailJson = await detailRes.json();
-        if (detailJson?.code !== 0 || !detailJson?.data) throw new Error('details-invalid-response');
-
-        if (cancelled) return;
-        setGameData(detailJson.data as GameDetailData);
-
-        const recommendationParam = String(
-          detailJson.data?.app?.pkg || detailJson.data?.app?._id || '',
-        ).trim();
-        if (recommendationParam) {
-          const recRes = await trackedApiFetch(`/game/recommendedApp?param=${encodeURIComponent(recommendationParam)}`, {
-            cache: 'force-cache',
-          });
-          if (recRes.ok) {
-            const recJson = await recRes.json();
-            const nextRecommendedGames = extractRecommendedGamesPayload(recJson);
-            if (nextRecommendedGames.length > 0) {
-              setRecommendedGames(nextRecommendedGames.slice(0, MAX_RECOMMENDED_GAMES));
-            }
-          }
-        }
-      } catch {
-        if (!cancelled) {
-          if (hasInitialMatch && initialGameData) {
-            setGameData(initialGameData);
-            setHasError(false);
-          } else {
-            setHasError(true);
-          }
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-
-    void loadDetails();
-    return () => {
-      cancelled = true;
-    };
-  }, [id, initialDataMode, initialGameData, initialRecommendedGames]);
-
-  useEffect(() => {
-    setIsHeroBackgroundError(false);
-    setIsIconBackdropError(false);
-  }, [id, heroImage, game?.icon]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !game) {
-      setIsReminderEnabled(false);
-      return;
-    }
-    const reminderKey = game._id || game.pkg;
-    if (!reminderKey) {
-      setIsReminderEnabled(false);
-      return;
-    }
-    try {
-      const storedValue = window.localStorage.getItem(`game-remind:${reminderKey}`);
-      setIsReminderEnabled(storedValue === '1');
-    } catch {
-      setIsReminderEnabled(false);
-    }
-  }, [game?._id, game?.pkg]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadRelatedPosts() {
-      if (!game) return;
-      const list = await getCommunityPostsByGame({
-        sort,
-        pageSize: 20,
-        appId: game._id,
-        pkg: game.pkg || undefined,
-        gameName: game.name,
-      }).catch(() => []);
-
-      if (!cancelled) {
-        setRelatedPosts(list);
-      }
-    }
-
-    void loadRelatedPosts();
-    return () => {
-      cancelled = true;
-    };
-  }, [sort, game?._id, game?.pkg, game?.name]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadRelatedNews() {
-      if (!game?.name) {
-        setRelatedNews([]);
-        return;
-      }
-
-      if (initialRelatedNews && initialRelatedNews.length > 0) {
-        setRelatedNews(initialRelatedNews.slice(0, 4));
-        return;
-      }
-
-      try {
-        const list = await getCommunityPostsByGame({
-          sort: 'latest',
-          pageSize: 8,
-          appId: game._id,
-          pkg: game.pkg || undefined,
-          gameName: game.name,
-        });
-        const mapped = list.map(toRelatedNewsItem).filter((item): item is RelatedNewsItem => Boolean(item));
-        if (!cancelled) {
-          setRelatedNews(mapped.slice(0, 4));
-        }
-      } catch {
-        if (!cancelled) {
-          setRelatedNews([]);
-        }
-      }
-    }
-
-    void loadRelatedNews();
-    return () => {
-      cancelled = true;
-    };
-  }, [game?.name, initialRelatedNews]);
-
-  useEffect(() => {
-    setIsMounted(true);
-    return () => setIsMounted(false);
-  }, []);
-
-  useEffect(() => {
-    if (!isMounted) return;
-    const media = window.matchMedia('(min-width: 1024px)');
-    const apply = () => setIsDesktopViewport(media.matches);
-    apply();
-    media.addEventListener('change', apply);
-    return () => {
-      media.removeEventListener('change', apply);
-    };
-  }, [isMounted]);
-
-  useEffect(() => {
-    if (!isMounted) return;
-    setTagStylePalettes(shuffleArray(TAG_STYLE_PALETTES));
-  }, [isMounted, tags]);
-
-  useEffect(() => {
-    if (previewIndex === null) return;
-    setPreviewZoom(1);
-    setPreviewOffset({ x: 0, y: 0 });
-    setIsPreviewImageError(false);
-  }, [previewIndex]);
-
-  useEffect(() => {
-    document.body.style.overflow = previewIndex !== null ? 'hidden' : '';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [previewIndex]);
-
-  useEffect(() => {
-    if (previewIndex === null) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setPreviewIndex(null);
-      if (!canPreviewNavigate) return;
-      if (event.key === 'ArrowLeft') {
-        setPreviewIndex((current) => (current === null ? null : (current - 1 + previewScreenshots.length) % previewScreenshots.length));
-      }
-      if (event.key === 'ArrowRight') {
-        setPreviewIndex((current) => (current === null ? null : (current + 1) % previewScreenshots.length));
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [previewIndex, previewScreenshots.length, canPreviewNavigate]);
-
-  const handleShare = useCallback(async () => {
-    const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: `${game?.name || '游戏详情'} - ACBOX`,
-          url: shareUrl,
-        });
-        return;
-      }
-
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(shareUrl);
-        toast({ title: '复制成功', description: '链接已复制。' });
-      }
-    } catch {
-      // ignore user-cancel/share errors
-    }
-  }, [game?.name, toast]);
-
-  const handleFavoriteToggle = useCallback(() => {
-    const next = !isFavorite;
-    setIsFavorite(next);
-    toast({
-      title: next ? '已加入收藏' : '已取消收藏',
-      description: next ? '你可以在收藏列表中快速找到该游戏。' : '该游戏已从收藏中移除。',
-    });
-  }, [isFavorite, toast]);
-
-  const handleBack = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    if (window.history.length > 1) {
-      window.history.back();
-      return;
-    }
-    window.location.href = '/app';
-  }, []);
-
-  const handleUrge = useCallback(async () => {
-    if (!game || isSubmittingUrge) return;
-    if (!isAuthenticated || !token) {
-      setAuthModalOpen(true);
-      toast({
-        title: '请先登录或注册',
-        description: '登录账号后即可提交催更请求。',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSubmittingUrge(true);
-    try {
-      const common = buildFeedbackCommonFields(
-        user || undefined,
-        typeof window !== 'undefined' ? window.location.href : '',
-      );
-      await submitFeedbackTicket(
-        {
-          type: 'missing',
-          title: '求添加资源反馈',
-          description: [
-            `缺少资源：${game.name}`,
-            `游戏包名：${game.pkg || '未提供'}`,
-            `当前版本：${game.version || '未提供'}`,
-            `提交用户：${common.nickname || '游客'}`,
-            `联系方式：${common.contact || '未提供'}`,
-            '提交入口：Web /app/[id] 详情页催更',
-          ].join('\n'),
-          ...common,
-        },
-        token,
-      );
-
-      toast({ title: '催更已提交', description: '工单已提交，请等待处理。' });
-    } catch {
-      toast({ title: '提交失败', description: '请稍后重试。', variant: 'destructive' });
-    } finally {
-      setIsSubmittingUrge(false);
-    }
-  }, [game, isAuthenticated, isSubmittingUrge, token, user, toast]);
-
-  const handleReminderToggle = useCallback(() => {
-    if (!game) return;
-    const reminderKey = game._id || game.pkg;
-    if (!reminderKey) return;
-    const next = !isReminderEnabled;
-    setIsReminderEnabled(next);
-    try {
-      window.localStorage.setItem(`game-remind:${reminderKey}`, next ? '1' : '0');
-    } catch {
-      // ignore storage write failures
-    }
-    toast({
-      title: next ? '已开启上线提醒' : '已取消上线提醒',
-      description: next ? '游戏上线后可在消息中心查看提醒。' : '你可以随时再次开启提醒。',
-    });
-  }, [game, isReminderEnabled, toast]);
-
-  const setZoom = useCallback((value: number) => {
-    const clamped = Math.min(3, Math.max(1, Number(value.toFixed(2))));
-    setPreviewZoom(clamped);
-    if (clamped <= 1) setPreviewOffset({ x: 0, y: 0 });
-  }, []);
-
-  const handlePreviewWheel = useCallback(
-    (event: WheelEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      const next = previewZoom + (event.deltaY < 0 ? 0.2 : -0.2);
-      setZoom(next);
-    },
-    [previewZoom, setZoom],
-  );
-
-  const handlePreviewPointerDown = useCallback(
-    (event: PointerEvent<HTMLDivElement>) => {
-      if (previewZoom <= 1) return;
-      dragStateRef.current = {
-        dragging: true,
-        startX: event.clientX,
-        startY: event.clientY,
-        baseX: previewOffset.x,
-        baseY: previewOffset.y,
-      };
-      event.currentTarget.setPointerCapture(event.pointerId);
-    },
-    [previewZoom, previewOffset.x, previewOffset.y],
-  );
-
-  const handlePreviewPointerMove = useCallback((event: PointerEvent<HTMLDivElement>) => {
-    const state = dragStateRef.current;
-    if (!state.dragging) return;
-    setPreviewOffset({
-      x: state.baseX + (event.clientX - state.startX),
-      y: state.baseY + (event.clientY - state.startY),
-    });
-  }, []);
-
-  const handlePreviewPointerUp = useCallback((event: PointerEvent<HTMLDivElement>) => {
-    if (!dragStateRef.current.dragging) return;
-    dragStateRef.current.dragging = false;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-  }, []);
-
-  const closePreview = useCallback(() => setPreviewIndex(null), []);
-  const handlePreviewBlankClick = useCallback(() => {
-    if (previewZoom > 1) {
-      setZoom(1);
-      setPreviewOffset({ x: 0, y: 0 });
-      return;
-    }
-    closePreview();
-  }, [closePreview, previewZoom, setZoom]);
-
-  const toPrevPreview = useCallback(() => {
-    if (!canPreviewNavigate) return;
-    setPreviewIndex((current) => (current === null ? null : (current - 1 + previewScreenshots.length) % previewScreenshots.length));
-    setIsPreviewImageError(false);
-  }, [canPreviewNavigate, previewScreenshots.length]);
-
-  const toNextPreview = useCallback(() => {
-    if (!canPreviewNavigate) return;
-    setPreviewIndex((current) => (current === null ? null : (current + 1) % previewScreenshots.length));
-    setIsPreviewImageError(false);
-  }, [canPreviewNavigate, previewScreenshots.length]);
-
-  const activeTagStylePalettes = tagStylePalettes.length > 0 ? tagStylePalettes : TAG_STYLE_PALETTES;
-
-  const renderTagSection = (isMobile = false) => (
-    <section className={cn(isMobile && 'mt-10')}>
-      <h2 className={cn('mb-4 flex items-center gap-2 font-black', isMobile ? 'text-xl' : 'mb-6 gap-3 text-xl font-bold')}>
-        <span className={cn('rounded-full bg-[#fdc003]', isMobile ? 'h-6 w-1.5' : 'h-8 w-2')} />
-        游戏标签
-      </h2>
-      <Card className={cn(
-        'border-[#abadae]/10 bg-white/85 backdrop-blur-sm dark:border-border/45 dark:bg-card/80',
-        isMobile ? 'shadow-[0_18px_40px_rgba(15,23,32,0.06)]' : 'rounded-[2rem] shadow-[0_24px_60px_rgba(15,23,32,0.08)]',
-      )}>
-        <CardContent className={cn(isMobile ? 'p-5' : 'p-6')}>
-          <div className="flex flex-wrap gap-3">
-            {tags.map((tag, index) => (
-              <Link
-                key={`${tag}-${index}`}
-                href={buildTagFilterHref(tag)}
-                className={cn(
-                  'inline-flex items-center rounded-full border px-4 py-2 text-sm font-bold',
-                  'transform-gpu will-change-transform transition-all duration-300 ease-out motion-reduce:transform-none motion-reduce:transition-none',
-                  '[@media(hover:hover)]:hover:-translate-y-1 [@media(hover:hover)]:hover:scale-[1.06] [@media(hover:hover)]:hover:shadow-[0_16px_36px_rgba(15,23,32,0.14)]',
-                  isMounted ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-70',
-                  activeTagStylePalettes[index % activeTagStylePalettes.length],
-                )}
-                style={{ transitionDelay: `${index * 45}ms` }}
-              >
-                {tag}
-              </Link>
-            ))}
+function GameFactSummary({ items, isWebGame }: { items: GameFactItem[]; isWebGame: boolean }) {
+  if (items.length === 0) return null;
+  return (
+    <section className="mb-10 lg:mb-12">
+      <SectionTitle color="bg-[#005e9f]">{isWebGame ? '基本信息' : '版本与资源信息'}</SectionTitle>
+      <dl className="grid grid-cols-1 gap-3 rounded-[1.75rem] border border-[#abadae]/10 bg-white/80 p-5 shadow-sm dark:border-border/45 dark:bg-card/75 sm:grid-cols-2 lg:grid-cols-4">
+        {items.map((item) => (
+          <div key={item.label} className="min-w-0">
+            <dt className="text-xs font-bold text-[#757778] dark:text-muted-foreground">{item.label}</dt>
+            <dd className="mt-1 break-words text-sm font-black text-[#0f1720] dark:text-foreground">{item.value}</dd>
           </div>
-        </CardContent>
-      </Card>
+        ))}
+      </dl>
     </section>
   );
+}
 
-  const renderFactSummary = (isMobile = false) => {
-    if (factSummaryItems.length === 0) return null;
-
-    return (
-      <section className={cn(isMobile ? 'mt-8' : 'mb-12')}>
-        <h2 className={cn('mb-4 flex items-center gap-2 font-black', isMobile ? 'text-xl' : 'gap-3 text-xl font-bold')}>
-          <span className={cn('rounded-full bg-[#005e9f]', isMobile ? 'h-6 w-1.5' : 'h-8 w-2')} />
-          {isWebGame ? '基本信息' : '版本与资源信息'}
-        </h2>
-        <dl className={cn(
-          'grid gap-3 rounded-[1.75rem] border border-[#abadae]/10 bg-white/80 p-5 shadow-sm dark:border-border/45 dark:bg-card/75',
-          isMobile ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-4',
-        )}>
-          {factSummaryItems.map((item) => (
-            <div key={`${isMobile ? 'mobile-' : ''}fact-${item.label}`} className="min-w-0">
-              <dt className="text-xs font-bold text-[#757778] dark:text-muted-foreground">{item.label}</dt>
-              <dd className="mt-1 break-words text-sm font-black text-[#0f1720] dark:text-foreground">
-                {item.value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-    );
-  };
-
-  const renderSeoContent = (isMobile = false) => {
-    const highlights = Array.isArray(game?.seo?.highlights)
-      ? game.seo.highlights.map((item) => cleanText(item)).filter(Boolean).slice(0, 8)
-      : [];
-    const latestContent = cleanText(game?.latest_content);
-    if (highlights.length === 0 && !latestContent) return null;
-    return (
-      <section className={cn(isMobile ? 'mt-8' : 'mb-12')}>
-        {highlights.length > 0 && (
-          <>
-            <h2 className={cn('mb-4 flex items-center gap-2 font-black', isMobile ? 'text-xl' : 'gap-3 text-xl font-bold')}>
-              <span className={cn('rounded-full bg-[#2e7d32]', isMobile ? 'h-6 w-1.5' : 'h-8 w-2')} />
-              游戏特色
-            </h2>
-            <ul className={cn('grid gap-2 rounded-[1.75rem] border border-[#abadae]/10 bg-white/80 p-5 text-sm leading-6 dark:border-border/45 dark:bg-card/75', isMobile ? 'grid-cols-1' : 'sm:grid-cols-2')}>
-              {highlights.map((highlight, index) => <li key={`${highlight}-${index}`} className="list-inside list-disc">{highlight}</li>)}
-            </ul>
-          </>
-        )}
-        {latestContent && (
-          <div className={cn(highlights.length > 0 && 'mt-8')}>
-            <h2 className={cn('mb-3 flex items-center gap-2 font-black', isMobile ? 'text-xl' : 'gap-3 text-xl font-bold')}>
-              <span className={cn('rounded-full bg-[#005e9f]', isMobile ? 'h-6 w-1.5' : 'h-8 w-2')} />
-              最新更新
-            </h2>
-            <p className="rounded-2xl border border-[#abadae]/10 bg-white/70 p-4 text-sm leading-6 text-[#595c5d] dark:border-border/45 dark:bg-card/60 dark:text-muted-foreground">{latestContent}</p>
-          </div>
-        )}
-      </section>
-    );
-  };
-
-  const renderRecommendationSection = (isMobile = false) => {
-    if (recommendationList.length === 0) return null;
-
-    return (
-      <section className={cn(isMobile && 'mt-10')}>
-        <h2 className={cn('mb-4 flex items-center gap-2 font-black', isMobile ? 'text-xl' : 'mb-6 text-xl font-bold')}>
-          <span className={cn('rounded-full bg-[#fdc003]', isMobile ? 'h-6 w-1.5' : 'h-8 w-2')} />
-          相似推荐
-        </h2>
-        <div className={cn(isMobile ? 'space-y-3' : 'space-y-4')}>
-          {recommendationList.map((item) => {
-            const href = `/app/${encodeURIComponent(item.pkg)}`;
-            return (
-              <Link
-                key={`${isMobile ? 'mobile-' : ''}rec-${item._id}-${item.pkg}`}
-                href={href}
-                className={cn(
-                  'flex items-center gap-4 rounded-2xl p-3 transition-colors',
-                  isMobile
-                    ? 'border border-[#abadae]/10 bg-white shadow-sm dark:border-border/45 dark:bg-card/75'
-                    : 'hover:bg-[#e0e3e4]/70 dark:hover:bg-card/80',
-                )}
-              >
-                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl shadow-md">
-                  {item.icon ? (
-                    <Image src={item.icon} alt={`${item.name} icon`} fill sizes="56px" className="object-cover" />
-                  ) : (
-                    <div className="h-full w-full bg-[#dadddf]" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-[#0f1720] dark:text-foreground">{item.name}</p>
-                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#595c5d] dark:text-muted-foreground">
-                    {cleanText(item.summary) || '同类热门推荐'}
-                  </p>
-                </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-[#595c5d] dark:text-muted-foreground" />
-              </Link>
-            );
-          })}
+function GameSeoContent({ highlights, latestContent }: { highlights: string[]; latestContent: string }) {
+  if (highlights.length === 0 && !latestContent) return null;
+  return (
+    <section className="mb-10 lg:mb-12">
+      {highlights.length > 0 ? (
+        <>
+          <SectionTitle color="bg-[#2e7d32]">游戏特色</SectionTitle>
+          <ul className="grid grid-cols-1 gap-2 rounded-[1.75rem] border border-[#abadae]/10 bg-white/80 p-5 text-sm leading-6 dark:border-border/45 dark:bg-card/75 sm:grid-cols-2">
+            {highlights.map((highlight, index) => <li key={`${highlight}-${index}`} className="list-inside list-disc">{highlight}</li>)}
+          </ul>
+        </>
+      ) : null}
+      {latestContent ? (
+        <div className={cn(highlights.length > 0 && 'mt-8')}>
+          <SectionTitle color="bg-[#005e9f]">最新更新</SectionTitle>
+          <p className="rounded-2xl border border-[#abadae]/10 bg-white/70 p-4 text-sm leading-6 text-[#595c5d] dark:border-border/45 dark:bg-card/60 dark:text-muted-foreground">{latestContent}</p>
         </div>
-      </section>
-    );
-  };
+      ) : null}
+    </section>
+  );
+}
 
-  const renderFaqIntro = (isMobile = false) => (
-    <div className={cn('grid', isMobile ? 'mb-4 gap-4' : 'mb-6 gap-6 xl:grid-cols-2')}>
-      <Card className={cn(
-        'border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75',
-        isMobile ? '' : 'rounded-[2rem]',
-      )}>
-        <CardContent className={cn(isMobile ? 'p-5' : 'p-6')}>
-          <h3 className={cn('font-black text-[#0f1720] dark:text-foreground', isMobile ? 'text-lg' : 'text-xl font-bold')}>安装说明</h3>
-          <ol className={cn('mt-4 space-y-3 leading-6 text-[#595c5d] dark:text-muted-foreground', isMobile ? 'text-sm' : 'text-sm')}>
+function InstallationGuide({ installSteps, riskNotes }: { installSteps: string[]; riskNotes: string[] }) {
+  return (
+    <div className="mb-6 grid gap-4 xl:grid-cols-2 xl:gap-6">
+      <Card className="rounded-[1.75rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75">
+        <CardContent className="p-5 lg:p-6">
+          <h3 className="text-lg font-black text-[#0f1720] dark:text-foreground lg:text-xl lg:font-bold">安装说明</h3>
+          <ol className="mt-4 space-y-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">
             {installSteps.map((item, index) => (
-              <li key={`${isMobile ? 'mobile-' : ''}install-${index}`} className="flex gap-3">
+              <li key={item} className="flex gap-3">
                 <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#005e9f] text-xs font-bold text-white">{index + 1}</span>
                 <span>{item}</span>
               </li>
@@ -1099,17 +104,13 @@ export default function GameDetailView({
           </ol>
         </CardContent>
       </Card>
-
-      <Card className={cn(
-        'border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75',
-        isMobile ? '' : 'rounded-[2rem]',
-      )}>
-        <CardContent className={cn(isMobile ? 'p-5' : 'p-6')}>
-          <h3 className={cn('font-black text-[#0f1720] dark:text-foreground', isMobile ? 'text-lg' : 'text-xl font-bold')}>下载与使用风险提示</h3>
+      <Card className="rounded-[1.75rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75">
+        <CardContent className="p-5 lg:p-6">
+          <h3 className="text-lg font-black text-[#0f1720] dark:text-foreground lg:text-xl lg:font-bold">下载与使用风险提示</h3>
           <ul className="mt-4 space-y-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">
-            {riskNotes.map((item, index) => (
-              <li key={`${isMobile ? 'mobile-' : ''}risk-${index}`} className="flex gap-3">
-                <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-[#b71211]" />
+            {riskNotes.map((item) => (
+              <li key={item} className="flex gap-3">
+                <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-[#b71211]" aria-hidden="true" />
                 <span>{item}</span>
               </li>
             ))}
@@ -1118,1119 +119,228 @@ export default function GameDetailView({
       </Card>
     </div>
   );
+}
 
-  const renderPrimaryAction = (isMobile = false) => {
-    if (!game) return null;
-
-    const triggerClassName = cn(
-      'stitch-primary-btn h-12 w-full rounded-full border-none font-bold text-white',
-      isMobile ? 'text-sm' : 'text-base',
-      showPreregReminder && 'flex-1',
-    );
-
-    if (primaryActionKind === 'app-guide') {
-      return (
-        <Button
-          type="button"
-          data-acbox-action="web_game_app_guide_open"
-          data-acbox-label={gameName}
-          className={triggerClassName}
-          onClick={() => setAppGuideOpen(true)}
-        >
-          <Smartphone className="mr-2 h-5 w-5" />
-          在 App 中游玩
-        </Button>
-      );
-    }
-
-    return (
-      <GameDownloadDialog
-        appId={game._id}
-        pkg={game.pkg}
-        resources={resources}
-        downloadNotices={downloadNotices}
-        triggerClassName={triggerClassName}
-        triggerLabel="立即下载"
-      />
-    );
-  };
-
-  const getScreenshotAspect = useCallback(
-    (url: string): ScreenshotAspectKind => screenshotAspectMap[url] || inferredScreenshotAspectMap[url] || 'landscape',
-    [inferredScreenshotAspectMap, screenshotAspectMap],
-  );
-
-  const getScreenshotCardClassName = useCallback((kind: ScreenshotAspectKind, isMobile = false) => {
-    if (isMobile) {
-      if (kind === 'portrait') return 'w-[172px] aspect-[9/16]';
-      if (kind === 'square') return 'w-[184px] aspect-square';
-      return 'w-[280px] aspect-[16/9]';
-    }
-    if (kind === 'portrait') return 'w-[236px] aspect-[9/16]';
-    if (kind === 'square') return 'w-[280px] aspect-square';
-    return 'w-[420px] aspect-[16/9]';
-  }, []);
-
-  const getScreenshotSizes = useCallback((kind: ScreenshotAspectKind, isMobile = false) => {
-    if (isMobile) {
-      if (kind === 'portrait') return '172px';
-      if (kind === 'square') return '184px';
-      return '280px';
-    }
-    if (kind === 'portrait') return '236px';
-    if (kind === 'square') return '280px';
-    return '420px';
-  }, []);
-
-  const handleScreenshotLoad = useCallback((url: string, event: SyntheticEvent<HTMLImageElement>) => {
-    const image = event.currentTarget;
-    const kind = getScreenshotAspectKindFromRatio(image.naturalWidth / image.naturalHeight);
-    if (kind === 'unknown') return;
-    setScreenshotAspectMap((current) => (current[url] === kind ? current : { ...current, [url]: kind }));
-  }, []);
-
-  const renderScreenshotGallery = (isMobile = false) => (
-    <div className={cn('scrollbar-hide flex gap-4 overflow-x-auto', isMobile ? 'snap-x pb-2' : 'items-end pb-6')}>
-      {previewScreenshots.map((url, index) => {
-        const aspectKind = getScreenshotAspect(url);
-        return (
-          <button
-            type="button"
-            key={`${isMobile ? 'mobile-shot' : url}-${index}`}
-            data-acbox-action="game_detail_screenshot_open"
-            data-acbox-label={`${gameName} 截图 ${index + 1}`}
-            className={cn(
-              'group relative shrink-0 snap-center overflow-hidden bg-[#dadddf] shadow-[0_18px_36px_rgba(15,23,32,0.08)] transition-transform duration-300',
-              '[@media(hover:hover)]:hover:-translate-y-1',
-              isMobile ? 'rounded-2xl' : 'rounded-[1.5rem] bg-white/60 dark:bg-card/60',
-              getScreenshotCardClassName(aspectKind, isMobile),
-            )}
-            onClick={() => setPreviewIndex(index)}
-          >
-            <Image
-              src={url}
-              alt={`${gameName} 截图 ${index + 1}`}
-              fill
-              priority={index === 0}
-              sizes={getScreenshotSizes(aspectKind, isMobile)}
-              className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-              onLoad={(event) => handleScreenshotLoad(url, event)}
-            />
-          </button>
-        );
-      })}
-    </div>
-  );
-
-  if (isLoading) return <ViewSkeleton />;
-
-  if (hasError || !gameData || !game) {
-    return (
-      <div className="rounded-2xl border border-[#abadae]/30 bg-white p-8 text-center text-sm text-[#595c5d]">
-        游戏详情加载失败，请刷新重试。
-      </div>
-    );
-  }
-
-  const detailAnnouncements =
-    (gameData as { Announcements?: unknown; announcements?: unknown }).Announcements ??
-    (gameData as { announcements?: unknown }).announcements;
-  const hasDetailAnnouncements =
-    Array.isArray(detailAnnouncements)
-      ? detailAnnouncements.length > 0
-      : Boolean(
-          detailAnnouncements &&
-            typeof detailAnnouncements === 'object' &&
-            Object.values(detailAnnouncements as Record<string, unknown>).some(
-              (group) => Array.isArray(group) && group.length > 0,
-            ),
-        );
-
+function RelatedNewsSection({ items }: { items: RelatedNewsItem[] }) {
   return (
-    <div className="game-detail-stitch relative min-h-screen overflow-x-hidden bg-[#f5f6f7] text-[#2c2f30] dark:bg-[#080d14] dark:text-[#f3f6fb]">
-      {hasDetailAnnouncements && (
-        <div className="relative z-20 px-4 pt-20 sm:px-6 lg:px-16 lg:pt-6 2xl:px-20">
-          <div className="mx-auto max-w-7xl">
-            <GameAnnouncements announcements={detailAnnouncements as any} position="game_detail" />
-          </div>
-        </div>
-      )}
-
-      <div className="pointer-events-none absolute left-0 top-0 z-0 hidden h-[870px] w-full lg:block">
-        {heroBackdropSrc ? (
-          <Image
-            src={heroBackdropSrc}
-            alt={`${game.name} 背景图`}
-            fill
-            priority
-            className={cn(
-              'object-cover object-center transition-all duration-500',
-              isUsingIconBackdrop && 'scale-110 blur-[10px] saturate-75',
-            )}
-            sizes="100vw"
-            onError={() => {
-              if (!isHeroBackgroundError) {
-                setIsHeroBackgroundError(true);
-                return;
-              }
-              setIsIconBackdropError(true);
-            }}
-          />
-        ) : (
-          <div className="h-full w-full bg-[#e6e8ea] dark:bg-[#121924]" />
+    <section>
+      <div className="flex items-center justify-between">
+        <SectionTitle color="bg-[#2e7d32]">相关帖子</SectionTitle>
+        <Link href="/community" className="mb-4 inline-flex items-center gap-1 text-xs font-bold text-[#005e9f] lg:mb-6 lg:gap-2 lg:text-sm lg:font-medium lg:text-[#595c5d] lg:hover:text-[#b71211]">
+          查看更多帖子
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {items.length > 0 ? items.map((item) => (
+          <Link key={item.id} href={`/community/post/${encodeURIComponent(item.id)}`} className="rounded-[1.75rem] border border-[#abadae]/10 bg-white/80 p-5 transition-colors hover:border-primary/30 hover:bg-white dark:border-border/45 dark:bg-card/75">
+            <h3 className="text-base font-bold text-[#2c2f30] dark:text-foreground">{item.title}</h3>
+            <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">{item.excerpt}</p>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#757778]">{item.date}</p>
+          </Link>
+        )) : (
+          <Card className="rounded-[1.75rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75 md:col-span-2">
+            <CardContent className="p-6 text-sm text-[#595c5d] dark:text-muted-foreground">暂时没有可展示的相关帖子，稍后可以从社区继续查看该游戏的更新与活动动态。</CardContent>
+          </Card>
         )}
-        {isUsingIconBackdrop && (
-          <div className="absolute inset-0 bg-white/16 backdrop-blur-md dark:bg-black/20" />
-        )}
-        <div
-          className="absolute inset-0 dark:hidden"
-          style={{
-            background:
-              'radial-gradient(72% 86% at 0% 50%, rgba(15,23,32,0.34) 0%, rgba(15,23,32,0.16) 28%, rgba(15,23,32,0) 64%), radial-gradient(72% 86% at 100% 50%, rgba(15,23,32,0.34) 0%, rgba(15,23,32,0.16) 28%, rgba(15,23,32,0) 64%), radial-gradient(122% 86% at 50% 112%, rgba(15,23,32,0.4) 0%, rgba(15,23,32,0.2) 24%, rgba(15,23,32,0) 60%)',
-          }}
-        />
-        <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-[#f5f6f7] via-[#f5f6f7]/78 to-transparent dark:hidden" />
-        <div
-          className="absolute inset-0 hidden dark:block"
-          style={{
-            background:
-              'radial-gradient(68% 88% at 0% 50%, rgba(10,18,30,0.28) 0%, rgba(10,18,30,0.1) 34%, rgba(10,18,30,0) 68%), radial-gradient(68% 88% at 100% 50%, rgba(10,18,30,0.28) 0%, rgba(10,18,30,0.1) 34%, rgba(10,18,30,0) 68%), linear-gradient(180deg, rgba(2,6,12,0.10) 0%, rgba(6,12,20,0.26) 42%, rgba(8,13,20,0.52) 72%, rgba(8,13,20,0.82) 100%)',
-          }}
-        />
-        <div className="absolute inset-x-0 bottom-0 hidden h-[56%] bg-gradient-to-t from-[#080d14]/86 via-[#080d14]/58 to-transparent dark:block" />
       </div>
+    </section>
+  );
+}
 
-      <div className="fixed bottom-8 right-8 z-[60] hidden flex-col gap-3 lg:flex">
-        <Button
-          size="icon"
-          variant="outline"
-          aria-label="分享当前游戏页面"
-          data-acbox-action="game_detail_share"
-          data-acbox-label={gameName}
-          className="h-12 w-12 rounded-full border-[#abadae]/30 bg-white/80 shadow-xl backdrop-blur-md transition-transform hover:scale-110 dark:border-border/50 dark:bg-card/90"
-          onClick={handleShare}
-        >
-          <LinkIcon className="h-4 w-4" />
-        </Button>
-        <Button
-          size="icon"
-          variant="outline"
-          aria-label={isFavorite ? '取消收藏当前游戏' : '收藏当前游戏'}
-          data-acbox-action="game_detail_favorite_toggle"
-          data-acbox-label={gameName}
-          className={cn(
-            'h-12 w-12 rounded-full border-[#abadae]/30 bg-white/80 shadow-xl backdrop-blur-md transition-transform hover:scale-110 dark:border-border/50 dark:bg-card/90',
-            isFavorite && 'border-[#b71211]/30 text-[#b71211]',
-          )}
-          onClick={handleFavoriteToggle}
-        >
-          <Heart className={cn('h-4 w-4', isFavorite && 'fill-current')} />
-        </Button>
-      </div>
-
-      {(!isMounted || isDesktopViewport) && (
-      <div className="relative z-10 hidden px-4 pb-20 sm:px-6 lg:block lg:px-16 2xl:px-20">
-        <div className="pointer-events-none absolute inset-x-0 top-0 hidden h-16 bg-gradient-to-b from-[#080d14]/72 via-[#080d14]/36 to-transparent dark:block" />
-        <div className="mx-auto max-w-7xl">
-          <section
-            className={cn(
-              'mb-8',
-              hasDetailAnnouncements ? 'pt-[136px]' : 'pt-[40%]',
-            )}
-          >
-            <div className="rounded-[2rem] bg-gradient-to-r from-black/60 via-black/35 to-black/10 p-6 shadow-[0_30px_60px_rgba(0,0,0,0.24)] backdrop-blur-[1.5px] dark:from-black/65 dark:via-black/45 dark:to-black/20 xl:p-8">
-              <div className="flex items-end gap-10">
-                <div className="h-36 w-36 shrink-0 overflow-hidden rounded-2xl shadow-2xl xl:h-40 xl:w-40">
-                  {game.icon ? (
-                    <Image src={game.icon} alt={`${game.name} icon`} width={160} height={160} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="h-full w-full bg-[#dadddf]" />
-                  )}
-                </div>
-
-                <div className="flex min-w-0 flex-1 items-end justify-between gap-8 pb-4">
-                  <div className="min-w-0 space-y-4">
-                    <div className="flex flex-wrap items-center gap-3">
-                      {tags.slice(0, 4).map((tag, index) => (
-                        <Badge
-                          key={`${tag}-${index}`}
-                          className={cn(
-                            'rounded-full border-none px-4 py-1.5 text-sm font-bold',
-                            index === 0 && 'bg-[#fdc003] text-[#604700]',
-                            index === 1 && 'bg-[#b3d4ff] text-[#004a7e]',
-                            index === 2 && 'bg-[#ff7767] text-[#4f0001]',
-                            index > 2 && 'bg-[#c8e6c9] text-[#2e7d32]',
-                          )}
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-
-                    <h1 className="line-clamp-2 text-3xl font-black leading-tight tracking-tight text-white [text-shadow:0_12px_30px_rgba(0,0,0,0.62)] xl:text-5xl">
-                      {game.name}
-                    </h1>
-
-                    <div className="flex flex-wrap gap-5 text-sm text-white/95 [text-shadow:0_3px_10px_rgba(0,0,0,0.45)]">
-                      <span className="inline-flex items-center gap-1">
-                        <Users className="h-4 w-4 text-white/80" />
-                        开发者：{game.developer || '未知'}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Star className="h-4 w-4 fill-[#fdc003] text-[#fdc003]" />
-                        评分：{normalizeScore(game.star)}
-                      </span>
-                      {!isWebGame && (
-                        <span className="inline-flex items-center gap-1">
-                          <Download className="h-4 w-4 text-white/80" />
-                          {game.download_count_show || '50W+'} 下载
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className={cn('w-56', showPreregReminder && 'w-[440px]')}>
-                    <div className={cn('flex items-center', showPreregReminder ? 'gap-3' : '')}>
-                      {showPreregReminder && (
-                        <Button
-                          type="button"
-                          data-acbox-action="game_detail_reminder_toggle"
-                          data-acbox-label={gameName}
-                          onClick={handleReminderToggle}
-                          className={cn(
-                            'h-12 shrink-0 whitespace-nowrap rounded-full border border-[#b71211] bg-transparent px-5 text-base font-bold leading-none text-[#b71211] transition-colors hover:bg-[#b71211]/8',
-                            isReminderEnabled && 'bg-[#b71211] text-white hover:bg-[#9f1110]',
-                          )}
-                        >
-                          <BellRing className="mr-2 h-4 w-4" />
-                          {isReminderEnabled ? '已提醒' : '上线提醒'}
-                        </Button>
-                      )}
-                      {renderPrimaryAction()}
-                    </div>
-                  </div>
-                </div>
+function SupportSection({ items, isWebGame }: { items: CardConfigItem[]; isWebGame: boolean }) {
+  return (
+    <section className="rounded-[2rem] border border-[#abadae]/10 bg-[#dadddf]/20 p-5 lg:p-8">
+      <h2 className="mb-6 flex items-center gap-2 text-xl font-bold">
+        <LinkIcon className="h-6 w-6 text-[#b71211]" />
+        {isWebGame ? '支持与服务' : '资源与支持'}
+      </h2>
+      <div className="space-y-4">
+        {items.length > 0 ? items.map((item) => {
+          const title = cleanText(item.content?.title) || '资源链接';
+          const text = cleanText(item.content?.text || item.content?.html) || '点击查看';
+          const href = String(item.content?.link || '').trim();
+          const isExternal = /^https?:\/\//i.test(href);
+          return (
+            <div key={item._id} className="flex items-center justify-between gap-3 rounded-2xl bg-white p-4 dark:bg-card/80">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-[#2c2f30] dark:text-foreground">{title}</p>
+                <p className="truncate text-xs text-[#595c5d] dark:text-muted-foreground">{text}</p>
               </div>
+              {href ? (
+                <a href={href} target={isExternal ? '_blank' : undefined} rel={isExternal ? 'noopener noreferrer' : undefined} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#005e9f] px-4 py-1.5 text-xs font-bold text-white">
+                  打开
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              ) : <span className="text-xs text-[#757778]">无链接</span>}
             </div>
-          </section>
-
-          <section className="mb-10 rounded-[2rem] border border-[#abadae]/10 bg-[#eff1f2]/60 p-6 backdrop-blur-sm dark:border-border/45 dark:bg-card/50">
-            <div className={cn('grid grid-cols-2 gap-8', !isWebGame && 'lg:grid-cols-4')}>
-              <div className="space-y-1">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#595c5d]">发布日期</p>
-                <p className="text-lg font-bold">{formatDateText(game.release_at)}</p>
-              </div>
-
-              <div className="space-y-1 border-l border-[#abadae]/20 pl-8 dark:border-border/45">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#595c5d]">更新日期</p>
-                <p className="text-lg font-bold">{formatDateText(game.latest_at)}</p>
-              </div>
-
-              {!isWebGame && (
-                <>
-                  <div className="space-y-1 border-l border-[#abadae]/20 pl-8 dark:border-border/45">
-                    <p className="text-xs font-bold uppercase tracking-wider text-[#595c5d]">文件大小</p>
-                    <p className="text-lg font-bold">{formatBytes(game.file_size)}</p>
-                  </div>
-
-                  <div className="flex items-center justify-between border-l border-[#abadae]/20 pl-8 dark:border-border/45">
-                    <div className="space-y-1">
-                      <p className="text-xs font-bold uppercase tracking-wider text-[#595c5d]">当前版本</p>
-                      <p className="text-lg font-bold">{game.version || '未知'}</p>
-                    </div>
-                    <Button
-                      type="button"
-                      data-acbox-action="game_detail_urge_update"
-                      data-acbox-label={gameName}
-                      onClick={handleUrge}
-                      disabled={isSubmittingUrge}
-                      className="flex items-center gap-2 rounded-full border border-[#b71211] bg-transparent px-4 py-2 text-sm font-bold text-[#b71211] transition-colors hover:bg-[#b71211]/5 dark:border-primary dark:text-primary dark:hover:bg-primary/10"
-                    >
-                      <BellRing className="h-4 w-4" />
-                      {isSubmittingUrge ? '提交中...' : '催更'}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          </section>
-
-          <section className="mb-14 grid grid-cols-2 gap-4 md:grid-cols-4">
-            <Card className="rounded-[2rem] border-[#abadae]/10 bg-white/70 dark:border-border/45 dark:bg-card/70">
-              <CardContent className="flex flex-col items-center justify-center gap-2 p-8 text-center">
-                <p className="text-sm text-[#595c5d]">综合评分</p>
-                <p className="text-xl font-black">{normalizeScore(game.star)}</p>
-              </CardContent>
-            </Card>
-            <Card className="rounded-[2rem] border-[#abadae]/10 bg-white/70 dark:border-border/45 dark:bg-card/70">
-              <CardContent className="flex flex-col items-center justify-center gap-2 p-8 text-center">
-                <p className="text-sm text-[#595c5d]">游戏分类</p>
-                 <p className="text-xl font-black">{primaryCategory}</p>
-              </CardContent>
-            </Card>
-            <Card className="rounded-[2rem] border-[#abadae]/10 bg-white/70 dark:border-border/45 dark:bg-card/70">
-              <CardContent className="flex flex-col items-center justify-center gap-2 p-8 text-center">
-                <p className="text-sm text-[#595c5d]">{isWebGame ? '开发者' : '下载总量'}</p>
-                <p className="line-clamp-2 text-xl font-black">
-                  {isWebGame ? game.developer || '未提供' : game.download_count_show || '0'}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="rounded-[2rem] border-[#abadae]/10 bg-white/70 dark:border-border/45 dark:bg-card/70">
-              <CardContent className="flex flex-col items-center justify-center gap-2 p-8 text-center">
-                <p className="text-sm text-[#595c5d]">{isWebGame ? '游玩方式' : '适配系统'}</p>
-                <p className="text-xl font-black">
-                  {isWebGame ? 'AC 盒子' : game.metadata?.region || 'Android'}
-                </p>
-              </CardContent>
-            </Card>
-          </section>
-
-          {renderFactSummary()}
-
-          {renderSeoContent()}
-
-          <section className="grid gap-12 lg:grid-cols-[minmax(0,2fr)_minmax(360px,1fr)]">
-            <div className="space-y-12">
-              <section>
-                <h2 className="mb-6 flex items-center gap-3 text-xl font-bold">
-                  <span className="h-8 w-2 rounded-full bg-[#b71211]" />
-                  游戏介绍
-                </h2>
-                <div
-                  className="text-base leading-relaxed text-[#595c5d] [&_p]:mb-3 [&_p:last-child]:mb-0"
-                  dangerouslySetInnerHTML={{
-                    __html: showFullDescription
-                      ? fullDescriptionHtml || '暂无介绍'
-                      : shortDescriptionHtml || '暂无介绍',
-                  }}
-                />
-
-                {hasMoreDescription && (
-                  <button
-                    type="button"
-                    data-acbox-action="game_detail_description_toggle"
-                    data-acbox-label={showFullDescription ? '收起详情' : '查看更多详情'}
-                    className="mt-8 inline-flex items-center gap-1 text-sm font-bold text-[#005e9f] hover:underline"
-                    onClick={() => setShowFullDescription((value) => !value)}
-                  >
-                    {showFullDescription ? '收起详情' : '查看更多详情'}
-                    <ChevronRight className={cn('h-4 w-4 transition-transform', showFullDescription && 'rotate-90')} />
-                  </button>
-                )}
-              </section>
-
-              <section>
-                <div className="mb-6 flex items-center justify-between">
-                  <h2 className="flex items-center gap-3 text-xl font-bold">
-                    <span className="h-8 w-2 rounded-full bg-[#fdc003]" />
-                    精彩截图
-                  </h2>
-                  <span className="text-sm font-bold text-[#005e9f]">点击查看大图</span>
-                </div>
-                {renderScreenshotGallery()}
-              </section>
-
-              {renderTagSection()}
-
-              <GameFaqSection items={faqItems} intro={isWebGame ? undefined : renderFaqIntro()} />
-
-              <section className="pb-8">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="flex items-center gap-3 text-xl font-bold">
-                    <span className="h-8 w-2 rounded-full bg-[#005e9f]" />
-                    社区动态
-                  </h2>
-                  <Link href="/community" className="inline-flex items-center gap-2 text-sm font-medium text-[#595c5d] transition-colors hover:text-[#b71211]">
-                    发现更多精彩
-                    <ChevronRight className="h-4 w-4" />
-                  </Link>
-                </div>
-                <div className="mb-8 flex items-center justify-between">
-                  <h3 className="inline-flex items-center gap-2 text-lg font-bold text-[#2c2f30]">
-                    <MessageSquare className="h-5 w-5 text-[#005e9f]" />
-                    社区热议
-                  </h3>
-                  <div className="inline-flex rounded-full bg-white/80 p-1">
-                    <button
-                      type="button"
-                      data-acbox-action="game_detail_posts_sort_latest"
-                      data-acbox-label={gameName}
-                      className={cn(
-                        'rounded-full px-4 py-2 text-sm font-bold transition-colors',
-                        sort === 'latest' ? 'bg-[#b71211] text-white' : 'text-[#595c5d]',
-                      )}
-                      onClick={() => setSort('latest')}
-                    >
-                      最新
-                    </button>
-                    <button
-                      type="button"
-                      data-acbox-action="game_detail_posts_sort_hot"
-                      data-acbox-label={gameName}
-                      className={cn(
-                        'rounded-full px-4 py-2 text-sm font-bold transition-colors',
-                        sort === 'hot' ? 'bg-[#b71211] text-white' : 'text-[#595c5d]',
-                      )}
-                      onClick={() => setSort('hot')}
-                    >
-                      热门
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid max-w-3xl grid-cols-1 gap-6">
-                  {relatedPosts.length > 0 ? (
-                    relatedPosts.slice(0, 6).map((post) => {
-                      const cover = extractPostImage(post);
-                      return (
-                        <Card key={post.id} className="overflow-hidden rounded-2xl border border-[#abadae]/15 bg-white shadow-sm transition-shadow hover:shadow-md">
-                          <CardContent className="p-5">
-                            <div className="mb-4 flex items-center gap-3">
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage src={post.user.avatarUrl} alt={post.user.name} />
-                                <AvatarFallback>{post.user.name.slice(0, 1)}</AvatarFallback>
-                              </Avatar>
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-bold">{post.user.name}</p>
-                                <p className="text-xs text-[#595c5d]">{post.timestamp}</p>
-                              </div>
-                            </div>
-
-                            <p className="line-clamp-3 text-sm leading-relaxed text-[#2c2f30]">{getCommunityPostPreviewText(post, 180, '暂无内容')}</p>
-
-                            {cover && (
-                              <div className="relative mt-4 aspect-[16/9] overflow-hidden rounded-xl">
-                                <Image src={cover} alt={post.title || post.summary || '社区帖子配图'} fill sizes="(min-width: 1024px) 620px, 100vw" className="object-cover" />
-                              </div>
-                            )}
-
-                            <div className="mt-5 flex items-center gap-6 text-xs text-[#595c5d]">
-                              <span className="inline-flex items-center gap-1.5">
-                                <ThumbsUp className="h-4 w-4" />
-                                {formatCompactCount(post.likesCount)}
-                              </span>
-                              <span className="inline-flex items-center gap-1.5">
-                                <MessageSquare className="h-4 w-4" />
-                                {formatCompactCount(post.commentsCount)}
-                              </span>
-                              <span className="inline-flex items-center gap-1.5">
-                                <Users className="h-4 w-4" />
-                                {formatCompactCount(post.viewsCount)}
-                              </span>
-                              <Link href={safeHref(post.id ? `/community/post/${post.id}` : '/community')} className="ml-auto text-sm font-bold text-[#005e9f] hover:underline">
-                                查看详情
-                              </Link>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })
-                  ) : (
-                    <Card className="rounded-[2rem] border-[#abadae]/10 bg-white/85">
-                      <CardContent className="p-6 text-sm text-[#595c5d]">暂无关联社区动态。</CardContent>
-                    </Card>
-                  )}
-                </div>
-              </section>
-
-              <section>
-                <div className="mb-6 flex items-center justify-between">
-                  <h2 className="flex items-center gap-3 text-xl font-bold">
-                    <span className="h-8 w-2 rounded-full bg-[#2e7d32]" />
-                    相关帖子
-                  </h2>
-                  <Link href="/community" className="inline-flex items-center gap-2 text-sm font-medium text-[#595c5d] transition-colors hover:text-[#b71211]">
-                    查看更多帖子
-                    <ChevronRight className="h-4 w-4" />
-                  </Link>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {relatedNews.length > 0 ? (
-                    relatedNews.map((item) => (
-                      <Link key={`related-news-${item.id}`} href={`/community/post/${item.id}`} className="rounded-[1.75rem] border border-[#abadae]/10 bg-white/80 p-5 transition-colors hover:border-primary/30 hover:bg-white dark:border-border/45 dark:bg-card/75">
-                        <p className="text-base font-bold text-[#2c2f30] dark:text-foreground">{item.title}</p>
-                        <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">{item.excerpt}</p>
-                        <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#757778]">{item.date}</p>
-                      </Link>
-                    ))
-                  ) : (
-                    <Card className="rounded-[1.75rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75 md:col-span-2">
-                      <CardContent className="p-6 text-sm text-[#595c5d] dark:text-muted-foreground">暂时没有可展示的相关帖子，稍后可以从社区继续查看该游戏的更新与活动动态。</CardContent>
-                    </Card>
-                  )}
-                </div>
-              </section>
-            </div>
-
-            <aside className="space-y-10">
-              <section className="rounded-[2rem] border border-[#abadae]/10 bg-[#dadddf]/20 p-8">
-                <h2 className="mb-6 flex items-center gap-2 text-xl font-bold">
-                  <LinkIcon className="h-6 w-6 text-[#b71211]" />
-                  {isWebGame ? '支持与服务' : '资源与支持'}
-                </h2>
-
-                <div className="space-y-4">
-                  {supportItems.length > 0 ? (
-                    supportItems.map((item) => {
-                      const title = cleanText(item.content?.title) || '资源链接';
-                      const text = cleanText(item.content?.text || item.content?.html) || '点击查看';
-                      const href = String(item.content?.link || '').trim();
-                      const isExternal = /^https?:\/\//i.test(href);
-                      return (
-                        <div key={item._id} className="flex items-center justify-between gap-3 rounded-2xl bg-white p-4">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-bold text-[#2c2f30]">{title}</p>
-                            <p className="truncate text-xs text-[#595c5d]">{text}</p>
-                          </div>
-                          {href ? (
-                            <a
-                              href={href}
-                              target={isExternal ? '_blank' : undefined}
-                              rel={isExternal ? 'noopener noreferrer' : undefined}
-                              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#005e9f] px-4 py-1.5 text-xs font-bold text-white"
-                            >
-                              打开
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </a>
-                          ) : (
-                            <span className="text-xs text-[#757778]">无链接</span>
-                          )}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="rounded-2xl bg-white p-4 text-sm text-[#595c5d]">暂无资源与支持信息。</div>
-                  )}
-                </div>
-              </section>
-
-              <section>
-                {isMounted && isDesktopViewport ? (
-                  <GameReviewPanel game={game} />
-                ) : null}
-              </section>
-
-              {renderRecommendationSection()}
-            </aside>
-          </section>
-        </div>
+          );
+        }) : <div className="rounded-2xl bg-white p-4 text-sm text-[#595c5d] dark:bg-card/80 dark:text-muted-foreground">暂无资源与支持信息。</div>}
       </div>
-      )}
+    </section>
+  );
+}
 
-      <div className="fixed left-0 top-0 z-[70] flex h-16 w-full items-center justify-between bg-white/80 px-4 shadow-sm backdrop-blur-xl lg:hidden">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            aria-label="返回上一页"
-            data-acbox-action="game_detail_mobile_back"
-            data-acbox-label={gameName}
-            className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-black/5"
-            onClick={handleBack}
-          >
-            <ArrowLeft className="h-5 w-5 text-[#b71211]" />
-          </button>
-          <p className="text-xl font-black tracking-tight text-[#2c2f30]">游戏详情</p>
-        </div>
-        <button
-          type="button"
-          aria-label="分享当前游戏页面"
-          data-acbox-action="game_detail_share"
-          data-acbox-label={gameName}
-          className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-black/5"
-          onClick={handleShare}
-        >
-          <LinkIcon className="h-5 w-5 text-[#b71211]" />
-        </button>
-      </div>
-
-      {isMounted && !isDesktopViewport && (
-      <div className="relative z-10 px-4 pb-32 pt-20 lg:hidden">
-        <section className="relative h-[340px] overflow-hidden rounded-[2rem]">
-          {heroBackdropSrc ? (
-            <Image
-              src={heroBackdropSrc}
-              alt={`${game.name} 封面图`}
-              fill
-              sizes="100vw"
-              className={cn(
-                'object-cover transition-all duration-500',
-                isUsingIconBackdrop && 'scale-110 blur-[8px] saturate-75',
-              )}
-              onError={() => {
-                if (!isHeroBackgroundError) {
-                  setIsHeroBackgroundError(true);
-                  return;
-                }
-                setIsIconBackdropError(true);
-              }}
-            />
-          ) : (
-            <div className="h-full w-full bg-[#e6e8ea] dark:bg-[#121924]" />
-          )}
-          {isUsingIconBackdrop && (
-            <div className="absolute inset-0 bg-white/14 backdrop-blur-md dark:bg-black/20" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#f5f6f7] via-transparent to-black/20 dark:hidden" />
-          <div className="absolute inset-0 hidden bg-gradient-to-t from-[#080d14]/84 via-[#080d14]/42 to-transparent dark:block" />
-          <div className="absolute inset-x-0 bottom-0 hidden h-[40%] bg-gradient-to-t from-[#080d14]/68 via-[#080d14]/30 to-transparent dark:block" />
-        </section>
-
-        <section className="relative z-10 -mt-16 rounded-[2rem] border border-[#abadae]/10 bg-white p-6 shadow-sm dark:border-border/40 dark:bg-[#111824]">
-          <div className="flex gap-4">
-            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl shadow-lg">
-              {game.icon ? (
-                <Image src={game.icon} alt={`${game.name} icon`} fill sizes="80px" className="object-cover" />
-              ) : (
-                <div className="h-full w-full bg-[#dadddf]" />
-              )}
+function RecommendationSection({ items }: { items: ApiRecommendedGame[] }) {
+  if (items.length === 0) return null;
+  return (
+    <section>
+      <SectionTitle color="bg-[#fdc003]">相似推荐</SectionTitle>
+      <div className="space-y-3 lg:space-y-4">
+        {items.map((item) => (
+          <Link key={`${item._id}-${item.pkg}`} href={`/app/${encodeURIComponent(item.pkg)}`} className="flex items-center gap-4 rounded-2xl border border-[#abadae]/10 bg-white p-3 shadow-sm transition-colors hover:bg-[#e0e3e4]/70 dark:border-border/45 dark:bg-card/75 dark:hover:bg-card/90 lg:border-0 lg:bg-transparent lg:shadow-none">
+            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-[#dadddf] shadow-md">
+              {item.icon ? <Image src={item.icon} alt={`${item.name} icon`} fill sizes="56px" className="object-cover" /> : null}
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="line-clamp-2 text-2xl font-black leading-tight text-[#0f1720] dark:text-[#f4f7fc]">{game.name}</h2>
-              <div className="mt-1 inline-flex items-center gap-1 text-[#b71211]">
-                <Star className="h-4 w-4 fill-current" />
-                <span className="text-base font-bold">{normalizeScore(game.star)}</span>
-              </div>
-              <p className="mt-2 text-xs text-[#757778] dark:text-[#9ca6b8]">
-                {isWebGame
-                  ? `页游 · ${game.developer || '开发者未提供'}`
-                  : `${game.download_count_show || '0'} 下载 · ${formatBytes(game.file_size)}`}
-              </p>
+              <h3 className="truncate text-sm font-bold text-[#0f1720] dark:text-foreground">{item.name}</h3>
+              <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#595c5d] dark:text-muted-foreground">{cleanText(item.summary) || '同类热门推荐'}</p>
             </div>
-          </div>
-
-          {!isWebGame && (
-            <div className="mt-5 flex items-center justify-between rounded-full bg-[#eff1f2] p-3 dark:bg-[#1a2433]">
-              <div className="ml-2 flex flex-col">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#757778] dark:text-[#9ca6b8]">当前版本</span>
-                <span className="text-sm font-bold text-[#1a1f26] dark:text-[#edf2fb]">v {game.version || '未知'}</span>
-              </div>
-              <Button
-                type="button"
-                data-acbox-action="game_detail_urge_update"
-                data-acbox-label={gameName}
-                onClick={handleUrge}
-                disabled={isSubmittingUrge}
-                className="rounded-full bg-[#b3d4ff] px-4 py-2 text-sm font-bold text-[#004a7e] hover:opacity-90"
-              >
-                <BellRing className="mr-1 h-4 w-4" />
-                催更
-              </Button>
-            </div>
-          )}
-        </section>
-
-        <section className="mt-8 grid grid-cols-4 gap-2">
-          <Card className="border-[#abadae]/10 bg-white">
-            <CardContent className="p-2 text-center">
-              <p className="text-[9px] font-bold uppercase tracking-tight text-[#757778]">更新时间</p>
-              <p className="mt-0.5 truncate text-[11px] font-black">{formatDateText(game.latest_at).slice(0, 7)}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-[#abadae]/10 bg-white">
-            <CardContent className="p-2 text-center">
-              <p className="text-[9px] font-bold uppercase tracking-tight text-[#757778]">游戏类型</p>
-              <p className="mt-0.5 truncate text-[11px] font-black text-[#005e9f]">{primaryCategory}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-[#abadae]/10 bg-white">
-            <CardContent className="p-2 text-center">
-              <p className="text-[9px] font-bold uppercase tracking-tight text-[#757778]">
-                {isWebGame ? '开发者' : '下载总量'}
-              </p>
-              <p className="mt-0.5 truncate text-[11px] font-black">
-                {isWebGame ? game.developer || '未提供' : game.download_count_show || '0'}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-[#abadae]/10 bg-white">
-            <CardContent className="p-2 text-center">
-              <p className="text-[9px] font-bold uppercase tracking-tight text-[#757778]">
-                {isWebGame ? '游玩方式' : '操作系统'}
-              </p>
-              <p className="mt-0.5 truncate text-[11px] font-black">
-                {isWebGame ? 'AC 盒子' : '安卓'}
-              </p>
-            </CardContent>
-          </Card>
-        </section>
-
-        {renderFactSummary(true)}
-
-        {renderSeoContent(true)}
-
-        <section className="mt-10">
-          <h2 className="mb-4 flex items-center gap-2 text-xl font-black">
-            <span className="h-6 w-1.5 rounded-full bg-[#b71211]" />
-            游戏介绍
-          </h2>
-          <div
-            className="text-sm leading-relaxed text-[#595c5d] [&_p]:mb-2.5 [&_p:last-child]:mb-0"
-            dangerouslySetInnerHTML={{
-              __html: showFullDescription
-                ? fullDescriptionHtml || '暂无介绍'
-                : shortDescriptionHtml || '暂无介绍',
-            }}
-          />
-          {hasMoreDescription && (
-            <button
-              type="button"
-              data-acbox-action="game_detail_description_toggle"
-              data-acbox-label={showFullDescription ? '收起' : '展开更多'}
-              className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#b71211]"
-              onClick={() => setShowFullDescription((value) => !value)}
-            >
-              {showFullDescription ? '收起' : '展开更多'}
-              <ChevronRight className={cn('h-4 w-4 transition-transform', showFullDescription && 'rotate-90')} />
-            </button>
-          )}
-        </section>
-
-        <section className="mt-10">
-          <h2 className="mb-4 flex items-center gap-2 text-xl font-black">
-            <span className="h-6 w-1.5 rounded-full bg-[#005e9f]" />
-            精彩截图
-          </h2>
-          {renderScreenshotGallery(true)}
-        </section>
-
-        {renderTagSection(true)}
-
-        <GameFaqSection items={faqItems} mobile intro={isWebGame ? undefined : renderFaqIntro(true)} />
-
-        <section className="mt-10">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-xl font-black">
-              <span className="h-6 w-1.5 rounded-full bg-[#2e7d32]" />
-              相关帖子
-            </h2>
-            <Link href="/community" className="text-xs font-bold text-[#005e9f]">
-              更多
-            </Link>
-          </div>
-          <div className="space-y-4">
-            {relatedNews.length > 0 ? (
-              relatedNews.slice(0, 3).map((item) => (
-                <Link key={`mobile-related-news-${item.id}`} href={`/community/post/${item.id}`} className="block rounded-2xl border-[#abadae]/10 bg-white p-4 shadow-sm">
-                  <p className="text-sm font-bold text-[#0f1720]">{item.title}</p>
-                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#595c5d]">{item.excerpt}</p>
-                  <p className="mt-3 text-[11px] font-semibold text-[#757778]">{item.date}</p>
-                </Link>
-              ))
-            ) : (
-              <Card className="border-[#abadae]/10 bg-white">
-                <CardContent className="p-4 text-sm text-[#595c5d]">暂无相关帖子，可前往社区查看更多更新。</CardContent>
-              </Card>
-            )}
-          </div>
-        </section>
-
-        <section className="mt-10">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-xl font-black">
-              <span className="h-6 w-1.5 rounded-full bg-[#fdc003]" />
-              社区动态
-            </h2>
-            <div className="inline-flex rounded-full bg-white p-1">
-              <button
-                type="button"
-                data-acbox-action="game_detail_posts_sort_latest"
-                data-acbox-label={gameName}
-                className={cn('rounded-full px-3 py-1 text-xs font-bold', sort === 'latest' ? 'bg-[#b71211] text-white' : 'text-[#595c5d]')}
-                onClick={() => setSort('latest')}
-              >
-                最新
-              </button>
-              <button
-                type="button"
-                data-acbox-action="game_detail_posts_sort_hot"
-                data-acbox-label={gameName}
-                className={cn('rounded-full px-3 py-1 text-xs font-bold', sort === 'hot' ? 'bg-[#b71211] text-white' : 'text-[#595c5d]')}
-                onClick={() => setSort('hot')}
-              >
-                热门
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {relatedPosts.length > 0 ? (
-              relatedPosts.slice(0, 3).map((post) => {
-                const cover = extractPostImage(post);
-                return (
-                  <Card key={`mobile-post-${post.id}`} className="border-[#abadae]/10 bg-white">
-                    <CardContent className="p-4">
-                      <div className="mb-3 flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={post.user.avatarUrl} alt={post.user.name} />
-                          <AvatarFallback>{post.user.name.slice(0, 1)}</AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-bold">{post.user.name}</p>
-                          <p className="text-[10px] text-[#757778]">{post.timestamp}</p>
-                        </div>
-                      </div>
-                      <p className="line-clamp-3 text-sm leading-relaxed text-[#595c5d]">{getCommunityPostPreviewText(post, 150, '暂无内容')}</p>
-                      {cover && (
-                        <div className="relative mt-3 aspect-[16/9] overflow-hidden rounded-xl">
-                          <Image src={cover} alt={post.title || post.summary || '帖子配图'} fill sizes="100vw" className="object-cover" />
-                        </div>
-                      )}
-                      <div className="mt-3 flex items-center gap-5 text-xs text-[#595c5d]">
-                        <span className="inline-flex items-center gap-1">
-                          <ThumbsUp className="h-3.5 w-3.5" />
-                          {formatCompactCount(post.likesCount)}
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <MessageSquare className="h-3.5 w-3.5" />
-                          {formatCompactCount(post.commentsCount)}
-                        </span>
-                        <Link href={safeHref(post.id ? `/community/post/${post.id}` : '/community')} className="ml-auto text-xs font-bold text-[#005e9f]">
-                          查看
-                        </Link>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })
-            ) : (
-              <Card className="border-[#abadae]/10 bg-white">
-                <CardContent className="p-4 text-sm text-[#595c5d]">暂无社区动态。</CardContent>
-              </Card>
-            )}
-          </div>
-        </section>
-
-        <section className="mt-10">
-          {isMounted && !isDesktopViewport ? (
-            <GameReviewPanel game={game} compact />
-          ) : null}
-        </section>
-
-        {renderRecommendationSection(true)}
-
-        <section className="mt-10">
-          <h2 className="mb-4 text-xl font-black">{isWebGame ? '支持与服务' : '资源与支持'}</h2>
-          <div className="space-y-2">
-            {supportItems.length > 0 ? (
-              supportItems.slice(0, 4).map((item) => {
-                const title = cleanText(item.content?.title) || '资源链接';
-                const href = String(item.content?.link || '').trim();
-                return (
-                  <div key={`mobile-support-${item._id}`} className="flex items-center justify-between rounded-2xl bg-white p-4">
-                    <p className="truncate text-sm font-bold">{title}</p>
-                    {href ? (
-                      <a href={href} target="_blank" rel="noopener noreferrer" aria-label={`打开${title}`} className="text-xs font-bold text-[#005e9f]">
-                        打开
-                      </a>
-                    ) : (
-                      <span className="text-xs text-[#757778]">无链接</span>
-                    )}
-                  </div>
-                );
-              })
-            ) : (
-              <div className="rounded-2xl bg-white p-4 text-sm text-[#595c5d]">暂无资源支持。</div>
-            )}
-          </div>
-        </section>
-      </div>
-      )}
-
-      <div
-        className="fixed inset-x-0 z-50 rounded-t-2xl bg-white/90 px-4 pt-3 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] backdrop-blur-2xl lg:hidden"
-        style={{
-          bottom: 'max(env(safe-area-inset-bottom), 0px)',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)',
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <Link
-            href="/community"
-            aria-label="前往游戏社区"
-            data-acbox-action="game_detail_mobile_community"
-            data-acbox-label={gameName}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#595c5d] transition-colors hover:bg-black/5 hover:text-[#b71211]"
-          >
-            <MessageSquare className="h-5 w-5" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-[#595c5d] dark:text-muted-foreground" />
           </Link>
-          <button
-            type="button"
-            aria-label={isFavorite ? '取消收藏当前游戏' : '收藏当前游戏'}
-            data-acbox-action="game_detail_favorite_toggle"
-            data-acbox-label={gameName}
-            className={cn(
-              'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[#595c5d] transition-colors hover:bg-black/5',
-              isFavorite && 'text-[#b71211]',
-            )}
-            onClick={handleFavoriteToggle}
-          >
-            <Heart className={cn('h-5 w-5', isFavorite && 'fill-current')} />
-          </button>
-          {showPreregReminder && (
-            <Button
-              type="button"
-              data-acbox-action="game_detail_reminder_toggle"
-              data-acbox-label={gameName}
-              onClick={handleReminderToggle}
-              className={cn(
-                'h-12 shrink-0 whitespace-nowrap rounded-full border border-[#b71211] bg-transparent px-4 text-sm font-bold leading-none text-[#b71211] transition-colors hover:bg-[#b71211]/8',
-                isReminderEnabled && 'bg-[#b71211] text-white hover:bg-[#9f1110]',
-              )}
-            >
-              <BellRing className="mr-1.5 h-4 w-4" />
-              {isReminderEnabled ? '已提醒' : '上线提醒'}
-            </Button>
-          )}
-          {renderPrimaryAction(true)}
-        </div>
+        ))}
       </div>
+    </section>
+  );
+}
 
-      {isMounted && previewIndex !== null && previewUrl
-        ? createPortal(
-            <div className="fixed inset-0 z-[10000] bg-black/92 backdrop-blur-sm">
-              <div className="absolute right-4 top-4 z-[130] flex items-center gap-2">
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="secondary"
-                  aria-label="缩小预览图片"
-                  data-acbox-action="game_detail_preview_zoom_out"
-                  data-acbox-label={gameName}
-                  className="h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setZoom(previewZoom - 0.2);
-                  }}
-                >
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="secondary"
-                  aria-label="放大预览图片"
-                  data-acbox-action="game_detail_preview_zoom_in"
-                  data-acbox-label={gameName}
-                  className="h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setZoom(previewZoom + 0.2);
-                  }}
-                >
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="secondary"
-                  aria-label="重置预览图片缩放"
-                  data-acbox-action="game_detail_preview_reset"
-                  data-acbox-label={gameName}
-                  className="h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setZoom(1);
-                    setPreviewOffset({ x: 0, y: 0 });
-                  }}
-                >
-                  <RotateCcw className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="secondary"
-                  aria-label="关闭图片预览"
-                  data-acbox-action="game_detail_preview_close"
-                  data-acbox-label={gameName}
-                  className="h-10 w-10 rounded-full bg-white/15 text-white hover:bg-white/25"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    closePreview();
-                  }}
-                >
-                  <CloseIcon className="h-4 w-4" />
-                </Button>
-              </div>
+export default function GameDetailView({ gameData, recommendedGames, relatedNews }: GameDetailViewProps) {
+  const game = gameData.app;
+  const resources = Array.isArray(gameData.resources) ? gameData.resources : [];
+  const isWebGame = isWebGameType(game.type);
+  const tags = getGameTags(game);
+  const primaryCategory = getPrimaryCategory(game, tags);
+  const cardConfig = (gameData.cardConfig || {}) as Record<string, CardConfigItem[] | undefined>;
+  const supportItems = resolveSupportItems(cardConfig);
+  const downloadNotices = Array.isArray(cardConfig.download_notice) ? cardConfig.download_notice : [];
+  const faqItems = normalizeGameFaqItems(gameData.faq);
+  const screenshots = (Array.isArray(game.detail_images) ? game.detail_images : []).filter(Boolean);
+  const displayScreenshots = screenshots.length > 0 ? screenshots : [game.header_image, game.icon].filter(Boolean);
+  const heroImage = game.header_image || displayScreenshots[0] || game.icon || '';
+  const facts = buildGameFactItems(game, { category: primaryCategory, resourceCount: resources.length, isWebGame });
+  const highlights = Array.isArray(game.seo?.highlights) ? game.seo.highlights.map(cleanText).filter(Boolean).slice(0, 8) : [];
+  const latestContent = cleanText(game.latest_content);
+  const fullDescriptionHtml = formatDescriptionHtml(game.description || game.summary) || '暂无介绍';
+  const hasLongDescription = toPlainTextWithBreaks(game.description || game.summary).length > 260;
+  const recommendationList = recommendedGames.filter((item, index, list) => {
+    const pkg = String(item.pkg || '').trim().toLowerCase();
+    if (!pkg || pkg === String(game.pkg || '').trim().toLowerCase() || item._id === game._id) return false;
+    return list.findIndex((candidate) => String(candidate.pkg || '').trim().toLowerCase() === pkg) === index;
+  }).slice(0, 5);
+  const detailAnnouncements = gameData.Announcements ?? gameData.announcements;
+  const hasDetailAnnouncements = Array.isArray(detailAnnouncements)
+    ? detailAnnouncements.length > 0
+    : Boolean(detailAnnouncements && Object.values(detailAnnouncements).some((group) => Array.isArray(group) && group.length > 0));
+  const showPreregReminder = isPreregGameLike(game) && !isWebGame;
 
-              {canPreviewNavigate && (
-                <>
-                  <button
-                    type="button"
-                    data-acbox-action="game_detail_preview_prev"
-                    data-acbox-label={gameName}
-                    className="absolute left-3 top-1/2 z-[130] hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:flex"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      toPrevPreview();
-                    }}
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="button"
-                    data-acbox-action="game_detail_preview_next"
-                    data-acbox-label={gameName}
-                    className="absolute right-3 top-1/2 z-[130] hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-white/25 sm:flex"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      toNextPreview();
-                    }}
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-                </>
-              )}
+  return (
+      <div className="game-detail-stitch relative min-h-screen overflow-x-hidden bg-[#f5f6f7] text-[#2c2f30] dark:bg-[#080d14] dark:text-[#f3f6fb]">
+        {hasDetailAnnouncements ? (
+          <div className="relative z-20 px-4 pt-20 sm:px-6 lg:px-16 lg:pt-6 2xl:px-20">
+            <div className="mx-auto max-w-7xl"><GameAnnouncements announcements={detailAnnouncements as any} position="game_detail" /></div>
+          </div>
+        ) : null}
 
-              <div
-                className={cn('absolute inset-0 flex items-center justify-center p-6', previewZoom > 1 ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in')}
-                onClick={handlePreviewBlankClick}
-                onWheel={handlePreviewWheel}
-                onPointerDown={handlePreviewPointerDown}
-                onPointerMove={handlePreviewPointerMove}
-                onPointerUp={handlePreviewPointerUp}
-                onPointerCancel={handlePreviewPointerUp}
-              >
-                <div
-                  className="relative max-h-[92vh] max-w-[92vw]"
-                  onClick={(event) => event.stopPropagation()}
-                  style={{
-                    transform: `translate3d(${previewOffset.x}px, ${previewOffset.y}px, 0) scale(${previewZoom})`,
-                    transformOrigin: 'center center',
-                    transition: dragStateRef.current.dragging ? 'none' : 'transform 0.15s ease-out',
-                  }}
-                >
-                  <img
-                    src={previewUrl}
-                    alt={`${game.name} 截图预览`}
-                    draggable={false}
-                    className="max-h-[92vh] w-auto max-w-[92vw] rounded-xl object-contain"
-                    onError={() => setIsPreviewImageError(true)}
-                  />
-                </div>
-                {isPreviewImageError && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-                    <div className="rounded-md bg-black/55 px-3 py-2 text-sm text-white">
-                      图片加载失败，请切换下一张或稍后重试
+        <section className={cn('relative z-10 px-4 sm:px-6 lg:px-16 2xl:px-20', hasDetailAnnouncements ? 'pt-5' : 'pt-20 lg:pt-6')}>
+          <div className="mx-auto max-w-7xl">
+            <div className="relative h-[340px] overflow-hidden rounded-[2rem] shadow-[0_24px_60px_rgba(15,23,32,0.18)] lg:h-[660px] lg:rounded-none lg:shadow-none">
+              <GameHeroArtwork gameName={game.name} heroImage={heroImage} icon={game.icon} />
+              <div className="absolute inset-x-0 bottom-0 z-10 p-4 lg:p-8">
+                <div className="rounded-[2rem] border border-[#abadae]/10 bg-white/95 p-5 shadow-xl backdrop-blur-md dark:bg-[#111824]/95 lg:border-white/10 lg:bg-gradient-to-r lg:from-black/65 lg:via-black/45 lg:to-black/20 lg:p-8 lg:text-white dark:lg:from-black/70 dark:lg:via-black/50 dark:lg:to-black/25">
+                  <div className="flex items-end gap-4 lg:gap-8">
+                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-[#dadddf] shadow-2xl lg:h-36 lg:w-36 xl:h-40 xl:w-40">
+                      {game.icon ? <Image src={game.icon} alt={`${game.name} icon`} fill sizes="(min-width: 1280px) 160px, (min-width: 1024px) 144px, 80px" className="object-cover" /> : null}
+                    </div>
+                    <div className="flex min-w-0 flex-1 items-end justify-between gap-6 lg:pb-3">
+                      <div className="min-w-0">
+                        <div className="mb-2 hidden flex-wrap gap-2 lg:flex">
+                          {tags.slice(0, 4).map((tag, index) => (
+                            <Badge key={`${tag}-${index}`} className={cn('rounded-full border-none px-4 py-1.5 text-sm font-bold', index === 0 && 'bg-[#fdc003] text-[#604700]', index === 1 && 'bg-[#b3d4ff] text-[#004a7e]', index === 2 && 'bg-[#ff7767] text-[#4f0001]', index > 2 && 'bg-[#c8e6c9] text-[#2e7d32]')}>{tag}</Badge>
+                          ))}
+                        </div>
+                        <h1 className="line-clamp-2 text-2xl font-black leading-tight tracking-tight text-[#0f1720] dark:text-foreground lg:text-4xl lg:text-white lg:[text-shadow:0_12px_30px_rgba(0,0,0,0.62)] xl:text-5xl">{game.name}</h1>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#595c5d] dark:text-muted-foreground lg:mt-4 lg:gap-5 lg:text-sm lg:text-white/95 lg:[text-shadow:0_3px_10px_rgba(0,0,0,0.45)]">
+                          <span className="inline-flex items-center gap-1"><Users className="h-4 w-4" />{game.developer || '开发者未提供'}</span>
+                          <span className="inline-flex items-center gap-1"><Star className="h-4 w-4 fill-[#fdc003] text-[#fdc003]" />{normalizeScore(game.star)}</span>
+                          {!isWebGame ? <span className="hidden items-center gap-1 sm:inline-flex"><Download className="h-4 w-4" />{game.download_count_show || '0'} 下载</span> : null}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
-            </div>,
-            document.body,
-          )
-        : null}
-      <AppDownloadGuideDialog
-        open={appGuideOpen}
-        onOpenChange={setAppGuideOpen}
-        title="请在 AC 盒子中游玩"
-        mobileDescription={`${gameName} 为页游，请先安装或打开 AC 盒子，在 App 内开始游玩。`}
-        desktopDescription={`请使用手机扫码下载 AC 盒子，在 App 内搜索 ${gameName} 并开始游玩。`}
-        mobileFeatureText="AC 盒子会在 App 内打开页游，并应用现有 WebView 加速策略。"
-        desktopQrCaption="使用手机扫码下载 AC 盒子，安装后在 App 内开始游玩。"
-        primaryActionLabel="前往下载 AC 盒子"
-      />
-      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
-    </div>
+            </div>
+          </div>
+        </section>
+
+        <GameDetailActions
+          game={{
+            _id: game._id,
+            pkg: game.pkg,
+            name: game.name,
+            version: game.version,
+            type: game.type,
+            file_size: game.file_size,
+          }}
+          resources={resources}
+          downloadNotices={downloadNotices}
+          showPreregReminder={showPreregReminder}
+        />
+        <div className="relative z-10 px-4 pb-32 pt-8 sm:px-6 lg:px-16 lg:pb-20 lg:pt-10 2xl:px-20">
+          <div className="mx-auto max-w-7xl">
+            <section className="mb-10 grid grid-cols-2 gap-3 md:grid-cols-4 lg:gap-4">
+              {[
+                ['综合评分', normalizeScore(game.star)],
+                ['游戏分类', primaryCategory],
+                [isWebGame ? '开发者' : '下载总量', isWebGame ? game.developer || '未提供' : game.download_count_show || '0'],
+                [isWebGame ? '游玩方式' : '适配系统', isWebGame ? 'AC 盒子' : game.metadata?.region || 'Android'],
+              ].map(([label, value]) => (
+                <Card key={label} className="rounded-2xl border-[#abadae]/10 bg-white/70 dark:border-border/45 dark:bg-card/70 lg:rounded-[2rem]">
+                  <CardContent className="flex min-h-24 flex-col items-center justify-center gap-2 p-3 text-center lg:min-h-32 lg:p-8"><p className="text-xs text-[#595c5d] lg:text-sm">{label}</p><p className="line-clamp-2 text-sm font-black lg:text-xl">{value}</p></CardContent>
+                </Card>
+              ))}
+            </section>
+
+            <GameFactSummary items={facts} isWebGame={isWebGame} />
+            <GameSeoContent highlights={highlights} latestContent={latestContent} />
+            <div className="grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(340px,1fr)] lg:gap-12">
+              <div className="space-y-10 lg:space-y-12">
+                <section>
+                  <SectionTitle color="bg-[#b71211]">游戏介绍</SectionTitle>
+                  {hasLongDescription ? <input id="game-description-toggle" type="checkbox" aria-label="展开或收起完整游戏介绍" className="peer sr-only" /> : null}
+                  <div id="game-description-content" className={cn('relative text-sm leading-relaxed text-[#595c5d] dark:text-muted-foreground lg:text-base [&_p]:mb-3 [&_p:last-child]:mb-0', hasLongDescription && 'max-h-72 overflow-hidden transition-[max-height] duration-500 peer-checked:max-h-[9999px]')} dangerouslySetInnerHTML={{ __html: fullDescriptionHtml }} />
+                  {hasLongDescription ? (
+                    <label htmlFor="game-description-toggle" className="mt-4 inline-flex cursor-pointer items-center gap-1 rounded text-sm font-bold text-[#005e9f] hover:underline peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4 peer-focus-visible:outline-[#005e9f] peer-checked:[&_.description-closed]:hidden peer-checked:[&_.description-open]:inline">
+                      <span className="description-closed">查看完整介绍</span><span className="description-open hidden">收起介绍</span><ChevronRight className="h-4 w-4" />
+                    </label>
+                  ) : null}
+                </section>
+
+                <section>
+                  <div className="flex items-center justify-between"><SectionTitle color="bg-[#005e9f]">精彩截图</SectionTitle><span className="mb-4 text-xs font-bold text-[#005e9f] lg:mb-6 lg:text-sm">点击查看大图</span></div>
+                  <GameScreenshotGallery gameName={game.name} screenshots={displayScreenshots} />
+                </section>
+
+                <section>
+                  <SectionTitle color="bg-[#fdc003]">游戏标签</SectionTitle>
+                  <Card className="rounded-[1.75rem] border-[#abadae]/10 bg-white/85 shadow-[0_18px_40px_rgba(15,23,32,0.06)] dark:border-border/45 dark:bg-card/80 lg:rounded-[2rem] lg:shadow-[0_24px_60px_rgba(15,23,32,0.08)]">
+                    <CardContent className="p-5 lg:p-6"><div className="flex flex-wrap gap-3">{tags.map((tag, index) => <Link key={`${tag}-${index}`} href={buildTagFilterHref(tag)} className={cn('inline-flex items-center rounded-full border px-4 py-2 text-sm font-bold transition-transform duration-300 [@media(hover:hover)]:hover:-translate-y-1 [@media(hover:hover)]:hover:scale-[1.04]', TAG_STYLE_PALETTES[index % TAG_STYLE_PALETTES.length])}>{tag}</Link>)}</div></CardContent>
+                  </Card>
+                </section>
+
+                <GameFaqSection items={faqItems} intro={isWebGame ? undefined : <InstallationGuide installSteps={buildInstallSteps(game)} riskNotes={buildRiskNotes(game)} />} />
+                <RelatedNewsSection items={relatedNews} />
+                <Suspense fallback={<GameCommunitySkeleton />}><GameCommunitySection game={{ _id: game._id, pkg: game.pkg, name: game.name }} /></Suspense>
+              </div>
+
+              <aside className="space-y-10">
+                <SupportSection items={supportItems} isWebGame={isWebGame} />
+                <Suspense fallback={<div className="h-48 animate-pulse rounded-2xl bg-white/70 dark:bg-card/70" />}><DeferredGameReviewPanel game={{ _id: game._id, pkg: game.pkg, name: game.name, star: game.star }} summary={gameData.reviewSummary} /></Suspense>
+                <RecommendationSection items={recommendationList} />
+              </aside>
+            </div>
+          </div>
+        </div>
+      </div>
   );
 }
