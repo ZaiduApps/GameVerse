@@ -21,6 +21,7 @@ import {
   type GameReviewIdentity,
   type GameReviewSummary,
 } from '@/lib/game-review-api';
+import { getPreviewImageUrl } from '@/lib/image-preview';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -696,7 +697,12 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
 
           <div className="flex items-start gap-3">
             <Avatar className="mt-1 h-8 w-8">
-              <AvatarImage src={user?.avatar || '/favicon.ico'} alt={user?.name || user?.username || '当前用户'} />
+              <AvatarImage
+                src={getPreviewImageUrl(user?.avatar || '/favicon.ico', 64)}
+                alt={user?.name || user?.username || '当前用户'}
+                loading="lazy"
+                decoding="async"
+              />
               <AvatarFallback>
                 {String(user?.name || user?.username || '我').slice(0, 1)}
               </AvatarFallback>
@@ -745,7 +751,12 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
                 <div key={comment.id} className="space-y-2">
                   <div className="flex items-start gap-3">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={comment.user.avatarUrl} alt={comment.user.name} />
+                      <AvatarImage
+                        src={getPreviewImageUrl(comment.user.avatarUrl, 64)}
+                        alt={comment.user.name}
+                        loading="lazy"
+                        decoding="async"
+                      />
                       <AvatarFallback>{comment.user.name.slice(0, 1)}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1 rounded-xl bg-[#f7f8f9] p-3">
@@ -789,7 +800,12 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
                       {(expandedReplies[comment.id] ? comment.replies : comment.replies.slice(0, 2)).map((reply) => (
                         <div key={reply.id} className="flex items-start gap-2">
                           <Avatar className="h-7 w-7">
-                            <AvatarImage src={reply.user.avatarUrl} alt={reply.user.name} />
+                            <AvatarImage
+                              src={getPreviewImageUrl(reply.user.avatarUrl, 56)}
+                              alt={reply.user.name}
+                              loading="lazy"
+                              decoding="async"
+                            />
                             <AvatarFallback>{reply.user.name.slice(0, 1)}</AvatarFallback>
                           </Avatar>
                           <div className="min-w-0 flex-1 rounded-lg bg-[#f4f6f7] p-2.5">

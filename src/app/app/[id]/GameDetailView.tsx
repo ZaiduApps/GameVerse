@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { normalizeGameFaqItems } from '@/lib/game-faq';
 import { isWebGameType } from '@/lib/game-resource-type';
+import { getPreviewImageUrl } from '@/lib/image-preview';
 import { cn } from '@/lib/utils';
 import type { ApiRecommendedGame, CardConfigItem, GamePageSnapshot } from '@/types';
 import DeferredGameReviewPanel from './DeferredGameReviewPanel.client';
@@ -190,7 +191,7 @@ function RecommendationSection({ items }: { items: ApiRecommendedGame[] }) {
         {items.map((item) => (
           <Link key={`${item._id}-${item.pkg}`} href={`/app/${encodeURIComponent(item.pkg)}`} className="flex items-center gap-4 rounded-2xl border border-[#abadae]/10 bg-white p-3 shadow-sm transition-colors hover:bg-[#e0e3e4]/70 dark:border-border/45 dark:bg-card/75 dark:hover:bg-card/90 lg:border-0 lg:bg-transparent lg:shadow-none">
             <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-[#dadddf] shadow-md">
-              {item.icon ? <Image src={item.icon} alt={`${item.name} icon`} fill sizes="56px" className="object-cover" /> : null}
+              {item.icon ? <Image src={getPreviewImageUrl(item.icon, 112)} alt={`${item.name} icon`} fill sizes="56px" className="object-cover" /> : null}
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="truncate text-sm font-bold text-[#0f1720] dark:text-foreground">{item.name}</h3>
@@ -249,7 +250,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                 <div className="rounded-[2rem] border border-[#abadae]/10 bg-white/95 p-5 shadow-xl backdrop-blur-md dark:bg-[#111824]/95 lg:border-white/10 lg:bg-gradient-to-r lg:from-black/65 lg:via-black/45 lg:to-black/20 lg:p-8 lg:text-white dark:lg:from-black/70 dark:lg:via-black/50 dark:lg:to-black/25">
                   <div className="flex items-end gap-4 lg:gap-8">
                     <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-[#dadddf] shadow-2xl lg:h-36 lg:w-36 xl:h-40 xl:w-40">
-                      {game.icon ? <Image src={game.icon} alt={`${game.name} icon`} fill sizes="(min-width: 1280px) 160px, (min-width: 1024px) 144px, 80px" className="object-cover" /> : null}
+                      {game.icon ? <Image src={getPreviewImageUrl(game.icon, 320)} alt={`${game.name} icon`} fill sizes="(min-width: 1280px) 160px, (min-width: 1024px) 144px, 80px" className="object-cover" /> : null}
                     </div>
                     <div className="flex min-w-0 flex-1 items-end justify-between gap-6 lg:pb-3">
                       <div className="min-w-0">

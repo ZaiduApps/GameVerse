@@ -77,6 +77,11 @@ test('首屏样式确定且非首屏截图不声明高优先级', () => {
   assert.match(viewSource, /TAG_STYLE_PALETTES\[index % TAG_STYLE_PALETTES\.length\]/);
   assert.doesNotMatch(presenterSource, /Math\.random|shuffleArray/);
   assert.doesNotMatch(gallerySource, /\bpriority\b|fetchPriority/);
+  assert.match(viewSource, /getPreviewImageUrl\(game\.icon, 320\)/);
+  assert.match(viewSource, /getPreviewImageUrl\(item\.icon, 112\)/);
+  assert.match(gallerySource, /getPreviewImageUrl\(url, previewImageWidth\(aspect\)\)/);
+  assert.match(communityFeedSource, /getPreviewImageUrl\(post\.userAvatarUrl, 80\)/);
+  assert.match(communityFeedSource, /loading="lazy"/);
 });
 
 test('中文正文使用系统字体栈且不加载站点级中文 WebFont', () => {

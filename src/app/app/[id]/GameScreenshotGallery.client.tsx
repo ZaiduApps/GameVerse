@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useMemo, useRef, useState, type SyntheticEvent } from 'react';
 
+import { getPreviewImageUrl } from '@/lib/image-preview';
 import { cn } from '@/lib/utils';
 
 const GameScreenshotLightbox = dynamic(() => import('./GameScreenshotLightbox.client'), {
@@ -55,6 +56,12 @@ function imageSizes(kind: ScreenshotAspectKind): string {
   return '(min-width: 1024px) 420px, 280px';
 }
 
+function previewImageWidth(kind: ScreenshotAspectKind): number {
+  if (kind === 'portrait') return 472;
+  if (kind === 'square') return 560;
+  return 840;
+}
+
 export default function GameScreenshotGallery({
   gameName,
   screenshots,
@@ -97,6 +104,7 @@ export default function GameScreenshotGallery({
       <div className="scrollbar-hide flex snap-x items-end gap-4 overflow-x-auto pb-2 lg:pb-6">
         {normalizedScreenshots.map((url, index) => {
           const aspect = measuredAspects[url] || inferredAspects[url] || 'landscape';
+          const previewUrl = getPreviewImageUrl(url, previewImageWidth(aspect));
           return (
             <button
               ref={(element) => {
@@ -115,7 +123,7 @@ export default function GameScreenshotGallery({
               onClick={() => setPreviewIndex(index)}
             >
               <Image
-                src={url}
+                src={previewUrl}
                 alt={`${gameName} 截图 ${index + 1}`}
                 fill
                 sizes={imageSizes(aspect)}

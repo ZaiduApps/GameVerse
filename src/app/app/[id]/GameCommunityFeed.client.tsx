@@ -7,6 +7,7 @@ import { useState } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
+import { getPreviewImageUrl } from '@/lib/image-preview';
 import { cn } from '@/lib/utils';
 import { formatCompactCount, type CommunityFeedItem } from './game-detail-presenter';
 
@@ -56,7 +57,12 @@ export default function GameCommunityFeed({ gameName, latest, hot }: GameCommuni
             <CardContent className="p-4 lg:p-5">
               <div className="mb-3 flex items-center gap-3 lg:mb-4">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={post.userAvatarUrl} alt={post.userName} />
+                  <AvatarImage
+                    src={getPreviewImageUrl(post.userAvatarUrl, 80)}
+                    alt={post.userName}
+                    loading="lazy"
+                    decoding="async"
+                  />
                   <AvatarFallback>{post.userName.slice(0, 1)}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
@@ -71,7 +77,7 @@ export default function GameCommunityFeed({ gameName, latest, hot }: GameCommuni
               {post.imageUrl ? (
                 <div className="relative mt-4 aspect-[16/9] overflow-hidden rounded-xl">
                   <Image
-                    src={post.imageUrl}
+                    src={getPreviewImageUrl(post.imageUrl, 1240)}
                     alt={post.title || `${gameName} 社区帖子配图`}
                     fill
                     sizes="(min-width: 1024px) 620px, 100vw"
