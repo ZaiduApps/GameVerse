@@ -13,6 +13,10 @@ const backendBaseUrl = (
 
 const nextConfig: NextConfig = {
   /* config options here */
+  experimental: {
+    // 限制静态页面生成并发，避免构建期批量 SEO 快照挤占 Interface 容量。
+    staticGenerationMaxConcurrency: 2,
+  },
   // Separate dev and prod artifacts to avoid stale chunk manifest conflicts.
   distDir: configuredDistDir || (isDevRuntime ? '.next-dev' : '.next'),
   typescript: {
@@ -54,12 +58,6 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
-      {
-        source: '/app/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, s-maxage=900, stale-while-revalidate=86400' },
-        ],
-      },
       {
         source: '/:path*',
         headers: [

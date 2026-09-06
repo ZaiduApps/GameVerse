@@ -37,6 +37,22 @@ test('详情路由允许新包名按需生成并兼容页游 ObjectId', () => {
   assert.match(pageSource, /<GameDetailView\s+gameData=\{initialGameData\}/);
 });
 
+test('静态构建只预生成最近的高质量游戏并保留完整动态覆盖', () => {
+  assert.match(pageSource, /const STATIC_PARAMS_DEFAULT_LIMIT = 100/);
+  assert.match(pageSource, /const STATIC_PARAMS_HARD_LIMIT = 500/);
+  assert.match(pageSource, /process\.env\.GAME_DETAIL_PREBUILD_LIMIT/);
+  assert.match(pageSource, /\/seo\/audit\/games\?page=1&pageSize=\$\{STATIC_PARAMS_LIMIT\}/);
+  assert.match(pageSource, /item\?\.quality\?\.indexable !== true/);
+  assert.doesNotMatch(pageSource, /STATIC_PARAMS_MAX_PAGES|\/seo\/sitemap\/games\?page=/);
+  assert.match(pageSource, /export const dynamicParams = true/);
+});
+
+test('详情页缓存只由 Next ISR 管理', () => {
+  assert.match(pageSource, /export const revalidate = 900/);
+  assert.match(nextConfigSource, /staticGenerationMaxConcurrency: 2/);
+  assert.doesNotMatch(nextConfigSource, /s-maxage=900|source:\s*['"]\/app\/:path\*['"]/);
+});
+
 test('详情主体是无客户端取数的 Server Component 且只维护一套响应式 DOM', () => {
   assert.doesNotMatch(viewSource, /^['"]use client['"]/);
   assert.doesNotMatch(viewSource, /trackedApiFetch|useEffect|useState|isDesktopViewport|initialDataMode/);

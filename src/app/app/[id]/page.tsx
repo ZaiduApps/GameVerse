@@ -23,8 +23,21 @@ const DETAIL_REVALIDATE_SECONDS = 900;
 const SEO_SNAPSHOT_VERSION = '2';
 const MAX_SERVER_RECOMMENDED_GAMES = 5;
 const RECOMMENDED_GAMES_TIMEOUT_MS = 2500;
-const STATIC_PARAMS_PAGE_SIZE = 500;
-const STATIC_PARAMS_MAX_PAGES = 200;
+const STATIC_PARAMS_DEFAULT_LIMIT = 100;
+const STATIC_PARAMS_HARD_LIMIT = 500;
+const configuredStaticParamsLimit = Number.parseInt(
+  String(process.env.GAME_DETAIL_PREBUILD_LIMIT || STATIC_PARAMS_DEFAULT_LIMIT),
+  10,
+);
+const STATIC_PARAMS_LIMIT = Math.min(
+  STATIC_PARAMS_HARD_LIMIT,
+  Math.max(
+    1,
+    Number.isFinite(configuredStaticParamsLimit)
+      ? configuredStaticParamsLimit
+      : STATIC_PARAMS_DEFAULT_LIMIT,
+  ),
+);
 const STRICT_STATIC_BUILD =
   process.env.NODE_ENV === 'production' || process.env.GAMEVERSE_REQUIRE_SEO_SNAPSHOT === '1';
 // 构建后新入库的规范包名允许按需生成；不存在的应用仍由数据查询返回真实 404。
@@ -32,11 +45,10 @@ export const dynamicParams = true;
 export const revalidate = 900;
 
 type StaticGameItem = {
-  _id?: string;
   pkg?: string;
-  type?: string;
-  status?: number;
-  is_deleted?: number | boolean;
+  quality?: {
+    indexable?: boolean;
+  };
 };
 
 function isCanonicalPackageName(input: string): boolean {
@@ -49,69 +61,47 @@ function isValidGameIdentifier(input: string): boolean {
 
 export async function generateStaticParams(): Promise<Array<{ id: string }>> {
   const targets = new Set<string>();
-  let expectedTotal = 0;
-  let completed = false;
+  const response = await trackedApiFetch(
+    `/seo/audit/games?page=1&pageSize=${STATIC_PARAMS_LIMIT}`,
+    {
+      cache: 'force-cache',
+      next: { revalidate: DETAIL_REVALIDATE_SECONDS },
+      timeoutMs: 20000,
+      logKey: 'game-static-params',
+    },
+  );
+  if (!response.ok) {
+    throw new Error(`游戏静态参数接口失败: status=${response.status}`);
+  }
 
-  for (let page = 1; page <= STATIC_PARAMS_MAX_PAGES; page += 1) {
-    const response = await trackedApiFetch(
-      `/seo/sitemap/games?page=${page}&pageSize=${STATIC_PARAMS_PAGE_SIZE}`,
-      {
-        cache: 'force-cache',
-        next: { revalidate: DETAIL_REVALIDATE_SECONDS },
-        timeoutMs: 20000,
-        logKey: 'game-static-params',
-      },
-    );
-    if (!response.ok) {
-      throw new Error(`游戏静态参数接口失败: page=${page}, status=${response.status}`);
-    }
+  const payload = await response.json();
+  if (payload?.code !== undefined && payload.code !== 0) {
+    throw new Error(`游戏静态参数接口返回错误: code=${payload.code}`);
+  }
 
-    const payload = await response.json();
-    if (payload?.code !== undefined && payload.code !== 0) {
-      throw new Error(`游戏静态参数接口返回错误: page=${page}, code=${payload.code}`);
-    }
+  const data = payload?.data;
+  const list: StaticGameItem[] = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.list)
+      ? data.list
+      : [];
 
-    const data = payload?.data;
-    const list: StaticGameItem[] = Array.isArray(data)
-      ? data
-      : Array.isArray(data?.list)
-        ? data.list
-        : [];
-    const total = Number(data?.total || 0);
-    const pageSize = Number(data?.pageSize || STATIC_PARAMS_PAGE_SIZE);
-    if (total > 0) expectedTotal = total;
-
-    for (const item of list) {
-      const pkg = String(item?.pkg || '').trim();
-      const id = String(item?._id || '').trim();
-      const deleted = item?.is_deleted === true || Number(item?.is_deleted || 0) === 1;
-      if (deleted || (item?.status !== undefined && ![0, 1].includes(Number(item.status)))) continue;
-      const target = pkg || id;
-      if (!target) continue;
-      if (!pkg && String(item?.type || '').trim().toLowerCase() !== 'web') continue;
-      if (pkg && !isCanonicalPackageName(pkg)) {
-        if (STRICT_STATIC_BUILD) {
-          throw new Error(`游戏静态参数包含非法包名: ${pkg}`);
-        }
-        continue;
+  // 审计接口按更新时间倒序；只预生成其中可索引的近期页面，其余页面继续由 ISR 按需生成。
+  for (const item of list) {
+    const pkg = String(item?.pkg || '').trim();
+    if (item?.quality?.indexable !== true) continue;
+    if (!isCanonicalPackageName(pkg)) {
+      if (STRICT_STATIC_BUILD && pkg) {
+        throw new Error(`游戏静态参数包含非法包名: ${pkg}`);
       }
-      targets.add(target);
+      continue;
     }
-
-    if (list.length === 0 || (total > 0 && page * pageSize >= total) || list.length < pageSize) {
-      completed = true;
-      break;
-    }
+    targets.add(pkg);
+    if (targets.size >= STATIC_PARAMS_LIMIT) break;
   }
 
-  if (!completed) {
-    throw new Error(`游戏静态参数超过分页上限: ${STATIC_PARAMS_MAX_PAGES}`);
-  }
-  if (targets.size === 0) {
-    throw new Error('游戏静态参数为空，终止构建');
-  }
-  if (STRICT_STATIC_BUILD && expectedTotal > 0 && targets.size !== expectedTotal) {
-    throw new Error(`游戏静态参数数量异常: unique=${targets.size}, total=${expectedTotal}`);
+  if (STRICT_STATIC_BUILD && targets.size === 0) {
+    throw new Error('没有可预生成的高质量游戏页面，终止构建');
   }
 
   return Array.from(targets, (id) => ({ id }));
