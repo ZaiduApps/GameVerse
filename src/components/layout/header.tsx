@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import {
   Menu,
   Gamepad2,
@@ -34,10 +35,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import SearchOverlay from '@/components/layout/SearchOverlay';
-import AuthModal from '@/components/auth/auth-modal';
 import { useAuth } from '@/context/auth-context';
 import { apiUrl, trackedApiFetch } from '@/lib/api';
+
+const SearchOverlay = dynamic(() => import('@/components/layout/SearchOverlay'), { ssr: false });
+const AuthModal = dynamic(() => import('@/components/auth/auth-modal'), { ssr: false });
 
 const navItems = [
   { href: '/', label: '首页', icon: Home, priority: 'primary' as const },
@@ -436,8 +438,10 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
         </div>
       </header>
 
-      <SearchOverlay isOpen={searchOverlayOpen} setIsOpen={setSearchOverlayOpen} />
-      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
+      {searchOverlayOpen ? (
+        <SearchOverlay isOpen={searchOverlayOpen} setIsOpen={setSearchOverlayOpen} />
+      ) : null}
+      {authModalOpen ? <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} /> : null}
     </>
   );
 }

@@ -15,6 +15,7 @@ const [
   communityFeedSource,
   reviewSource,
   downloadDialogSource,
+  headerSource,
   nextConfigSource,
   layoutSource,
   globalsSource,
@@ -29,6 +30,7 @@ const [
   readSource('../src/app/app/[id]/GameCommunityFeed.client.tsx'),
   readSource('../src/app/app/[id]/DeferredGameReviewPanel.client.tsx'),
   readSource('../src/components/game-download-dialog.tsx'),
+  readSource('../src/components/layout/header.tsx'),
   readSource('../next.config.ts'),
   readSource('../src/app/layout.tsx'),
   readSource('../src/app/globals.css'),
@@ -104,6 +106,10 @@ test('重型弹窗和截图灯箱只在交互后挂载', () => {
   assert.match(lightboxSource, /closeButtonRef\.current\?\.focus\(\)/);
   assert.match(downloadDialogSource, /hideTrigger\?: boolean/);
   assert.match(downloadDialogSource, /open=\{open\}/);
+  assert.match(headerSource, /dynamic\(\(\) => import\('@\/components\/layout\/SearchOverlay'\), \{ ssr: false \}\)/);
+  assert.match(headerSource, /dynamic\(\(\) => import\('@\/components\/auth\/auth-modal'\), \{ ssr: false \}\)/);
+  assert.match(headerSource, /searchOverlayOpen \? \(/);
+  assert.match(headerSource, /authModalOpen \? <AuthModal/);
 });
 
 test('社区内容通过服务端 Suspense 区块获取，客户端岛只负责排序', () => {
