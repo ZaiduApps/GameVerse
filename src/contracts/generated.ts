@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 942099d2d430cfcd40b2c8a70d22a22cf2e63f00c7faf7b0e051b51dfebf50e4
+ * @contract-sha256 0cd6a80ef383761ad4da0a585d0d557d06dc285eae29c6faea2863c1eaa48c5b
  */
 
 export interface paths {
@@ -5518,6 +5518,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/resource-worker/v1/tasks/{taskId}/apkeep-account/lease": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 在实际尝试 apkeep 来源时领取账号 */
+        post: operations["ResourceWorkerGatewayController_leaseApkeepAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/resource-worker/v1/tasks/{taskId}/heartbeat": {
         parameters: {
             query?: never;
@@ -7992,6 +8009,7 @@ export interface components {
         RegisterResourceWorkerDto: Record<string, never>;
         ResourceWorkerHeartbeatDto: Record<string, never>;
         ClaimResourceTasksDto: Record<string, never>;
+        LeaseApkeepAccountDto: Record<string, never>;
         HeartbeatResourceTaskDto: Record<string, never>;
         ResourceTaskEventDto: Record<string, never>;
         CompleteResourceTaskDto: Record<string, never>;
@@ -21106,6 +21124,32 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ClaimResourceTasksDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerGatewayController_leaseApkeepAccount: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
+            };
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaseApkeepAccountDto"];
             };
         };
         responses: {
