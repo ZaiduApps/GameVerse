@@ -422,6 +422,7 @@ export interface GamePageSnapshot extends GameDetailData {
   relatedNews?: CommunityPost[];
   reviewSummary?: {
     displayScore?: number | null;
+    userAverage?: number | null;
     ratingCount?: number;
   } | null;
 }

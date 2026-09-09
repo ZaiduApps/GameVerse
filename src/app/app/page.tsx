@@ -2,6 +2,11 @@ import type { Metadata } from 'next';
 
 import AppLibraryView from './AppLibraryView';
 import { trackedApiFetch } from '@/lib/api';
+import {
+  GAME_LIBRARY_BROWSE_PAGE_SIZE,
+  GAME_LIBRARY_BROWSE_QUERIES,
+  GAME_LIBRARY_PAGE_SIZE,
+} from '@/lib/game-library';
 import { absoluteUrl, buildSeoDescription } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import type { ApiGame } from '@/types';
@@ -12,7 +17,23 @@ type GameQueryPayload = {
   code?: number;
   data?: {
     list?: ApiGame[];
+    total?: number;
+    page?: number;
+    pageSize?: number;
   };
+};
+
+type LibraryQueryResult = {
+  list: ApiGame[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+type InitialLibraryData = {
+  games: ApiGame[];
+  hasMorePages: boolean;
+  ready: boolean;
 };
 
 type HomeFallbackPayload = {
@@ -29,26 +50,7 @@ function getGameHref(game: ApiGame): string {
   return target ? `/app/${encodeURIComponent(target)}` : '/app';
 }
 
-async function getTopGamesForSeo(): Promise<ApiGame[]> {
-  try {
-    const params = new URLSearchParams({
-      q: 'com',
-      page: '1',
-      pageSize: String(GAME_JSONLD_PAGE_SIZE),
-    });
-    const res = await trackedApiFetch(`/game/q?${params.toString()}`, {
-      cache: 'force-cache',
-      next: { revalidate: 900 },
-    });
-    if (!res.ok) return [];
-    const json = (await res.json()) as GameQueryPayload;
-    if (Number(json?.code ?? -1) !== 0) return [];
-    const list = json?.data?.list;
-    if (Array.isArray(list) && list.length > 0) return list;
-  } catch {
-    // fall through to home fallback
-  }
-
+async function getHomeFallbackGames(): Promise<ApiGame[]> {
   try {
     const res = await trackedApiFetch('/home', {
       cache: 'force-cache',
@@ -77,6 +79,75 @@ async function getTopGamesForSeo(): Promise<ApiGame[]> {
   } catch {
     return [];
   }
+}
+
+async function fetchLibraryQuery(
+  query: string,
+  pageSize: number,
+  cacheable: boolean,
+): Promise<LibraryQueryResult | null> {
+  try {
+    const params = new URLSearchParams({
+      q: query,
+      page: '1',
+      pageSize: String(pageSize),
+    });
+    const res = await trackedApiFetch(`/game/q?${params.toString()}`, cacheable
+      ? { cache: 'force-cache', next: { revalidate: 900 } }
+      : { cache: 'no-store' });
+    if (!res.ok) return null;
+
+    const json = (await res.json()) as GameQueryPayload;
+    if (Number(json?.code ?? -1) !== 0) return null;
+    const list = Array.isArray(json?.data?.list) ? json.data.list : [];
+    const total = Number(json?.data?.total ?? 0);
+    const page = Math.max(1, Number(json?.data?.page ?? 1));
+    const responsePageSize = Math.max(1, Number(json?.data?.pageSize ?? pageSize));
+    return {
+      list,
+      total: Number.isFinite(total) ? total : 0,
+      page,
+      pageSize: responsePageSize,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function getInitialLibraryData(keyword: string): Promise<InitialLibraryData> {
+  const normalizedKeyword = String(keyword || '').trim();
+  const browseMode = !normalizedKeyword;
+  const queries = browseMode ? [...GAME_LIBRARY_BROWSE_QUERIES] : [normalizedKeyword];
+  const pageSize = browseMode ? GAME_LIBRARY_BROWSE_PAGE_SIZE : GAME_LIBRARY_PAGE_SIZE;
+  const results = await Promise.all(
+    queries.map((query) => fetchLibraryQuery(query, pageSize, browseMode)),
+  );
+  const successfulResults = results.filter((result): result is LibraryQueryResult => result !== null);
+
+  if (successfulResults.length === 0) {
+    const fallbackGames = browseMode ? await getHomeFallbackGames() : [];
+    return {
+      games: fallbackGames,
+      hasMorePages: false,
+      ready: fallbackGames.length > 0,
+    };
+  }
+
+  const gamesByKey = new Map<string, ApiGame>();
+  successfulResults.forEach((result) => {
+    result.list.forEach((game) => {
+      const key = String(game.pkg || game._id || '').trim();
+      if (key && !gamesByKey.has(key)) gamesByKey.set(key, game);
+    });
+  });
+
+  return {
+    games: Array.from(gamesByKey.values()),
+    hasMorePages: successfulResults.some(
+      (result) => result.total > result.page * result.pageSize,
+    ),
+    ready: true,
+  };
 }
 
 export async function generateMetadata({
@@ -164,11 +235,15 @@ export default async function GamesPage({
 }: {
   searchParams: Promise<{ q?: string; category?: string }>;
 }) {
-  const [config, games] = await Promise.all([getPublicSiteConfig(300), getTopGamesForSeo()]);
   const params = await searchParams;
-  const siteName = String(config?.basic?.site_name || 'APKScc').trim();
   const initialKeyword = String(params?.q || '').trim();
   const initialCategory = String(params?.category || '').trim() || 'all';
+  const [config, initialLibraryData] = await Promise.all([
+    getPublicSiteConfig(300),
+    getInitialLibraryData(initialKeyword),
+  ]);
+  const siteName = String(config?.basic?.site_name || 'APKScc').trim();
+  const games = initialLibraryData.games.slice(0, GAME_JSONLD_PAGE_SIZE);
 
   const collectionJsonLd = {
     '@context': 'https://schema.org',
@@ -225,7 +300,14 @@ export default async function GamesPage({
           ))}
         </div>
       </section>
-      <AppLibraryView initialKeyword={initialKeyword} initialCategory={initialCategory} />
+      <AppLibraryView
+        key={`${initialKeyword}:${initialCategory}`}
+        initialKeyword={initialKeyword}
+        initialCategory={initialCategory}
+        initialGames={initialLibraryData.games}
+        initialHasMorePages={initialLibraryData.hasMorePages}
+        initialDataReady={initialLibraryData.ready}
+      />
     </>
   );
 }

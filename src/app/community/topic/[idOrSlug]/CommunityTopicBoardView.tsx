@@ -773,10 +773,10 @@ export default function CommunityTopicBoardView({
                     className="rounded-xl border border-white/45 object-cover shadow-sm"
                     onError={() => setTopicIconFailed(true)}
                   />
-                  <div className="min-w-0">
-                    <CardTitle className="line-clamp-2 text-xl">
-                      #{topic?.name || '话题'}
-                    </CardTitle>
+                    <div className="min-w-0">
+                      <h1 className="line-clamp-2 text-xl font-semibold leading-none tracking-tight">
+                        #{topic?.name || '话题'}
+                      </h1>
                     <CardDescription className="mt-1 line-clamp-3 text-foreground/70">
                       {topic?.description?.trim() || '该话题暂无简介。'}
                     </CardDescription>

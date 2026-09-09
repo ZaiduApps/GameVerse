@@ -86,7 +86,7 @@ export default function AppShell({ children, siteName, logoUrl, siteConfig }: Ap
             className={
               isCommunityTopicsPage
                 ? 'min-h-screen flex-grow overflow-x-hidden px-0 py-0'
-                : 'container mx-auto flex-grow px-4 py-8'
+                : 'container mx-auto min-h-[calc(100vh-4rem)] flex-grow px-4 py-8'
             }
           >
             {communityBreadcrumbJsonLd ? (

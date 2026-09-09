@@ -149,6 +149,7 @@ export default function RecentUpdatesSection({
           </span>
           <Link
             href={getGameHref(game)}
+            prefetch={false}
             className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
             aria-label={`查看${game.name}更新详情`}
           >
@@ -167,6 +168,7 @@ export default function RecentUpdatesSection({
           {viewAllHref ? (
             <Link
               href={viewAllHref}
+              prefetch={false}
               className="text-sm font-bold text-[#005e9f] hover:underline"
               aria-label={`${viewAllText}${title || '最近更新'}`}
             >

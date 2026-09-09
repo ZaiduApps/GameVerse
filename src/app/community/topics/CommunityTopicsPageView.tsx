@@ -132,6 +132,7 @@ function TopicGrid({
           <Link
             key={topicKey}
             href={getTopicHref(topic)}
+            prefetch={false}
             className="group flex min-h-[132px] flex-col items-center justify-between rounded-lg border bg-card px-2 py-3 text-center transition hover:border-primary/30 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-[148px] sm:px-3"
           >
             <TopicIcon

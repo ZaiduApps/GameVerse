@@ -66,6 +66,7 @@ export default function CommunityInfoPanel({ posts, searchValue = '', topics = [
               <Link
                 key={topic._id || topic.name}
                 href={`/community?topicName=${encodeURIComponent(topic.name || topic.slug || topic._id)}`}
+                prefetch={false}
                 className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-muted/60"
               >
                 <span className="min-w-0 truncate text-primary">#{topic.name}</span>
@@ -91,6 +92,7 @@ export default function CommunityInfoPanel({ posts, searchValue = '', topics = [
               <li key={post.id}>
                 <Link
                   href={`/community/post/${post.id}`}
+                  prefetch={false}
                   className="flex gap-2 rounded-md px-2 py-1.5 text-foreground hover:bg-muted/60 hover:text-primary"
                   title={post.title || post.content.substring(0, 50)}
                 >

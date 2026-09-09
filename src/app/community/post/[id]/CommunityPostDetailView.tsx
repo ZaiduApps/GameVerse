@@ -181,6 +181,8 @@ export default function CommunityPostDetailView({
   const [hashCommentId, setHashCommentId] = useState('');
   const articleRef = useRef<HTMLElement | null>(null);
   const requestedCommentContextIdsRef = useRef<Set<string>>(new Set());
+  // React Strict Mode 在开发态会重复执行 effect；按页面实例去重，避免浏览量被重复计数。
+  const recordedViewPostIdsRef = useRef<Set<string>>(new Set());
   const authorProfileHref = getCommunityAuthorProfileHref(post);
   const postId = String(post.id || '').trim();
 
@@ -212,11 +214,15 @@ export default function CommunityPostDetailView({
 
   useEffect(() => {
     let cancelled = false;
+    const viewPostId = String(post.id || '').trim();
+    if (!viewPostId || recordedViewPostIdsRef.current.has(viewPostId)) return;
+    recordedViewPostIdsRef.current.add(viewPostId);
+
     const referrer = typeof document !== 'undefined' ? document.referrer : '';
     const source = resolveCommunityPostViewSource(referrer);
 
     void recordCommunityPostView({
-      postId: post.id,
+      postId: viewPostId,
       referrer,
       source,
     }).then((data) => {
@@ -1400,6 +1406,7 @@ export default function CommunityPostDetailView({
                   {comment.user.profileHref ? (
                     <Link
                       href={comment.user.profileHref}
+                      prefetch={false}
                       aria-label={`查看 ${comment.user.name} 的主页`}
                       className="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
@@ -1419,6 +1426,7 @@ export default function CommunityPostDetailView({
                       {comment.user.profileHref ? (
                         <Link
                           href={comment.user.profileHref}
+                          prefetch={false}
                           className="text-sm font-semibold text-foreground hover:text-primary"
                         >
                           {comment.user.name}
@@ -1495,6 +1503,7 @@ export default function CommunityPostDetailView({
                             {reply.user.profileHref ? (
                               <Link
                                 href={reply.user.profileHref}
+                                prefetch={false}
                                 aria-label={`查看 ${reply.user.name} 的主页`}
                                 className="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary"
                               >
@@ -1514,6 +1523,7 @@ export default function CommunityPostDetailView({
                                 {reply.user.profileHref ? (
                                   <Link
                                     href={reply.user.profileHref}
+                                    prefetch={false}
                                     className="text-xs font-semibold text-foreground hover:text-primary"
                                   >
                                     {reply.user.name}
@@ -1842,6 +1852,7 @@ export default function CommunityPostDetailView({
                     <Button asChild size="sm" className="mt-3 w-full bg-white/20 text-white hover:bg-white/30">
                       <Link
                         href={relatedAppHref}
+                        prefetch={false}
                         data-acbox-action="community_post_related_game_detail"
                         data-acbox-label={relatedApp?.pkg || post.id}
                       >
@@ -1890,6 +1901,7 @@ export default function CommunityPostDetailView({
                 {authorProfileHref ? (
                   <Link
                     href={authorProfileHref}
+                    prefetch={false}
                     aria-label={`查看 ${post.user.name} 的主页`}
                     className="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
@@ -1907,7 +1919,7 @@ export default function CommunityPostDetailView({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5 text-sm leading-5">
                     {authorProfileHref ? (
-                      <Link href={authorProfileHref} className="font-semibold text-foreground hover:text-primary">
+                      <Link href={authorProfileHref} prefetch={false} className="font-semibold text-foreground hover:text-primary">
                         {post.user.name}
                       </Link>
                     ) : (
@@ -1950,6 +1962,7 @@ export default function CommunityPostDetailView({
                     <Link
                       key={`${post.id}-detail-topic-${topic}`}
                       href={`/community?topicName=${encodeURIComponent(topic)}`}
+                      prefetch={false}
                       className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/15"
                     >
                       #{topic}
@@ -2077,6 +2090,7 @@ export default function CommunityPostDetailView({
                       <Button asChild size="sm" variant="outline" className="h-8 shrink-0 px-3 text-xs">
                         <Link
                           href={relatedAppHref}
+                          prefetch={false}
                           data-acbox-action="community_post_related_game_detail"
                           data-acbox-label={relatedApp?.pkg || post.id}
                         >

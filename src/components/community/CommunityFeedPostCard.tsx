@@ -363,6 +363,7 @@ export default function CommunityFeedPostCard({
         {!hideAuthor ? (
           <Link
             href={authorHref || postHref}
+            prefetch={false}
             onClick={(event) => {
               if (!authorHref) event.preventDefault();
             }}
@@ -380,7 +381,7 @@ export default function CommunityFeedPostCard({
             <div className="min-w-0">
               {!hideAuthor ? (
                 <div className="flex flex-wrap items-center gap-1.5 text-sm leading-5">
-                  <Link href={authorHref || postHref} className="font-semibold text-foreground hover:text-primary">
+                  <Link href={authorHref || postHref} prefetch={false} className="font-semibold text-foreground hover:text-primary">
                     {post.user.name}
                   </Link>
                   {post.authorUsername ? (
@@ -403,7 +404,7 @@ export default function CommunityFeedPostCard({
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>帖子操作</DropdownMenuLabel>
                 <DropdownMenuItem asChild>
-                  <Link href={postHref} onClick={persistReturnAndOpen}>查看详情</Link>
+                  <Link href={postHref} prefetch={false} onClick={persistReturnAndOpen}>查看详情</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => void handleShare()}>复制链接</DropdownMenuItem>
                 {canManage ? (
@@ -423,7 +424,7 @@ export default function CommunityFeedPostCard({
             </DropdownMenu>
           </div>
 
-          <Link href={postHref} onClick={persistReturnAndOpen} className="mt-2 block min-w-0">
+          <Link href={postHref} prefetch={false} onClick={persistReturnAndOpen} className="mt-2 block min-w-0">
             {post.title ? (
               <h3 className="mb-1 line-clamp-2 text-[15px] font-semibold leading-6 text-foreground group-hover:text-primary">
                 {post.title}
@@ -445,6 +446,7 @@ export default function CommunityFeedPostCard({
                 <Link
                   key={`${postId}-topic-${topic}`}
                   href={`/community?topicName=${encodeURIComponent(topic)}`}
+                  prefetch={false}
                   className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary hover:bg-primary/15"
                 >
                   #{topic}
@@ -474,8 +476,8 @@ export default function CommunityFeedPostCard({
                       <img
                         src={image}
                         alt={post.title || '帖子图片'}
-                        loading={index < 2 && imageIndex === 0 ? 'eager' : 'lazy'}
-                        fetchPriority={index < 2 && imageIndex === 0 ? 'high' : 'auto'}
+                        loading={index === 0 && imageIndex === 0 ? 'eager' : 'lazy'}
+                        fetchPriority={index === 0 && imageIndex === 0 ? 'high' : 'auto'}
                         className={cn(
                           'block h-auto w-auto max-w-full rounded-md object-contain',
                           images.length === 1 ? 'max-h-[520px]' : 'max-h-[220px]',
@@ -516,7 +518,7 @@ export default function CommunityFeedPostCard({
                       alt={post.title || '帖子图片'}
                       fill
                       sizes={images.length === 1 ? '(max-width: 768px) 92vw, 560px' : '180px'}
-                      priority={index < 2 && imageIndex === 0}
+                      priority={index === 0 && imageIndex === 0}
                       className="object-cover transition-transform duration-200 group-hover:scale-[1.01]"
                     />
                     {overflow > 0 ? (
@@ -552,6 +554,7 @@ export default function CommunityFeedPostCard({
           {post.relatedApp ? (
             <Link
               href={post.relatedApp.pkg ? `/app/${encodeURIComponent(post.relatedApp.pkg)}` : postHref}
+              prefetch={false}
               className="mt-3 flex items-center gap-2 rounded-md bg-primary/5 px-2.5 py-2 text-xs text-muted-foreground hover:bg-primary/10"
             >
               {post.relatedApp.icon ? (

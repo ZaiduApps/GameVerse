@@ -69,10 +69,8 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
     if (href === '/') return pathname === '/';
     return pathname === href || pathname.startsWith(`${href}/`);
   };
-  const deferNavigationPrefetch = pathname.startsWith('/app/');
-  const navigationPrefetch = deferNavigationPrefetch ? false : null;
   const prefetchOnIntent = (href: string) => {
-    if (deferNavigationPrefetch) router.prefetch(href);
+    router.prefetch(href);
   };
 
   useEffect(() => {
@@ -123,7 +121,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
           <div className="flex items-center gap-6">
             <Link
               href="/"
-              prefetch={navigationPrefetch}
+              prefetch={false}
               onMouseEnter={() => prefetchOnIntent('/')}
               onFocus={() => prefetchOnIntent('/')}
               className="flex items-center gap-2 text-primary hover:opacity-90 transition-opacity"
@@ -149,7 +147,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                 <Link
                   key={item.label}
                   href={item.href}
-                  prefetch={navigationPrefetch}
+                  prefetch={false}
                   onMouseEnter={() => prefetchOnIntent(item.href)}
                   onFocus={() => prefetchOnIntent(item.href)}
                   className={`inline-flex items-center justify-start gap-1 rounded-full px-2.5 py-1.5 text-sm font-semibold transition-colors ${
@@ -182,7 +180,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                     <DropdownMenuItem key={item.label} asChild>
                       <Link
                         href={item.href}
-                        prefetch={navigationPrefetch}
+                        prefetch={false}
                         onMouseEnter={() => prefetchOnIntent(item.href)}
                         onFocus={() => prefetchOnIntent(item.href)}
                         className="flex items-center gap-2"
@@ -203,7 +201,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                   <li key={item.label}>
                     <Link
                       href={item.href}
-                      prefetch={navigationPrefetch}
+                      prefetch={false}
                       onMouseEnter={() => prefetchOnIntent(item.href)}
                       onFocus={() => prefetchOnIntent(item.href)}
                       className={`inline-flex items-center justify-start gap-1.5 rounded-full lg:px-2 xl:px-3 py-2 text-sm font-semibold transition-colors ${

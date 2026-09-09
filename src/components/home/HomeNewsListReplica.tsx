@@ -66,6 +66,7 @@ export default function HomeNewsListReplica({
         </div>
         <Link
           href={moreHref}
+          prefetch={false}
           className="text-sm font-bold text-[#005e9f] hover:underline dark:text-[#7fc1ff] dark:hover:text-[#a9d6ff]"
           aria-label={`查看更多${title}`}
         >
@@ -131,6 +132,7 @@ export default function HomeNewsListReplica({
               </div>
               <Link
                 href={articleHref}
+                prefetch={false}
                 className="absolute inset-0 z-30 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
                 aria-label={`查看社区动态：${article.name}`}
               >

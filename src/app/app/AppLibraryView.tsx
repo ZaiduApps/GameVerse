@@ -1,7 +1,7 @@
 ﻿
 'use client';
 
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Plus_Jakarta_Sans } from 'next/font/google';
@@ -20,12 +20,14 @@ import {
 } from 'lucide-react';
 
 import { trackedApiFetch } from '@/lib/api';
+import {
+  GAME_LIBRARY_BROWSE_PAGE_SIZE,
+  GAME_LIBRARY_BROWSE_QUERIES,
+  GAME_LIBRARY_PAGE_SIZE,
+} from '@/lib/game-library';
 import { cn } from '@/lib/utils';
 import type { ApiGame, Game } from '@/types';
 
-const PAGE_SIZE = 24;
-const DEFAULT_BROWSE_QUERIES = ['国际服', '日服', '韩服', '动作', '卡牌', '冒险'];
-const DEFAULT_BROWSE_PAGE_SIZE = 8;
 const GAME_LIST_REQUEST_TIMEOUT_MS = 12000;
 const GAME_LIST_RETRY_ATTEMPTS = 3;
 const GAME_LIST_RETRY_DELAY_MS = 1200;
@@ -193,7 +195,7 @@ function normalizeGameQueryResult(payload: unknown): {
   pageSize: number;
 } {
   if (!payload || typeof payload !== 'object') {
-    return { code: -1, list: [], total: 0, page: 1, pageSize: PAGE_SIZE };
+    return { code: -1, list: [], total: 0, page: 1, pageSize: GAME_LIBRARY_PAGE_SIZE };
   }
 
   const raw = payload as {
@@ -208,7 +210,7 @@ function normalizeGameQueryResult(payload: unknown): {
   const list = Array.isArray(raw.data?.list) ? (raw.data?.list as ApiGame[]) : [];
   const total = Number(raw.data?.total ?? 0);
   const page = Math.max(1, Number(raw.data?.page ?? 1));
-  const pageSize = Math.max(1, Number(raw.data?.pageSize ?? PAGE_SIZE));
+  const pageSize = Math.max(1, Number(raw.data?.pageSize ?? GAME_LIBRARY_PAGE_SIZE));
   return {
     code: Number(raw.code ?? -1),
     list,
@@ -294,6 +296,7 @@ function LibraryGameCard({ game }: { game: LibraryGame }) {
     <div className="group relative flex flex-col gap-3">
       <Link
         href={getGameHref(game)}
+        prefetch={false}
         className="relative aspect-video overflow-hidden rounded-xl bg-white shadow-[0_24px_32px_-12px_rgba(44,47,48,0.06)]"
       >
         <Image
@@ -349,6 +352,7 @@ function LibraryGameCard({ game }: { game: LibraryGame }) {
           </div>
           <Link
             href={getGameHref(game)}
+            prefetch={false}
             className="whitespace-nowrap rounded-full bg-[#005e9f] px-4 py-1.5 text-xs font-bold text-white shadow-sm transition-opacity hover:opacity-90"
           >
             安装
@@ -362,21 +366,34 @@ function LibraryGameCard({ game }: { game: LibraryGame }) {
 export default function GamesPage({
   initialKeyword = '',
   initialCategory = 'all',
+  initialGames = [],
+  initialHasMorePages = false,
+  initialDataReady = false,
 }: {
   initialKeyword?: string;
   initialCategory?: string;
+  initialGames?: ApiGame[];
+  initialHasMorePages?: boolean;
+  initialDataReady?: boolean;
 }) {
+  const normalizedInitialKeyword = String(initialKeyword || '').trim();
   const safeInitialCategory = String(initialCategory || '').trim() || 'all';
-  const [isLoading, setIsLoading] = useState(true);
+  const shouldUseInitialDataRef = useRef(initialDataReady);
+  const [isLoading, setIsLoading] = useState(!initialDataReady);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadingAttempt, setLoadingAttempt] = useState(1);
-  const [allGames, setAllGames] = useState<LibraryGame[]>([]);
+  const [allGames, setAllGames] = useState<LibraryGame[]>(() =>
+    mergeUniqueGames(
+      [],
+      initialGames.map((game, index) => transformApiGameToGame(game, index)),
+    ),
+  );
   const [currentPage, setCurrentPage] = useState(1);
-  const [hasMorePages, setHasMorePages] = useState(false);
+  const [hasMorePages, setHasMorePages] = useState(initialHasMorePages);
   const [loadError, setLoadError] = useState('');
   const [reloadToken, setReloadToken] = useState(0);
-  const [searchInput, setSearchInput] = useState(initialKeyword);
-  const [queryKeyword, setQueryKeyword] = useState(initialKeyword);
+  const [searchInput, setSearchInput] = useState(normalizedInitialKeyword);
+  const [queryKeyword, setQueryKeyword] = useState(normalizedInitialKeyword);
   const [selectedCategory, setSelectedCategory] = useState(safeInitialCategory);
   const [selectedThemeTag, setSelectedThemeTag] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('all');
@@ -394,9 +411,9 @@ export default function GamesPage({
   }, [searchInput]);
 
   useEffect(() => {
-    setSearchInput(initialKeyword);
-    setQueryKeyword(initialKeyword);
-  }, [initialKeyword]);
+    setSearchInput(normalizedInitialKeyword);
+    setQueryKeyword(normalizedInitialKeyword);
+  }, [normalizedInitialKeyword]);
 
   useEffect(() => {
     setSelectedCategory(String(initialCategory || '').trim() || 'all');
@@ -437,8 +454,8 @@ export default function GamesPage({
     const externalSignal = options?.externalSignal;
     const keyword = (options?.keywordOverride ?? queryKeyword).trim();
     const browseMode = isBrowseMode(keyword);
-    const queries = browseMode ? DEFAULT_BROWSE_QUERIES : [keyword];
-    const requestPageSize = browseMode ? DEFAULT_BROWSE_PAGE_SIZE : PAGE_SIZE;
+    const queries = browseMode ? GAME_LIBRARY_BROWSE_QUERIES : [keyword];
+    const requestPageSize = browseMode ? GAME_LIBRARY_BROWSE_PAGE_SIZE : GAME_LIBRARY_PAGE_SIZE;
 
     if (append) {
       setIsLoadingMore(true);
@@ -551,13 +568,22 @@ export default function GamesPage({
   }
 
   useEffect(() => {
+    if (
+      shouldUseInitialDataRef.current &&
+      reloadToken === 0 &&
+      queryKeyword === normalizedInitialKeyword
+    ) {
+      shouldUseInitialDataRef.current = false;
+      return;
+    }
+    shouldUseInitialDataRef.current = false;
     const controller = new AbortController();
     setAllGames([]);
     setCurrentPage(1);
     setHasMorePages(false);
     void fetchGamePage(1, { append: false, externalSignal: controller.signal });
     return () => controller.abort();
-  }, [queryKeyword, reloadToken]);
+  }, [normalizedInitialKeyword, queryKeyword, reloadToken]);
 
   const categories = useMemo<FacetOption[]>(() => {
     const counts = new Map<string, number>();
@@ -671,7 +697,7 @@ export default function GamesPage({
     onlyHighScore ||
     sortMode !== 'latest';
   const placeholderCount = isLoading
-    ? Math.min(PAGE_SIZE, 8)
+    ? Math.min(GAME_LIBRARY_PAGE_SIZE, 8)
     : isLoadingMore
       ? 4
       : 0;
@@ -686,7 +712,7 @@ export default function GamesPage({
   const aggregatedBrowseActive = isBrowseMode(queryKeyword);
   const resultScopeLabel = queryKeyword.trim()
     ? `关键词：${queryKeyword.trim()}`
-    : `综合浏览：${DEFAULT_BROWSE_QUERIES.join(' / ')}`;
+    : `综合浏览：${GAME_LIBRARY_BROWSE_QUERIES.join(' / ')}`;
   const isEmpty = !isLoading && !loadError && renderedGames.length === 0;
 
   return (
@@ -874,7 +900,7 @@ export default function GamesPage({
                 >
                   综合推荐
                 </button>
-                {DEFAULT_BROWSE_QUERIES.map((query) => (
+                {GAME_LIBRARY_BROWSE_QUERIES.map((query) => (
                   <button
                     key={`browse-${query}`}
                     type="button"

@@ -13,6 +13,7 @@ const [
   presenterSource,
   communitySource,
   communityFeedSource,
+  heroArtworkSource,
   reviewSource,
   downloadDialogSource,
   headerSource,
@@ -28,6 +29,7 @@ const [
   readSource('../src/app/app/[id]/game-detail-presenter.ts'),
   readSource('../src/app/app/[id]/GameCommunitySection.tsx'),
   readSource('../src/app/app/[id]/GameCommunityFeed.client.tsx'),
+  readSource('../src/app/app/[id]/GameHeroArtwork.client.tsx'),
   readSource('../src/app/app/[id]/DeferredGameReviewPanel.client.tsx'),
   readSource('../src/components/game-download-dialog.tsx'),
   readSource('../src/components/layout/header.tsx'),
@@ -84,6 +86,13 @@ test('首屏样式确定且非首屏截图不声明高优先级', () => {
   assert.match(gallerySource, /getPreviewImageUrl\(url, previewImageWidth\(aspect\)\)/);
   assert.match(communityFeedSource, /getPreviewImageUrl\(post\.userAvatarUrl, 80\)/);
   assert.match(communityFeedSource, /loading="lazy"/);
+  assert.match(heroArtworkSource, /getResponsiveImageAttributes\(currentImage\)/);
+  assert.match(heroArtworkSource, /imageSrcSet=\{responsiveImage\.srcSet\}/);
+  assert.match(heroArtworkSource, /srcSet=\{responsiveImage\.srcSet\}/);
+  assert.match(heroArtworkSource, /fetchPriority="high"/);
+  assert.match(heroArtworkSource, /hasCheckedHydratedImage\.current/);
+  assert.match(heroArtworkSource, /image\?\.complete && image\.naturalWidth === 0/);
+  assert.match(heroArtworkSource, /handleImageError\(currentImage\)/);
 });
 
 test('中文正文使用系统字体栈且不加载站点级中文 WebFont', () => {
@@ -113,10 +122,8 @@ test('重型弹窗和截图灯箱只在交互后挂载', () => {
 });
 
 test('详情页顶部导航仅在用户表达意图后预取', () => {
-  assert.match(headerSource, /const deferNavigationPrefetch = pathname\.startsWith\('\/app\/'\)/);
-  assert.match(headerSource, /const navigationPrefetch = deferNavigationPrefetch \? false : null/);
-  assert.match(headerSource, /if \(deferNavigationPrefetch\) router\.prefetch\(href\)/);
-  assert.ok((headerSource.match(/prefetch=\{navigationPrefetch\}/g) || []).length >= 4);
+  assert.match(headerSource, /const prefetchOnIntent = \(href: string\) => \{\s+router\.prefetch\(href\);\s+\}/);
+  assert.ok((headerSource.match(/prefetch=\{false\}/g) || []).length >= 4);
   assert.match(headerSource, /onMouseEnter=\{\(\) => prefetchOnIntent\(item\.href\)\}/);
   assert.match(headerSource, /onFocus=\{\(\) => prefetchOnIntent\(item\.href\)\}/);
   assert.match(actionsSource, /href="\/community"\s+prefetch=\{false\}/);

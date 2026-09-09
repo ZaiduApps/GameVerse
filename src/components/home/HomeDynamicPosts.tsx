@@ -450,6 +450,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
               <span className="mt-1.5 inline-block text-[12px] text-[#9aa3af] dark:text-[#7f8da3]">全文</span>
               <Link
                 href={`/community/post/${postId}`}
+                prefetch={false}
                 className="absolute inset-0 z-30 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
                 aria-label={`查看动态：${titleText || previewText}`}
               >
@@ -598,6 +599,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
                 <ChevronRight className="h-3.5 w-3.5 text-[#b0b7c3] dark:text-[#7f8da3]" />
                 <Link
                   href={appHref}
+                  prefetch={false}
                   className="absolute inset-0 z-30 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
                   aria-label={`查看${post.app_info.name}`}
                 >
@@ -623,6 +625,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
               </button>
               <Link
                 href={`/community/post/${postId}#comments`}
+                prefetch={false}
                 className="inline-flex items-center gap-1 transition-colors hover:text-[#6b7789] dark:hover:text-[#a9b7ca]"
                 aria-label={`查看${actionSubject}的评论`}
               >

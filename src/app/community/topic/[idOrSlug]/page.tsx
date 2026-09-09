@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { cache } from 'react';
 
 import CommunityTopicBoardView from './CommunityTopicBoardView';
-import { absoluteUrl, buildSeoDescription, sanitizeSeoText } from '@/lib/seo';
+import { absoluteUrl, buildSeoDescription, getSiteUrl, sanitizeSeoText } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityFeed, getCommunityTopicDetail, type CommunityFeedResult } from '@/lib/community-api';
 
@@ -126,19 +126,65 @@ export default async function CommunityTopicPage({
   params: Promise<{ idOrSlug: string }>;
 }) {
   const { idOrSlug } = await params;
-  const { topic, latestFeed, hotFeed } = await getTopicPageData(idOrSlug);
+  const { config, topic, latestFeed, hotFeed } = await getTopicPageData(idOrSlug);
+  const siteName = String(config?.basic?.site_name || 'APKScc').trim();
+  const canonicalPath = `/community/topic/${encodeURIComponent(String(topic?.slug || topic?._id || '').trim())}`;
+  const topicName = sanitizeSeoText(topic?.name || '社区话题') || '社区话题';
+  const postCount = Number(topic?.post_count || 0);
+  const collectionJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `${topicName} 社区话题`,
+    url: absoluteUrl(canonicalPath),
+    description:
+      sanitizeSeoText(topic?.description || topic?.announcement) ||
+      `${topicName} 的最新帖子、攻略讨论与玩家动态`,
+    isPartOf: {
+      '@type': 'WebSite',
+      name: siteName,
+      url: getSiteUrl(),
+    },
+    mainEntity: {
+      '@type': 'Collection',
+      name: `${topicName} 帖子集合`,
+      numberOfItems: postCount,
+    },
+  };
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: '首页', item: getSiteUrl() },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: '社区',
+        item: absoluteUrl('/community'),
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: topicName,
+        item: absoluteUrl(canonicalPath),
+      },
+    ],
+  };
   return (
-    <CommunityTopicBoardView
-      idOrSlug={idOrSlug}
-      initialData={
-        topic?._id
-          ? {
-              topic,
-              latestFeed,
-              hotFeed,
-            }
-          : null
-      }
-    />
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <CommunityTopicBoardView
+        idOrSlug={idOrSlug}
+        initialData={
+          topic?._id
+            ? {
+                topic,
+                latestFeed,
+                hotFeed,
+              }
+            : null
+        }
+      />
+    </>
   );
 }

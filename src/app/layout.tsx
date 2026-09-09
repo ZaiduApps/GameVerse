@@ -8,6 +8,7 @@ import type { SiteConfig } from '@/types';
 import Script from 'next/script';
 import { resolveSiteStylePreset } from '@/lib/site-style';
 import { getPublicSiteConfig } from '@/lib/site-config';
+import { filterAllowedHeadScripts } from '@/lib/head-scripts';
 import { getLayoutIconMetadata, getSiteShareImageUrl, getSiteUrl } from '@/lib/seo';
 import AppShell from '@/components/layout/AppShell';
 
@@ -99,20 +100,24 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const siteConfig = await getSiteConfig();
+  const filteredHeadScripts = filterAllowedHeadScripts(
+    siteConfig?.header?.head_scripts || '',
+  );
 
   return (
     <html lang="zh-CN" data-site-style={siteStyle} suppressHydrationWarning>
       <head>
         <link rel="llms" href="/llms.txt" type="text/plain" />
+        <link rel="preconnect" href="https://tc-new.z.wiki" crossOrigin="anonymous" />
         {siteConfig?.header?.custom_css && (
           <style dangerouslySetInnerHTML={{ __html: siteConfig.header.custom_css }} />
         )}
-        {siteConfig?.header?.head_scripts && (
+        {filteredHeadScripts && (
           <Script
             id="analytics"
             strategy="afterInteractive"
             dangerouslySetInnerHTML={{
-              __html: siteConfig.header.head_scripts,
+              __html: filteredHeadScripts,
             }}
           />
         )}

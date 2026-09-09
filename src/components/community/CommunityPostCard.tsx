@@ -180,7 +180,7 @@ export default function CommunityPostCard({
   const touchStartX = useRef<number | null>(null);
 
   const allImages = post.previewImages?.filter(Boolean) || (post.imageUrl ? [post.imageUrl] : []);
-  const shouldPrioritizeLeadImage = index < 2;
+  const shouldPrioritizeLeadImage = index === 0;
   const relatedApp = post.relatedApp;
   const relatedAppHref = relatedApp?.pkg ? `/app/${relatedApp.pkg}` : undefined;
   const relatedAppPrimaryTag =
@@ -436,6 +436,7 @@ export default function CommunityPostCard({
         <div className="flex items-center justify-between">
           <Link
             href={authorProfileHref || postHref}
+            prefetch={false}
             className="flex items-center space-x-3 rounded-md outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary"
             onClick={(event) => {
               if (!authorProfileHref) event.preventDefault();
@@ -470,7 +471,7 @@ export default function CommunityPostCard({
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>帖子操作</DropdownMenuLabel>
               <DropdownMenuItem asChild>
-                <Link href={postHref} onClick={handleOpenPost} onAuxClick={handleOpenPost}>查看详情</Link>
+                <Link href={postHref} prefetch={false} onClick={handleOpenPost} onAuxClick={handleOpenPost}>查看详情</Link>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => void handleCopyPostId()}>复制 ID</DropdownMenuItem>
               {canManage ? (
@@ -497,11 +498,11 @@ export default function CommunityPostCard({
       </CardHeader>
       <CardContent className="p-4 pt-2 space-y-3">
         {post.title && (
-          <Link href={postHref} onClick={handleOpenPost} onAuxClick={handleOpenPost} className="block hover:text-primary transition-colors">
+          <Link href={postHref} prefetch={false} onClick={handleOpenPost} onAuxClick={handleOpenPost} className="block hover:text-primary transition-colors">
             <h3 className="text-base font-semibold text-foreground leading-tight group-hover:text-primary">{post.title}</h3>
           </Link>
         )}
-        <Link href={postHref} onClick={handleOpenPost} onAuxClick={handleOpenPost} className="block min-w-0">
+        <Link href={postHref} prefetch={false} onClick={handleOpenPost} onAuxClick={handleOpenPost} className="block min-w-0">
           <p className="text-sm text-foreground/90 leading-relaxed line-clamp-3 hover:text-foreground transition-colors">
             {excerpt}
           </p>
@@ -557,6 +558,7 @@ export default function CommunityPostCard({
                       <Link
                         key={`${post.id}-img-${imageIndex}`}
                         href={postHref}
+                        prefetch={false}
                         onClick={handleOpenPost}
                         onAuxClick={handleOpenPost}
                         className="absolute inset-0 block"
@@ -691,7 +693,7 @@ export default function CommunityPostCard({
                     size="sm"
                     className="h-7 shrink-0 bg-white/20 px-2.5 text-xs text-white hover:bg-white/30"
                   >
-                    <Link href={relatedAppHref}>查看游戏详情</Link>
+                    <Link href={relatedAppHref} prefetch={false}>查看游戏详情</Link>
                   </Button>
                 ) : null}
               </div>

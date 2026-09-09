@@ -136,7 +136,7 @@ export default function CommunitySidebar({
               热门话题
             </span>
             <Button asChild variant="ghost" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
-              <Link href="/community/topics">
+              <Link href="/community/topics" prefetch={false}>
                 更多
                 <ChevronRight className="h-3.5 w-3.5" />
               </Link>

@@ -272,6 +272,7 @@ const getGamePageSnapshot = cache(async (id: string): Promise<GamePageSnapshot |
       reviewSummary: rawReview
         ? {
             displayScore: rawReview.displayScore ?? rawReview.display_score ?? rawReview.rating,
+            userAverage: rawReview.userAverage ?? rawReview.user_average ?? rawReview.user_avg ?? null,
             ratingCount: rawReview.ratingCount ?? rawReview.rating_count,
           }
         : null,
@@ -405,9 +406,15 @@ export async function generateMetadata({
     pkg: game.pkg,
     type: game.type,
     region: game.metadata?.region,
+    version: game.version,
+    summary: game.summary,
+    latestAt: game.latest_at,
     manualTitle: game.seo?.title,
     manualDescription: game.seo?.description,
     manualKeywords: game.seo?.keywords,
+    titleTemplate: siteConfig?.app_seo?.app_title_template,
+    descriptionTemplate: siteConfig?.app_seo?.app_description_template,
+    titleSuffix: siteConfig?.seo?.title_suffix,
   }, siteName);
   const title = detailSeo.title;
   const faqItems = normalizeGameFaqItems(gameData.faq);
@@ -506,7 +513,13 @@ export default async function GameDetailPage({
       : getRecommendedGames(game),
   ]);
   const ratingCount = Math.max(0, Number(initialGameData.reviewSummary?.ratingCount || 0));
-  const ratingValue = Number(initialGameData.reviewSummary?.displayScore || 0);
+  // 评分结构化数据只使用站点真实评价数据；来源评分（app.star）仅作为展示参考，不进 JSON-LD。
+  const siteRatingAverage = Number(initialGameData.reviewSummary?.userAverage || 0);
+  const genre = normalizeText(Array.isArray(game.tags) ? game.tags[0] : '');
+  const screenshots = (Array.isArray(game.detail_images) ? game.detail_images : [])
+    .map((item) => normalizeText(item))
+    .filter(Boolean)
+    .slice(0, 5);
 
   const detailJsonLd = {
     '@context': 'https://schema.org',
@@ -518,6 +531,8 @@ export default async function GameDetailPage({
     image: heroImage || undefined,
     description: description || undefined,
     url: canonicalUrl,
+    genre: genre || undefined,
+    screenshot: screenshots.length > 0 ? screenshots : undefined,
     softwareVersion: isWebGame ? undefined : normalizeText(game.version) || undefined,
     fileSize: isWebGame ? undefined : formatFileSize(game.file_size),
     datePublished: toIsoDate(game.release_at),
@@ -537,13 +552,20 @@ export default async function GameDetailPage({
             priceCurrency: 'CNY',
             availability: 'https://schema.org/InStock',
           },
+          potentialAction: {
+            '@type': 'InstallAction',
+            target: canonicalUrl,
+            platform: ['https://schema.org/AndroidPlatform'],
+          },
         }
       : {}),
-    aggregateRating: ratingValue > 0 && ratingCount > 0
+    aggregateRating: ratingCount > 0 && siteRatingAverage > 0
       ? {
           '@type': 'AggregateRating',
-          ratingValue,
+          ratingValue: Math.round(siteRatingAverage * 10) / 10,
           ratingCount,
+          bestRating: 5,
+          worstRating: 1,
         }
       : undefined,
   };

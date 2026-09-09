@@ -112,7 +112,7 @@ function ActionLink({ href, className, children }: { href: string; className: st
     );
   }
   return (
-    <Link href={href} className={className} data-no-drag="true">
+    <Link href={href} prefetch={false} className={className} data-no-drag="true">
       {children}
     </Link>
   );
@@ -428,6 +428,7 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
                 </ActionLink>
                 <Link
                   href="/app"
+                  prefetch={false}
                   data-no-drag="true"
                   className={compact
                     ? 'inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/10 px-4 py-2 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-white/20'

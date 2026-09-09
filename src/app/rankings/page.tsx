@@ -327,6 +327,7 @@ export default async function RankingsPage({
         <Link
           key={`${game.id}-mobile`}
           href={getGameHref(game)}
+          prefetch={false}
           className={`flex items-center gap-3 rounded-xl border p-3 transition-colors hover:border-primary/40 hover:bg-primary/5 ${index === 0 ? 'bg-primary/5 border-primary/30' : 'bg-card'}`}
         >
           <div className="w-7 text-center text-sm font-black text-primary">#{index + 1}</div>
@@ -354,7 +355,7 @@ export default async function RankingsPage({
       {games.length === 0 ? (
         <div className="rounded-xl border bg-card p-4 text-center text-sm text-muted-foreground">
           当前筛选暂无数据，
-          <Link href="/rankings" className="ml-1 font-semibold text-primary hover:underline">
+          <Link href="/rankings" prefetch={false} className="ml-1 font-semibold text-primary hover:underline">
             回到默认榜单
           </Link>
         </div>
@@ -375,7 +376,7 @@ export default async function RankingsPage({
           <TableRow key={`${games[0].id}-top`} className="bg-primary/5">
             <TableCell className="font-black text-primary">#1</TableCell>
             <TableCell>
-              <Link href={getGameHref(games[0])} className="group flex items-center gap-3">
+              <Link href={getGameHref(games[0])} prefetch={false} className="group flex items-center gap-3">
                 <Image
                   src={games[0].imageUrl}
                   alt={games[0].title}
@@ -413,7 +414,7 @@ export default async function RankingsPage({
           <TableRow key={game.id} className="transition-colors hover:bg-muted/50">
             <TableCell className="font-medium">{index + 2}</TableCell>
             <TableCell>
-              <Link href={getGameHref(game)} className="group flex items-center gap-3">
+              <Link href={getGameHref(game)} prefetch={false} className="group flex items-center gap-3">
                 <Image
                   src={game.imageUrl}
                   alt={game.title}
@@ -478,6 +479,7 @@ export default async function RankingsPage({
           <div className="mt-3 flex flex-wrap gap-2">
             <Link
               href={buildRankingsHrefWithState({ limit: activeLimit, tab: activeTab, showTags: showAllTags })}
+              prefetch={false}
               className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
                 !activeTag
                   ? 'border-primary bg-primary/10 text-primary'
@@ -493,6 +495,7 @@ export default async function RankingsPage({
                 <Link
                   key={tag}
                   href={href}
+                  prefetch={false}
                   className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
                     active
                       ? 'border-primary bg-primary/10 text-primary'
@@ -506,6 +509,7 @@ export default async function RankingsPage({
             {activeTag ? (
               <Link
                 href={buildRankingsHrefWithState({ limit: activeLimit, tab: activeTab, showTags: showAllTags })}
+                prefetch={false}
                 className="rounded-full border border-[#b71211]/40 bg-[#b71211]/5 px-3 py-1 text-xs font-semibold text-[#b71211]"
               >
                 清空筛选
@@ -514,6 +518,7 @@ export default async function RankingsPage({
             {tagOptions.length > 8 ? (
               <Link
                 href={buildRankingsHrefWithState({ tag: activeTag, limit: activeLimit, tab: activeTab, showTags: !showAllTags })}
+                prefetch={false}
                 className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted-foreground hover:border-primary/40 hover:text-foreground"
               >
                 {showAllTags ? '收起标签' : `展开更多 (${tagOptions.length})`}
@@ -533,6 +538,7 @@ export default async function RankingsPage({
                 <Link
                   key={size}
                   href={href}
+                  prefetch={false}
                   className={`rounded-full border px-3 py-1 font-semibold ${
                     active
                       ? 'border-primary bg-primary/10 text-primary'
@@ -563,6 +569,7 @@ export default async function RankingsPage({
               <Link
                 key={item.value}
                 href={buildRankingsHrefWithState({ tag: activeTag, limit: activeLimit, tab: item.value as RankingTab, showTags: showAllTags })}
+                prefetch={false}
                 className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${
                   isActive
                     ? 'border-primary bg-primary/10 text-primary'
@@ -607,7 +614,7 @@ export default async function RankingsPage({
               ) : (
                 <p className="text-sm text-muted-foreground">
                   暂无可展示数据，
-                  <Link href="/rankings" className="font-semibold text-primary hover:underline">
+                  <Link href="/rankings" prefetch={false} className="font-semibold text-primary hover:underline">
                     回到默认榜单
                   </Link>
                   。
@@ -632,7 +639,7 @@ export default async function RankingsPage({
               ) : (
                 <p className="text-sm text-muted-foreground">
                   暂无可展示数据，
-                  <Link href="/rankings" className="font-semibold text-primary hover:underline">
+                  <Link href="/rankings" prefetch={false} className="font-semibold text-primary hover:underline">
                     回到默认榜单
                   </Link>
                   。
@@ -657,7 +664,7 @@ export default async function RankingsPage({
               ) : (
                 <p className="text-sm text-muted-foreground">
                   暂无可展示数据，
-                  <Link href="/rankings" className="font-semibold text-primary hover:underline">
+                  <Link href="/rankings" prefetch={false} className="font-semibold text-primary hover:underline">
                     回到默认榜单
                   </Link>
                   。
@@ -682,7 +689,7 @@ export default async function RankingsPage({
               ) : (
                 <p className="text-sm text-muted-foreground">
                   暂无可展示数据，
-                  <Link href="/rankings" className="font-semibold text-primary hover:underline">
+                  <Link href="/rankings" prefetch={false} className="font-semibold text-primary hover:underline">
                     回到默认榜单
                   </Link>
                   。

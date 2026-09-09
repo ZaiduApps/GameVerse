@@ -513,6 +513,7 @@ export default async function HomePage() {
               ) : (
                 <Link
                   href={androidDownloadHref}
+                  prefetch={false}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#005e9f] py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#004a7e]"
                 >
                   <Download className="h-4 w-4" />
@@ -532,6 +533,7 @@ export default async function HomePage() {
               ) : (
                 <Link
                   href={iosDownloadHref}
+                  prefetch={false}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#e0e3e4] py-2.5 text-sm font-bold text-[#2c2f30] transition-colors hover:bg-[#d1d5d7] dark:bg-[#223043] dark:text-[#edf2fb] dark:hover:bg-[#2a3b52]"
                 >
                   <Apple className="h-4 w-4" />
@@ -557,7 +559,7 @@ export default async function HomePage() {
                   </h3>
                   <p className="mt-1 text-sm font-medium text-[#595c5d] dark:text-[#9ca6b8]">编辑精选必玩佳作</p>
                 </div>
-                <Link href={getAlbumHref(heavyweightAlbum)} className="text-sm font-bold text-[#005e9f] hover:underline">
+                <Link href={getAlbumHref(heavyweightAlbum)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
                   查看全部
                   <span className="sr-only">{heavyweightAlbum.title || '重磅推荐'}</span>
                 </Link>
@@ -597,6 +599,7 @@ export default async function HomePage() {
                     </span>
                     <Link
                       href={getGameHref(game)}
+                      prefetch={false}
                       className="absolute inset-0 z-30 rounded-[18px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
                       aria-label={`查看${game.name}详情`}
                     >
@@ -621,7 +624,7 @@ export default async function HomePage() {
             <section>
               <div className="mb-5 flex items-end justify-between gap-3">
                 <h3 className="text-xl font-black tracking-tight">{preregAlbum.title || '事前登录'}</h3>
-                <Link href={getAlbumHref(preregAlbum)} className="text-sm font-bold text-[#005e9f] hover:underline">
+                <Link href={getAlbumHref(preregAlbum)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
                   查看全部
                   <span className="sr-only">{preregAlbum.title || '事前登录'}</span>
                 </Link>
@@ -700,6 +703,7 @@ export default async function HomePage() {
                     </span>
                     <Link
                       href={getGameHref(game)}
+                      prefetch={false}
                       className="absolute inset-0 z-30 rounded-[22px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
                       aria-label={`查看${game.name}预约详情`}
                     >
@@ -724,7 +728,7 @@ export default async function HomePage() {
                     <h3 className="text-xl font-black tracking-tight">{album.title || '推荐专辑'}</h3>
                     {album.subtitle && <p className="mt-1 text-sm text-[#595c5d] dark:text-[#9ca6b8]">{album.subtitle}</p>}
                   </div>
-                  <Link href={getAlbumHref(album)} className="text-sm font-bold text-[#005e9f] hover:underline">
+                  <Link href={getAlbumHref(album)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
                     查看全部
                     <span className="sr-only">{album.title || '推荐专辑'}</span>
                   </Link>
@@ -748,6 +752,7 @@ export default async function HomePage() {
                       <p className="mt-1 line-clamp-1 text-xs text-[#595c5d] dark:text-[#9ca6b8]">{game.tags?.[0] || game.summary || '热门推荐'}</p>
                       <Link
                         href={getGameHref(game)}
+                        prefetch={false}
                         className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
                         aria-label={`查看${game.name}详情`}
                       >
@@ -770,7 +775,7 @@ export default async function HomePage() {
                   </h3>
                   <p className="mt-1 text-sm font-medium text-[#595c5d]">来自次元住民的实时分享</p>
                 </div>
-                <Link href="/community" className="text-sm font-bold text-[#005e9f] hover:underline">
+                <Link href="/community" prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
                   去社区
                 </Link>
               </div>
@@ -786,7 +791,7 @@ export default async function HomePage() {
               <div className="mb-6 flex items-start justify-between gap-3">
                 <h3 className="text-xl font-black tracking-tight">{rankingAlbum.title || '热门游戏'}</h3>
                 <div className="flex flex-col items-end gap-2">
-                  <Link href={getAlbumHref(rankingAlbum)} className="text-sm font-bold text-[#005e9f] hover:underline">
+                  <Link href={getAlbumHref(rankingAlbum)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
                     查看全部
                     <span className="sr-only">{rankingAlbum.title || '热门游戏'}</span>
                   </Link>
@@ -824,6 +829,7 @@ export default async function HomePage() {
                     {index < 3 && <Flame className="h-4 w-4 text-[#22c55e]" />}
                     <Link
                       href={getGameHref(game)}
+                      prefetch={false}
                       className="absolute inset-0 z-30 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
                       aria-label={`查看${game.name}详情`}
                     >
@@ -834,6 +840,7 @@ export default async function HomePage() {
               </div>
               <Link
                 href="/rankings"
+                prefetch={false}
                 className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-[#eff1f2] py-2 text-sm font-semibold text-[#595c5d] transition-colors hover:bg-[#e0e3e4] dark:bg-[#223043] dark:text-[#9ca6b8] dark:hover:bg-[#2a3b52]"
               >
                 查看完整榜单
@@ -848,7 +855,7 @@ export default async function HomePage() {
                   {toolsAlbum.title || '效率工具'}
                   <Wrench className="h-5 w-5 text-[#005e9f]" />
                 </h3>
-                <Link href={getAlbumHref(toolsAlbum)} className="text-sm font-bold text-[#005e9f] hover:underline">
+                <Link href={getAlbumHref(toolsAlbum)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
                   查看全部
                   <span className="sr-only">{toolsAlbum.title || '效率工具'}</span>
                 </Link>
@@ -871,6 +878,7 @@ export default async function HomePage() {
                     <p className="line-clamp-1 text-sm font-black">{game.name}</p>
                     <Link
                       href={getGameHref(game)}
+                      prefetch={false}
                       className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
                       aria-label={`查看${game.name}详情`}
                     >
@@ -905,6 +913,7 @@ export default async function HomePage() {
               ) : (
                 <Link
                   href={promoHref}
+                  prefetch={false}
                   className="mt-5 inline-flex items-center rounded-full bg-white px-5 py-2 text-sm font-black text-[#b71211] transition-transform hover:scale-[1.03]"
                 >
                   立即申请

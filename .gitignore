@@ -31,6 +31,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 .codex*.log
+/.next-release-check/
+/logs/
+scripts/.tmp-*.mjs
+seo-audit-*.json
 .codex-artifacts/
 .omo/
 

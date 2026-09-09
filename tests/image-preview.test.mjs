@@ -10,7 +10,7 @@ const compiled = ts.transpileModule(source, {
     target: ts.ScriptTarget.ES2022,
   },
 }).outputText;
-const { getPreviewImageUrl } = await import(
+const { getPreviewImageUrl, getResponsiveImageAttributes } = await import(
   `data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`
 );
 
@@ -51,4 +51,39 @@ test('未知图源、相对地址和无效宽度保持原地址', () => {
     getPreviewImageUrl('https://play-lh.googleusercontent.com/example-image', Number.NaN),
     'https://play-lh.googleusercontent.com/example-image',
   );
+});
+
+test('Google Play 响应式图片保留原始 src 并提供有界候选', () => {
+  const sourceUrl = 'https://play-lh.googleusercontent.com/example-image=w2560-h1440-rw';
+  const attributes = getResponsiveImageAttributes(sourceUrl);
+
+  assert.equal(attributes.src, sourceUrl);
+  assert.equal(
+    attributes.srcSet,
+    [320, 640, 960, 1280, 1920, 2560]
+      .map((width) => `https://play-lh.googleusercontent.com/example-image=w${width}-rw ${width}w`)
+      .join(', '),
+  );
+});
+
+test('Google Play 响应式候选不超过源 URL 声明宽度', () => {
+  const sourceUrl = 'https://play-lh.googleusercontent.com/example-image=w1280-rw';
+  const attributes = getResponsiveImageAttributes(sourceUrl);
+
+  assert.match(attributes.srcSet, /=w1280-rw 1280w$/);
+  assert.doesNotMatch(attributes.srcSet, /1920w|2560w/);
+});
+
+test('无宽度参数的 Google Play 图片保持原请求', () => {
+  const sourceUrl = 'https://play-lh.googleusercontent.com/example-image';
+  assert.deepEqual(getResponsiveImageAttributes(sourceUrl), { src: sourceUrl });
+});
+
+test('非 Google Play 图源不生成响应式候选', () => {
+  assert.deepEqual(
+    getResponsiveImageAttributes('https://cdn.apks.cc/uploads/example.webp'),
+    { src: 'https://cdn.apks.cc/uploads/example.webp' },
+  );
+  assert.deepEqual(getResponsiveImageAttributes('/fallback.webp'), { src: '/fallback.webp' });
+  assert.deepEqual(getResponsiveImageAttributes(''), { src: '' });
 });

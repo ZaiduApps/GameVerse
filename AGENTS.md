@@ -7,7 +7,7 @@
 ## Commands
 
 - Install with `pnpm install`. The custom runtime scripts shell out to `pnpm exec next`, and deploy scripts also assume `pnpm`.
-- Run dev server with `pnpm dev`. This loads `.env` through `scripts/next-runner.mjs` and serves on `PORT` or `9002` by default.
+- Run dev server with `pnpm dev`. This loads `.env` through `scripts/next-runner.mjs` and serves on `PORT` (default `9002` if unset; local `.env` sets `PORT=3002` to match production, so dev runs on `3002`).
 - Start production build locally with `pnpm build` then `pnpm start`. `pnpm start` fails unless `.next/BUILD_ID` exists.
 - `pnpm lint` currently triggers Next's interactive ESLint setup prompt because no ESLint config is checked in. Treat lint as unavailable until the repo adds a real ESLint config.
 - Run typecheck with `pnpm typecheck`.

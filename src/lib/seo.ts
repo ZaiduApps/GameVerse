@@ -8,9 +8,15 @@ export type GameDetailSeoInput = {
   pkg?: string | null;
   type?: string | null;
   region?: string | null;
+  version?: string | null;
+  summary?: string | null;
+  latestAt?: string | null;
   manualTitle?: string | null;
   manualDescription?: string | null;
   manualKeywords?: Array<string | null | undefined> | null;
+  titleTemplate?: string | null;
+  descriptionTemplate?: string | null;
+  titleSuffix?: string | null;
 };
 
 const SEO_MARKUP_NOISE_PATTERN =
@@ -103,7 +109,27 @@ export function buildSeoDescription(
   return clampSeoDescription(description, max);
 }
 
-/** 详情页使用稳定下载意图文案，版本、日期、大小等易过期字段不进入主描述。 */
+/** 站点配置模板占位符渲染：{name} {pkg} {version} {region} {summary} {site_name} {title_suffix} {date}。 */
+export function renderSeoTemplate(
+  template: string | null | undefined,
+  vars: Record<string, string>,
+): string {
+  let out = String(template || '').trim();
+  if (!out) return '';
+  for (const [key, value] of Object.entries(vars)) {
+    out = out.split(`{${key}}`).join(value);
+  }
+  return sanitizeSeoText(out);
+}
+
+function formatSeoDate(input?: string | null): string {
+  if (!input) return '';
+  const date = new Date(input);
+  if (Number.isNaN(date.getTime())) return '';
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+}
+
+/** 详情页使用稳定下载意图文案，版本、日期、大小等易过期字段不进入主描述。优先级：人工 SEO > 站点模板 > 内置模板。 */
 export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc') {
   const name = sanitizeSeoText(input.name) || sanitizeSeoText(input.pkg) || '安卓游戏';
   const pkg = sanitizeSeoText(input.pkg);
@@ -114,7 +140,16 @@ export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc
   const manualDescription = sanitizeSeoText(input.manualDescription);
   const normalizedSiteName = sanitizeSeoText(siteName) || 'APKScc';
   const regionPhrase = region ? `，提供${region}相关下载信息` : '';
-  const titleCore = manualTitle || (
+  const titleCore = manualTitle || renderSeoTemplate(input.titleTemplate, {
+    name,
+    pkg,
+    version: sanitizeSeoText(input.version),
+    region,
+    summary: sanitizeSeoText(input.summary),
+    site_name: normalizedSiteName,
+    title_suffix: String(input.titleSuffix || '').replace(/\s+/g, ' '),
+    date: formatSeoDate(input.latestAt),
+  }) || (
     isWebGame
       ? `${name} 网页游戏${region ? ` ${region}` : ''} - 在线游玩`
       : `${name} APK下载${region ? ` - ${region}下载` : ''}`
@@ -123,7 +158,16 @@ export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc
     ? titleCore
     : `${titleCore} | ${normalizedSiteName}`;
   const title = clampSeoText(titleWithSite, 68);
-  const description = manualDescription || (
+  const description = manualDescription || renderSeoTemplate(input.descriptionTemplate, {
+    name,
+    pkg,
+    version: sanitizeSeoText(input.version),
+    region,
+    summary: sanitizeSeoText(input.summary),
+    site_name: normalizedSiteName,
+    title_suffix: String(input.titleSuffix || '').replace(/\s+/g, ' '),
+    date: formatSeoDate(input.latestAt),
+  }) || (
     isWebGame
       ? `获取${name}网页游戏入口，查看游戏介绍、玩法特色和社区资讯${regionPhrase}。通过${normalizedSiteName}快速找到${name}并开始游玩。`
       : `下载${name}安卓版 APK，获取安全可靠的游戏下载入口${regionPhrase}。在${normalizedSiteName}查看游戏介绍、玩法特色和可用资源，快速安装并开始游玩。`

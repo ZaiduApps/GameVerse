@@ -825,7 +825,8 @@ export default function CommunityPageView({ initialData }: CommunityPageViewProp
   }, [resetModerationForm, selectedTopic]);
 
   useEffect(() => {
-    const handlePageShow = () => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
       if (suppressNextResumeRefreshRef.current) {
         suppressNextResumeRefreshRef.current = false;
         return;

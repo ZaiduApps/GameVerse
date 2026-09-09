@@ -3,11 +3,9 @@ import { getPublicSiteConfig } from '@/lib/site-config';
 
 export const revalidate = 3600;
 
-const FEATURED_GAMES = [
-  ['PUBG MOBILE', 'com.tencent.ig'],
-  ['棕色尘埃2', 'com.neowizgames.game.browndust2'],
-];
 const LLMS_TIME_ZONE = process.env.SEO_TIMEZONE || 'Asia/Shanghai';
+const FEATURED_GAME_COUNT = 10;
+const FEATURED_FETCH_SECONDS = 3600;
 
 function formatLocalDate(date: Date): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -20,8 +18,50 @@ function formatLocalDate(date: Date): string {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+function getServerApiBaseUrl() {
+  const appEnv = (process.env.APP_ENV || process.env.NODE_ENV || 'development').toLowerCase();
+  const base = (
+    process.env.API_BASE_URL ||
+    (appEnv === 'production'
+      ? process.env.API_BASE_URL_PROD || 'https://api.hk.apks.cc'
+      : process.env.API_BASE_URL_DEV || 'http://127.0.0.1:9527')
+  ).replace(/\/+$/, '');
+  return base;
+}
+
+async function fetchFeaturedGames(): Promise<Array<{ name: string; pkg: string }>> {
+  try {
+    const res = await fetch(
+      `${getServerApiBaseUrl()}/seo/sitemap/games?page=1&pageSize=${FEATURED_GAME_COUNT}`,
+      {
+        cache: 'force-cache',
+        next: { revalidate: FEATURED_FETCH_SECONDS },
+        headers: {
+          'x-tracking-skip': '1',
+          'x-client-platform': 'web',
+        },
+      },
+    );
+    if (!res.ok) return [];
+    const json = await res.json();
+    const list: any[] = Array.isArray(json?.data?.list) ? json.data.list : [];
+    return list
+      .map((item) => ({
+        name: String(item?.name || '').trim(),
+        pkg: String(item?.pkg || '').trim(),
+      }))
+      .filter((item) => item.pkg && item.name)
+      .slice(0, FEATURED_GAME_COUNT);
+  } catch {
+    return [];
+  }
+}
+
 export async function GET() {
-  const config = await getPublicSiteConfig(300);
+  const [config, featuredGames] = await Promise.all([
+    getPublicSiteConfig(300),
+    fetchFeaturedGames(),
+  ]);
   const siteUrl = getSiteUrl();
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
   const description =
@@ -34,12 +74,16 @@ export async function GET() {
     `> ${description}`,
     '',
     '## 主要入口',
-    `- 首页: ${siteUrl}/`,
-    `- 游戏库: ${siteUrl}/app`,
-    `- 社区: ${siteUrl}/community`,
-    `- 排行榜: ${siteUrl}/rankings`,
-    `- Sitemap: ${siteUrl}/sitemap.xml`,
-    ...FEATURED_GAMES.map(([name, pkg]) => `- ${name}: ${siteUrl}/app/${pkg}`),
+    `- [首页](${siteUrl}/)`,
+    `- [游戏库](${siteUrl}/app)`,
+    `- [社区](${siteUrl}/community)`,
+    `- [排行榜](${siteUrl}/rankings)`,
+    `- [Sitemap](${siteUrl}/sitemap.xml)`,
+    '',
+    '## 最近更新游戏',
+    ...(featuredGames.length > 0
+      ? featuredGames.map((game) => `- [${game.name}](${siteUrl}/app/${encodeURIComponent(game.pkg)})`)
+      : ['- 暂无可列出的游戏。']),
     '',
     '## 内容类型',
     '- 游戏详情页包含下载渠道、版本、截图、结构化数据和关联社区内容。',
