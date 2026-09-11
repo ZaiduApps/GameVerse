@@ -1,3 +1,8 @@
+## Package Manager
+
+- Use `pnpm` as the only package manager. `package-lock.json` is intentionally removed; do not reintroduce npm or yarn lockfiles.
+- Install with `pnpm install` / `pnpm install --frozen-lockfile`. Deploy scripts assume pnpm.
+
 ## Overview
 
 - This repo is a single Next.js 15 app, not a monorepo. App routes live under `src/app`, shared UI under `src/components`, shared fetch/config helpers under `src/lib`, and the only checked-in test is `tests/markdown-render.test.cjs`.
