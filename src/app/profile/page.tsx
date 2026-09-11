@@ -387,7 +387,7 @@ export default function ProfilePage() {
       <div className="flex flex-col gap-8 md:flex-row">
         <div className="w-full space-y-6 md:w-80">
           <Card className="sticky top-24 overflow-hidden border-primary/10 shadow-lg">
-            <div className="h-24 bg-gradient-to-r from-primary/20 to-accent/20" />
+            <div className="h-24 bg-muted" />
             <CardContent className="relative flex flex-col items-center pt-0">
               <Avatar className="-mt-12 h-20 w-20 border-4 border-background shadow-xl">
                 <AvatarImage src={profile.avatar} alt={profileDisplayName} />
@@ -504,15 +504,15 @@ export default function ProfilePage() {
                 <CardContent className="space-y-6">
                   <div className="grid gap-6 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">显示名称</Label>
+                      <Label className="text-xs tracking-wider text-muted-foreground">显示名称</Label>
                       <p className="font-medium">{profile.name || '未设置'}</p>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">用户名</Label>
+                      <Label className="text-xs tracking-wider text-muted-foreground">用户名</Label>
                       <p className="font-medium">{profileHandle || '未设置'}</p>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">性别</Label>
+                      <Label className="text-xs tracking-wider text-muted-foreground">性别</Label>
                       <p className="font-medium">
                         {profile.gender === 'male'
                           ? '男'
@@ -524,21 +524,21 @@ export default function ProfilePage() {
                       </p>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">生日</Label>
+                      <Label className="text-xs tracking-wider text-muted-foreground">生日</Label>
                       <p className="flex items-center gap-2 font-medium">
                         <Cake className="h-4 w-4 text-pink-400" />
                         {profile.birthday || '未设置'}
                       </p>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">个性签名</Label>
+                      <Label className="text-xs tracking-wider text-muted-foreground">个性签名</Label>
                       <p className="flex items-center gap-2 font-medium">
                         <PencilLine className="h-4 w-4 text-green-500" />
                         {profile.signature || '未设置'}
                       </p>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">地理位置</Label>
+                      <Label className="text-xs tracking-wider text-muted-foreground">地理位置</Label>
                       <p className="flex items-center gap-2 font-medium">
                         <MapPin className="h-4 w-4 text-red-400" />
                         {[profile.country, profile.province, profile.city].filter(Boolean).join(' / ') || '未设置'}
@@ -549,7 +549,7 @@ export default function ProfilePage() {
                   <Separator />
 
                   <div className="space-y-3">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">系统角色</Label>
+                    <Label className="text-xs tracking-wider text-muted-foreground">系统角色</Label>
                     <div className="flex flex-wrap gap-2">
                       {profile.roles && profile.roles.length > 0 ? (
                         profile.roles.map((role, idx) => (

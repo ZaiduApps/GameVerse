@@ -9,7 +9,6 @@ import {
   QrCode,
   Sparkles,
   Smartphone,
-  Rocket,
   Star,
   Zap,
   Wrench,
@@ -467,11 +466,11 @@ export default async function HomePage() {
         <div className="grid w-full grid-cols-1 gap-5 sm:grid-cols-2 lg:h-full lg:w-1/4 lg:grid-cols-1 lg:gap-6">
           <HomeQuickSearchCard />
 
-          <section className="flex flex-col justify-between rounded-[22px] border-t-4 border-[#005e9f] bg-white p-5 shadow-[0_14px_28px_rgba(12,15,16,0.08)] dark:border-[#2d8fd3] dark:bg-[#111824] dark:shadow-[0_14px_28px_rgba(0,0,0,0.4)]">
+          <section className="flex flex-col justify-between rounded-2xl border-t-2 border-tone-blue bg-white p-5 shadow-sm dark:border-t-tone-blue dark:bg-[#111824]">
             <div>
               <div className="flex items-center justify-between gap-2">
-                <h3 className="flex items-center gap-2 text-lg font-black text-[#2c2f30] dark:text-[#edf2fb]">
-                  <Smartphone className="h-4 w-4 text-[#005e9f] dark:text-[#7fc1ff]" />
+                <h3 className="flex items-center gap-2 text-lg font-semibold text-[#2c2f30] dark:text-[#edf2fb]">
+                  <Smartphone className="h-4 w-4 text-tone-blue" />
                   ACBOX 客户端下载
                 </h3>
                 <span className="rounded-full bg-[#eff1f2] px-2 py-0.5 text-[10px] font-bold text-[#595c5d] dark:bg-[#223043] dark:text-[#9ca6b8]">
@@ -553,9 +552,9 @@ export default async function HomePage() {
             <section>
               <div className="mb-5 flex items-end justify-between">
                 <div>
-                  <h3 className="flex items-center gap-2 text-xl font-black tracking-tight sm:text-2xl">
-                    {heavyweightAlbum.title || '重磅推荐'}
+                  <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
                     <Star className="h-5 w-5 fill-[#b71211] text-[#b71211]" />
+                    {heavyweightAlbum.title || '重磅推荐'}
                   </h3>
                   <p className="mt-1 text-sm font-medium text-[#595c5d] dark:text-[#9ca6b8]">编辑精选必玩佳作</p>
                 </div>
@@ -568,7 +567,7 @@ export default async function HomePage() {
                 {heavyweightGames.map((game) => (
                   <article
                     key={game._id}
-                    className="group relative flex h-full w-full flex-col rounded-[18px] bg-white p-2 shadow-[0_8px_18px_rgba(12,15,16,0.08)] transition-all hover:-translate-y-0.5 hover:shadow-[0_14px_24px_rgba(12,15,16,0.12)] dark:bg-[#111824] dark:shadow-[0_8px_18px_rgba(0,0,0,0.35)] dark:hover:shadow-[0_14px_24px_rgba(0,0,0,0.45)]"
+                    className="group relative flex h-full w-full flex-col rounded-2xl border border-border/60 bg-white p-2 shadow-sm transition-shadow hover:shadow-md dark:bg-[#111824]"
                   >
                     {typeof game.star === 'number' && game.star > 0 && (
                       <div className="absolute right-2 top-2 z-20 inline-flex items-center gap-1 rounded-full bg-black/65 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur">
@@ -586,7 +585,7 @@ export default async function HomePage() {
                       />
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <h4 className="min-w-0 flex-1 truncate text-sm font-black">{game.name}</h4>
+                      <h4 className="min-w-0 flex-1 truncate text-sm font-semibold">{game.name}</h4>
                       {game.metadata?.region && (
                         <span className="inline-flex rounded-md bg-[#eff1f2] px-1 py-0.5 text-[10px] font-bold text-[#595c5d] dark:bg-[#223043] dark:text-[#9ca6b8]">
                           {game.metadata.region}
@@ -594,13 +593,13 @@ export default async function HomePage() {
                       )}
                     </div>
                     <p className="mt-1 line-clamp-1 text-[11px] text-[#595c5d] dark:text-[#9ca6b8]">{game.summary || game.tags?.[0] || '精品推荐'}</p>
-                    <span className="mt-1.5 inline-flex w-full items-center justify-center rounded-full bg-[#b3d4ff] py-1 text-[11px] font-black text-[#004a7e] transition-colors group-hover:bg-[#005e9f] group-hover:text-white">
+                    <span className="mt-1.5 inline-flex w-full items-center justify-center rounded-full bg-[#b3d4ff] py-1 text-[11px] font-semibold text-[#004a7e] transition-colors group-hover:bg-[#005e9f] group-hover:text-white">
                       下载
                     </span>
                     <Link
                       href={getGameHref(game)}
                       prefetch={false}
-                      className="absolute inset-0 z-30 rounded-[18px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                      className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
                       aria-label={`查看${game.name}详情`}
                     >
                       <span className="sr-only">查看{game.name}详情</span>
@@ -623,7 +622,7 @@ export default async function HomePage() {
           {preregAlbum && preregGames.length > 0 && (
             <section>
               <div className="mb-5 flex items-end justify-between gap-3">
-                <h3 className="text-xl font-black tracking-tight">{preregAlbum.title || '事前登录'}</h3>
+                <h3 className="text-xl font-semibold tracking-tight">{preregAlbum.title || '事前登录'}</h3>
                 <Link href={getAlbumHref(preregAlbum)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
                   查看全部
                   <span className="sr-only">{preregAlbum.title || '事前登录'}</span>
@@ -643,7 +642,7 @@ export default async function HomePage() {
                     return (
                   <article
                     key={game._id}
-                    className="group relative flex h-full flex-col justify-between gap-4 rounded-[22px] bg-[#eff1f2] p-4 transition-colors hover:bg-[#e6e8ea] dark:bg-[#162132] dark:hover:bg-[#1c2b40] sm:h-full sm:flex-row sm:items-center sm:justify-between"
+                    className="group relative flex h-full flex-col justify-between gap-4 rounded-2xl border border-border/60 bg-[#eff1f2] p-4 transition-colors hover:bg-[#e6e8ea] dark:bg-[#162132] dark:hover:bg-[#1c2b40] sm:h-full sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex items-center gap-4">
                       <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl bg-[#dadddf] dark:bg-[#223043]">
@@ -657,7 +656,7 @@ export default async function HomePage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <h4 className="min-w-0 flex-1 truncate text-lg font-black" title={game.name}>{clampText(game.name, 16)}</h4>
+                          <h4 className="min-w-0 flex-1 truncate text-lg font-semibold" title={game.name}>{clampText(game.name, 16)}</h4>
                           {region && (
                             <span className="inline-flex shrink-0 rounded-md bg-[#dadddf] px-1.5 py-0.5 text-[10px] font-bold text-[#595c5d] dark:bg-[#2a3b52] dark:text-[#9ca6b8]">
                               {region}
@@ -675,7 +674,7 @@ export default async function HomePage() {
                             )}
                             {deviceLabels.length > 0 && (
                               <span className="inline-flex items-center gap-1">
-                                <Smartphone className="h-3.5 w-3.5 text-[#005e9f]" />
+                                <Smartphone className="h-3.5 w-3.5 text-tone-blue" />
                                 {deviceLabels.join(' / ')}
                               </span>
                             )}
@@ -692,19 +691,13 @@ export default async function HomePage() {
                         )}
                       </div>
                     </div>
-                    <span
-                      className={`inline-flex shrink-0 whitespace-nowrap items-center justify-center rounded-full px-6 py-2 text-sm font-bold leading-none text-white transition-transform group-hover:scale-[1.03] ${
-                        index % 2 === 0
-                          ? 'bg-gradient-to-br from-[#b71211] to-[#ff7767]'
-                          : 'bg-gradient-to-br from-[#005e9f] to-[#2d8fd3]'
-                      }`}
-                    >
+                    <span className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[#b71211] px-6 py-2 text-sm font-semibold leading-none text-white transition-opacity group-hover:opacity-90">
                       预约
                     </span>
                     <Link
                       href={getGameHref(game)}
                       prefetch={false}
-                      className="absolute inset-0 z-30 rounded-[22px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                      className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
                       aria-label={`查看${game.name}预约详情`}
                     >
                       <span className="sr-only">查看{game.name}预约详情</span>
@@ -725,7 +718,7 @@ export default async function HomePage() {
               <section key={`extra-${album._id}`}>
                 <div className="mb-5 flex items-end justify-between">
                   <div>
-                    <h3 className="text-xl font-black tracking-tight">{album.title || '推荐专辑'}</h3>
+                    <h3 className="text-xl font-semibold tracking-tight">{album.title || '推荐专辑'}</h3>
                     {album.subtitle && <p className="mt-1 text-sm text-[#595c5d] dark:text-[#9ca6b8]">{album.subtitle}</p>}
                   </div>
                   <Link href={getAlbumHref(album)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
@@ -737,7 +730,7 @@ export default async function HomePage() {
                   {extraGames.slice(0, 6).map((game) => (
                     <article
                       key={game._id}
-                      className="relative rounded-2xl bg-white p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-[#111824] dark:shadow-[0_6px_14px_rgba(0,0,0,0.35)]"
+                      className="relative rounded-2xl border border-border/60 bg-white p-3 shadow-sm transition-shadow hover:shadow-md dark:bg-[#111824]"
                     >
                       <div className="relative mb-2.5 aspect-square overflow-hidden rounded-xl bg-[#e6e8ea] dark:bg-[#1a2433]">
                         <Image
@@ -748,7 +741,7 @@ export default async function HomePage() {
                           sizes="(max-width: 640px) 45vw, 160px"
                         />
                       </div>
-                      <p className="line-clamp-1 text-sm font-black">{game.name}</p>
+                      <p className="line-clamp-1 text-sm font-semibold">{game.name}</p>
                       <p className="mt-1 line-clamp-1 text-xs text-[#595c5d] dark:text-[#9ca6b8]">{game.tags?.[0] || game.summary || '热门推荐'}</p>
                       <Link
                         href={getGameHref(game)}
@@ -766,12 +759,12 @@ export default async function HomePage() {
           })}
 
           {safeDynamicPosts.length > 0 && (
-            <section className="rounded-[22px] border border-[#e0e3e4] bg-white p-4 shadow-[0_8px_22px_rgba(12,15,16,0.06)] sm:p-5">
+            <section className="rounded-2xl border border-border/70 bg-white p-4 shadow-sm sm:p-5">
               <div className="mb-4 flex items-end justify-between">
                 <div>
-                  <h3 className="flex items-center gap-2 text-xl font-black tracking-tight sm:text-2xl">
-                    社区动态
+                  <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
                     <MessageCircle className="h-5 w-5 text-[#b71211]" />
+                    社区动态
                   </h3>
                   <p className="mt-1 text-sm font-medium text-[#595c5d]">来自次元住民的实时分享</p>
                 </div>
@@ -787,9 +780,9 @@ export default async function HomePage() {
 
         <aside className="space-y-8 xl:col-span-4">
           {rankingAlbum && rankingGames.length > 0 && (
-            <section className="rounded-[22px] bg-white p-5 shadow-[0_8px_24px_rgba(12,15,16,0.08)] dark:bg-[#111824] dark:shadow-[0_8px_24px_rgba(0,0,0,0.4)] sm:p-6">
+            <section className="rounded-2xl border border-border/70 bg-white p-5 shadow-sm dark:bg-[#111824] sm:p-6">
               <div className="mb-6 flex items-start justify-between gap-3">
-                <h3 className="text-xl font-black tracking-tight">{rankingAlbum.title || '热门游戏'}</h3>
+                <h3 className="text-xl font-semibold tracking-tight">{rankingAlbum.title || '热门游戏'}</h3>
                 <div className="flex flex-col items-end gap-2">
                   <Link href={getAlbumHref(rankingAlbum)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
                     查看全部
@@ -805,7 +798,7 @@ export default async function HomePage() {
                 {rankingGames.slice(0, 8).map((game, index) => (
                   <article key={game._id} className="group relative flex items-center gap-3">
                     <span
-                      className={`w-8 text-center text-xl font-black italic ${
+                      className={`w-8 text-center text-xl font-semibold ${
                         index === 0 ? 'text-[#b71211]' : index === 1 ? 'text-[#b71211]/75' : index === 2 ? 'text-[#b71211]/55' : 'text-[#abadae]'
                       }`}
                     >
@@ -821,12 +814,12 @@ export default async function HomePage() {
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-black group-hover:text-[#b71211]">{game.name}</p>
+                      <p className="truncate text-sm font-semibold group-hover:text-[#b71211]">{game.name}</p>
                       <p className="truncate text-xs text-[#595c5d] dark:text-[#9ca6b8]">
                         {game.tags?.[0] || '热门'} · {typeof game.star === 'number' && game.star > 0 ? `${game.star.toFixed(1)}分` : '玩家推荐'}
                       </p>
                     </div>
-                    {index < 3 && <Flame className="h-4 w-4 text-[#22c55e]" />}
+                    {index < 3 && <Flame className="h-4 w-4 text-tone-amber" />}
                     <Link
                       href={getGameHref(game)}
                       prefetch={false}
@@ -849,11 +842,11 @@ export default async function HomePage() {
           )}
 
           {toolsAlbum && toolGames.length > 0 && (
-            <section className="rounded-[22px] bg-[#e6e8ea] p-5 sm:p-6">
+            <section className="rounded-2xl border border-border/60 bg-[#e6e8ea] p-5 sm:p-6">
               <div className="mb-5 flex items-end justify-between gap-3">
-                <h3 className="flex items-center gap-2 text-lg font-black">
+                <h3 className="flex items-center gap-2 text-lg font-semibold">
+                  <Wrench className="h-5 w-5 text-tone-blue" />
                   {toolsAlbum.title || '效率工具'}
-                  <Wrench className="h-5 w-5 text-[#005e9f]" />
                 </h3>
                 <Link href={getAlbumHref(toolsAlbum)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
                   查看全部
@@ -875,7 +868,7 @@ export default async function HomePage() {
                         sizes="48px"
                       />
                     </div>
-                    <p className="line-clamp-1 text-sm font-black">{game.name}</p>
+                    <p className="line-clamp-1 text-sm font-semibold">{game.name}</p>
                     <Link
                       href={getGameHref(game)}
                       prefetch={false}
@@ -891,9 +884,9 @@ export default async function HomePage() {
           )}
 
           {shouldShowPromoCard ? (
-          <section className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-[#b71211] to-[#ff7767] p-6 text-white">
+          <section className="relative overflow-hidden rounded-2xl border border-border/70 bg-[#b71211] p-6 text-white">
             <div className="relative z-10">
-              <h3 className="text-xl font-black leading-tight">
+              <h3 className="text-xl font-semibold leading-tight">
                 {promoAnnouncement?.title || '加入 ACBOX'}
                 <br />
                 开发者计划
@@ -906,7 +899,7 @@ export default async function HomePage() {
                   href={promoHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-5 inline-flex items-center rounded-full bg-white px-5 py-2 text-sm font-black text-[#b71211] transition-transform hover:scale-[1.03]"
+                  className="mt-5 inline-flex items-center rounded-full bg-white px-5 py-2 text-sm font-semibold text-[#b71211] transition-colors hover:opacity-90"
                 >
                   立即申请
                 </a>
@@ -914,13 +907,12 @@ export default async function HomePage() {
                 <Link
                   href={promoHref}
                   prefetch={false}
-                  className="mt-5 inline-flex items-center rounded-full bg-white px-5 py-2 text-sm font-black text-[#b71211] transition-transform hover:scale-[1.03]"
+                  className="mt-5 inline-flex items-center rounded-full bg-white px-5 py-2 text-sm font-semibold text-[#b71211] transition-colors hover:opacity-90"
                 >
                   立即申请
                 </Link>
               )}
             </div>
-            <Rocket className="absolute -bottom-4 -right-4 h-28 w-28 text-white/25" />
           </section>
           ) : null}
         </aside>

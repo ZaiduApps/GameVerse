@@ -142,7 +142,7 @@ export default function GameDetailActions({
       aria-haspopup="dialog"
       data-acbox-action={isWebGame ? 'web_game_app_guide_open' : 'game_download_open'}
       data-acbox-label={game.name}
-      className={cn('stitch-primary-btn h-12 rounded-full border-none font-bold text-white', className)}
+      className={cn('h-12 rounded-full border-none bg-[#b71211] font-semibold text-white hover:bg-[#9f1110]', className)}
       onClick={openPrimaryAction}
     >
       {isWebGame ? <Smartphone className="mr-2 h-5 w-5" /> : <Download className="mr-2 h-5 w-5" />}
@@ -179,7 +179,7 @@ export default function GameDetailActions({
           >
             <ArrowLeft className="h-5 w-5 text-[#b71211]" />
           </button>
-          <p className="text-xl font-black tracking-tight text-[#2c2f30] dark:text-foreground">游戏详情</p>
+          <p className="text-xl font-semibold tracking-tight text-[#2c2f30] dark:text-foreground">游戏详情</p>
         </div>
         <button type="button" aria-label="分享当前游戏页面" className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-black/5" onClick={() => void handleShare()}>
           <LinkIcon className="h-5 w-5 text-[#b71211]" />
@@ -188,7 +188,7 @@ export default function GameDetailActions({
 
       {!isWebGame ? (
         <div className="relative z-20 mx-4 mt-8 flex items-center justify-between gap-4 rounded-2xl border border-[#abadae]/10 bg-white/75 p-4 dark:border-border/45 dark:bg-card/70 sm:mx-6 lg:hidden">
-          <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-widest text-[#757778]">当前版本</p><p className="truncate text-sm font-bold">v {game.version || '未知'} · {formatBytes(game.file_size)}</p></div>
+          <div className="min-w-0"><p className="text-[10px] font-bold tracking-normal text-[#757778]">当前版本</p><p className="truncate text-sm font-bold">v {game.version || '未知'} · {formatBytes(game.file_size)}</p></div>
           <Button type="button" onClick={() => void handleUrge()} disabled={isSubmittingUrge} className="rounded-full border border-[#b71211] bg-transparent px-4 py-2 text-sm font-bold text-[#b71211] hover:bg-[#b71211]/5">
             <BellRing className="mr-1 h-4 w-4" />{isSubmittingUrge ? '提交中...' : '催更'}
           </Button>
@@ -202,11 +202,11 @@ export default function GameDetailActions({
       </div>
 
       <div className="fixed bottom-8 right-8 z-[60] hidden flex-col gap-3 lg:flex">
-        <Button type="button" size="icon" variant="outline" aria-label="分享当前游戏页面" className="h-12 w-12 rounded-full border-[#abadae]/30 bg-white/80 shadow-xl backdrop-blur-md hover:scale-110 dark:border-border/50 dark:bg-card/90" onClick={() => void handleShare()}><LinkIcon className="h-4 w-4" /></Button>
-        <Button type="button" size="icon" variant="outline" aria-label={isFavorite ? '取消收藏当前游戏' : '收藏当前游戏'} className={cn('h-12 w-12 rounded-full border-[#abadae]/30 bg-white/80 shadow-xl backdrop-blur-md hover:scale-110 dark:border-border/50 dark:bg-card/90', isFavorite && 'border-[#b71211]/30 text-[#b71211]')} onClick={handleFavoriteToggle}><Heart className={cn('h-4 w-4', isFavorite && 'fill-current')} /></Button>
+        <Button type="button" size="icon" variant="outline" aria-label="分享当前游戏页面" className="h-12 w-12 rounded-full border-[#abadae]/30 bg-white/80 shadow-sm backdrop-blur-md dark:border-border/50 dark:bg-card/90" onClick={() => void handleShare()}><LinkIcon className="h-4 w-4" /></Button>
+        <Button type="button" size="icon" variant="outline" aria-label={isFavorite ? '取消收藏当前游戏' : '收藏当前游戏'} className={cn('h-12 w-12 rounded-full border-[#abadae]/30 bg-white/80 shadow-sm backdrop-blur-md dark:border-border/50 dark:bg-card/90', isFavorite && 'border-[#b71211]/30 text-[#b71211]')} onClick={handleFavoriteToggle}><Heart className={cn('h-4 w-4', isFavorite && 'fill-current')} /></Button>
       </div>
 
-      <div className="fixed inset-x-0 z-50 rounded-t-2xl bg-white/90 px-4 pt-3 shadow-[0_-8px_30px_rgba(0,0,0,0.06)] backdrop-blur-2xl dark:bg-[#111824]/95 lg:hidden" style={{ bottom: 'max(env(safe-area-inset-bottom), 0px)', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}>
+      <div className="fixed inset-x-0 z-50 rounded-t-2xl bg-white/90 px-4 pt-3 shadow-sm backdrop-blur-2xl dark:bg-[#111824]/95 lg:hidden" style={{ bottom: 'max(env(safe-area-inset-bottom), 0px)', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}>
         <div className="flex items-center gap-3">
           <Link
             href="/community"

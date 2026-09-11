@@ -25,7 +25,7 @@ export default function GameCommunityFeed({ gameName, latest, hot }: GameCommuni
     <>
       <div className="mb-6 flex items-center justify-between gap-4">
         <h3 className="inline-flex items-center gap-2 text-base font-bold text-[#2c2f30] dark:text-foreground lg:text-lg">
-          <MessageSquare className="h-5 w-5 text-[#005e9f]" />
+          <MessageSquare className="h-5 w-5 text-tone-blue" />
           社区热议
         </h3>
         <div className="inline-flex rounded-full bg-white/80 p-1 dark:bg-card/80" aria-label="社区动态排序">
@@ -108,7 +108,7 @@ export default function GameCommunityFeed({ gameName, latest, hot }: GameCommuni
             </CardContent>
           </Card>
         )) : (
-          <Card className="rounded-[1.75rem] border-[#abadae]/10 bg-white/85 dark:border-border/45 dark:bg-card/75">
+          <Card className="rounded-2xl border-[#abadae]/10 bg-white/85 dark:border-border/45 dark:bg-card/75">
             <CardContent className="p-5 text-sm text-[#595c5d] dark:text-muted-foreground lg:p-6">
               暂无关联社区动态。
             </CardContent>

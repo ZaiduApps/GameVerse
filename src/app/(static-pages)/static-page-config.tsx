@@ -103,7 +103,7 @@ export async function StaticConfigPage({ pageKey }: { pageKey: StaticPageKey }) 
 
   return (
     <section className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="text-3xl font-black">{title}</h1>
+      <h1 className="text-3xl font-semibold">{title}</h1>
       <div
         className={cn(
           'mt-6 text-sm leading-7 text-muted-foreground',

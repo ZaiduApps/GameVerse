@@ -745,7 +745,7 @@ export default function CommunityTopicBoardView({
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <section className="space-y-4">
-          <Card className="group relative overflow-hidden rounded-xl border-transparent bg-card text-card-foreground shadow-[0_14px_40px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_48px_rgba(15,23,42,0.12)]">
+          <Card className="group relative overflow-hidden rounded-xl border-transparent bg-card text-card-foreground shadow-sm">
             {topicBackdrop ? (
               <>
                 <Image
@@ -759,7 +759,7 @@ export default function CommunityTopicBoardView({
                 <div className="absolute inset-0 bg-background/65 backdrop-blur-xl" />
               </>
             ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-background" />
+              <div className="absolute inset-0 bg-background" />
             )}
 
             <CardHeader className="relative z-10 pb-4">

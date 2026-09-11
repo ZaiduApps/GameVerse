@@ -36,6 +36,13 @@
 - `src/lib/site-config.ts` fetches public site config from `/config/site/public?key=...`. `SITE_CONFIG_KEY` changes behavior across the whole site.
 - `src/lib/utils.ts` contains the hand-rolled markdown renderer. If you change it, run `pnpm test:markdown`.
 
+## Visual System
+
+- 图标统一使用已内置的 `lucide-react`（package.json 依赖 ^0.475.0），不要再引入第二个图标库；标题/按钮里的图标一律放在文字前面，禁用 emoji 或 “★▲” 之类符号字符充当图标。
+- 色彩走 `src/app/globals.css` 里的 `--tone-{blue,red,green,amber,violet,cyan,pink}` 语义色板（`tailwind.config.ts` 映射为 `tone-*`），只用于分类、标签、色条、图标等小面积元素；页面底色、卡片和标题保持中性色，避免大面积彩色渐变与文字渐变。
+- 卡片用 `rounded-xl`/`rounded-2xl` + `border-border/60` + `shadow-sm`；不要恢复任意圆角（如 rounded-[1.75rem]）、大投影（如 shadow-[0_24px_60px_...]）或 hover:-translate-y-* / hover:scale-* 上浮动效。
+- 正文 markdown 排版集中在 `src/lib/utils.ts` 的 `detail` preset：标题用字号+字重+`border-b border-border`，列表用 `list-disc`，引用用左侧描边，不要加彩色底板或伪元素色条。
+
 ## Testing And Verification
 
 - There is no CI config in the repo and no broader automated test suite checked in beyond `tests/markdown-render.test.cjs`.

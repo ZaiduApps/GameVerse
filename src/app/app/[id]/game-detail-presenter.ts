@@ -26,12 +26,12 @@ export interface CommunityFeedItem {
 }
 
 export const TAG_STYLE_PALETTES = [
-  'border-[#fdc003]/35 bg-[#fff7d6] text-[#6f4c00] shadow-[0_10px_24px_rgba(253,192,3,0.14)]',
-  'border-[#7fb3ff]/35 bg-[#eaf3ff] text-[#0d4e8f] shadow-[0_10px_24px_rgba(127,179,255,0.18)]',
-  'border-[#ff8f82]/35 bg-[#fff0ed] text-[#8f2018] shadow-[0_10px_24px_rgba(255,119,103,0.16)]',
-  'border-[#83d3af]/35 bg-[#ecfbf4] text-[#166247] shadow-[0_10px_24px_rgba(131,211,175,0.16)]',
-  'border-[#c7a6ff]/35 bg-[#f5efff] text-[#59358c] shadow-[0_10px_24px_rgba(199,166,255,0.16)]',
-  'border-[#8fd7df]/35 bg-[#edf9fb] text-[#155f69] shadow-[0_10px_24px_rgba(143,215,223,0.16)]',
+  'border-tone-amber/40 bg-tone-amber/10 text-tone-amber',
+  'border-tone-blue/40 bg-tone-blue/10 text-tone-blue',
+  'border-tone-red/40 bg-tone-red/10 text-tone-red',
+  'border-tone-green/40 bg-tone-green/10 text-tone-green',
+  'border-tone-violet/40 bg-tone-violet/10 text-tone-violet',
+  'border-tone-cyan/40 bg-tone-cyan/10 text-tone-cyan',
 ] as const;
 
 export function cleanText(input?: string | null): string {

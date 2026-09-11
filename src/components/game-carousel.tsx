@@ -187,8 +187,8 @@ export default function GameCarousel({ bannerItems, autoPlayInterval = 5000 }: G
                     </div>
                   )}
                   <div className="flex-grow min-w-0">
-                    <h2 className="mb-1 text-base font-bold drop-shadow-lg sm:text-lg md:text-lg lg:text-xl">{item.name}</h2>
-                    <p className="line-clamp-2 text-sm text-gray-200 drop-shadow-md sm:text-sm md:text-base">
+                    <h2 className="mb-1 text-base font-semibold sm:text-lg lg:text-xl">{item.name}</h2>
+                    <p className="line-clamp-2 text-sm text-white/85 sm:text-sm md:text-base">
                       {item.description}
                     </p>
                   </div>

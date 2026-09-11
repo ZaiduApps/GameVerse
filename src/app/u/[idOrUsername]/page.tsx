@@ -277,7 +277,7 @@ export default async function PublicUserPage({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
       ) : null}
       <Card className="overflow-hidden border-primary/10 shadow-md">
-        <div className="h-28 bg-gradient-to-r from-primary/20 via-accent/10 to-primary/5" />
+        <div className="h-28 bg-muted" />
         <CardContent className="relative px-5 pb-6 sm:px-7">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end">

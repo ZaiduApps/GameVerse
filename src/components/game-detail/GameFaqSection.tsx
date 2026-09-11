@@ -21,7 +21,7 @@ export default function GameFaqSection({
       <h2
         className={cn(
           'flex items-center font-bold',
-          mobile ? 'mb-4 gap-2 text-xl font-black' : 'mb-6 gap-3 text-xl',
+          mobile ? 'mb-4 gap-2 text-xl font-semibold' : 'mb-6 gap-3 text-xl',
         )}
       >
         <span
@@ -39,8 +39,8 @@ export default function GameFaqSection({
           <Card
             key={`${item.source}:${item.id}`}
             className={cn(
-              'border-[#abadae]/10 bg-white dark:border-border/45 dark:bg-card/75',
-              mobile ? '' : 'rounded-[1.75rem] bg-white/80',
+              'bg-white dark:bg-card/75',
+              mobile ? '' : 'rounded-2xl border border-border/60 bg-white/80',
             )}
           >
             <CardContent className={mobile ? 'p-5' : 'p-6'}>

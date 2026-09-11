@@ -43,7 +43,7 @@ interface GameDetailViewProps {
 
 function SectionTitle({ children, color }: { children: ReactNode; color: string }) {
   return (
-    <h2 className="mb-4 flex items-center gap-2 text-xl font-black lg:mb-6 lg:gap-3 lg:font-bold">
+    <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold lg:mb-6 lg:gap-3 lg:font-bold">
       <span className={cn('h-6 w-1.5 rounded-full lg:h-8 lg:w-2', color)} aria-hidden="true" />
       {children}
     </h2>
@@ -54,12 +54,12 @@ function GameFactSummary({ items, isWebGame }: { items: GameFactItem[]; isWebGam
   if (items.length === 0) return null;
   return (
     <section className="mb-10 lg:mb-12">
-      <SectionTitle color="bg-[#005e9f]">{isWebGame ? '基本信息' : '版本与资源信息'}</SectionTitle>
-      <dl className="grid grid-cols-1 gap-3 rounded-[1.75rem] border border-[#abadae]/10 bg-white/80 p-5 shadow-sm dark:border-border/45 dark:bg-card/75 sm:grid-cols-2 lg:grid-cols-4">
+      <SectionTitle color="bg-tone-blue">{isWebGame ? '基本信息' : '版本与资源信息'}</SectionTitle>
+      <dl className="grid grid-cols-1 gap-3 rounded-2xl border border-[#abadae]/10 bg-white/80 p-5 shadow-sm dark:border-border/45 dark:bg-card/75 sm:grid-cols-2 lg:grid-cols-4">
         {items.map((item) => (
           <div key={item.label} className="min-w-0">
             <dt className="text-xs font-bold text-[#757778] dark:text-muted-foreground">{item.label}</dt>
-            <dd className="mt-1 break-words text-sm font-black text-[#0f1720] dark:text-foreground">{item.value}</dd>
+            <dd className="mt-1 break-words text-sm font-semibold text-[#0f1720] dark:text-foreground">{item.value}</dd>
           </div>
         ))}
       </dl>
@@ -73,15 +73,15 @@ function GameSeoContent({ highlights, latestContent }: { highlights: string[]; l
     <section className="mb-10 lg:mb-12">
       {highlights.length > 0 ? (
         <>
-          <SectionTitle color="bg-[#2e7d32]">游戏特色</SectionTitle>
-          <ul className="grid grid-cols-1 gap-2 rounded-[1.75rem] border border-[#abadae]/10 bg-white/80 p-5 text-sm leading-6 dark:border-border/45 dark:bg-card/75 sm:grid-cols-2">
+          <SectionTitle color="bg-tone-green">游戏特色</SectionTitle>
+          <ul className="grid grid-cols-1 gap-2 rounded-2xl border border-[#abadae]/10 bg-white/80 p-5 text-sm leading-6 dark:border-border/45 dark:bg-card/75 sm:grid-cols-2">
             {highlights.map((highlight, index) => <li key={`${highlight}-${index}`} className="list-inside list-disc">{highlight}</li>)}
           </ul>
         </>
       ) : null}
       {latestContent ? (
         <div className={cn(highlights.length > 0 && 'mt-8')}>
-          <SectionTitle color="bg-[#005e9f]">最新更新</SectionTitle>
+          <SectionTitle color="bg-tone-blue">最新更新</SectionTitle>
           <p className="rounded-2xl border border-[#abadae]/10 bg-white/70 p-4 text-sm leading-6 text-[#595c5d] dark:border-border/45 dark:bg-card/60 dark:text-muted-foreground">{latestContent}</p>
         </div>
       ) : null}
@@ -92,26 +92,26 @@ function GameSeoContent({ highlights, latestContent }: { highlights: string[]; l
 function InstallationGuide({ installSteps, riskNotes }: { installSteps: string[]; riskNotes: string[] }) {
   return (
     <div className="mb-6 grid gap-4 xl:grid-cols-2 xl:gap-6">
-      <Card className="rounded-[1.75rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75">
+      <Card className="rounded-2xl border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75">
         <CardContent className="p-5 lg:p-6">
-          <h3 className="text-lg font-black text-[#0f1720] dark:text-foreground lg:text-xl lg:font-bold">安装说明</h3>
+          <h3 className="text-lg font-semibold text-[#0f1720] dark:text-foreground lg:text-xl lg:font-bold">安装说明</h3>
           <ol className="mt-4 space-y-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">
             {installSteps.map((item, index) => (
               <li key={item} className="flex gap-3">
-                <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#005e9f] text-xs font-bold text-white">{index + 1}</span>
+                <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-tone-blue text-xs font-semibold text-white">{index + 1}</span>
                 <span>{item}</span>
               </li>
             ))}
           </ol>
         </CardContent>
       </Card>
-      <Card className="rounded-[1.75rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75">
+      <Card className="rounded-2xl border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75">
         <CardContent className="p-5 lg:p-6">
-          <h3 className="text-lg font-black text-[#0f1720] dark:text-foreground lg:text-xl lg:font-bold">下载与使用风险提示</h3>
+          <h3 className="text-lg font-semibold text-[#0f1720] dark:text-foreground lg:text-xl lg:font-bold">下载与使用风险提示</h3>
           <ul className="mt-4 space-y-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">
             {riskNotes.map((item) => (
               <li key={item} className="flex gap-3">
-                <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-[#b71211]" aria-hidden="true" />
+                <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-tone-red" aria-hidden="true" />
                 <span>{item}</span>
               </li>
             ))}
@@ -126,7 +126,7 @@ function RelatedNewsSection({ items }: { items: RelatedNewsItem[] }) {
   return (
     <section>
       <div className="flex items-center justify-between">
-        <SectionTitle color="bg-[#2e7d32]">相关帖子</SectionTitle>
+        <SectionTitle color="bg-tone-green">相关帖子</SectionTitle>
         <Link href="/community" className="mb-4 inline-flex items-center gap-1 text-xs font-bold text-[#005e9f] lg:mb-6 lg:gap-2 lg:text-sm lg:font-medium lg:text-[#595c5d] lg:hover:text-[#b71211]">
           查看更多帖子
           <ChevronRight className="h-4 w-4" />
@@ -134,13 +134,13 @@ function RelatedNewsSection({ items }: { items: RelatedNewsItem[] }) {
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         {items.length > 0 ? items.map((item) => (
-          <Link key={item.id} href={`/community/post/${encodeURIComponent(item.id)}`} className="rounded-[1.75rem] border border-[#abadae]/10 bg-white/80 p-5 transition-colors hover:border-primary/30 hover:bg-white dark:border-border/45 dark:bg-card/75">
+          <Link key={item.id} href={`/community/post/${encodeURIComponent(item.id)}`} className="rounded-2xl border border-[#abadae]/10 bg-white/80 p-5 transition-colors hover:border-primary/30 hover:bg-white dark:border-border/45 dark:bg-card/75">
             <h3 className="text-base font-bold text-[#2c2f30] dark:text-foreground">{item.title}</h3>
             <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#595c5d] dark:text-muted-foreground">{item.excerpt}</p>
-            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#757778]">{item.date}</p>
+            <p className="mt-4 text-xs font-semibold tracking-wide text-[#757778]">{item.date}</p>
           </Link>
         )) : (
-          <Card className="rounded-[1.75rem] border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75 md:col-span-2">
+          <Card className="rounded-2xl border-[#abadae]/10 bg-white/80 dark:border-border/45 dark:bg-card/75 md:col-span-2">
             <CardContent className="p-6 text-sm text-[#595c5d] dark:text-muted-foreground">暂时没有可展示的相关帖子，稍后可以从社区继续查看该游戏的更新与活动动态。</CardContent>
           </Card>
         )}
@@ -151,9 +151,9 @@ function RelatedNewsSection({ items }: { items: RelatedNewsItem[] }) {
 
 function SupportSection({ items, isWebGame }: { items: CardConfigItem[]; isWebGame: boolean }) {
   return (
-    <section className="rounded-[2rem] border border-[#abadae]/10 bg-[#dadddf]/20 p-5 lg:p-8">
+    <section className="rounded-2xl border border-border/60 bg-[#dadddf]/20 p-5 lg:p-8">
       <h2 className="mb-6 flex items-center gap-2 text-xl font-bold">
-        <LinkIcon className="h-6 w-6 text-[#b71211]" />
+        <LinkIcon className="h-6 w-6 text-tone-red" />
         {isWebGame ? '支持与服务' : '资源与支持'}
       </h2>
       <div className="space-y-4">
@@ -186,7 +186,7 @@ function RecommendationSection({ items }: { items: ApiRecommendedGame[] }) {
   if (items.length === 0) return null;
   return (
     <section>
-      <SectionTitle color="bg-[#fdc003]">相似推荐</SectionTitle>
+      <SectionTitle color="bg-tone-amber">相似推荐</SectionTitle>
       <div className="space-y-3 lg:space-y-4">
         {items.map((item) => (
           <Link key={`${item._id}-${item.pkg}`} href={`/app/${encodeURIComponent(item.pkg)}`} className="flex items-center gap-4 rounded-2xl border border-[#abadae]/10 bg-white p-3 shadow-sm transition-colors hover:bg-[#e0e3e4]/70 dark:border-border/45 dark:bg-card/75 dark:hover:bg-card/90 lg:border-0 lg:bg-transparent lg:shadow-none">
@@ -244,23 +244,23 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
 
         <section className={cn('relative z-10 px-4 sm:px-6 lg:px-16 2xl:px-20', hasDetailAnnouncements ? 'pt-5' : 'pt-20 lg:pt-6')}>
           <div className="mx-auto max-w-7xl">
-            <div className="relative h-[340px] overflow-hidden rounded-[2rem] shadow-[0_24px_60px_rgba(15,23,32,0.18)] lg:h-[660px] lg:rounded-none lg:shadow-none">
+            <div className="relative h-[340px] overflow-hidden rounded-2xl shadow-sm lg:h-[660px] lg:rounded-none lg:shadow-none">
               <GameHeroArtwork gameName={game.name} heroImage={heroImage} icon={game.icon} />
               <div className="absolute inset-x-0 bottom-0 z-10 p-4 lg:p-8">
-                <div className="rounded-[2rem] border border-[#abadae]/10 bg-white/95 p-5 shadow-xl backdrop-blur-md dark:bg-[#111824]/95 lg:border-white/10 lg:bg-gradient-to-r lg:from-black/65 lg:via-black/45 lg:to-black/20 lg:p-8 lg:text-white dark:lg:from-black/70 dark:lg:via-black/50 dark:lg:to-black/25">
+                <div className="rounded-2xl border border-border/60 bg-white/95 p-5 shadow-sm backdrop-blur-md dark:bg-[#111824]/95 lg:border-white/10 lg:bg-gradient-to-r lg:from-black/65 lg:via-black/45 lg:to-black/20 lg:p-8 lg:text-white dark:lg:from-black/70 dark:lg:via-black/50 dark:lg:to-black/25">
                   <div className="flex items-end gap-4 lg:gap-8">
-                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-[#dadddf] shadow-2xl lg:h-36 lg:w-36 xl:h-40 xl:w-40">
+                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-muted shadow-sm lg:h-36 lg:w-36 xl:h-40 xl:w-40">
                       {game.icon ? <Image src={getPreviewImageUrl(game.icon, 320)} alt={`${game.name} icon`} fill sizes="(min-width: 1280px) 160px, (min-width: 1024px) 144px, 80px" className="object-cover" /> : null}
                     </div>
                     <div className="flex min-w-0 flex-1 items-end justify-between gap-6 lg:pb-3">
                       <div className="min-w-0">
                         <div className="mb-2 hidden flex-wrap gap-2 lg:flex">
                           {tags.slice(0, 4).map((tag, index) => (
-                            <Badge key={`${tag}-${index}`} className={cn('rounded-full border-none px-4 py-1.5 text-sm font-bold', index === 0 && 'bg-[#fdc003] text-[#604700]', index === 1 && 'bg-[#b3d4ff] text-[#004a7e]', index === 2 && 'bg-[#ff7767] text-[#4f0001]', index > 2 && 'bg-[#c8e6c9] text-[#2e7d32]')}>{tag}</Badge>
+                            <Badge key={`${tag}-${index}`} className={cn('rounded-full border-none px-4 py-1.5 text-sm font-semibold', index === 0 && 'bg-tone-amber text-white', index === 1 && 'bg-tone-blue text-white', index === 2 && 'bg-tone-red text-white', index > 2 && 'bg-tone-green text-white')}>{tag}</Badge>
                           ))}
                         </div>
-                        <h1 className="line-clamp-2 text-2xl font-black leading-tight tracking-tight text-[#0f1720] dark:text-foreground lg:text-4xl lg:text-white lg:[text-shadow:0_12px_30px_rgba(0,0,0,0.62)] xl:text-5xl">{game.name}</h1>
-                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#595c5d] dark:text-muted-foreground lg:mt-4 lg:gap-5 lg:text-sm lg:text-white/95 lg:[text-shadow:0_3px_10px_rgba(0,0,0,0.45)]">
+                        <h1 className="line-clamp-2 text-2xl font-semibold leading-tight tracking-tight text-[#0f1720] dark:text-foreground lg:text-4xl lg:text-white xl:text-5xl">{game.name}</h1>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#595c5d] dark:text-muted-foreground lg:mt-4 lg:gap-5 lg:text-sm lg:text-white/95 ">
                           <span className="inline-flex items-center gap-1"><Users className="h-4 w-4" />{game.developer || '开发者未提供'}</span>
                           <span className="inline-flex items-center gap-1"><Star className="h-4 w-4 fill-[#fdc003] text-[#fdc003]" />{normalizeScore(game.star)}</span>
                           {!isWebGame ? <span className="hidden items-center gap-1 sm:inline-flex"><Download className="h-4 w-4" />{game.download_count_show || '0'} 下载</span> : null}
@@ -296,8 +296,8 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                 [isWebGame ? '开发者' : '下载总量', isWebGame ? game.developer || '未提供' : game.download_count_show || '0'],
                 [isWebGame ? '游玩方式' : '适配系统', isWebGame ? 'AC 盒子' : game.metadata?.region || 'Android'],
               ].map(([label, value]) => (
-                <Card key={label} className="rounded-2xl border-[#abadae]/10 bg-white/70 dark:border-border/45 dark:bg-card/70 lg:rounded-[2rem]">
-                  <CardContent className="flex min-h-24 flex-col items-center justify-center gap-2 p-3 text-center lg:min-h-32 lg:p-8"><p className="text-xs text-[#595c5d] lg:text-sm">{label}</p><p className="line-clamp-2 text-sm font-black lg:text-xl">{value}</p></CardContent>
+                <Card key={label} className="rounded-2xl border-[#abadae]/10 bg-white/70 dark:border-border/45 dark:bg-card/70 lg:rounded-2xl">
+                  <CardContent className="flex min-h-24 flex-col items-center justify-center gap-2 p-3 text-center lg:min-h-32 lg:p-8"><p className="text-xs text-[#595c5d] lg:text-sm">{label}</p><p className="line-clamp-2 text-sm font-semibold lg:text-xl">{value}</p></CardContent>
                 </Card>
               ))}
             </section>
@@ -307,7 +307,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
             <div className="grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(340px,1fr)] lg:gap-12">
               <div className="space-y-10 lg:space-y-12">
                 <section>
-                  <SectionTitle color="bg-[#b71211]">游戏介绍</SectionTitle>
+                  <SectionTitle color="bg-tone-red">游戏介绍</SectionTitle>
                   {hasLongDescription ? <input id="game-description-toggle" type="checkbox" aria-label="展开或收起完整游戏介绍" className="peer sr-only" /> : null}
                   <div id="game-description-content" className={cn('relative text-sm leading-relaxed text-[#595c5d] dark:text-muted-foreground lg:text-base [&_p]:mb-3 [&_p:last-child]:mb-0', hasLongDescription && 'max-h-72 overflow-hidden transition-[max-height] duration-500 peer-checked:max-h-[9999px]')} dangerouslySetInnerHTML={{ __html: fullDescriptionHtml }} />
                   {hasLongDescription ? (
@@ -318,14 +318,14 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                 </section>
 
                 <section>
-                  <div className="flex items-center justify-between"><SectionTitle color="bg-[#005e9f]">精彩截图</SectionTitle><span className="mb-4 text-xs font-bold text-[#005e9f] lg:mb-6 lg:text-sm">点击查看大图</span></div>
+                  <div className="flex items-center justify-between"><SectionTitle color="bg-tone-blue">精彩截图</SectionTitle><span className="mb-4 text-xs font-bold text-[#005e9f] lg:mb-6 lg:text-sm">点击查看大图</span></div>
                   <GameScreenshotGallery gameName={game.name} screenshots={displayScreenshots} />
                 </section>
 
                 <section>
-                  <SectionTitle color="bg-[#fdc003]">游戏标签</SectionTitle>
-                  <Card className="rounded-[1.75rem] border-[#abadae]/10 bg-white/85 shadow-[0_18px_40px_rgba(15,23,32,0.06)] dark:border-border/45 dark:bg-card/80 lg:rounded-[2rem] lg:shadow-[0_24px_60px_rgba(15,23,32,0.08)]">
-                    <CardContent className="p-5 lg:p-6"><div className="flex flex-wrap gap-3">{tags.map((tag, index) => <Link key={`${tag}-${index}`} href={buildTagFilterHref(tag)} className={cn('inline-flex items-center rounded-full border px-4 py-2 text-sm font-bold transition-transform duration-300 [@media(hover:hover)]:hover:-translate-y-1 [@media(hover:hover)]:hover:scale-[1.04]', TAG_STYLE_PALETTES[index % TAG_STYLE_PALETTES.length])}>{tag}</Link>)}</div></CardContent>
+                  <SectionTitle color="bg-tone-amber">游戏标签</SectionTitle>
+                  <Card className="rounded-2xl border-border/60 bg-white/85 dark:border-border/45 dark:bg-card/80">
+                    <CardContent className="p-5 lg:p-6"><div className="flex flex-wrap gap-3">{tags.map((tag, index) => <Link key={`${tag}-${index}`} href={buildTagFilterHref(tag)} className={cn('inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold transition-colors duration-200 [@media(hover:hover)]:hover:bg-muted/60', TAG_STYLE_PALETTES[index % TAG_STYLE_PALETTES.length])}>{tag}</Link>)}</div></CardContent>
                   </Card>
                 </section>
 

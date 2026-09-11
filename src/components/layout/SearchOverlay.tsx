@@ -249,7 +249,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
               name="search"
               type="search"
               placeholder="搜索游戏、话题、帖子、文章..."
-              className="h-14 w-full rounded-full border-2 bg-background/80 pl-14 pr-14 text-lg"
+              className="h-14 w-full rounded-full border bg-background/80 pl-14 pr-14 text-lg"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               autoComplete="off"
@@ -409,7 +409,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                 <div>
                   <div className="mb-3 flex items-center justify-between px-4">
                     <h3 className="flex items-center text-sm font-semibold text-muted-foreground">
-                      <History className="mr-2 h-4 w-4" /> 搜索历史
+                      <History className="mr-2 h-4 w-4 text-tone-blue" /> 搜索历史
                     </h3>
                     <Button
                       variant="ghost"
@@ -442,7 +442,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
 
               <div>
                 <h3 className="mb-3 flex items-center px-4 text-sm font-semibold text-muted-foreground">
-                  <Flame className="mr-2 h-4 w-4 text-red-500" /> 热门推荐
+                  <Flame className="mr-2 h-4 w-4 text-tone-amber" /> 热门推荐
                 </h3>
                 {isLoading ? (
                   <div className="flex items-center justify-center py-8">

@@ -330,7 +330,7 @@ export default async function RankingsPage({
           prefetch={false}
           className={`flex items-center gap-3 rounded-xl border p-3 transition-colors hover:border-primary/40 hover:bg-primary/5 ${index === 0 ? 'bg-primary/5 border-primary/30' : 'bg-card'}`}
         >
-          <div className="w-7 text-center text-sm font-black text-primary">#{index + 1}</div>
+          <div className="w-7 text-center text-sm font-semibold text-primary">#{index + 1}</div>
           <Image
             src={game.imageUrl}
             alt={game.title}
@@ -374,7 +374,7 @@ export default async function RankingsPage({
       <TableBody>
         {games[0] ? (
           <TableRow key={`${games[0].id}-top`} className="bg-primary/5">
-            <TableCell className="font-black text-primary">#1</TableCell>
+            <TableCell className="font-semibold text-primary">#1</TableCell>
             <TableCell>
               <Link href={getGameHref(games[0])} prefetch={false} className="group flex items-center gap-3">
                 <Image
@@ -454,10 +454,10 @@ export default async function RankingsPage({
   return (
     <div className="fade-in space-y-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(rankingsJsonLd) }} />
-      <section className="rounded-lg bg-card p-6 shadow">
+      <section className="rounded-2xl border border-border/70 bg-card p-6 shadow-sm">
         <div className="mb-4 flex items-center">
-          <BarChartBig className="mr-3 h-7 w-7 text-primary" />
-          <h1 className="text-xl font-bold text-primary">游戏排行榜</h1>
+          <BarChartBig className="mr-3 h-6 w-6 text-tone-blue" />
+          <h1 className="text-xl font-semibold text-foreground">游戏排行榜</h1>
         </div>
         <p className="text-muted-foreground">查看热门与高评分游戏，了解本周受欢迎的安卓作品、下载趋势与代表玩法。</p>
         <div className="mt-4 grid gap-4 text-sm text-muted-foreground md:grid-cols-3">
@@ -471,11 +471,11 @@ export default async function RankingsPage({
           </div>
           <div className="rounded-xl border bg-background/70 p-4">
             <p className="font-semibold text-foreground">更新时间</p>
-            <p className="mt-2">榜单数据来自线上接口聚合，最近刷新时间：{updatedAtText}。</p>
+            <p className="mt-2">榜单数据每日聚合更新，最近刷新时间：{updatedAtText}。</p>
           </div>
         </div>
         <div className="mt-5 rounded-xl border bg-background/70 p-4">
-          <p className="text-sm font-semibold text-foreground">标签筛选（复用现有接口）</p>
+          <p className="text-sm font-semibold text-foreground">按标签筛选榜单</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link
               href={buildRankingsHrefWithState({ limit: activeLimit, tab: activeTab, showTags: showAllTags })}

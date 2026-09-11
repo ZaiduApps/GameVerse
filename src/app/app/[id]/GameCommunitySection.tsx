@@ -73,8 +73,8 @@ export default async function GameCommunitySection({ game }: GameCommunitySectio
   return (
     <section>
       <div className="mb-4 flex items-center justify-between lg:mb-6">
-        <h2 className="flex items-center gap-2 text-xl font-black lg:gap-3 lg:font-bold">
-          <span className="h-6 w-1.5 rounded-full bg-[#fdc003] lg:h-8 lg:w-2" aria-hidden="true" />
+        <h2 className="flex items-center gap-2 text-xl font-semibold lg:gap-3 lg:font-bold">
+          <span className="h-6 w-1.5 rounded-full bg-tone-amber lg:h-8 lg:w-2" aria-hidden="true" />
           社区动态
         </h2>
         <Link

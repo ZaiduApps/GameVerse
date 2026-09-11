@@ -18,6 +18,7 @@ import {
   ThumbsDown,
   Trash2,
   EyeOff,
+  X,
 } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -616,7 +617,7 @@ export default function CommunityFeedPostCard({
                 className="absolute right-4 top-4 z-10 rounded-full bg-white/15 text-white hover:bg-white/25"
                 onClick={() => setPreviewState(null)}
               >
-                ×
+                <X className="h-4 w-4" />
               </Button>
               {previewState.images.length > 1 ? (
                 <Button

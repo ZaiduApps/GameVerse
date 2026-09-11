@@ -567,7 +567,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
             <div>
               <p className="text-sm text-[#595c5d]">综合评分</p>
               <div className="mt-1 flex items-end gap-2">
-                <span className="text-3xl font-black text-[#b71211]">
+                <span className="text-3xl font-semibold text-[#b71211]">
                   {isLoadingSummary ? '...' : (summary?.displayScore ?? 0).toFixed(1)}
                 </span>
                 <span className="pb-1 text-xs text-[#757778]">

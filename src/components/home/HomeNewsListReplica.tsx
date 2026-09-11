@@ -58,10 +58,10 @@ export default function HomeNewsListReplica({
     .slice(0, 9);
 
   return (
-    <section className="rounded-[22px] border border-[#e0e3e4] bg-white p-4 shadow-[0_8px_22px_rgba(12,15,16,0.06)] dark:border-[#2a3442] dark:bg-[#111824] dark:shadow-[0_8px_22px_rgba(0,0,0,0.38)] sm:p-5">
+    <section className="rounded-2xl border border-border/70 bg-white p-4 shadow-sm dark:border-[#2a3442] dark:bg-[#111824] sm:p-5">
       <div className="mb-4 flex items-end justify-between">
         <div>
-          <h3 className="text-xl font-black tracking-tight text-[#1f2428] dark:text-[#edf2fb] sm:text-2xl">{title}</h3>
+          <h3 className="text-xl font-semibold tracking-tight text-[#1f2428] dark:text-[#edf2fb] sm:text-2xl">{title}</h3>
           <p className="mt-1 text-sm font-medium text-[#687076] dark:text-[#9ca6b8]">{subtitle}</p>
         </div>
         <Link
@@ -90,7 +90,7 @@ export default function HomeNewsListReplica({
           return (
             <article
               key={article._id || article.gid || article.name}
-              className="group relative flex flex-col overflow-hidden rounded-xl border border-[#edf0f2] bg-white transition-all duration-200 hover:border-[#c8dcee] hover:shadow-[0_8px_20px_rgba(0,94,159,0.08)] dark:border-[#2a3442] dark:bg-[#0f1723] dark:hover:border-[#3a5068] dark:hover:shadow-[0_8px_20px_rgba(0,0,0,0.42)]"
+              className="group relative flex flex-col overflow-hidden rounded-xl border border-[#edf0f2] bg-white transition-all duration-200 hover:border-border hover:shadow-md dark:border-[#2a3442] dark:bg-[#0f1723] dark:hover:border-border dark:hover:shadow-lg"
             >
               <div className="relative aspect-video overflow-hidden bg-[#e6e8ea] dark:bg-[#1a2433]">
                 <Image
@@ -103,12 +103,12 @@ export default function HomeNewsListReplica({
                 {(isTop || isRecommended) && (
                   <div className="absolute left-2 top-2 z-10 flex gap-1.5">
                     {isTop && (
-                      <span className="rounded-md bg-[#ffe9e7] px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#b71211] shadow-sm dark:bg-[#5a2025] dark:text-[#ffb4aa]">
+                      <span className="rounded-md bg-[#ffe9e7] px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[#b71211] shadow-sm dark:bg-[#5a2025] dark:text-[#ffb4aa]">
                         置顶
                       </span>
                     )}
                     {isRecommended && (
-                      <span className="rounded-md bg-[#eaf3ff] px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#005e9f] shadow-sm dark:bg-[#1e3550] dark:text-[#a9d6ff]">
+                      <span className="rounded-md bg-[#eaf3ff] px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[#005e9f] shadow-sm dark:bg-[#1e3550] dark:text-[#a9d6ff]">
                         推荐
                       </span>
                     )}

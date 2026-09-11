@@ -4,7 +4,6 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Plus_Jakarta_Sans } from 'next/font/google';
 import {
   Brain,
   ChevronDown,
@@ -13,6 +12,7 @@ import {
   ListFilter,
   LoaderCircle,
   Search,
+  Star,
   Swords,
   Theater,
   Trophy,
@@ -55,6 +55,13 @@ interface FacetOption {
 }
 
 const SIDEBAR_ICONS = [Grid3X3, Theater, Swords, Trophy, Brain];
+const SIDEBAR_ICON_TONES = [
+  'text-tone-blue',
+  'text-tone-amber',
+  'text-tone-red',
+  'text-tone-violet',
+  'text-tone-cyan',
+];
 const DEVICE_LABELS: Record<Exclude<DeviceFilter, 'all'>, string> = {
   android: 'Android',
   ios: 'iOS',
@@ -87,22 +94,17 @@ const PRIORITY_TAGS = [
 ];
 
 const TAG_TONE_CLASSES = [
-  'text-blue-600 bg-blue-50',
-  'text-red-600 bg-red-50',
-  'text-green-600 bg-green-50',
-  'text-purple-600 bg-purple-50',
-  'text-yellow-700 bg-yellow-50',
-  'text-orange-600 bg-orange-50',
-  'text-pink-600 bg-pink-50',
+  'border-tone-blue/25 bg-tone-blue/10 text-tone-blue',
+  'border-tone-red/25 bg-tone-red/10 text-tone-red',
+  'border-tone-green/25 bg-tone-green/10 text-tone-green',
+  'border-tone-violet/25 bg-tone-violet/10 text-tone-violet',
+  'border-tone-amber/30 bg-tone-amber/10 text-tone-amber',
+  'border-tone-cyan/25 bg-tone-cyan/10 text-tone-cyan',
+  'border-tone-pink/25 bg-tone-pink/10 text-tone-pink',
 ];
 
 const FALLBACK_SIDEBAR_CATEGORIES = ['角色扮演', '动作冒险', '竞技体育', '策略解谜'];
 const FALLBACK_THEME_TAGS = ['幻想', '都市', '赛博朋克', '校园', '末世'];
-
-const plusJakartaSans = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-});
 
 function getTagToneClass(tag: string): string {
   const normalized = String(tag || '').trim();
@@ -297,7 +299,7 @@ function LibraryGameCard({ game }: { game: LibraryGame }) {
       <Link
         href={getGameHref(game)}
         prefetch={false}
-        className="relative aspect-video overflow-hidden rounded-xl bg-white shadow-[0_24px_32px_-12px_rgba(44,47,48,0.06)]"
+        className="relative aspect-video overflow-hidden rounded-xl bg-white shadow-sm"
       >
         <Image
           src={game.bannerUrl || game.imageUrl || FALLBACK_BANNER}
@@ -307,12 +309,12 @@ function LibraryGameCard({ game }: { game: LibraryGame }) {
           className="object-cover transition-transform duration-500 group-hover:scale-105"
           data-ai-hint={game.dataAiHint || 'game cover'}
         />
-        <div className="absolute left-3 top-3 flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[10px] font-black text-white backdrop-blur-md">
-          <span className="text-xs text-yellow-400">★</span>
+        <div className="absolute left-3 top-3 flex items-center gap-1 rounded-md bg-black/60 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-md">
+          <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
           {scoreText}
         </div>
         <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-          <span className="translate-y-4 rounded-full bg-[#b71211] px-6 py-2 text-xs font-bold uppercase tracking-widest text-white transition-transform group-hover:translate-y-0">
+          <span className="translate-y-4 rounded-full bg-[#b71211] px-6 py-2 text-xs font-bold tracking-normal text-white transition-transform group-hover:translate-y-0">
             立即下载
           </span>
         </div>
@@ -324,7 +326,7 @@ function LibraryGameCard({ game }: { game: LibraryGame }) {
             <span
               key={`${game.id}-${tag}`}
               className={cn(
-                'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase',
+                'rounded-full border px-2 py-0.5 text-[10px] font-semibold',
                 getTagToneClass(tag),
               )}
             >
@@ -506,7 +508,7 @@ export default function GamesPage({
             setLoadError(
               failedStatus
                 ? `游戏服务异常（${failedStatus}）`
-                : '游戏接口返回异常，请稍后重试',
+                : '游戏数据加载异常，请稍后重试',
             );
             return false;
           }
@@ -549,7 +551,7 @@ export default function GamesPage({
             setLoadError('游戏服务请求超时，请稍后重试');
           } else {
             console.error('Failed to fetch games page:', error);
-            setLoadError('游戏服务不可用，请检查接口服务是否启动');
+            setLoadError('游戏服务暂时不可用，请稍后重试');
           }
           return false;
         } finally {
@@ -716,7 +718,7 @@ export default function GamesPage({
   const isEmpty = !isLoading && !loadError && renderedGames.length === 0;
 
   return (
-    <div className={cn('app-library-page min-h-screen bg-background text-foreground', plusJakartaSans.className)}>
+    <div className="app-library-page min-h-screen bg-background text-foreground">
       <div className="mx-auto flex max-w-screen-2xl items-start pt-6">
         <aside className="hidden h-[calc(100vh-6rem)] w-64 shrink-0 flex-col gap-2 overflow-y-auto rounded-r-2xl border-r border-border/40 bg-card/70 p-4 lg:sticky lg:top-24 lg:flex">
           <div className="mb-6 px-4">
@@ -737,7 +739,7 @@ export default function GamesPage({
                   : 'text-muted-foreground hover:bg-muted/70',
               )}
             >
-              <Grid3X3 className="h-4 w-4" />
+              <Grid3X3 className="h-4 w-4 text-tone-blue" />
               <span className="text-sm font-medium">全部游戏</span>
             </button>
 
@@ -758,7 +760,7 @@ export default function GamesPage({
                       : 'text-muted-foreground hover:bg-muted/70',
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className={cn('h-4 w-4', SIDEBAR_ICON_TONES[(index + 1) % SIDEBAR_ICON_TONES.length])} />
                   <span className="text-sm font-medium">{category.name}</span>
                 </button>
               );
@@ -767,7 +769,7 @@ export default function GamesPage({
 
           {themeTags.length ? (
             <div className="mt-8 px-4">
-              <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              <h3 className="mb-4 text-xs font-bold tracking-normal text-muted-foreground">
                 游戏题材
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -795,18 +797,18 @@ export default function GamesPage({
 
         <section className="min-w-0 flex-1 px-4 pb-20 lg:px-8">
           <section className="mb-10 mt-4">
-            <div className="rounded-[28px] border border-zinc-200 bg-white px-5 py-6 shadow-[0_24px_50px_-28px_rgba(25,28,31,0.18)] sm:px-7">
+            <div className="rounded-2xl border border-border/70 bg-card px-5 py-6 shadow-sm sm:px-7">
               <div className="flex flex-col justify-between gap-6 xl:flex-row xl:items-end">
                 <div>
                   <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#ffe8ab] px-3 py-1 text-xs font-bold text-[#7a6000]">
                     <Flame className="h-3.5 w-3.5" />
                     动态筛选游戏库
                   </div>
-                  <h2 className="mb-2 text-[24px] font-black leading-[1.1] tracking-tight sm:text-[28px]">
+                  <h2 className="mb-2 text-[24px] font-semibold leading-[1.1] tracking-tight sm:text-[28px]">
                     发现。游玩。热爱。
                   </h2>
                   <p className="max-w-2xl text-sm leading-6 text-zinc-500 sm:text-base">
-                    用关键词、题材、地区、平台、评分和更新时间快速筛到真正可玩的内容，当前结果直接来自联调中的游戏库接口。
+                    用关键词、题材、地区、平台、评分和更新时间快速筛到真正可玩的内容。
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -872,7 +874,7 @@ export default function GamesPage({
                     type="submit"
                     data-acbox-action="app_library_search_submit"
                     data-acbox-label="搜索游戏库"
-                    className="inline-flex min-h-14 items-center justify-center rounded-2xl bg-[#005e9f] px-6 text-sm font-bold text-white shadow-[0_16px_30px_-18px_rgba(0,94,159,0.9)] transition-opacity hover:opacity-90"
+                    className="inline-flex min-h-14 items-center justify-center rounded-2xl bg-[#005e9f] px-6 text-sm font-semibold text-white transition-opacity hover:opacity-90"
                   >
                     搜索游戏库
                   </button>
@@ -880,7 +882,7 @@ export default function GamesPage({
               </form>
 
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-widest text-zinc-400">
+                <span className="text-xs font-semibold tracking-normal text-zinc-400">
                   快速浏览
                 </span>
                 <button
@@ -922,10 +924,10 @@ export default function GamesPage({
                 ))}
               </div>
 
-              <div className="mt-6 rounded-3xl bg-[#f7f8fa] p-4 sm:p-5">
+              <div className="mt-6 rounded-2xl border border-border/70 bg-muted/40 p-4 sm:p-5">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div className="text-sm font-semibold text-[#2c2f30]">多维筛选</div>
+                    <div className="text-sm font-semibold text-foreground">多维筛选</div>
                     <p className="mt-1 text-xs text-zinc-500">
                       {resultScopeLabel} · 共载入 {allGames.length} 款，当前命中 {renderedGames.length} 款
                     </p>
@@ -946,7 +948,7 @@ export default function GamesPage({
                 <div className="grid gap-4 xl:grid-cols-2">
                   <div className="space-y-3">
                     <div>
-                      <div className="mb-2 text-xs font-bold uppercase tracking-widest text-zinc-400">
+                      <div className="mb-2 text-xs font-bold tracking-normal text-zinc-400">
                         分类
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -986,7 +988,7 @@ export default function GamesPage({
                     </div>
 
                     <div>
-                      <div className="mb-2 text-xs font-bold uppercase tracking-widest text-zinc-400">
+                      <div className="mb-2 text-xs font-bold tracking-normal text-zinc-400">
                         题材
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -1012,7 +1014,7 @@ export default function GamesPage({
                     </div>
 
                     <div>
-                      <div className="mb-2 text-xs font-bold uppercase tracking-widest text-zinc-400">
+                      <div className="mb-2 text-xs font-bold tracking-normal text-zinc-400">
                         地区
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -1054,7 +1056,7 @@ export default function GamesPage({
 
                   <div className="space-y-3">
                     <div>
-                      <div className="mb-2 text-xs font-bold uppercase tracking-widest text-zinc-400">
+                      <div className="mb-2 text-xs font-bold tracking-normal text-zinc-400">
                         平台
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -1094,7 +1096,7 @@ export default function GamesPage({
                     </div>
 
                     <div>
-                      <div className="mb-2 text-xs font-bold uppercase tracking-widest text-zinc-400">
+                      <div className="mb-2 text-xs font-bold tracking-normal text-zinc-400">
                         评分
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -1119,7 +1121,7 @@ export default function GamesPage({
                     </div>
 
                     <div>
-                      <div className="mb-2 text-xs font-bold uppercase tracking-widest text-zinc-400">
+                      <div className="mb-2 text-xs font-bold tracking-normal text-zinc-400">
                         更新时间
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -1262,7 +1264,7 @@ export default function GamesPage({
           ) : null}
 
           {isEmpty ? (
-            <div className="rounded-[28px] border border-dashed border-zinc-300 bg-zinc-50 px-6 py-12 text-center">
+            <div className="rounded-2xl border border-dashed border-border bg-muted/40 px-6 py-12 text-center">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm">
                 <Search className="h-6 w-6 text-zinc-400" />
               </div>
@@ -1326,9 +1328,7 @@ export default function GamesPage({
               )}
             >
               {isLoading ? '加载中...' : isLoadingMore ? '加载更多中...' : '查看更多精彩游戏'}
-              <span className="ml-2 inline-block transition-transform group-hover:translate-y-1">
-                ▼
-              </span>
+              <ChevronDown className="ml-2 inline-block h-4 w-4 transition-transform group-hover:translate-y-0.5" />
             </button>
             <p className="text-xs text-zinc-400">
               已载入 {allGames.length} 款候选 · 当前展示 {renderedGames.length} 款

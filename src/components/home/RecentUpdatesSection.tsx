@@ -113,14 +113,14 @@ export default function RecentUpdatesSection({
       return (
         <article
           key={game._id}
-          className="group relative flex min-h-[94px] items-center gap-3 rounded-2xl bg-white px-3 py-2.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-[#0f1723] dark:shadow-[0_6px_14px_rgba(0,0,0,0.35)]"
+          className="group relative flex min-h-[94px] items-center gap-3 rounded-2xl bg-white px-3 py-2.5 shadow-sm transition-colors hover:shadow-md dark:bg-[#0f1723]"
         >
           <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-[#dadddf] dark:bg-[#1a2433]">
             <Image src={game.icon || fallbackImage} alt={game.name} fill className="object-cover" sizes="56px" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <p className="min-w-0 flex-1 truncate text-sm font-black dark:text-[#edf2fb]">{game.name}</p>
+              <p className="min-w-0 flex-1 truncate text-sm font-semibold dark:text-[#edf2fb]">{game.name}</p>
               {typeof game.star === 'number' && game.star > 0 && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-[#eff1f2] px-2 py-0.5 text-[10px] font-bold text-[#595c5d] dark:bg-[#223043] dark:text-[#9ca6b8]">
                   <Star className="h-3 w-3 fill-[#fdc003] text-[#fdc003]" />
@@ -161,10 +161,10 @@ export default function RecentUpdatesSection({
   );
 
   return (
-    <section className="rounded-[26px] bg-[#eff1f2] p-5 dark:bg-[#111824] sm:p-7">
+    <section className="rounded-2xl border border-border/70 bg-[#eff1f2] p-5 dark:bg-[#111824] sm:p-7">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h3 className="text-xl font-black tracking-tight dark:text-[#edf2fb]">{title || '最近更新'}</h3>
+          <h3 className="text-xl font-semibold tracking-tight dark:text-[#edf2fb]">{title || '最近更新'}</h3>
           {viewAllHref ? (
             <Link
               href={viewAllHref}

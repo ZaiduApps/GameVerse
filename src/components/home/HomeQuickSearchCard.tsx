@@ -10,8 +10,8 @@ export default function HomeQuickSearchCard() {
 
   return (
     <>
-      <section className="rounded-[22px] border border-[#e0e3e4] bg-white p-5 shadow-[0_14px_28px_rgba(12,15,16,0.08)] dark:border-[#2a3442] dark:bg-[#111824] dark:shadow-[0_14px_28px_rgba(0,0,0,0.4)]">
-        <h3 className="flex items-center gap-2 text-lg font-black text-[#2c2f30] dark:text-[#edf2fb]">
+      <section className="rounded-2xl border border-border/70 bg-white p-5 shadow-sm dark:border-[#2a3442] dark:bg-[#111824]">
+        <h3 className="flex items-center gap-2 text-lg font-semibold text-[#2c2f30] dark:text-[#edf2fb]">
           <Search className="h-4 w-4 text-[#005e9f] dark:text-[#7fc1ff]" />
           快速探索
         </h3>

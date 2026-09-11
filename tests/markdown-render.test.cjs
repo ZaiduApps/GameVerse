@@ -590,7 +590,7 @@ test('markdown regression: quote heading with paragraph', () => {
   assert.match(html, /<blockquote class="border-l-4 border-primary[^\"]*">最近在寻找存储空间，3天前找到了 100GB 的免费 WebDAV 空间，<\/blockquote>/);
 });
 
-test('markdown detail preset: upgraded section headings and unordered list items', () => {
+test('markdown detail preset: editorial typography for headings, lists and quotes', () => {
   const input = [
     '## 功能概览',
     '',
@@ -613,7 +613,7 @@ test('markdown detail preset: upgraded section headings and unordered list items
   ].join('\n');
 
   const html = renderMarkdown(input, { preset: 'detail' }).__html;
-  assert.match(html, /<ul class="my-4 list-none space-y-3 pl-0">/);
+  assert.match(html, /<ul class="my-4 list-disc space-y-2 pl-6">/);
 
   const h2Class = html.match(/<h2 class="([^"]+)">功能概览<\/h2>/)?.[1] || '';
   const listItemClass = html.match(/<li class="([^"]+)">第一条提示<\/li>/)?.[1] || '';
@@ -626,19 +626,20 @@ test('markdown detail preset: upgraded section headings and unordered list items
 
   [h2Class, listItemClass, quoteClass, codeClass, imageClass, thClass, tdClass, hrClass].forEach((value) => {
     assert.ok(value.length > 0);
-    assert.doesNotMatch(value, /(^| )border(?:$|-|\[)/);
-    assert.doesNotMatch(value, /(^| )border-l(?:$|-|\[)/);
-    assert.doesNotMatch(value, /(^| )border-t(?:$|-|\[)/);
   });
 
-  assert.match(h2Class, /bg-gradient-to-r/);
-  assert.match(h2Class, /before:bg-primary\/75/);
-  assert.match(listItemClass, /bg-gradient-to-r/);
-  assert.match(listItemClass, /after:bg-primary\/80/);
-  assert.match(quoteClass, /before:bg-accent\/65/);
+  // 正文排版不再使用彩色渐变底板和伪元素装饰，改由字号、字重与分隔线建立层级
+  [h2Class, listItemClass, quoteClass, hrClass].forEach((value) => {
+    assert.doesNotMatch(value, /bg-gradient-to/);
+    assert.doesNotMatch(value, /before:/);
+    assert.doesNotMatch(value, /after:/);
+  });
+
+  assert.match(h2Class, /border-b border-border/);
+  assert.match(quoteClass, /border-l-2 border-border/);
+  assert.match(hrClass, /border-t border-border/);
   assert.match(codeClass, /bg-muted\/70/);
   assert.match(imageClass, /bg-muted\/20/);
-  assert.match(hrClass, /bg-gradient-to-r/);
 });
 
 test('markdown detail preset: hides configured excerpt heading', () => {

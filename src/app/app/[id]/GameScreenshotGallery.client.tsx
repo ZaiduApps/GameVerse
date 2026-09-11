@@ -116,8 +116,7 @@ export default function GameScreenshotGallery({
               data-acbox-action="game_detail_screenshot_open"
               data-acbox-label={`${gameName} 截图 ${index + 1}`}
               className={cn(
-                'group relative shrink-0 snap-center overflow-hidden rounded-2xl bg-[#dadddf] shadow-[0_18px_36px_rgba(15,23,32,0.08)] transition-transform duration-300 lg:rounded-[1.5rem] lg:bg-white/60 dark:bg-card/60',
-                '[@media(hover:hover)]:hover:-translate-y-1',
+                'group relative shrink-0 snap-center overflow-hidden rounded-2xl bg-muted shadow-sm transition-colors duration-300 lg:rounded-2xl lg:bg-white/60 dark:bg-card/60',
                 cardClassName(aspect),
               )}
               onClick={() => setPreviewIndex(index)}

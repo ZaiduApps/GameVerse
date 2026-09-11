@@ -79,7 +79,7 @@ function getStylePalette(style?: string | null) {
       featurePanel: 'bg-white/12',
       primaryButton: 'bg-white text-[#7a2e00] hover:bg-[#fff4e8]',
       secondaryButton: 'border-white/20 bg-white/10 text-white hover:bg-white/16',
-      headingAccent: 'text-[#ffb46b]',
+      headingAccent: 'text-tone-amber',
       statValue: 'text-[#ffe5c6]',
     };
   }
@@ -90,7 +90,7 @@ function getStylePalette(style?: string | null) {
       featurePanel: 'bg-white/12',
       primaryButton: 'bg-white text-[#7f1032] hover:bg-[#fff1f4]',
       secondaryButton: 'border-white/20 bg-white/10 text-white hover:bg-white/16',
-      headingAccent: 'text-[#ffb7cb]',
+      headingAccent: 'text-tone-pink',
       statValue: 'text-[#ffe3ea]',
     };
   }
@@ -101,7 +101,7 @@ function getStylePalette(style?: string | null) {
       featurePanel: 'bg-white/12',
       primaryButton: 'bg-white text-[#014574] hover:bg-[#eef6ff]',
       secondaryButton: 'border-white/20 bg-white/10 text-white hover:bg-white/16',
-      headingAccent: 'text-[#9ad0ff]',
+      headingAccent: 'text-tone-cyan',
       statValue: 'text-[#d9eeff]',
     };
   }
@@ -111,7 +111,7 @@ function getStylePalette(style?: string | null) {
     featurePanel: 'bg-white/12',
     primaryButton: 'bg-white text-[#0b2743] hover:bg-[#eef7ff]',
     secondaryButton: 'border-white/20 bg-white/10 text-white hover:bg-white/16',
-    headingAccent: 'text-[#b8e6ff]',
+    headingAccent: 'text-tone-cyan',
     statValue: 'text-[#e5f6ff]',
   };
 }
@@ -121,40 +121,40 @@ function getStyleClassNames(style?: string | null) {
 
   if (normalized === 'box') {
     return {
-      heroGradient: 'from-[#2d1200] via-[#8b3000] to-[#d96a1b]',
+      heroGradient: 'from-[#2b1c08] via-[#4a3110] to-[#7a5410]',
       sectionBadge: 'border-[#ffd5b3] bg-[#fff3e9] text-[#8b3000]',
       sectionHint: '适合优先查看站内热门作品、榜单型内容和高热度游戏。',
       sectionTitle: '专题榜单',
-      cardRing: 'hover:border-[#ffb36b] hover:shadow-[0_18px_38px_rgba(167,85,14,0.18)]',
+      cardRing: 'hover:border-tone-amber/50',
     };
   }
 
   if (normalized === 'pre') {
     return {
-      heroGradient: 'from-[#3c1026] via-[#8f1d4b] to-[#ff7358]',
+      heroGradient: 'from-[#2e0f1a] via-[#4d1828] to-[#7c2338]',
       sectionBadge: 'border-[#ffd0db] bg-[#fff1f5] text-[#9a214f]',
       sectionHint: '适合跟踪预约新游、上线前动态和近期值得蹲守的新项目。',
       sectionTitle: '预约观察清单',
-      cardRing: 'hover:border-[#ff94ae] hover:shadow-[0_18px_38px_rgba(185,28,88,0.16)]',
+      cardRing: 'hover:border-tone-pink/50',
     };
   }
 
   if (normalized === 'list') {
     return {
-      heroGradient: 'from-[#07243d] via-[#005f9f] to-[#37a6cf]',
+      heroGradient: 'from-[#0d2436] via-[#123a55] to-[#17547d]',
       sectionBadge: 'border-[#cfe8ff] bg-[#edf7ff] text-[#005f9f]',
       sectionHint: '适合快速筛选效率工具、常用应用和轻量辅助型内容。',
       sectionTitle: '工具合集',
-      cardRing: 'hover:border-[#70c9ff] hover:shadow-[0_18px_38px_rgba(0,94,159,0.18)]',
+      cardRing: 'hover:border-tone-blue/50',
     };
   }
 
   return {
-    heroGradient: 'from-[#071522] via-[#005e9f] to-[#2d8fd3]',
+    heroGradient: 'from-[#0b2a2c] via-[#0e4245] to-[#136469]',
     sectionBadge: 'border-[#d5eaff] bg-[#eff7ff] text-[#005e9f]',
     sectionHint: '适合快速发现近期值得下载的精选游戏与编辑推荐内容。',
     sectionTitle: '专题精选内容',
-    cardRing: 'hover:border-[#7fc1ff] hover:shadow-[0_18px_38px_rgba(0,94,159,0.18)]',
+    cardRing: 'hover:border-tone-cyan/50',
   };
 }
 
@@ -243,7 +243,7 @@ function FeatureGameCard({
       href={getGameHref(game)}
       data-acbox-action="album_feature_game_click"
       data-acbox-label={normalizeText(game.name) || '专题首屏推荐'}
-      className="group overflow-hidden rounded-[28px] border border-white/12 bg-white/10 shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur"
+      className="group overflow-hidden rounded-2xl border border-white/12 bg-white/10 shadow-sm backdrop-blur"
     >
       <div className="relative h-56 overflow-hidden">
         <Image
@@ -262,7 +262,7 @@ function FeatureGameCard({
         </div>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xl font-black leading-tight">{normalizeText(game.name) || '专题内容'}</p>
+            <p className="text-xl font-semibold leading-tight">{normalizeText(game.name) || '专题内容'}</p>
             <p className="mt-2 text-sm leading-6 text-white/82">{summary}</p>
           </div>
           <span className="rounded-full bg-white/14 px-2.5 py-1 text-xs font-bold text-white/88">
@@ -295,7 +295,7 @@ function SupportingGameCard({
       href={getGameHref(game)}
       data-acbox-action="album_supporting_game_click"
       data-acbox-label={normalizeText(game.name) || '专题辅助推荐'}
-      className="group flex items-center gap-3 rounded-[22px] border border-white/12 bg-white/10 p-3.5 text-white transition-transform hover:-translate-y-0.5"
+      className="group flex items-center gap-3 rounded-2xl border border-white/12 bg-white/10 p-3.5 text-white transition-transform hover:-translate-y-0.5"
     >
       <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl bg-white/8">
         <Image
@@ -307,7 +307,7 @@ function SupportingGameCard({
         />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-black">{normalizeText(game.name) || '未命名内容'}</p>
+        <p className="truncate text-sm font-semibold">{normalizeText(game.name) || '未命名内容'}</p>
         <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/72">
           {clampText(normalizeText(game.summary) || normalizeText(game.tags?.[0]) || '专题推荐游戏', 44)}
         </p>
@@ -337,7 +337,7 @@ function ShowcaseCard({
       href={getGameHref(game)}
       data-acbox-action="album_showcase_game_click"
       data-acbox-label={normalizeText(game.name) || '专题精选游戏'}
-      className={`group overflow-hidden rounded-[26px] border border-[#d9e4ef] bg-white shadow-[0_12px_32px_rgba(12,15,16,0.08)] transition-all hover:-translate-y-1 ${cardRing}`}
+      className={`group overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-all hover:-translate-y-0.5 ${cardRing}`}
     >
       <div className="relative h-48 overflow-hidden bg-[#e9eef4]">
         <Image
@@ -356,7 +356,7 @@ function ShowcaseCard({
       <div className="space-y-3 p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-black text-[#15202b]">{normalizeText(game.name) || '未命名游戏'}</h3>
+            <h3 className="text-lg font-semibold text-[#15202b]">{normalizeText(game.name) || '未命名游戏'}</h3>
             <p className="mt-1 text-sm font-semibold text-[#4a6074]">{buildGameMetaLine(game)}</p>
           </div>
           <span className="rounded-full bg-[#edf7ff] px-2.5 py-1 text-xs font-bold text-[#005e9f]">
@@ -399,9 +399,9 @@ function RankingRow({
       href={getGameHref(game)}
       data-acbox-action="album_ranking_game_click"
       data-acbox-label={`${index + 1}. ${normalizeText(game.name) || '专题榜单游戏'}`}
-      className={`group flex items-center gap-4 rounded-[24px] border border-[#d9e4ef] bg-white p-4 shadow-[0_12px_32px_rgba(12,15,16,0.08)] transition-all hover:-translate-y-1 ${cardRing}`}
+      className={`group flex items-center gap-4 rounded-2xl border border-border bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 ${cardRing}`}
     >
-      <div className="flex w-10 flex-shrink-0 items-center justify-center text-xl font-black italic text-[#b71211]">
+      <div className="flex w-10 flex-shrink-0 items-center justify-center text-xl font-semibold text-[#b71211]">
         {String(index + 1).padStart(2, '0')}
       </div>
       <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl bg-[#e9eef4]">
@@ -415,7 +415,7 @@ function RankingRow({
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <h3 className="truncate text-base font-black text-[#15202b]">{normalizeText(game.name) || '未命名游戏'}</h3>
+          <h3 className="truncate text-base font-semibold text-[#15202b]">{normalizeText(game.name) || '未命名游戏'}</h3>
           {showFlame ? <Flame className="h-4 w-4 text-[#ff7a00]" /> : null}
         </div>
         <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#4a6074]">
@@ -454,10 +454,10 @@ function PreregCard({
       href={getGameHref(game)}
       data-acbox-action="album_prereg_game_click"
       data-acbox-label={normalizeText(game.name) || '预约专题游戏'}
-      className={`group flex h-full flex-col justify-between gap-5 rounded-[26px] border border-[#f3d9df] bg-white p-5 shadow-[0_12px_32px_rgba(12,15,16,0.08)] transition-all hover:-translate-y-1 ${cardRing}`}
+      className={`group flex h-full flex-col justify-between gap-5 rounded-2xl border border-border bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 ${cardRing}`}
     >
       <div className="flex items-start gap-4">
-        <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-[22px] bg-[#f7ecef]">
+        <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl bg-[#f7ecef]">
           <Image
             src={imageUrl || FALLBACK_IMAGE}
             alt={normalizeText(game.name) || '预约新游'}
@@ -467,7 +467,7 @@ function PreregCard({
           />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-lg font-black text-[#15202b]">{clampText(normalizeText(game.name) || '预约内容', 18)}</h3>
+          <h3 className="text-lg font-semibold text-[#15202b]">{clampText(normalizeText(game.name) || '预约内容', 18)}</h3>
           <p className="mt-1 text-sm font-semibold text-[#9a214f]">
             {normalizeText(game?.metadata?.region) || '国际服'}
           </p>
@@ -492,7 +492,7 @@ function PreregCard({
             </span>
           ) : null}
         </div>
-        <div className="inline-flex items-center gap-2 rounded-full bg-[#9a214f] px-4 py-2 text-sm font-black text-white">
+        <div className="inline-flex items-center gap-2 rounded-full bg-[#9a214f] px-4 py-2 text-sm font-semibold text-white">
           <Clock3 className="h-4 w-4" />
           查看详情
         </div>
@@ -517,7 +517,7 @@ function CompactToolCard({
       href={getGameHref(game)}
       data-acbox-action="album_tool_game_click"
       data-acbox-label={normalizeText(game.name) || '工具专题应用'}
-      className={`group rounded-[24px] border border-[#d9e4ef] bg-white p-4 shadow-[0_12px_32px_rgba(12,15,16,0.08)] transition-all hover:-translate-y-1 ${cardRing}`}
+      className={`group rounded-2xl border border-border bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 ${cardRing}`}
     >
       <div className="flex items-center gap-3">
         <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-2xl bg-[#edf5ff]">
@@ -530,7 +530,7 @@ function CompactToolCard({
           />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-black text-[#15202b]">{normalizeText(game.name) || '工具应用'}</h3>
+          <h3 className="truncate text-base font-semibold text-[#15202b]">{normalizeText(game.name) || '工具应用'}</h3>
           <p className="mt-1 truncate text-sm text-[#4a6074]">{normalizeText(game.tags?.[0]) || '效率工具'}</p>
         </div>
         <span className="rounded-full bg-[#edf7ff] px-2.5 py-1 text-xs font-bold text-[#005e9f]">
@@ -615,7 +615,7 @@ export default function AlbumTopicView({
 
   return (
     <div className="space-y-8 pb-12">
-      <section className={`relative overflow-hidden rounded-[34px] bg-gradient-to-br ${styleInfo.heroGradient} text-white shadow-[0_28px_60px_rgba(8,18,31,0.24)]`}>
+      <section className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${styleInfo.heroGradient} text-white shadow-sm`}>
         {heroImage ? (
           <Image
             src={heroImage}
@@ -629,7 +629,7 @@ export default function AlbumTopicView({
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.14),transparent_38%),linear-gradient(135deg,rgba(0,0,0,0.2),rgba(0,0,0,0.58))]" />
         <div className="relative z-10 grid gap-8 p-6 sm:p-8 xl:grid-cols-[minmax(0,1.2fr)_380px] xl:p-10">
           <div>
-            <nav className="mb-5 flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-white/68">
+            <nav className="mb-5 flex flex-wrap items-center gap-2 text-xs font-bold tracking-normal text-white/68">
               <Link href="/" className="transition-colors hover:text-white">首页</Link>
               <span>/</span>
               <span>专题推荐</span>
@@ -652,7 +652,7 @@ export default function AlbumTopicView({
                 </span>
               ) : null}
             </div>
-            <h1 className="mt-6 text-3xl font-black tracking-tight sm:text-4xl xl:text-[3.35rem] xl:leading-[1.08]">
+            <h1 className="mt-6 text-3xl font-semibold tracking-tight sm:text-4xl xl:text-[3.35rem] xl:leading-[1.08]">
               {title}
             </h1>
             {subtitle ? (
@@ -666,7 +666,7 @@ export default function AlbumTopicView({
                 href="#album-games"
                 data-acbox-action="album_enter_content"
                 data-acbox-label={title}
-                className={`inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-black transition-colors ${palette.primaryButton}`}
+                className={`inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition-colors ${palette.primaryButton}`}
               >
                 进入专题内容
                 <ArrowRight className="h-4 w-4" />
@@ -681,17 +681,17 @@ export default function AlbumTopicView({
               </Link>
             </div>
             <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className={`rounded-[22px] border border-white/12 p-4 backdrop-blur ${palette.featurePanel}`}>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/64">专题评分均值</p>
-                <p className={`mt-2 text-2xl font-black ${palette.statValue}`}>{averageRating}</p>
+              <div className={`rounded-2xl border border-white/12 p-4 backdrop-blur ${palette.featurePanel}`}>
+                <p className="text-xs font-bold tracking-normal text-white/64">专题评分均值</p>
+                <p className={`mt-2 text-2xl font-semibold ${palette.statValue}`}>{averageRating}</p>
               </div>
-              <div className={`rounded-[22px] border border-white/12 p-4 backdrop-blur ${palette.featurePanel}`}>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/64">覆盖设备</p>
-                <p className={`mt-2 text-lg font-black ${palette.statValue}`}>{devices.length > 0 ? devices.join(' / ') : '多端内容'}</p>
+              <div className={`rounded-2xl border border-white/12 p-4 backdrop-blur ${palette.featurePanel}`}>
+                <p className="text-xs font-bold tracking-normal text-white/64">覆盖设备</p>
+                <p className={`mt-2 text-lg font-semibold ${palette.statValue}`}>{devices.length > 0 ? devices.join(' / ') : '多端内容'}</p>
               </div>
-              <div className={`rounded-[22px] border border-white/12 p-4 backdrop-blur ${palette.featurePanel}`}>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/64">专题归属</p>
-                <p className={`mt-2 text-lg font-black ${palette.statValue}`}>{siteName}</p>
+              <div className={`rounded-2xl border border-white/12 p-4 backdrop-blur ${palette.featurePanel}`}>
+                <p className="text-xs font-bold tracking-normal text-white/64">专题归属</p>
+                <p className={`mt-2 text-lg font-semibold ${palette.statValue}`}>{siteName}</p>
               </div>
             </div>
           </div>
@@ -706,7 +706,7 @@ export default function AlbumTopicView({
       </section>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <article className="rounded-[30px] border border-[#d7e2ee] bg-white p-6 shadow-[0_12px_32px_rgba(12,15,16,0.06)] sm:p-7">
+        <article className="rounded-2xl border border-border bg-white p-6 shadow-sm sm:p-7">
           <div className="flex flex-wrap items-center gap-3">
             <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${styleInfo.sectionBadge}`}>
               专题导读
@@ -723,14 +723,14 @@ export default function AlbumTopicView({
           </div>
         </article>
 
-        <aside className="rounded-[30px] border border-[#d7e2ee] bg-[#f6f9fc] p-6 shadow-[0_12px_32px_rgba(12,15,16,0.04)] sm:p-7">
+        <aside className="rounded-2xl border border-border bg-[#f6f9fc] p-6 shadow-sm sm:p-7">
           <div className="flex items-center gap-2 text-[#15202b]">
             {normalizeText(album?.style).toLowerCase() === 'list' ? (
               <Wrench className="h-4 w-4 text-[#005e9f]" />
             ) : (
               <Sparkles className="h-4 w-4 text-[#005e9f]" />
             )}
-            <h2 className="text-lg font-black">浏览建议</h2>
+            <h2 className="text-lg font-semibold">浏览建议</h2>
           </div>
           <ul className="mt-4 space-y-3 text-sm leading-6 text-[#425466]">
             <li>先看首屏推荐，能最快判断这个专题当前主推的核心作品。</li>
@@ -738,7 +738,7 @@ export default function AlbumTopicView({
             <li>如果想扩大范围，直接跳转游戏详情页或站内游戏库继续深挖。</li>
           </ul>
           <div className="mt-6">
-            <h3 className="text-sm font-black text-[#15202b]">专题关键词</h3>
+            <h3 className="text-sm font-semibold text-[#15202b]">专题关键词</h3>
             <div className="mt-3 flex flex-wrap gap-2">
               {(keywords.length > 0 ? keywords : primaryTags).slice(0, 8).map((keyword) => (
                 <span key={keyword} className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-[#587089] shadow-sm">
@@ -753,8 +753,8 @@ export default function AlbumTopicView({
       <section id="album-games" className="space-y-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#005e9f]">{getAlbumStyleLabel(album?.style)}</p>
-            <h2 className="mt-2 text-2xl font-black tracking-tight text-[#15202b]">{styleInfo.sectionTitle}</h2>
+            <p className="text-sm font-bold tracking-normal text-[#005e9f]">{getAlbumStyleLabel(album?.style)}</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#15202b]">{styleInfo.sectionTitle}</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[#587089]">
               {games.length > 0
                 ? `以下内容均来自 ${title} 专题，按照当前专辑顺序完整展示。`
