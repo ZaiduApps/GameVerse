@@ -16,7 +16,8 @@
 - Start production build locally with `pnpm build` then `pnpm start`. `pnpm start` fails unless `.next/BUILD_ID` exists.
 - `pnpm lint` currently triggers Next's interactive ESLint setup prompt because no ESLint config is checked in. Treat lint as unavailable until the repo adds a real ESLint config.
 - Run typecheck with `pnpm typecheck`.
-- Run the only targeted test with `pnpm test:markdown`.
+- Run the targeted tests with `pnpm test:markdown` (44 cases) and `pnpm test:seo-runner` (9 cases); both pass on the checked-in tree.
+- Run `pnpm assert:build-env` right after `pnpm build`. It fails when a `NEXT_PUBLIC_` key defined in `.env.production` was not inlined into `.next/static/**/*.js`, or when `NEXT_PUBLIC_API_USE_PROXY=false` and the production API base URL is missing from the client bundle. The production release script runs it automatically for this repo.
 - Preferred verification today is `pnpm typecheck`, then `pnpm test:markdown` when `src/lib/utils.ts` or markdown rendering paths changed. Only add `pnpm lint` after the repo has a non-interactive ESLint config.
 
 ## Runtime And Env
@@ -26,6 +27,8 @@
 - If dev output gets stale, rerun with `CLEAN_NEXT_DEV_DIST=1 pnpm dev` to delete `.next-dev` first.
 - `next.config.ts` currently sets `typescript.ignoreBuildErrors` and `eslint.ignoreDuringBuilds` to `true`. Do not treat a successful `pnpm build` as proof that types or lint are clean; run the explicit commands.
 - Browser API calls should usually keep using the `/api` proxy. `NEXT_PUBLIC_API_USE_PROXY=false` switches the browser to direct cross-origin requests.
+- `.env.production` is checked in on purpose (public values only, never secrets) and pins the production build. `next build` reads `.env.production`, while `pnpm dev` keeps using `.env`, so local development is unaffected.
+- Production is built on the release machine and only `.next` is uploaded; `NEXT_PUBLIC_*` is inlined at build time, so a wrong build-time value cannot be repaired by editing the server `.env`. Keep `.env.production` in sync with `/root/home/GameVerse/.env` on `hk.apk` (verified identical for all shared keys on 2026-09-11).
 
 ## Code Map
 
@@ -46,7 +49,7 @@
 ## Testing And Verification
 
 - There is no CI config in the repo and no broader automated test suite checked in beyond `tests/markdown-render.test.cjs`.
-- `pnpm test:markdown` is currently red on the checked-in tree: the `defined-image html compatibility` case still expects `alt=""`, but `src/lib/utils.ts` now normalizes missing image alt text to `内容配图`.
+- `pnpm test:markdown` covers `src/lib/utils.ts` and is green on the checked-in tree (44/44); the earlier `defined-image html compatibility` mismatch (odd `alt` vs `内容配图`) is fixed.
 - For route or UI work, manual QA matters. Exercise the changed page in the browser because server data, rewrites, and layout branching are route-specific.
 - For API-facing changes, verify against the configured backend or a compatible local service on `127.0.0.1:9527`; many pages depend on live responses and will degrade silently if the backend is absent.
 
@@ -55,3 +58,5 @@
 - `deploy.sh` does `git pull`, `pnpm install --frozen-lockfile`, `pnpm build`, then `pm2 startOrReload ecosystem.prod.config.js --only game-ve --update-env`.
 - `deploy-fast.sh` skips install and only rebuilds and reloads PM2.
 - Production PM2 config lives in `ecosystem.prod.config.js` and starts `scripts/next-runner.mjs start` with `PORT=3002` from `/root/home/GameVerse`.
+- The current release entry point is `../AC-interface/scripts/production-release.ps1 -Components gameverse` (or `interface,gameverse`): it runs typecheck, `test:markdown`, `test:seo-runner`, `pnpm build`, `pnpm assert:build-env`, then packages `.next` (excluding `.next/cache`) and swaps it on the server. The server never builds.
+- `deploy.sh` / `deploy-fast.sh` are the legacy in-place path and build on the server; the current flow does not use them.

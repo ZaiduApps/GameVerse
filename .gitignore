@@ -48,6 +48,7 @@ next-env.d.ts
 .genkit/*
 .env*
 !.env.example
+!.env.production
 
 # firebase
 firebase-debug.log
