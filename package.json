@@ -17,7 +17,8 @@
     "test:seo-runner": "node --test tests/seo-write-game.test.mjs tests/seo-indexnow-boundary.test.mjs tests/deploy-fast-boundary.test.mjs",
     "test:game-detail": "node --test tests/game-detail-boundary.test.mjs tests/image-preview.test.mjs",
     "seo:audit": "node scripts/seo-daily-audit.mjs",
-    "seo:write-game": "node scripts/seo-write-game.mjs"
+    "seo:write-game": "node scripts/seo-write-game.mjs",
+    "preinstall": "node -e \"const ua=process.env.npm_config_user_agent||'';if(ua.indexOf('pnpm/')!==0){console.error('[preinstall] 本项目只允许使用 pnpm 安装依赖，请改用 pnpm install');process.exit(1)}\""
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.8.0",
