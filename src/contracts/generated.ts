@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 0cd6a80ef383761ad4da0a585d0d557d06dc285eae29c6faea2863c1eaa48c5b
+ * @contract-sha256 fbf5d3dea6f6e5b09bb7f4a92c266f8e8d662f13e7533b5619bbc2d179f1d8b2
  */
 
 export interface paths {
@@ -3342,6 +3342,188 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tags/admin/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TagsController_health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tags/admin/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TagsController_audit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tags/admin/cleanup/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TagsController_cleanupPreview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tags/admin/cleanup/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TagsController_cleanupExecute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tags/admin/cleanup/batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["TagsController_cleanupBatches"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tags/admin/cleanup/{batchId}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TagsController_rollback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 创建标签 */
+        post: operations["TagsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tags/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 更新标签 */
+        put: operations["TagsController_update"];
+        post?: never;
+        /** 删除标签 */
+        delete: operations["TagsController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tags/active/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取标签详情 */
+        get: operations["TagsController_findById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tags/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 分页查询标签 */
+        post: operations["TagsController_list"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tags/list-games": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 查询标签下游戏 */
+        post: operations["TagsController_AppList"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/banner": {
         parameters: {
             query?: never;
@@ -3704,188 +3886,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/tags/admin/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["TagsController_health"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tags/admin/audit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["TagsController_audit"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tags/admin/cleanup/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["TagsController_cleanupPreview"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tags/admin/cleanup/execute": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["TagsController_cleanupExecute"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tags/admin/cleanup/batches": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["TagsController_cleanupBatches"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tags/admin/cleanup/{batchId}/rollback": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["TagsController_rollback"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tags": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 创建标签 */
-        post: operations["TagsController_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tags/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** 更新标签 */
-        put: operations["TagsController_update"];
-        post?: never;
-        /** 删除标签 */
-        delete: operations["TagsController_remove"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tags/active/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 获取标签详情 */
-        get: operations["TagsController_findById"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tags/list": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 分页查询标签 */
-        post: operations["TagsController_list"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tags/list-games": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 查询标签下游戏 */
-        post: operations["TagsController_AppList"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/feedbacks": {
         parameters: {
             query?: never;
@@ -4076,6 +4076,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/feedbacks/vote/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 批量查询当前用户对反馈的点赞状态 */
+        post: operations["FeedbacksController_checkVotes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/feedbacks/{id}/vote": {
         parameters: {
             query?: never;
@@ -4085,7 +4102,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 反馈点赞/同求 */
+        /** 反馈点赞/取消点赞（toggle，需登录） */
         post: operations["FeedbacksController_incrementVote"];
         delete?: never;
         options?: never;
@@ -4605,6 +4622,41 @@ export interface paths {
         put?: never;
         /** 更新系统配置 */
         post: operations["SettingController_updateSystemConfig"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/config/runtime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取运行期配置（后台可配置项） */
+        get: operations["SettingController_getRuntimeConfig"];
+        put?: never;
+        /** 更新运行期配置 */
+        post: operations["SettingController_updateRuntimeConfig"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/config/runtime/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 恢复运行期配置默认值 */
+        post: operations["SettingController_resetRuntimeConfig"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5467,6 +5519,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/resource-worker/v1/runtime-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取接口下发的资源 Worker 运行期配置 */
+        get: operations["ResourceWorkerGatewayController_runtimeConfigPayload"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/resource-worker/v1/workers/register": {
         parameters: {
             query?: never;
@@ -5854,6 +5923,23 @@ export interface paths {
         put?: never;
         /** 设置 Worker 任务画像，限制检测或资源任务 */
         post: operations["ResourceWorkerManagementController_setTaskProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/remote-workers/{workerId}/concurrency": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 设置远程资源 Worker 总并发上限 */
+        post: operations["ResourceWorkerManagementController_setConcurrency"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6413,6 +6499,40 @@ export interface paths {
         /** 只读审计游戏元数据或下载来源 */
         post: operations["ResourceUpdateController_audit"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/source-memories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 查询包名级渠道记忆 */
+        get: operations["ResourceUpdateController_sourceMemories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/source-memories/{pkg}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 清除某个包名的渠道记忆 */
+        delete: operations["ResourceUpdateController_clearSourceMemory"];
         options?: never;
         head?: never;
         patch?: never;
@@ -7762,6 +7882,8 @@ export interface components {
             content: string;
             /** @description 消息附图 URL 数组 */
             images?: string[];
+            /** @description 楼中楼：所回复的一级评论消息 ID（不传为一级评论） */
+            parent_id?: string;
         };
         UpdateFeedbackDto: {
             /** @description 标题 */
@@ -8032,6 +8154,31 @@ export interface components {
             /** @description 失败错误分类，不得包含凭证或邮箱 */
             error_category?: string;
         };
+        ApkeepAccountTestResultDto: {
+            /** @description 用于账号测试的公开 Android 包名 */
+            package_name: string;
+            /**
+             * @description apkeep 产物形态
+             * @enum {string}
+             */
+            artifact_mode: "single" | "bundle" | "split_directory";
+            /** @description 已验证的输出文件数 */
+            output_file_count: number;
+            /** @description 账号测试耗时（毫秒） */
+            elapsed_ms: number;
+        };
+        CompleteApkeepAccountTestDto: {
+            /** @description Interface 分配的 apkeep 账号标识 */
+            account_id: string;
+            /**
+             * @description 账号测试结果
+             * @enum {string}
+             */
+            status: "succeeded" | "failed";
+            result?: components["schemas"]["ApkeepAccountTestResultDto"];
+            /** @description 失败错误分类，不得包含凭证或邮箱 */
+            error_category?: string;
+        };
         FailResourceTaskDto: Record<string, never>;
         AbandonResourceTaskDto: Record<string, never>;
         ClaimDetectionItemsDto: Record<string, never>;
@@ -8040,6 +8187,7 @@ export interface components {
         CreateDetectionRunDto: Record<string, never>;
         UpdateResourceWorkerStatusDto: Record<string, never>;
         UpdateResourceWorkerTaskProfileDto: Record<string, never>;
+        UpdateResourceWorkerConcurrencyDto: Record<string, never>;
         SystemLogItemDto: {
             /** @example combined-123-2026-03-22T10:30:08.000Z */
             id: string;
@@ -8341,31 +8489,6 @@ export interface components {
         WebGameImportDto: Record<string, never>;
         WebGameConfigDto: Record<string, never>;
         WebGameSortDto: Record<string, never>;
-        ApkeepAccountTestResultDto: {
-            /** @description 用于账号测试的公开 Android 包名 */
-            package_name: string;
-            /**
-             * @description apkeep 产物形态
-             * @enum {string}
-             */
-            artifact_mode: "single" | "bundle" | "split_directory";
-            /** @description 已验证的输出文件数 */
-            output_file_count: number;
-            /** @description 账号测试耗时（毫秒） */
-            elapsed_ms: number;
-        };
-        CompleteApkeepAccountTestDto: {
-            /** @description Interface 分配的 apkeep 账号标识 */
-            account_id: string;
-            /**
-             * @description 账号测试结果
-             * @enum {string}
-             */
-            status: "succeeded" | "failed";
-            result?: components["schemas"]["ApkeepAccountTestResultDto"];
-            /** @description 失败错误分类，不得包含凭证或邮箱 */
-            error_category?: string;
-        };
     };
     responses: never;
     parameters: never;
@@ -16705,6 +16828,279 @@ export interface operations {
             };
         };
     };
+    TagsController_health: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TagsController_audit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TagsController_cleanupPreview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TagsController_cleanupExecute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TagsController_cleanupBatches: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TagsController_rollback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TagsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTagDto"];
+            };
+        };
+        responses: {
+            /** @description 创建标签成功 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    TagsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标签ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 更新标签成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    TagsController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标签ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 删除标签成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    TagsController_findById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 标签ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取标签详情成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    TagsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 查询标签列表成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    TagsController_AppList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 查询标签下游戏成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
     BannerController_list: {
         parameters: {
             query?: {
@@ -17459,279 +17855,6 @@ export interface operations {
             };
         };
     };
-    TagsController_health: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    TagsController_audit: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    TagsController_cleanupPreview: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    TagsController_cleanupExecute: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    TagsController_cleanupBatches: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    TagsController_rollback: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                batchId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    TagsController_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateTagDto"];
-            };
-        };
-        responses: {
-            /** @description 创建标签成功 */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    TagsController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 标签ID */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 更新标签成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    TagsController_remove: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 标签ID */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 删除标签成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    TagsController_findById: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description 标签ID */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 获取标签详情成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    TagsController_list: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 查询标签列表成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    TagsController_AppList: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 查询标签下游戏成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
     FeedbacksController_findAll: {
         parameters: {
             query?: {
@@ -18268,6 +18391,40 @@ export interface operations {
             };
         };
     };
+    FeedbacksController_checkVotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 查询成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 未登录 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     FeedbacksController_incrementVote: {
         parameters: {
             query?: never;
@@ -18282,6 +18439,13 @@ export interface operations {
         responses: {
             /** @description 操作成功 */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 未登录 */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19461,6 +19625,84 @@ export interface operations {
                         /** @example ok */
                         message: string;
                         data: components["schemas"]["SettingModifiedDataDto"];
+                    };
+                };
+            };
+        };
+    };
+    SettingController_getRuntimeConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取运行期配置成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    SettingController_updateRuntimeConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 更新运行期配置成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    SettingController_resetRuntimeConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 恢复默认成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
                     };
                 };
             };
@@ -21063,6 +21305,26 @@ export interface operations {
             };
         };
     };
+    ResourceWorkerGatewayController_runtimeConfigPayload: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ResourceWorkerGatewayController_register: {
         parameters: {
             query?: never;
@@ -21630,6 +21892,29 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateResourceWorkerTaskProfileDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerManagementController_setConcurrency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateResourceWorkerConcurrencyDto"];
             };
         };
         responses: {
@@ -22551,6 +22836,42 @@ export interface operations {
         requestBody?: never;
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_sourceMemories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_clearSourceMemory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pkg: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
