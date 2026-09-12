@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 fbf5d3dea6f6e5b09bb7f4a92c266f8e8d662f13e7533b5619bbc2d179f1d8b2
+ * @contract-sha256 b40a0aa054f5a9630f03e135b6de4a534639c29a01a06e802de4d288ada0f29a
  */
 
 export interface paths {
@@ -8166,6 +8166,13 @@ export interface components {
             output_file_count: number;
             /** @description 账号测试耗时（毫秒） */
             elapsed_ms: number;
+            /**
+             * @description 账号测试档位：probe 只下基础 APK，full 为完整下载链路；缺省按 full
+             * @enum {string}
+             */
+            account_test_mode?: "probe" | "full";
+            /** @description 是否按 split APK 全量下载 */
+            split_apk?: boolean;
         };
         CompleteApkeepAccountTestDto: {
             /** @description Interface 分配的 apkeep 账号标识 */
@@ -8484,6 +8491,14 @@ export interface components {
             weight?: number;
             /** @enum {string} */
             status?: "active" | "disabled" | "cooldown" | "invalid";
+        };
+        TestApkeepAccountDto: {
+            /**
+             * @description probe：只下基础包验证鉴权，不拆分、不上传、不解析，产物立即删除；full：按账号配置拆分下载
+             * @default probe
+             * @enum {string}
+             */
+            test_mode: "probe" | "full";
         };
         WebGameImportPreviewDto: Record<string, never>;
         WebGameImportDto: Record<string, never>;
@@ -23279,7 +23294,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TestApkeepAccountDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
