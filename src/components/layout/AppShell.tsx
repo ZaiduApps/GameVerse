@@ -70,7 +70,8 @@ export default function AppShell({ children, siteName, logoUrl, siteConfig }: Ap
         <main id="main-content" className="min-h-screen">{children}</main>
       ) : isGameDetailPage ? (
         <>
-          <div className="hidden lg:block">
+          {/* Header 的 containing block 是这个包裹层，sticky 必须挂在这里，挂在 Header 上会随页面滚走。 */}
+          <div className="sticky top-0 z-50 hidden lg:block">
             <Header siteName={siteName} logoUrl={logoUrl} />
           </div>
           <main id="main-content" className="min-h-screen flex-grow">{children}</main>
