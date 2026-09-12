@@ -20,6 +20,7 @@ export interface CommunityFeedItem {
   userName: string;
   userAvatarUrl: string;
   timestamp: string;
+  tag: string;
   likesCount: number;
   commentsCount: number;
   viewsCount: number;

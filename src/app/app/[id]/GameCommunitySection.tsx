@@ -1,6 +1,3 @@
-import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
-
 import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
 import { getCommunityPostsByGame } from '@/lib/community-api';
 import type { CommunityPost, GameDetailData } from '@/types';
@@ -21,6 +18,16 @@ function extractPostImage(post: CommunityPost): string {
   return htmlMatch?.[1] || '';
 }
 
+// 帖子标签：优先用置顶/推荐标记，其次用真实分类（话题名或关联游戏名），没有就留空，不编造。
+function resolvePostTag(post: CommunityPost): string {
+  if (post.isTop) return '置顶';
+  if (post.isRecommended) return '推荐';
+  const pick = (...candidates: Array<string | undefined>) =>
+    candidates.map((value) => String(value || '').trim()).find(Boolean) || '';
+  // 只用话题名/标签：category 在无话题时会回落成关联游戏名，做成角标与标题重复，宁可不显示。
+  return pick(post.topicNames?.[0], post.tags?.[0]);
+}
+
 function toFeedItem(post: CommunityPost): CommunityFeedItem {
   return {
     id: String(post.id || '').trim(),
@@ -30,6 +37,7 @@ function toFeedItem(post: CommunityPost): CommunityFeedItem {
     userName: String(post.user?.name || '社区用户').trim() || '社区用户',
     userAvatarUrl: String(post.user?.avatarUrl || '').trim(),
     timestamp: String(post.timestamp || '最近更新').trim() || '最近更新',
+    tag: resolvePostTag(post),
     likesCount: Math.max(0, Number(post.likesCount || 0)),
     commentsCount: Math.max(0, Number(post.commentsCount || 0)),
     viewsCount: Math.max(0, Number(post.viewsCount || 0)),
@@ -70,33 +78,21 @@ export default async function GameCommunitySection({ game }: GameCommunitySectio
     hot = hotResult.status === 'fulfilled' ? hotResult.value.slice(0, 6).map(toFeedItem) : [];
   }
 
-  return (
-    <section>
-      <div className="mb-4 flex items-center justify-between lg:mb-6">
-        <h2 className="flex items-center gap-2 text-xl font-semibold lg:gap-3 lg:font-bold">
-          <span className="h-6 w-1.5 rounded-full bg-tone-amber lg:h-8 lg:w-2" aria-hidden="true" />
-          社区动态
-        </h2>
-        <Link
-          href="/community"
-          className="inline-flex items-center gap-1 text-xs font-bold text-[#005e9f] lg:gap-2 lg:text-sm lg:font-medium lg:text-[#595c5d] lg:hover:text-[#b71211]"
-        >
-          发现更多精彩
-          <ChevronRight className="h-4 w-4" />
-        </Link>
-      </div>
-      <GameCommunityFeed gameName={game.name} latest={latest} hot={hot.length > 0 ? hot : latest} />
-    </section>
-  );
+  // 卡片外壳与标题行统一由 GameCommunityFeed 渲染：排序切换和「进入完整专区」要和标题同处一行。
+  return <GameCommunityFeed gameName={game.name} latest={latest} hot={hot.length > 0 ? hot : latest} />;
 }
 
 export function GameCommunitySkeleton() {
   return (
-    <section aria-busy="true" aria-label="正在加载社区动态">
-      <div className="mb-6 h-8 w-36 animate-pulse rounded bg-[#dadddf]/70" />
-      <div className="space-y-4">
-        {[0, 1].map((index) => (
-          <div key={index} className="h-44 animate-pulse rounded-2xl bg-white/70 dark:bg-card/70" />
+    <section
+      aria-busy="true"
+      aria-label="正在加载社区动态"
+      className="rounded-2xl border border-[#abadae]/20 bg-white p-4 shadow-sm lg:p-6 dark:border-border/45 dark:bg-card/80"
+    >
+      <div className="mb-4 h-6 w-40 animate-pulse rounded bg-[#dadddf]/70 lg:mb-5 lg:h-7" />
+      <div className="space-y-2.5 lg:space-y-3">
+        {[0, 1, 2].map((index) => (
+          <div key={index} className="h-24 animate-pulse rounded-xl bg-[#dadddf]/40 lg:h-36" />
         ))}
       </div>
     </section>

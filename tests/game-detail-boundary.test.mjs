@@ -140,6 +140,9 @@ test('社区内容通过服务端 Suspense 区块获取，客户端岛只负责�
   assert.match(communitySource, /COMMUNITY_FEED_REVALIDATE_SECONDS = 300/);
   assert.match(communitySource, /process\.env\.NEXT_PHASE !== 'phase-production-build'/);
   assert.doesNotMatch(communityFeedSource, /getCommunityPostsByGame|trackedApiFetch|useEffect/);
+  // 排序控件：PC 端在标题行，移动端单独一行右对齐，避免标题被挤成两行。
+  assert.match(communityFeedSource, /<SortToggle className="hidden lg:inline-flex"/);
+  assert.match(communityFeedSource, /lg:hidden">\s*<SortToggle className="inline-flex"/);
 });
 
 test('评价模块与整页状态解耦并按视口延迟加载', () => {
