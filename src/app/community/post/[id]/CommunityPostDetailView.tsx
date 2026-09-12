@@ -1953,7 +1953,7 @@ export default function CommunityPostDetailView({
 
             <CardContent className="space-y-4 p-4">
               {post.title ? (
-                <h1 className="break-words text-[17px] font-semibold leading-7 text-foreground md:text-lg">{post.title}</h1>
+                <h1 className="break-words text-lg font-semibold leading-7 text-foreground md:text-xl">{post.title}</h1>
               ) : null}
 
               {detailTopics.length > 0 ? (

@@ -525,7 +525,8 @@ test('markdown document builder: renders duplicated detail title heading as plai
   assert.doesNotMatch(doc.html, /<h1\b/);
   assert.doesNotMatch(doc.html, /id="post-heading-0"/);
   assert.match(doc.html, /<p[^>]*>无尽梦回 评价讨论<\/p>/);
-  assert.match(doc.html, /text-3xl font-semibold/);
+  assert.match(doc.html, /<p class="mt-6 mb-4 text-\[17px\] font-semibold/);
+  assert.doesNotMatch(doc.html, /text-3xl/);
 });
 
 test('markdown document builder: demotes first h1 contained in detail title', () => {

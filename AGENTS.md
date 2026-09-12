@@ -45,6 +45,7 @@
 - 色彩走 `src/app/globals.css` 里的 `--tone-{blue,red,green,amber,violet,cyan,pink}` 语义色板（`tailwind.config.ts` 映射为 `tone-*`），只用于分类、标签、色条、图标等小面积元素；页面底色、卡片和标题保持中性色，避免大面积彩色渐变与文字渐变。
 - 卡片用 `rounded-xl`/`rounded-2xl` + `border-border/60` + `shadow-sm`；不要恢复任意圆角（如 rounded-[1.75rem]）、大投影（如 shadow-[0_24px_60px_...]）或 hover:-translate-y-* / hover:scale-* 上浮动效。
 - 正文 markdown 排版集中在 `src/lib/utils.ts` 的 `detail` preset：标题用字号+字重+`border-b border-border`，列表用 `list-disc`，引用用左侧描边，不要加彩色底板或伪元素色条。
+- 帖子详情页会把正文里与标题重复的首个 `#` 标题降级成普通块（`renderFirstHeadingMatchingTextAsPlainBlock` 命中后改用 `demotedHeading` 样式）：它必须明显弱于页面 `<h1>`，否则视觉上仍是两个标题；改动详情页标题字号或 `demotedHeading` 时两边一起看。
 
 ## Testing And Verification
 

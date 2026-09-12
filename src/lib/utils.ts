@@ -98,6 +98,8 @@ interface MarkdownClassSet {
   h2: string;
   h3: string;
   h4: string;
+  /** 与帖子标题重复、被降级为普通块的首个一级标题：必须明显弱于页面 h1，否则视觉上仍是两个标题 */
+  demotedHeading: string;
   paragraph: string;
   unorderedList: string;
   unorderedListItem: string;
@@ -129,6 +131,7 @@ const MARKDOWN_CLASS_SETS: Record<MarkdownClassPreset, MarkdownClassSet> = {
     h2: "text-2xl font-bold my-4 border-b pb-2",
     h3: "text-xl font-semibold my-3",
     h4: "text-lg font-semibold my-2",
+    demotedHeading: "my-4 text-base font-semibold",
     paragraph: "my-2",
     unorderedList: "list-disc list-inside my-2 space-y-1",
     unorderedListItem: "",
@@ -158,6 +161,7 @@ const MARKDOWN_CLASS_SETS: Record<MarkdownClassPreset, MarkdownClassSet> = {
     h2: "mt-9 mb-4 border-b border-border pb-2.5 text-2xl font-semibold text-foreground sm:text-[1.7rem]",
     h3: "mt-7 mb-3 text-xl font-semibold text-foreground sm:text-[1.35rem]",
     h4: "mt-6 mb-2 text-lg font-semibold text-foreground/95 sm:text-[1.12rem]",
+    demotedHeading: "mt-6 mb-4 text-[17px] font-semibold tracking-[0.01em] text-foreground/95 sm:text-[18px]",
     paragraph: "my-3 leading-8 text-foreground/90",
     unorderedList: "my-4 list-disc space-y-2 pl-6",
     unorderedListItem: "leading-7 text-foreground/90 marker:text-muted-foreground",
@@ -794,9 +798,14 @@ export const buildRenderedMarkdownDocument = (
           headingDemotionTarget &&
           isFirstHeadingDemotionMatch(text, headingDemotionTarget);
         if (shouldRenderHeadingAsPlainBlock) {
-          const plainAttrs = rawAttrs
+          // 降级只去掉标题语义还不够：沿用 h1 样式（text-3xl）会让正文里那句比页面标题还大，
+          // 看起来仍是两个标题，所以这里换成 demotedHeading 这套弱化样式。
+          const demotedAttrs = rawAttrs
             .replace(/\sdata-toc-source="[^"]*"/g, "")
             .replace(/\sid="[^"]*"/g, "");
+          const plainAttrs = /class="/.test(demotedAttrs)
+            ? demotedAttrs.replace(/class="[^"]*"/, `class="${classSet.demotedHeading}"`)
+            : `${demotedAttrs} class="${classSet.demotedHeading}"`;
           return `<p${plainAttrs}>${inner}</p>`;
         }
         const nextLevel = level;
