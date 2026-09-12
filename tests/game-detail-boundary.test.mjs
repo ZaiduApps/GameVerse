@@ -143,6 +143,9 @@ test('社区内容通过服务端 Suspense 区块获取，客户端岛只负责�
   // 排序控件：PC 端在标题行，移动端单独一行右对齐，避免标题被挤成两行。
   assert.match(communityFeedSource, /<SortToggle className="hidden lg:inline-flex"/);
   assert.match(communityFeedSource, /lg:hidden">\s*<SortToggle className="inline-flex"/);
+  // 摘要截断：line-clamp 与 lg:block 同元素会被 display:block 覆盖，必须分成外层显隐 + 内层截断两层。
+  assert.doesNotMatch(communityFeedSource, /className="[^"]*(?:lg:block[^"]*line-clamp|line-clamp[^"]*lg:block)[^"]*"/);
+  assert.match(communityFeedSource, /<p className="line-clamp-2[^"]*">{post.excerpt}/);
 });
 
 test('评价模块与整页状态解耦并按视口延迟加载', () => {

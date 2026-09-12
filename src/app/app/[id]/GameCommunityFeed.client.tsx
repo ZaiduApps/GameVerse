@@ -135,7 +135,11 @@ function CommunityPostRow({ post, gameName }: { post: CommunityFeedItem; gameNam
           </Link>
         </h3>
 
-        <p className="hidden text-xs leading-relaxed text-[#595c5d] lg:line-clamp-2 lg:block dark:text-muted-foreground">{post.excerpt}</p>
+        {/* line-clamp-2 与 lg:block 落在同一元素上时，变体生成的 display:block 会覆盖 -webkit-box 使截断失效，
+            因此外层只管响应式显隐，内层单独负责行数截断。 */}
+        <div className="hidden lg:block">
+          <p className="line-clamp-2 text-xs leading-relaxed text-[#595c5d] dark:text-muted-foreground">{post.excerpt}</p>
+        </div>
 
         <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-[#757778] lg:mt-0 lg:gap-4 lg:pt-1 lg:text-xs dark:text-muted-foreground">
           <div className="flex items-center gap-3 lg:gap-4">
@@ -165,13 +169,13 @@ function CommunityPostRow({ post, gameName }: { post: CommunityFeedItem; gameNam
         <Link
           href={href}
           aria-label={post.title || gameName}
-          className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-[#abadae]/15 bg-[#eff1f2] lg:h-28 lg:w-48 dark:border-border/40 dark:bg-muted/60"
+          className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-[#abadae]/15 bg-[#eff1f2] lg:h-28 lg:w-32 xl:w-48 dark:border-border/40 dark:bg-muted/60"
         >
           <Image
             src={getPreviewImageUrl(post.imageUrl, 480)}
             alt={post.title || gameName + ' 社区帖子配图'}
             fill
-            sizes="(min-width: 1024px) 192px, 64px"
+            sizes="(min-width: 1280px) 192px, (min-width: 1024px) 128px, 64px"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
         </Link>
