@@ -399,3 +399,12 @@
 .dark .game-detail-stitch [class*='hover:bg-black/5']:hover {
   background-color: hsl(var(--muted) / 0.72) !important;
 }
+
+
+/* 详情页移动端强调色：按 Stitch 移动稿（TapTap 风格）取青绿，PC 端保持站点橙。 */
+@media (max-width: 1023.98px) {
+  .game-detail-stitch {
+    --primary: 175 84% 32%;
+    --ring: 175 84% 32%;
+  }
+}

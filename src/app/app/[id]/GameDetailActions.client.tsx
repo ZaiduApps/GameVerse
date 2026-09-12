@@ -336,7 +336,7 @@ export default function GameDetailActions({
             data-acbox-action={isWebGame ? 'web_game_app_guide_open' : 'game_download_open'}
             data-acbox-label={game.name}
             onClick={openPrimaryAction}
-            className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white shadow-sm transition-colors [@media(hover:hover)]:hover:bg-primary/90 active:bg-primary/90"
+            className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 px-4 text-sm font-bold text-white shadow-md shadow-teal-500/25 transition-[filter] active:from-teal-600 active:to-emerald-600 [@media(hover:hover)]:hover:brightness-105"
           >
             {isWebGame ? <Smartphone className="h-5 w-5" /> : <Download className="h-5 w-5" />}
             <span className="truncate">
