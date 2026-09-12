@@ -33,7 +33,7 @@
 ## Code Map
 
 - `src/app/layout.tsx` is the root shell. It uses the system Chinese font stack, fetches public site config on the server, injects site-config-driven head scripts and CSS, and wraps the app with theme and auth providers.
-- `src/components/layout/AppShell.tsx` controls page chrome. `/download/app` renders without header/footer, `/app/[id]` hides header/footer on small screens, and all other routes use the standard container layout.
+- `src/components/layout/AppShell.tsx` controls page chrome. `/download/app` renders without header/footer, `/app/[id]` hides header/footer on small screens, and all other routes use the standard container layout. On `/app/[id]` the desktop `Header` sits inside a `sticky top-0 z-50 hidden lg:block` wrapper, and the `sticky` must stay on that wrapper: it is the containing block, so a `sticky` on `<Header>` alone only pins within the wrapper's own 64px and the header scrolls away.
 - `src/app/page.tsx` is the main landing page and a good representative SSR entrypoint. It fetches site config plus backend home data, applies SEO filtering, and uses ISR with `revalidate = 120`.
 - SEO endpoints are real app surfaces here: `src/app/robots.ts`, `src/app/sitemap.ts`, and the client-side `/api/seo/push` beacon call in `AppShell.tsx`.
 - `src/lib/site-config.ts` fetches public site config from `/config/site/public?key=...`. `SITE_CONFIG_KEY` changes behavior across the whole site.
@@ -42,14 +42,14 @@
 ## Visual System
 
 - 图标统一使用已内置的 `lucide-react`（package.json 依赖 ^0.475.0），不要再引入第二个图标库；标题/按钮里的图标一律放在文字前面，禁用 emoji 或 “★▲” 之类符号字符充当图标。
-- 色彩走 `src/app/globals.css` 里的 `--tone-{blue,red,green,amber,violet,cyan,pink}` 语义色板（`tailwind.config.ts` 映射为 `tone-*`），只用于分类、标签、色条、图标等小面积元素；页面底色、卡片和标题保持中性色，避免大面积彩色渐变与文字渐变。
+- 色彩走 `src/app/globals.css` 里的 `--tone-{blue,red,green,amber,violet,cyan,pink}` 语义色板（`tailwind.config.ts` 映射为 `tone-*`），只用于分类、标签、色条、图标等小面积元素；页面底色、卡片和标题保持中性色，避免大面积彩色渐变与文字渐变。详情页是受控例外：`src/app/app/[id]/*` 按视觉稿走 `--primary` 强调色，PC 端是站点橙，移动端在 `.game-detail-stitch` 作用域内被 `globals.css` 的 `max-width: 1023.98px` 媒体查询覆写成青绿（视觉稿两端主色不一致，移动端以青绿为准），改详情页配色时两端一起看。
 - 卡片用 `rounded-xl`/`rounded-2xl` + `border-border/60` + `shadow-sm`；不要恢复任意圆角（如 rounded-[1.75rem]）、大投影（如 shadow-[0_24px_60px_...]）或 hover:-translate-y-* / hover:scale-* 上浮动效。
 - 正文 markdown 排版集中在 `src/lib/utils.ts` 的 `detail` preset：标题用字号+字重+`border-b border-border`，列表用 `list-disc`，引用用左侧描边，不要加彩色底板或伪元素色条。
 - 帖子详情页会把正文里与标题重复的首个 `#` 标题降级成普通块（`renderFirstHeadingMatchingTextAsPlainBlock` 命中后改用 `demotedHeading` 样式）：它必须明显弱于页面 `<h1>`，否则视觉上仍是两个标题；改动详情页标题字号或 `demotedHeading` 时两边一起看。
 
 ## Testing And Verification
 
-- There is no CI config in the repo and no broader automated test suite checked in beyond `tests/markdown-render.test.cjs`.
+- There is no CI config in the repo; the checked-in suites run through `package.json` scripts: `pnpm test:markdown` (markdown + community helpers, 44/44), `pnpm test:game-detail` (detail-page boundary assertions + image preview, 18/18) and `pnpm test:seo-runner` (SEO write / indexnow / deploy-fast boundaries, 9/9). `production-release.ps1` itself gates on `typecheck`, `test:markdown`, `test:seo-runner`, `build` and `assert:build-env`; for detail-page work also run `pnpm test:game-detail`.
 - `pnpm test:markdown` covers `src/lib/utils.ts` and is green on the checked-in tree (44/44); the earlier `defined-image html compatibility` mismatch (odd `alt` vs `内容配图`) is fixed.
 - For route or UI work, manual QA matters. Exercise the changed page in the browser because server data, rewrites, and layout branching are route-specific.
 - For API-facing changes, verify against the configured backend or a compatible local service on `127.0.0.1:9527`; many pages depend on live responses and will degrade silently if the backend is absent.
