@@ -156,7 +156,6 @@ export default function CommunityPostDetailView({
   const [dislikeCount, setDislikeCount] = useState(Math.max(0, Number(post.dislikesCount || 0)));
   const [bookmarked, setBookmarked] = useState(false);
   const [viewCount, setViewCount] = useState<number | null>(null);
-  const [detailImageErrors, setDetailImageErrors] = useState<Record<string, boolean>>({});
   const [activePreviewImages, setActivePreviewImages] = useState<string[]>([]);
   const [selectedPreviewIndex, setSelectedPreviewIndex] = useState<number | null>(null);
   const [previewZoom, setPreviewZoom] = useState(1);
@@ -365,20 +364,6 @@ export default function CommunityPostDetailView({
     contentImageUrls.forEach((url) => pushUnique(url));
     return urls;
   }, [contentImageUrls, post.imageUrl]);
-  const detailImages = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          [
-            ...(post.previewImages || []),
-            ...previewImages,
-          ]
-            .map((url) => String(url || '').trim())
-            .filter((url) => /^https?:\/\//i.test(url)),
-        ),
-      ).slice(0, 9),
-    [post.previewImages, previewImages],
-  );
   const detailTopics = useMemo(
     () =>
       Array.from(
@@ -1974,42 +1959,11 @@ export default function CommunityPostDetailView({
               <h2 className="sr-only">帖子正文与玩家讨论内容</h2>
               <article
                 ref={articleRef}
-                className="max-w-none break-words text-[15px] leading-7 text-foreground/90 [&_img]:hidden"
+                className="max-w-none break-words text-[15px] leading-7 text-foreground/90"
                 dangerouslySetInnerHTML={{ __html: renderedContent.html }}
                 onPointerDownCapture={handleMarkdownPointerIntent}
                 onClick={handleMarkdownContainerClick}
               />
-
-              {detailImages.length > 0 ? (
-                <div className="flex max-w-full flex-col items-start gap-3 overflow-hidden">
-                  {detailImages.map((image, imageIndex) => (
-                    <button
-                      key={`${post.id}-detail-image-${imageIndex}-${image}`}
-                      type="button"
-                      data-acbox-action="community_post_image_preview"
-                      data-acbox-label={post.id}
-                      className="relative inline-flex min-h-11 min-w-11 max-w-full items-center justify-center overflow-hidden rounded-md bg-muted text-muted-foreground transition-[filter] hover:brightness-[0.98] sm:max-w-[760px]"
-                      onClick={() => openPreviewImage(image)}
-                    >
-                      {!detailImageErrors[image] ? (
-                        <img
-                          src={image}
-                          alt={post.title || '帖子图片'}
-                          loading={imageIndex === 0 ? 'eager' : 'lazy'}
-                          fetchPriority={imageIndex === 0 ? 'high' : 'auto'}
-                          className="block h-auto w-auto max-h-[680px] max-w-full rounded-md object-contain"
-                          data-ai-hint={post.imageAiHint || 'community post image detail'}
-                          onError={() => setDetailImageErrors((prev) => ({ ...prev, [image]: true }))}
-                        />
-                      ) : (
-                        <span className="flex min-h-28 min-w-44 items-center justify-center px-3 text-xs">
-                          图片加载失败
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
 
               {linkPreviews.length > 0 ? (
                 <div className="space-y-2 rounded-lg bg-muted/25 p-3 shadow-[inset_0_0_0_1px_hsl(var(--border)/0.18)]">
