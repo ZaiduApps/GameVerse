@@ -101,7 +101,7 @@ export default function GameScreenshotGallery({
 
   return (
     <>
-      <div className="scrollbar-hide flex snap-x items-end gap-4 overflow-x-auto pb-2 lg:pb-6">
+      <div className="flex snap-x items-end gap-4 overflow-x-auto pb-2 lg:pb-6 [&::-webkit-scrollbar]:hidden [scrollbar-width:none] [-ms-overflow-style:none]">
         {normalizedScreenshots.map((url, index) => {
           const aspect = measuredAspects[url] || inferredAspects[url] || 'landscape';
           const previewUrl = getPreviewImageUrl(url, previewImageWidth(aspect));
