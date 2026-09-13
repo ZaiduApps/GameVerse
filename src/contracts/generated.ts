@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 f9e93df0997507536bf8262324efe4b2f000e05c96f26af17a74f8c23a587020
+ * @contract-sha256 a256119c2aec5606ec1856b2cca4d062b9c89239a410194c016d26c352d80e90
  */
 
 export interface paths {
@@ -6737,6 +6737,57 @@ export interface paths {
         post?: never;
         /** 清除某个包名的渠道记忆 */
         delete: operations["ResourceUpdateController_clearSourceMemory"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/source-memories/{pkg}/sources/{source}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 人工恢复某个包名下一个被降级的渠道 */
+        delete: operations["ResourceUpdateController_clearSourceMemoryUnreachable"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/unreachable-targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 查询包名级「源不可达」隔离记录 */
+        get: operations["ResourceUpdateController_unreachableTargets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/unreachable-targets/{pkg}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 人工清除某个包名的「源不可达」隔离 */
+        delete: operations["ResourceUpdateController_clearUnreachableTarget"];
         options?: never;
         head?: never;
         patch?: never;
@@ -23319,6 +23370,62 @@ export interface operations {
         };
     };
     ResourceUpdateController_clearSourceMemory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pkg: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_clearSourceMemoryUnreachable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pkg: string;
+                source: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_unreachableTargets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_clearUnreachableTarget: {
         parameters: {
             query?: never;
             header?: never;
