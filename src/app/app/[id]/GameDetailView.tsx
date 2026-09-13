@@ -336,7 +336,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
         </div>
       ) : null}
 
-      <div className="relative z-10 mx-auto hidden max-w-7xl px-4 sm:px-6 lg:block lg:px-16 lg:pb-1 lg:pt-4 2xl:px-20">
+      <div className="relative z-10 mx-auto hidden max-w-7xl px-4 sm:px-6 lg:block lg:px-16 lg:pb-5 lg:pt-6 2xl:px-20">
         <GameDetailBreadcrumb
           gameId={game.pkg || game._id || ''}
           gameName={game.name}

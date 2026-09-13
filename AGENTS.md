@@ -44,6 +44,7 @@
 - 图标统一使用已内置的 `lucide-react`（package.json 依赖 ^0.475.0），不要再引入第二个图标库；标题/按钮里的图标一律放在文字前面，禁用 emoji 或 “★▲” 之类符号字符充当图标。
 - 色彩走 `src/app/globals.css` 里的 `--tone-{blue,red,green,amber,violet,cyan,pink}` 语义色板（`tailwind.config.ts` 映射为 `tone-*`），只用于分类、标签、色条、图标等小面积元素；页面底色、卡片和标题保持中性色，避免大面积彩色渐变与文字渐变。详情页是受控例外：`src/app/app/[id]/*` 按视觉稿走 `--primary` 强调色，PC 端是站点橙，移动端在 `.game-detail-stitch` 作用域内被 `globals.css` 的 `max-width: 1023.98px` 媒体查询覆写成青绿（视觉稿两端主色不一致，移动端以青绿为准），改详情页配色时两端一起看。
 - 卡片用 `rounded-xl`/`rounded-2xl` + `border-border/60` + `shadow-sm`；不要恢复任意圆角（如 rounded-[1.75rem]）、大投影（如 shadow-[0_24px_60px_...]）或 hover:-translate-y-* / hover:scale-* 上浮动效。
+- 详情页首图封面固定两层（`GameHeroArtwork.client.tsx`）：底层是同一张图的 `bg-cover` + 高斯模糊铺满画幅，保证 100% 占比不留空档；上层是清晰图 `object-contain` 居中。首图源分辨率常低于画幅（如 512×250 铺 1106×384），清晰层不要再改回 `object-cover`，否则整图被裁切放大成糊图。截图胶片条（`GameScreenshotGallery.client.tsx`）统一行高（移动端 160 / PC 240）、宽度由各自比例推导，不要改回「按比例各给一套宽高」，否则混排横竖图时矮卡上方会出现大块空白。
 - 正文 markdown 排版集中在 `src/lib/utils.ts` 的 `detail` preset：标题用字号+字重+`border-b border-border`，列表用 `list-disc`，引用用左侧描边，不要加彩色底板或伪元素色条。
 - 帖子详情页会把正文里与标题重复的首个 `#` 标题降级成普通块（`renderFirstHeadingMatchingTextAsPlainBlock` 命中后改用 `demotedHeading` 样式）：它必须明显弱于页面 `<h1>`，否则视觉上仍是两个标题；改动详情页标题字号或 `demotedHeading` 时两边一起看。
 - 帖子详情页正文图片按 markdown 原文位置渲染（`src/lib/utils.ts` 的 `detail` preset 已给正文 `img` 统一圆角与尺寸上限）：不要重新加 `[&_img]:hidden` 把正文图藏起来，也不要再加底部图集区块重复渲染一遍；正文图点击放大（灯箱）是图片唯一的查看入口，由 `CommunityPostDetailView.tsx` 的 `handleMarkdownContainerClick` + `openPreviewImage` 提供，需要保留。

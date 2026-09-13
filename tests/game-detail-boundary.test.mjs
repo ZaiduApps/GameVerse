@@ -158,3 +158,18 @@ test('评价模块与整页状态解耦并按视口延迟加载', () => {
   assert.match(reviewSource, /window\.matchMedia\('\(max-width: 1023px\)'\)/);
   assert.match(viewSource, /summary=\{gameData\.reviewSummary\}/);
 });
+
+test('首图封面按原始比例居中，模糊层保证画幅百分百占比', () => {
+  assert.ok(heroArtworkSource.includes('const artworkLayers = isIconFallback'));
+  assert.ok(heroArtworkSource.includes('object-contain object-center'));
+  assert.ok(heroArtworkSource.includes('blur-xl lg:blur-2xl'));
+  assert.ok(heroArtworkSource.includes('layer.id === refLayerId ? imageRef : undefined'));
+  assert.ok(!heroArtworkSource.includes('object-cover object-center transition-all duration-500'));
+});
+
+test('截图胶片条统一行高，不再按比例各给一套宽高', () => {
+  assert.ok(gallerySource.includes('const SCREENSHOT_CARD_SIZES'));
+  assert.ok(gallerySource.includes('h-[160px] aspect-[9/16] lg:h-[240px]'));
+  assert.ok(gallerySource.includes('h-[160px] aspect-[16/9] lg:h-[240px]'));
+  assert.ok(!gallerySource.includes('items-end'));
+});

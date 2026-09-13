@@ -39,27 +39,37 @@ function getAspectKind(ratio?: number | null): ScreenshotAspectKind {
 }
 
 function inferAspectFromUrl(input: string): ScreenshotAspectKind {
-  const match = input.match(/(\d{2,5})[xX](\d{2,5})/);
+  // 只把被非字母数字分隔的「宽x高」当作尺寸：Google Play 的图片 ID 是随机串，
+  // 里面偶尔会出现 22x27 这类巧合，误判会让卡片宽高比在图片加载完成前后跳一下。
+  const match = input.match(/(?:^|[^0-9a-zA-Z])([0-9]{2,5})[xX]([0-9]{2,5})(?![0-9a-zA-Z])/);
   if (!match) return 'unknown';
   return getAspectKind(Number(match[1]) / Number(match[2]));
 }
 
+// 卡片尺寸表：统一行高 + 由原始比例推导宽度（与 Google Play 截图胶片条一致）。
+// 混排横竖图时若各卡按自身比例各给一套宽高，行高会被最高的一张撑开，矮卡上方就出现大片空白。
+const SCREENSHOT_CARD_SIZES = {
+  portrait: { card: 'h-[160px] aspect-[9/16] lg:h-[240px]', mobile: 90, desktop: 135, preview: 320 },
+  square: { card: 'h-[160px] aspect-square lg:h-[240px]', mobile: 160, desktop: 240, preview: 480 },
+  landscape: { card: 'h-[160px] aspect-[16/9] lg:h-[240px]', mobile: 284, desktop: 427, preview: 860 },
+} as const;
+
+function getCardSize(kind: ScreenshotAspectKind) {
+  return kind === 'portrait' || kind === 'square' ? SCREENSHOT_CARD_SIZES[kind] : SCREENSHOT_CARD_SIZES.landscape;
+}
+
 function cardClassName(kind: ScreenshotAspectKind): string {
-  if (kind === 'portrait') return 'w-[172px] aspect-[9/16] lg:w-[236px]';
-  if (kind === 'square') return 'w-[184px] aspect-square lg:w-[280px]';
-  return 'w-[280px] aspect-[16/9] lg:w-[420px]';
+  return getCardSize(kind).card;
 }
 
 function imageSizes(kind: ScreenshotAspectKind): string {
-  if (kind === 'portrait') return '(min-width: 1024px) 236px, 172px';
-  if (kind === 'square') return '(min-width: 1024px) 280px, 184px';
-  return '(min-width: 1024px) 420px, 280px';
+  const size = getCardSize(kind);
+  return '(min-width: 1024px) ' + size.desktop + 'px, ' + size.mobile + 'px';
 }
 
+// 预览图按展示宽度的 2 倍取（覆盖 DPR2 屏幕），不足一档的按档位向上取。
 function previewImageWidth(kind: ScreenshotAspectKind): number {
-  if (kind === 'portrait') return 472;
-  if (kind === 'square') return 560;
-  return 840;
+  return getCardSize(kind).preview;
 }
 
 export default function GameScreenshotGallery({
@@ -101,7 +111,7 @@ export default function GameScreenshotGallery({
 
   return (
     <>
-      <div className="flex snap-x items-end gap-4 overflow-x-auto pb-2 lg:pb-6 [&::-webkit-scrollbar]:hidden [scrollbar-width:none] [-ms-overflow-style:none]">
+      <div className="flex snap-x items-center gap-3 overflow-x-auto py-1.5 lg:gap-4 [&::-webkit-scrollbar]:hidden [scrollbar-width:none] [-ms-overflow-style:none]">
         {normalizedScreenshots.map((url, index) => {
           const aspect = measuredAspects[url] || inferredAspects[url] || 'landscape';
           const previewUrl = getPreviewImageUrl(url, previewImageWidth(aspect));

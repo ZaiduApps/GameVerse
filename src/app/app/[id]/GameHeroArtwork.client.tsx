@@ -27,6 +27,17 @@ export default function GameHeroArtwork({ gameName, heroImage, icon }: GameHeroA
   const hasCheckedHydratedImage = useRef(false);
   const isIconFallback = Boolean(icon) && currentImage === icon && heroImage !== icon;
   const responsiveImage = getResponsiveImageAttributes(currentImage);
+  // 首图分两层渲染：底层把同一张图放大铺满并高斯模糊，保证画幅 100% 不留空档；
+  // 上层按原始比例居中显示清晰图，四周自然过渡到虚化层。
+  // 首图源分辨率常低于画幅（例如 512×250 铺 1106×384），整图裁切放大必然发虚，所以清晰层用 contain。
+  // 两层共用同一份 src/srcSet/sizes，浏览器只会下载一次。
+  const artworkLayers = isIconFallback
+    ? [{ id: 'fallback', decorative: false, className: 'scale-110 object-cover object-center blur-[10px] saturate-75' }]
+    : [
+        { id: 'backdrop', decorative: true, className: 'scale-110 object-cover object-center blur-xl lg:blur-2xl' },
+        { id: 'sharp', decorative: false, className: 'object-contain object-center' },
+      ];
+  const refLayerId = isIconFallback ? 'fallback' : 'sharp';
 
   const handleImageError = useCallback((failedImage: string) => {
     setCurrentImage((renderedImage) => {
@@ -54,48 +65,48 @@ export default function GameHeroArtwork({ gameName, heroImage, icon }: GameHeroA
   return (
     <div className="absolute inset-0 overflow-hidden bg-[#e6e8ea] dark:bg-[#121924]">
       {responsiveImage.srcSet ? (
-        <>
-          <Head>
-            <link
-              rel="preload"
-              as="image"
-              imageSrcSet={responsiveImage.srcSet}
-              imageSizes={HERO_IMAGE_SIZES}
-              fetchPriority="high"
-            />
-          </Head>
+        <Head>
+          <link
+            rel="preload"
+            as="image"
+            imageSrcSet={responsiveImage.srcSet}
+            imageSizes={HERO_IMAGE_SIZES}
+            fetchPriority="high"
+          />
+        </Head>
+      ) : null}
+      {artworkLayers.map((layer) =>
+        responsiveImage.srcSet ? (
           <img
-            ref={imageRef}
+            key={layer.id}
+            ref={layer.id === refLayerId ? imageRef : undefined}
             src={responsiveImage.src}
             srcSet={responsiveImage.srcSet}
             sizes={HERO_IMAGE_SIZES}
-            alt={`${gameName} 封面图`}
+            alt={layer.decorative ? '' : `${gameName} 封面图`}
+            aria-hidden={layer.decorative || undefined}
             loading="eager"
             decoding="async"
-            fetchPriority="high"
-            className={cn(
-              'absolute inset-0 h-full w-full object-cover object-center transition-all duration-500',
-              isIconFallback && 'scale-110 blur-[10px] saturate-75',
-            )}
-            onError={() => handleImageError(currentImage)}
+            fetchPriority={layer.decorative ? undefined : 'high'}
+            className={cn('absolute inset-0 h-full w-full transition-all duration-500', layer.className)}
+            onError={layer.decorative ? undefined : () => handleImageError(currentImage)}
           />
-        </>
-      ) : currentImage ? (
-        <Image
-          ref={imageRef}
-          src={currentImage}
-          alt={`${gameName} 封面图`}
-          fill
-          priority
-          fetchPriority="high"
-          sizes="100vw"
-          className={cn(
-            'object-cover object-center transition-all duration-500',
-            isIconFallback && 'scale-110 blur-[10px] saturate-75',
-          )}
-          onError={() => handleImageError(currentImage)}
-        />
-      ) : null}
+        ) : currentImage ? (
+          <Image
+            key={layer.id}
+            ref={layer.id === refLayerId ? imageRef : undefined}
+            src={currentImage}
+            alt={layer.decorative ? '' : `${gameName} 封面图`}
+            aria-hidden={layer.decorative || undefined}
+            fill
+            priority={!layer.decorative}
+            fetchPriority={layer.decorative ? undefined : 'high'}
+            sizes="100vw"
+            className={cn('transition-all duration-500', layer.className)}
+            onError={layer.decorative ? undefined : () => handleImageError(currentImage)}
+          />
+        ) : null,
+      )}
       {isIconFallback ? (
         <div className="absolute inset-0 bg-white/14 backdrop-blur-md dark:bg-black/20" />
       ) : null}
