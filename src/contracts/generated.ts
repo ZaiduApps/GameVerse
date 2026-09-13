@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 b40a0aa054f5a9630f03e135b6de4a534639c29a01a06e802de4d288ada0f29a
+ * @contract-sha256 f9e93df0997507536bf8262324efe4b2f000e05c96f26af17a74f8c23a587020
  */
 
 export interface paths {
@@ -3282,6 +3282,210 @@ export interface paths {
         put?: never;
         /** 公共上传：外链图片转存（登录可用） */
         post: operations["UploadController_transferPublicUrl"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-assets/objects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 媒体资源列表（R2 分页） */
+        get: operations["MediaAssetController_listObjects"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-assets/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 存储用量概览 */
+        get: operations["MediaAssetController_stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-assets/references": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 查询某个资源的引用方 */
+        get: operations["MediaAssetController_references"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-assets/detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 资源详情与桶内对账 */
+        get: operations["MediaAssetController_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-assets/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 设置和谐状态（正常 / 和谐下架 / 封禁） */
+        post: operations["MediaAssetController_setStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-assets/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 软删除资源（默认带引用保护） */
+        post: operations["MediaAssetController_softDelete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-assets/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 恢复被软删除的资源 */
+        post: operations["MediaAssetController_restore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-assets/batch/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 批量设置和谐状态（正常 / 和谐下架 / 封禁） */
+        post: operations["MediaAssetController_batchSetStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-assets/batch/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 批量软删除资源（逐条做引用保护） */
+        post: operations["MediaAssetController_batchSoftDelete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-assets/replace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 替换资源内容（上传新对象并回写全部引用，旧对象保留） */
+        post: operations["MediaAssetController_replace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-assets/uploader/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 按上传者批量和谐 / 封禁其全部资源 */
+        post: operations["MediaAssetController_setUploaderStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-assets/references/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 按需重算单个资源的引用索引 */
+        post: operations["MediaAssetController_refreshReferences"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7107,11 +7311,7 @@ export interface components {
              * @example content_user
              * @enum {string}
              */
-            key_type?:
-                | "content_user"
-                | "admin_agent"
-                | "integration"
-                | "legacy";
+            key_type?: "content_user" | "admin_agent" | "integration" | "legacy";
             /**
              * @description 能力列表，默认由 key_type 决定
              * @example [
@@ -7636,33 +7836,7 @@ export interface components {
              * @example link_click
              * @enum {string}
              */
-            event_name?:
-                | "client_action"
-                | "screen_view"
-                | "search_submit"
-                | "link_click"
-                | "webview_action"
-                | "route_decision"
-                | "accel_hit"
-                | "external_open"
-                | "fail_reason"
-                | "game_detail_view"
-                | "download_click"
-                | "download_url_issued"
-                | "splash_ad_impression"
-                | "splash_ad_click"
-                | "splash_ad_skip"
-                | "download_task_pause"
-                | "download_task_resume"
-                | "download_task_retry"
-                | "download_task_delete"
-                | "download_file_open"
-                | "download_file_missing"
-                | "install_click"
-                | "install_submitted"
-                | "install_success"
-                | "install_failed"
-                | "install_cancelled";
+            event_name?: "client_action" | "screen_view" | "search_submit" | "link_click" | "webview_action" | "route_decision" | "accel_hit" | "external_open" | "fail_reason" | "game_detail_view" | "download_click" | "download_url_issued" | "splash_ad_impression" | "splash_ad_click" | "splash_ad_skip" | "download_task_pause" | "download_task_resume" | "download_task_retry" | "download_task_delete" | "download_file_open" | "download_file_missing" | "install_click" | "install_submitted" | "install_success" | "install_failed" | "install_cancelled";
             /**
              * @description 客户端生成的幂等事件 ID
              * @example evt-m3abc-xyz
@@ -7763,6 +7937,57 @@ export interface components {
              * @example https://example.com/image.png
              */
             url: string;
+        };
+        MediaAssetStatusDto: {
+            /** @description 对象键（R2 Key） */
+            key: string;
+            /** @enum {string} */
+            status: "active" | "banned" | "hidden";
+            /** @description 处理原因，写入留证字段 */
+            reason?: string;
+        };
+        MediaAssetDeleteDto: {
+            /** @description 对象键（R2 Key） */
+            key: string;
+            /** @description 是否强制删除被引用的资产；默认 false，仍被内容引用时拒绝删除 */
+            force?: boolean;
+        };
+        MediaAssetKeyQueryDto: {
+            /** @description 对象键（R2 Key） */
+            key: string;
+        };
+        MediaAssetBatchStatusDto: {
+            /** @description 对象键列表 */
+            keys: string[];
+            /** @enum {string} */
+            status: "active" | "banned" | "hidden";
+            /** @description 处理原因，写入留证字段 */
+            reason?: string;
+        };
+        MediaAssetBatchDeleteDto: {
+            /** @description 对象键列表 */
+            keys: string[];
+            /** @description 是否强制删除被引用的资产；默认 false，仍被内容引用时进入 skipped */
+            force?: boolean;
+        };
+        MediaAssetReplaceDto: {
+            /** @description 被替换资源的对象键（R2 Key） */
+            key: string;
+            /** @description 替换原因，写入日志便于追溯 */
+            reason?: string;
+        };
+        MediaAssetUploaderStatusDto: {
+            /** @description 上传者标识（媒体库 uploaded_by）；登记表上线前的存量资源没有归属，命中数为 0 属正常 */
+            uploaded_by: string;
+            /**
+             * @description 上传者类型；不传表示不限类型
+             * @enum {string}
+             */
+            uploaded_by_type?: "admin" | "system" | "user";
+            /** @enum {string} */
+            status: "active" | "banned" | "hidden";
+            /** @description 处理原因，写入留证字段 */
+            reason?: string;
         };
         SaveFaqConfigDto: Record<string, never>;
         CreateTagDto: Record<string, never>;
@@ -8036,18 +8261,7 @@ export interface components {
              * @example admin.content.update
              * @enum {string}
              */
-            task_key?:
-                | "system.daily-log"
-                | "tracking.daily-rollup"
-                | "tracking.daily-rollup-yesterday"
-                | "admin.post-gp"
-                | "admin.content.update"
-                | "admin.update.all-gp"
-                | "admin.update.one-gp"
-                | "admin.get-gp"
-                | "admin.get-qoo"
-                | "admin.resource.audit"
-                | "system.task-run-log-retention";
+            task_key?: "system.daily-log" | "tracking.daily-rollup" | "tracking.daily-rollup-yesterday" | "admin.post-gp" | "admin.content.update" | "admin.update.all-gp" | "admin.update.one-gp" | "admin.get-gp" | "admin.get-qoo" | "admin.resource.audit" | "system.task-run-log-retention";
             /** @description 任务名称 */
             name?: string;
             /** @description 任务说明 */
@@ -8202,13 +8416,7 @@ export interface components {
              * @example combined
              * @enum {string}
              */
-            source:
-                | "combined"
-                | "error"
-                | "tracking"
-                | "import"
-                | "task_scheduler"
-                | "upload";
+            source: "combined" | "error" | "tracking" | "import" | "task_scheduler" | "upload";
             /** @example 2026-03-22T10:30:08.348Z */
             timestamp: string;
             /** @example warn */
@@ -9644,11 +9852,7 @@ export interface operations {
                 /** @description 每页数量 */
                 pageSize?: string;
                 /** @description 密钥类型 */
-                key_type?:
-                    | "content_user"
-                    | "admin_agent"
-                    | "integration"
-                    | "legacy";
+                key_type?: "content_user" | "admin_agent" | "integration" | "legacy";
                 /** @description 风险等级 */
                 risk_level?: "low" | "medium" | "high";
             };
@@ -16727,6 +16931,259 @@ export interface operations {
             };
         };
     };
+    MediaAssetController_listObjects: {
+        parameters: {
+            query?: {
+                /** @description 对象键前缀过滤，如 apkscc/pubgm */
+                prefix?: string;
+                /** @description R2 分页游标，取上一页返回的 next_cursor */
+                cursor?: string;
+                /** @description 每页数量，1-200，默认 30 */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MediaAssetController_stats: {
+        parameters: {
+            query?: {
+                /** @description 是否顺带统计桶内真实用量；桶扫描较慢，结果缓存 10 分钟，默认关闭 */
+                include_bucket?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MediaAssetController_references: {
+        parameters: {
+            query: {
+                /** @description 对象键（R2 Key） */
+                key: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MediaAssetController_detail: {
+        parameters: {
+            query: {
+                /** @description 对象键（R2 Key） */
+                key: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MediaAssetController_setStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaAssetStatusDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MediaAssetController_softDelete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaAssetDeleteDto"];
+            };
+        };
+        responses: {
+            /** @description 资源仍被引用，需强制模式 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MediaAssetController_restore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaAssetKeyQueryDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MediaAssetController_batchSetStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaAssetBatchStatusDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MediaAssetController_batchSoftDelete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaAssetBatchDeleteDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MediaAssetController_replace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["MediaAssetReplaceDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MediaAssetController_setUploaderStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaAssetUploaderStatusDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MediaAssetController_refreshReferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaAssetKeyQueryDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     FaqConfigController_getGlobal: {
         parameters: {
             query?: never;
@@ -21966,14 +22423,7 @@ export interface operations {
                 /** @description Page size */
                 pageSize?: number;
                 /** @description all | combined | error | tracking | import | task_scheduler | upload */
-                source?:
-                    | "all"
-                    | "combined"
-                    | "error"
-                    | "tracking"
-                    | "import"
-                    | "task_scheduler"
-                    | "upload";
+                source?: "all" | "combined" | "error" | "tracking" | "import" | "task_scheduler" | "upload";
                 /** @description error | warn | info | debug | verbose */
                 level?: "error" | "warn" | "info" | "debug" | "verbose";
                 /** @description Log context */
@@ -22083,14 +22533,7 @@ export interface operations {
                 /** @description Page size */
                 pageSize?: number;
                 /** @description all | combined | error | tracking | import | task_scheduler | upload */
-                source?:
-                    | "all"
-                    | "combined"
-                    | "error"
-                    | "tracking"
-                    | "import"
-                    | "task_scheduler"
-                    | "upload";
+                source?: "all" | "combined" | "error" | "tracking" | "import" | "task_scheduler" | "upload";
                 /** @description error | warn | info | debug | verbose */
                 level?: "error" | "warn" | "info" | "debug" | "verbose";
                 /** @description Log context */
