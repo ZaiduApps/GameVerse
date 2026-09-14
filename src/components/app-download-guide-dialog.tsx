@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
 import { ExternalLink, QrCode, Smartphone } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -38,6 +37,31 @@ const DEFAULT_DESKTOP_QR_CAPTION =
   '使用手机扫码后，在 AC 盒子中继续下载与安装。';
 const DEFAULT_PRIMARY_ACTION_LABEL = '前往下载盒子';
 
+const QR_CODE_OPTIONS = {
+  color: {
+    dark: '#0c0f10',
+    light: '#ffffff',
+  },
+  margin: 1,
+  width: 320,
+};
+
+/**
+ * 二维码按目标地址现场生成。
+ * 原先这里写死了 CDN 上的静态图片地址，切换 CDN 域名时弹窗会直接裂图；
+ * 改成从 appUrl 生成后，弹窗里的二维码与按钮跳转的地址永远一致。
+ */
+async function buildQrCodeDataUrl(target: string): Promise<string> {
+  const url = String(target || '').trim();
+  if (!url) return '';
+  try {
+    const qrcode = await import('qrcode');
+    return await qrcode.toDataURL(url, QR_CODE_OPTIONS);
+  } catch {
+    return '';
+  }
+}
+
 export default function AppDownloadGuideDialog({
   open,
   onOpenChange,
@@ -50,6 +74,7 @@ export default function AppDownloadGuideDialog({
   primaryActionLabel = DEFAULT_PRIMARY_ACTION_LABEL,
 }: AppDownloadGuideDialogProps) {
   const [isNarrowScreen, setIsNarrowScreen] = useState(false);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -66,6 +91,16 @@ export default function AppDownloadGuideDialog({
     mediaQuery.addListener(sync);
     return () => mediaQuery.removeListener(sync);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void buildQrCodeDataUrl(appUrl).then((dataUrl) => {
+      if (!cancelled) setQrCodeDataUrl(dataUrl);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [appUrl]);
 
   const handleOpenAppSite = () => {
     window.open(appUrl, '_blank', 'noopener,noreferrer');
@@ -92,12 +127,20 @@ export default function AppDownloadGuideDialog({
         ) : (
           <div className="space-y-3">
             <div className="mx-auto relative h-52 w-52 overflow-hidden rounded-2xl border border-border/70 bg-background shadow-sm">
-              <Image
-                src="https://cdn.apks.cc/blinko/ACBOX_QR.png"
-                alt="ACBOX 下载二维码"
-                fill
-                className="object-cover"
-              />
+              {qrCodeDataUrl ? (
+                <img
+                  src={qrCodeDataUrl}
+                  alt="ACBOX 下载二维码"
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <QrCode
+                    className="h-12 w-12 text-[#757778] dark:text-[#9ca6b8]"
+                    aria-hidden="true"
+                  />
+                </div>
+              )}
             </div>
             <p className="text-center text-xs text-muted-foreground">
               {desktopQrCaption}
