@@ -131,12 +131,15 @@ export default function GameScreenshotGallery({
               )}
               onClick={() => setPreviewIndex(index)}
             >
+              {/* 等比缩放到卡内（contain），不用 cover 填满：卡片比例是按「档位」取整的，图与档位
+                  不完全一致时 cover 会裁掉内容——9:19.5 的全面屏截图塞进 9/16 约裁 18%，4:3 截图塞进
+                  16/9 约裁 25%；截图是「要看清内容」的素材，宁可留白也不裁。 */}
               <Image
                 src={previewUrl}
                 alt={`${gameName} 截图 ${index + 1}`}
                 fill
                 sizes={imageSizes(aspect)}
-                className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                className="object-contain transition-transform duration-500 group-hover:scale-[1.03]"
                 onLoad={(event) => handleImageLoad(url, event)}
               />
             </button>
