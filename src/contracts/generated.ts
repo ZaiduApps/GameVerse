@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 a256119c2aec5606ec1856b2cca4d062b9c89239a410194c016d26c352d80e90
+ * @contract-sha256 32c5fc5311909fb0d285cfec991f896a159b74eb003e6d75ba3c2e76b3533f35
  */
 
 export interface paths {
@@ -3492,6 +3492,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/media-assets/reclaim/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 游戏媒体旧版本回收候选（零引用已标记，只读） */
+        get: operations["MediaAssetController_reclaimCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-assets/reclaim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 归档回收游戏媒体旧版本（默认预演，dry_run=false 才执行） */
+        post: operations["MediaAssetController_reclaim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/faq-config/global": {
         parameters: {
             query?: never;
@@ -6075,7 +6109,7 @@ export interface paths {
         get: operations["ResourceWorkerManagementController_get"];
         put?: never;
         post?: never;
-        /** 软删除离线且无有效租约的远程资源 Worker */
+        /** 硬删除离线且无有效租约的远程资源 Worker（物理删除，节点重连会重新注册） */
         delete: operations["ResourceWorkerManagementController_remove"];
         options?: never;
         head?: never;
@@ -8040,6 +8074,14 @@ export interface components {
             /** @description 处理原因，写入留证字段 */
             reason?: string;
         };
+        MediaAssetReclaimDto: {
+            /** @description 要回收的对象键；与 all_due 二选一 */
+            keys?: string[];
+            /** @description 回收全部已过宽限期的游戏媒体候选（单次上限 500） */
+            all_due?: boolean;
+            /** @description 预演：只返回将回收的清单，不复制也不删除 */
+            dry_run?: boolean;
+        };
         SaveFaqConfigDto: Record<string, never>;
         CreateTagDto: Record<string, never>;
         CreateFeedbackDto: {
@@ -8312,7 +8354,7 @@ export interface components {
              * @example admin.content.update
              * @enum {string}
              */
-            task_key?: "system.daily-log" | "tracking.daily-rollup" | "tracking.daily-rollup-yesterday" | "admin.post-gp" | "admin.content.update" | "admin.update.all-gp" | "admin.update.one-gp" | "admin.get-gp" | "admin.get-qoo" | "admin.resource.audit" | "system.task-run-log-retention";
+            task_key?: "system.daily-log" | "tracking.daily-rollup" | "tracking.daily-rollup-yesterday" | "admin.post-gp" | "admin.content.update" | "admin.update.all-gp" | "admin.update.one-gp" | "admin.get-gp" | "admin.get-qoo" | "admin.resource.audit" | "system.task-run-log-retention" | "system.media-reclaim-scan";
             /** @description 任务名称 */
             name?: string;
             /** @description 任务说明 */
@@ -17224,6 +17266,51 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["MediaAssetKeyQueryDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MediaAssetController_reclaimCandidates: {
+        parameters: {
+            query?: {
+                /** @description 候选范围，默认 game_media */
+                scope?: "game_media" | "all";
+                /** @description 每页数量，1-200，默认 50 */
+                limit?: number;
+                /** @description 偏移量，默认 0 */
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MediaAssetController_reclaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaAssetReclaimDto"];
             };
         };
         responses: {
