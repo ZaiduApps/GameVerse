@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 32c5fc5311909fb0d285cfec991f896a159b74eb003e6d75ba3c2e76b3533f35
+ * @contract-sha256 670ee5be4a543cf6bdd3923f86dbba2251735c948942ab3784659847bcee241a
  */
 
 export interface paths {
@@ -8769,6 +8769,7 @@ export interface components {
             device?: string;
             locale?: string;
             timezone?: string;
+            region?: string;
             split_apk?: boolean;
             accept_tos?: boolean;
             weight?: number;
@@ -8787,6 +8788,7 @@ export interface components {
             device?: string;
             locale?: string;
             timezone?: string;
+            region?: string;
             split_apk?: boolean;
             accept_tos?: boolean;
             weight?: number;
