@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 670ee5be4a543cf6bdd3923f86dbba2251735c948942ab3784659847bcee241a
+ * @contract-sha256 0037d1386c753f197bae2f7c9d6be60cbf4e30c0ebb77abeb0866f0b89fc40d2
  */
 
 export interface paths {
@@ -8354,7 +8354,7 @@ export interface components {
              * @example admin.content.update
              * @enum {string}
              */
-            task_key?: "system.daily-log" | "tracking.daily-rollup" | "tracking.daily-rollup-yesterday" | "admin.post-gp" | "admin.content.update" | "admin.update.all-gp" | "admin.update.one-gp" | "admin.get-gp" | "admin.get-qoo" | "admin.resource.audit" | "system.task-run-log-retention" | "system.media-reclaim-scan";
+            task_key?: "system.daily-log" | "tracking.daily-rollup" | "tracking.daily-rollup-yesterday" | "admin.post-gp" | "admin.content.update" | "admin.update.all-gp" | "admin.update.one-gp" | "admin.get-gp" | "admin.get-qoo" | "admin.resource.audit" | "system.task-run-log-retention" | "system.media-reclaim-scan" | "admin.apkeep.account-health";
             /** @description 任务名称 */
             name?: string;
             /** @description 任务说明 */
