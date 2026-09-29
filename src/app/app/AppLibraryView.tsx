@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 import { trackedApiFetch } from '@/lib/api';
+import { resolveGameName } from '@/lib/game-display-name';
 import {
   GAME_LIBRARY_BROWSE_PAGE_SIZE,
   GAME_LIBRARY_BROWSE_QUERIES,
@@ -171,7 +172,7 @@ function transformApiGameToGame(apiGame: ApiGame, sourceIndex: number): LibraryG
   return {
     id: String(apiGame._id || `game-${sourceIndex}`),
     pkg: String(apiGame.pkg || '').trim(),
-    title: String(apiGame.name || '未命名游戏').trim(),
+    title: resolveGameName(apiGame),
     description: String(apiGame.summary || '').trim() || '精彩内容敬请体验',
     shortDescription: String(apiGame.summary || '').trim() || '精彩内容敬请体验',
     imageUrl: String(apiGame.icon || '').trim() || FALLBACK_ICON,
@@ -180,7 +181,7 @@ function transformApiGameToGame(apiGame: ApiGame, sourceIndex: number): LibraryG
     rating: Number(apiGame.star || 0),
     tags,
     status: 'released',
-    dataAiHint: `game cover ${String(apiGame.name || '').trim() || 'game'}`,
+    dataAiHint: `game cover ${resolveGameName(apiGame) || 'game'}`,
     sourceIndex,
     region,
     deviceList,

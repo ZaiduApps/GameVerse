@@ -1,3 +1,4 @@
+import { resolveGameName } from '@/lib/game-display-name';
 import type { CardConfigItem, GameDetailData } from '@/types';
 
 export interface GameFactItem {
@@ -199,7 +200,7 @@ export function buildGameFactItems(
 }
 
 export function buildInstallSteps(game: GameDetailData['app']): string[] {
-  const name = String(game.name || '该应用').trim() || '该应用';
+  const name = resolveGameName(game) || '该应用';
   return [
     '点击页面中的“立即下载”，优先选择更新日期较新的渠道资源。',
     `下载完成后，确认安装包大小与页面展示信息基本一致，再开始安装 ${name}。`,

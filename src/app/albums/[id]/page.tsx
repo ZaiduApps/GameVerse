@@ -12,6 +12,7 @@ import {
   normalizeAlbumGames,
 } from '@/lib/albums';
 import { absoluteUrl } from '@/lib/seo';
+import { resolveGameName } from '@/lib/game-display-name';
 import { getPublicSiteConfig } from '@/lib/site-config';
 
 export const revalidate = 300;
@@ -224,7 +225,7 @@ export default async function AlbumTopicPage({
       '@type': 'ListItem',
       position: index + 1,
       url: absoluteUrl(getGameHref(game)),
-      name: normalizeText(game.name) || '专题内容',
+      name: resolveGameName(game) || '专题内容',
       image: getAlbumShareImage(
         {
           _id: '',

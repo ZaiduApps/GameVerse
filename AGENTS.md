@@ -38,6 +38,7 @@
 - SEO endpoints are real app surfaces here: `src/app/robots.ts`, `src/app/sitemap.ts`, and the client-side `/api/seo/push` beacon call in `AppShell.tsx`.
 - `src/lib/site-config.ts` fetches public site config from `/config/site/public?key=...`. `SITE_CONFIG_KEY` changes behavior across the whole site.
 - `src/lib/utils.ts` contains the hand-rolled markdown renderer. If you change it, run `pnpm test:markdown`.
+- 游戏展示名一律走 `src/lib/game-display-name.ts` 的 `resolveGameName(game, locale?)`，不要直接读 `game.name`。`game.name` 是 Google Play 原名，只作最后兜底；`metadata.chs` 是运营在后台确定的默认名（zh-CN），`metadata.cht` 是繁体名，`metadata.en` 是英文名。`/search/global` 的 `title` 同样是 GP 原名，必须配合 `metadata` 取值，否则会出现「首页中文名、搜索结果原名」。改动该文件后跑 `pnpm test:game-display-name`。
 
 ## Visual System
 

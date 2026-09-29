@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowRight, BarChartBig, Clock3, Flame, Star, TrendingUp } from 'lucide-react';
 
 import { trackedApiFetch } from '@/lib/api';
+import { resolveGameName } from '@/lib/game-display-name';
 import { absoluteUrl, buildSeoDescription } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import type { ApiGame } from '@/types';
@@ -77,7 +78,7 @@ function toRow(game: ApiGame, index: number): RankingRow {
   return {
     id: String(game._id || `ranking-${index}`),
     pkg: String(game.pkg || '').trim(),
-    title: String(game.name || '未命名游戏').trim() || '未命名游戏',
+    title: resolveGameName(game) || '未命名游戏',
     imageUrl: String(game.icon || '').trim() || FALLBACK_ICON,
     category: tags[0] || '游戏',
     rating: Number(game.star || 0),

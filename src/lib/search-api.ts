@@ -1,4 +1,5 @@
 import { trackedApiFetch } from '@/lib/api';
+import { resolveGameName } from '@/lib/game-display-name';
 import type { SearchResult } from '@/types';
 
 export interface GlobalSearchSection {
@@ -27,6 +28,12 @@ interface ApiSearchItem {
   pkg?: string;
   region?: string;
   rating?: number;
+  metadata?: {
+    chs?: string;
+    cht?: string;
+    en?: string;
+    region?: string;
+  };
 }
 
 interface ApiSearchSection {
@@ -55,8 +62,18 @@ export function createEmptyGlobalSearchResult(q = '', limitPerType = 6): GlobalS
 
 function normalizeItem(input: ApiSearchItem): SearchResult | null {
   const id = String(input?.id || '').trim();
-  const title = String(input?.title || '').trim();
   const type = input?.type;
+
+  // 游戏条目的 title 是 Google Play 原名，与列表/详情页展示的名字对不上。
+  // 这里就地换成展示名，搜索结果的所有消费方不必再各自处理一遍。
+  const title =
+    type === 'game'
+      ? resolveGameName({
+          metadata: input?.metadata,
+          name: input?.title,
+          pkg: input?.pkg,
+        })
+      : String(input?.title || '').trim();
 
   if (!id || !title || !type) {
     return null;

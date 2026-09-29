@@ -1,6 +1,7 @@
 import { cache } from 'react';
 
 import { trackedApiFetch } from '@/lib/api';
+import { resolveGameName } from '@/lib/game-display-name';
 import { getSiteShareImageUrl, normalizeSeoAssetUrl, resolveGameSeoImage, sanitizeSeoText } from '@/lib/seo';
 import type { ApiAlbum, ApiGame, ApiResponse } from '@/types';
 
@@ -81,7 +82,7 @@ export function normalizeAlbumGames(album: ApiAlbum | null | undefined): ApiGame
   for (const game of source) {
     const key = normalizeText(game?.pkg || game?._id);
     if (!key || deduped.has(key)) continue;
-    if (!normalizeText(game?.name)) continue;
+    if (!resolveGameName(game)) continue;
     deduped.set(key, game);
   }
 
@@ -101,7 +102,7 @@ export function getAlbumDescription(album: ApiAlbum | null | undefined): string 
 
   const gameNames = games
     .slice(0, 3)
-    .map((game) => normalizeText(game?.name))
+    .map((game) => resolveGameName(game))
     .filter(Boolean);
   const primaryTag = collectAlbumGameTags(games)[0] || '';
 
@@ -146,7 +147,7 @@ export function getAlbumKeywords(album: ApiAlbum | null | undefined): string[] {
   const games = normalizeAlbumGames(album);
   const gameNames = games
     .slice(0, 6)
-    .map((game) => normalizeText(game?.name))
+    .map((game) => resolveGameName(game))
     .filter(Boolean);
   const gameTags = collectAlbumGameTags(games).slice(0, 8);
 

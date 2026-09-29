@@ -156,14 +156,21 @@ export interface ApiGame {
   file_size?: number | null;
   file_size_text?: string;
   download_count_show?: string;
-  metadata: {
-    en: string;
-    chs: string;
-    cht: string;
-    region: string;
-    deviceList: string[];
-    android_url: string;
-  }
+  /**
+   * 多语言展示名等扩展字段。
+   *
+   * 社区 app_info 只 select 了 _id/name/pkg/icon/summary/tags，
+   * 搜索结果也可能是历史脏数据，所以这里整体按可选处理，
+   * 渲染统一走 resolveGameName 的回退链，不要直接读 metadata.xxx。
+   */
+  metadata?: {
+    en?: string;
+    chs?: string;
+    cht?: string;
+    region?: string;
+    deviceList?: string[];
+    android_url?: string;
+  };
 }
 
 export interface ApiAlbumMetadata {
@@ -297,9 +304,11 @@ export interface ApiGameDetail {
   file_size: number | null;
   latest_content?: string;
   seo?: GameSeoContent;
-  metadata: {
-    region: string;
-  };
+  /**
+   * 与 ApiGame.metadata 同源：region 只是详情页过去唯一用到的字段，
+   * chs/cht/en 同样在库里，漏声明会让详情页拿不到后台维护的中文名。
+   */
+  metadata?: ApiGame['metadata'];
 }
 
 export interface GameSeoContent {

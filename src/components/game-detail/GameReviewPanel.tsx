@@ -22,6 +22,7 @@ import {
   type GameReviewSummary,
 } from '@/lib/game-review-api';
 import { getPreviewImageUrl } from '@/lib/image-preview';
+import { resolveGameName } from '@/lib/game-display-name';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -66,7 +67,7 @@ function buildIdentity(game: Pick<ApiGameDetail, '_id' | 'pkg' | 'name' | 'star'
   return {
     appId: game._id,
     pkg: game.pkg,
-    gameName: game.name,
+    gameName: resolveGameName(game),
     manualScore: game.star,
   };
 }
@@ -75,7 +76,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
   const { token, user, isAuthenticated } = useAuth();
   const { toast } = useToast();
 
-  const identity = useMemo(() => buildIdentity(game), [game._id, game.pkg, game.name, game.star]);
+  const identity = useMemo(() => buildIdentity(game), [game._id, game.pkg, resolveGameName(game), game.star]);
   const canManageAdminSwitch = useMemo(() => hasAdminRole(user?.roles), [user?.roles]);
 
   const [summary, setSummary] = useState<GameReviewSummary | null>(null);
@@ -315,7 +316,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
       }
       toast({
         title: '评分成功',
-        description: `你已为 ${game.name} 打 ${score} 星。`,
+        description: `你已为 ${resolveGameName(game)} 打 ${score} 星。`,
       });
     } finally {
       setIsSubmittingRating(false);

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Download, Star } from 'lucide-react';
 
+import { resolveGameName } from '@/lib/game-display-name';
 import type { ApiGame } from '@/types';
 
 const PAGE_SIZE_DESKTOP = 6;
@@ -116,11 +117,11 @@ export default function RecentUpdatesSection({
           className="group relative flex min-h-[94px] items-center gap-3 rounded-2xl bg-white px-3 py-2.5 shadow-sm transition-colors hover:shadow-md dark:bg-[#0f1723]"
         >
           <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-[#dadddf] dark:bg-[#1a2433]">
-            <Image src={game.icon || fallbackImage} alt={game.name} fill className="object-cover" sizes="56px" />
+            <Image src={game.icon || fallbackImage} alt={resolveGameName(game)} fill className="object-cover" sizes="56px" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <p className="min-w-0 flex-1 truncate text-sm font-semibold dark:text-[#edf2fb]">{game.name}</p>
+              <p className="min-w-0 flex-1 truncate text-sm font-semibold dark:text-[#edf2fb]">{resolveGameName(game)}</p>
               {typeof game.star === 'number' && game.star > 0 && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-[#eff1f2] px-2 py-0.5 text-[10px] font-bold text-[#595c5d] dark:bg-[#223043] dark:text-[#9ca6b8]">
                   <Star className="h-3 w-3 fill-[#fdc003] text-[#fdc003]" />
@@ -151,9 +152,9 @@ export default function RecentUpdatesSection({
             href={getGameHref(game)}
             prefetch={false}
             className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
-            aria-label={`查看${game.name}更新详情`}
+            aria-label={`查看${resolveGameName(game)}更新详情`}
           >
-            <span className="sr-only">查看{game.name}更新详情</span>
+            <span className="sr-only">查看{resolveGameName(game)}更新详情</span>
           </Link>
         </article>
       );

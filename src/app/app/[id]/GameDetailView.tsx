@@ -6,6 +6,7 @@ import { BadgeCheck, ChevronRight, CreditCard, Download, ExternalLink, MessageSq
 import GameAnnouncements from '@/components/game-announcements';
 import GameFaqSection from '@/components/game-detail/GameFaqSection';
 import { normalizeGameFaqItems } from '@/lib/game-faq';
+import { resolveGameName } from '@/lib/game-display-name';
 import { isWebGameType } from '@/lib/game-resource-type';
 import { getPreviewImageUrl } from '@/lib/image-preview';
 import { cn } from '@/lib/utils';
@@ -322,7 +323,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   const ratingCount = Math.max(0, Number(gameData.reviewSummary?.ratingCount || 0));
   const reviewCountLabel = ratingCount > 0 ? formatCompactCount(ratingCount) : undefined;
   const heroDescription = cleanText(game.description || game.summary);
-  const actionGame = { _id: game._id, pkg: game.pkg, name: game.name, version: game.version, type: game.type, file_size: game.file_size };
+  const actionGame = { _id: game._id, pkg: game.pkg, name: resolveGameName(game), version: game.version, type: game.type, file_size: game.file_size };
   // 移动端三宫格只取综合评分 / 下载热度 / 适龄与平台，与稿件一致。
   const mobileMetrics = [heroMetrics[0], heroMetrics[2], heroMetrics[3]].filter(Boolean);
 
@@ -339,7 +340,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
       <div className="relative z-10 mx-auto hidden max-w-7xl px-4 sm:px-6 lg:block lg:px-16 lg:pb-5 lg:pt-6 2xl:px-20">
         <GameDetailBreadcrumb
           gameId={game.pkg || game._id || ''}
-          gameName={game.name}
+          gameName={resolveGameName(game)}
           category={primaryCategory}
           categoryHref={buildTagFilterHref(primaryCategory)}
         />
@@ -352,7 +353,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
             data-stitch="banner"
             className="relative h-72 w-full overflow-hidden bg-[#e6e8ea] sm:h-80 lg:h-96 lg:rounded-3xl lg:border lg:border-[#abadae]/20 lg:shadow-sm dark:bg-[#121924]"
           >
-            <GameHeroArtwork gameName={game.name} heroImage={heroImage} icon={game.icon} />
+            <GameHeroArtwork gameName={resolveGameName(game)} heroImage={heroImage} icon={game.icon} />
             <span className="absolute bottom-16 right-4 z-10 inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/60 px-2.5 py-1 text-xs text-white backdrop-blur-sm lg:hidden">
               <Play className="h-3 w-3 fill-current" aria-hidden="true" />
               {HERO_PV_PILL}
@@ -369,7 +370,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                       {game.icon ? (
                         <Image
                           src={getPreviewImageUrl(game.icon, 320)}
-                          alt={game.name + ' 图标'}
+                          alt={resolveGameName(game) + ' 图标'}
                           fill
                           sizes="(min-width: 1024px) 96px, 80px"
                           className="object-cover"
@@ -385,7 +386,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                   </div>
                   <div className="min-w-0 space-y-2">
                     <HeroBadges badges={trustBadges} />
-                    <h1 className="text-lg font-bold leading-snug tracking-tight text-[#2c2f30] sm:text-xl lg:text-2xl dark:text-foreground">{game.name}</h1>
+                    <h1 className="text-lg font-bold leading-snug tracking-tight text-[#2c2f30] sm:text-xl lg:text-2xl dark:text-foreground">{resolveGameName(game)}</h1>
                     <div className="flex items-center gap-2 text-xs font-medium text-[#595c5d] dark:text-muted-foreground">
                       <span className="inline-flex items-center gap-1 text-[#2c2f30] dark:text-foreground">
                         {game.developer || '开发者未提供'}
@@ -453,7 +454,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
               title="游戏精选截图与实机展示"
               subtitle="点击截图可放大查看高清原始画质"
             >
-              <GameScreenshotGallery gameName={game.name} screenshots={displayScreenshots} />
+              <GameScreenshotGallery gameName={resolveGameName(game)} screenshots={displayScreenshots} />
             </DetailSection>
 
             <DetailSection title="版本与技术参数规格">
@@ -564,7 +565,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
               hint={GUIDE_SECTION_HINT}
               action={
                 <Link
-                  href={'/community/topics?q=' + encodeURIComponent(game.name)}
+                  href={'/community/topics?q=' + encodeURIComponent(resolveGameName(game))}
                   className="inline-flex items-center gap-1 text-xs font-semibold text-primary transition-colors [@media(hover:hover)]:hover:underline"
                 >
                   社区攻略讨论
@@ -577,7 +578,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
 
             <div id="game-detail-section-community">
               <Suspense fallback={<GameCommunitySkeleton />}>
-                <GameCommunitySection game={{ _id: game._id, pkg: game.pkg, name: game.name }} />
+                <GameCommunitySection game={{ _id: game._id, pkg: game.pkg, name: resolveGameName(game) }} />
               </Suspense>
             </div>
 
@@ -592,7 +593,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
             <div id="game-detail-section-reviews">
               <Suspense fallback={<div className="min-h-[31rem] animate-pulse rounded-2xl bg-white/70 dark:bg-card/70" />}>
                 <DeferredGameReviewPanel
-                  game={{ _id: game._id, pkg: game.pkg, name: game.name, star: game.star }}
+                  game={{ _id: game._id, pkg: game.pkg, name: resolveGameName(game), star: game.star }}
                   summary={gameData.reviewSummary}
                 />
               </Suspense>

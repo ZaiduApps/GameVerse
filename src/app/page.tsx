@@ -22,6 +22,7 @@ import HomeQuickSearchCard from '@/components/home/HomeQuickSearchCard';
 import RecentUpdatesSection from '@/components/home/RecentUpdatesSection';
 import { getAlbumHref } from '@/lib/albums';
 import { getClientLandingAppData, type ClientLandingAppData } from '@/lib/client-landing';
+import { resolveGameName } from '@/lib/game-display-name';
 import type { Announcement, ApiAlbum, ApiArticle, ApiBanner, ApiDynamicPost, ApiGame, HomeData } from '@/types';
 import { trackedApiFetch } from '@/lib/api';
 import { getPublicSiteConfig } from '@/lib/site-config';
@@ -578,14 +579,14 @@ export default async function HomePage() {
                     <div className="relative mb-2 h-32 w-full overflow-hidden rounded-xl bg-[#e6e8ea] dark:bg-[#1a2433]">
                       <Image
                         src={game.header_image || game.icon || FALLBACK_GAME_IMAGE}
-                        alt={game.name}
+                        alt={resolveGameName(game)}
                         fill
                         className="rounded-xl object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                         sizes="(max-width: 767px) 50vw, 25vw"
                       />
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <h4 className="min-w-0 flex-1 truncate text-sm font-semibold">{game.name}</h4>
+                      <h4 className="min-w-0 flex-1 truncate text-sm font-semibold">{resolveGameName(game)}</h4>
                       {game.metadata?.region && (
                         <span className="inline-flex rounded-md bg-[#eff1f2] px-1 py-0.5 text-[10px] font-bold text-[#595c5d] dark:bg-[#223043] dark:text-[#9ca6b8]">
                           {game.metadata.region}
@@ -600,9 +601,9 @@ export default async function HomePage() {
                       href={getGameHref(game)}
                       prefetch={false}
                       className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
-                      aria-label={`查看${game.name}详情`}
+                      aria-label={`查看${resolveGameName(game)}详情`}
                     >
-                      <span className="sr-only">查看{game.name}详情</span>
+                      <span className="sr-only">查看{resolveGameName(game)}详情</span>
                     </Link>
                   </article>
                 ))}
@@ -648,7 +649,7 @@ export default async function HomePage() {
                       <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl bg-[#dadddf] dark:bg-[#223043]">
                         <Image
                           src={game.icon || FALLBACK_GAME_IMAGE}
-                          alt={game.name}
+                          alt={resolveGameName(game)}
                           fill
                           className="object-cover"
                           sizes="80px"
@@ -656,7 +657,7 @@ export default async function HomePage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <h4 className="min-w-0 flex-1 truncate text-lg font-semibold" title={game.name}>{clampText(game.name, 16)}</h4>
+                          <h4 className="min-w-0 flex-1 truncate text-lg font-semibold" title={resolveGameName(game)}>{clampText(resolveGameName(game), 16)}</h4>
                           {region && (
                             <span className="inline-flex shrink-0 rounded-md bg-[#dadddf] px-1.5 py-0.5 text-[10px] font-bold text-[#595c5d] dark:bg-[#2a3b52] dark:text-[#9ca6b8]">
                               {region}
@@ -698,9 +699,9 @@ export default async function HomePage() {
                       href={getGameHref(game)}
                       prefetch={false}
                       className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
-                      aria-label={`查看${game.name}预约详情`}
+                      aria-label={`查看${resolveGameName(game)}预约详情`}
                     >
-                      <span className="sr-only">查看{game.name}预约详情</span>
+                      <span className="sr-only">查看{resolveGameName(game)}预约详情</span>
                     </Link>
                   </article>
                     );
@@ -735,21 +736,21 @@ export default async function HomePage() {
                       <div className="relative mb-2.5 aspect-square overflow-hidden rounded-xl bg-[#e6e8ea] dark:bg-[#1a2433]">
                         <Image
                           src={game.icon || FALLBACK_GAME_IMAGE}
-                          alt={game.name}
+                          alt={resolveGameName(game)}
                           fill
                           className="object-cover"
                           sizes="(max-width: 640px) 45vw, 160px"
                         />
                       </div>
-                      <p className="line-clamp-1 text-sm font-semibold">{game.name}</p>
+                      <p className="line-clamp-1 text-sm font-semibold">{resolveGameName(game)}</p>
                       <p className="mt-1 line-clamp-1 text-xs text-[#595c5d] dark:text-[#9ca6b8]">{game.tags?.[0] || game.summary || '热门推荐'}</p>
                       <Link
                         href={getGameHref(game)}
                         prefetch={false}
                         className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
-                        aria-label={`查看${game.name}详情`}
+                        aria-label={`查看${resolveGameName(game)}详情`}
                       >
-                        <span className="sr-only">查看{game.name}详情</span>
+                        <span className="sr-only">查看{resolveGameName(game)}详情</span>
                       </Link>
                     </article>
                   ))}
@@ -807,14 +808,14 @@ export default async function HomePage() {
                     <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-xl bg-[#eff1f2] dark:bg-[#223043]">
                       <Image
                         src={game.icon || FALLBACK_GAME_IMAGE}
-                        alt={game.name}
+                        alt={resolveGameName(game)}
                         fill
                         className="object-cover"
                         sizes="48px"
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold group-hover:text-[#b71211]">{game.name}</p>
+                      <p className="truncate text-sm font-semibold group-hover:text-[#b71211]">{resolveGameName(game)}</p>
                       <p className="truncate text-xs text-[#595c5d] dark:text-[#9ca6b8]">
                         {game.tags?.[0] || '热门'} · {typeof game.star === 'number' && game.star > 0 ? `${game.star.toFixed(1)}分` : '玩家推荐'}
                       </p>
@@ -824,9 +825,9 @@ export default async function HomePage() {
                       href={getGameHref(game)}
                       prefetch={false}
                       className="absolute inset-0 z-30 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
-                      aria-label={`查看${game.name}详情`}
+                      aria-label={`查看${resolveGameName(game)}详情`}
                     >
-                      <span className="sr-only">查看{game.name}详情</span>
+                      <span className="sr-only">查看{resolveGameName(game)}详情</span>
                     </Link>
                   </article>
                 ))}
@@ -862,20 +863,20 @@ export default async function HomePage() {
                     <div className="relative mx-auto mb-2.5 h-12 w-12 overflow-hidden rounded-full bg-[#eff1f2]">
                       <Image
                         src={game.icon || FALLBACK_GAME_IMAGE}
-                        alt={game.name}
+                        alt={resolveGameName(game)}
                         fill
                         className="object-cover"
                         sizes="48px"
                       />
                     </div>
-                    <p className="line-clamp-1 text-sm font-semibold">{game.name}</p>
+                    <p className="line-clamp-1 text-sm font-semibold">{resolveGameName(game)}</p>
                     <Link
                       href={getGameHref(game)}
                       prefetch={false}
                       className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
-                      aria-label={`查看${game.name}详情`}
+                      aria-label={`查看${resolveGameName(game)}详情`}
                     >
-                      <span className="sr-only">查看{game.name}详情</span>
+                      <span className="sr-only">查看{resolveGameName(game)}详情</span>
                     </Link>
                   </article>
                 ))}

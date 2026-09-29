@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import GameDetailView from './GameDetailView';
 import { trackedApiFetch } from '@/lib/api';
 import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
+import { resolveGameName } from '@/lib/game-display-name';
 import {
   absoluteUrl,
   buildGameDetailSeo,
@@ -158,7 +159,7 @@ async function getRelatedNews(game: GameDetailData['app']): Promise<RelatedNewsI
       pageSize: 8,
       appId: game._id,
       pkg: game.pkg || undefined,
-      gameName: game.name,
+      gameName: resolveGameName(game),
     });
     return posts
       .map(toRelatedNewsItem)
@@ -400,7 +401,7 @@ export async function generateMetadata({
     share_image: '',
   };
   const siteName = normalizeText(basic.site_name) || 'APKScc';
-  const normalizedName = normalizeText(game.name);
+  const normalizedName = resolveGameName(game);
   const detailSeo = buildGameDetailSeo({
     name: normalizedName,
     pkg: game.pkg,
@@ -456,7 +457,7 @@ export async function generateMetadata({
               url: heroImage,
               width: 1200,
               height: 630,
-              alt: game.name,
+              alt: resolveGameName(game),
             },
           ]
         : [],
@@ -495,7 +496,7 @@ export default async function GameDetailPage({
   const canonicalUrl = absoluteUrl(canonicalPath);
   const heroImage = resolveGameSeoImage(game, getSiteShareImageUrl());
   const description = buildGameDetailSeo({
-    name: game.name,
+    name: resolveGameName(game),
     pkg: game.pkg,
     type: game.type,
     region: game.metadata?.region,
@@ -524,7 +525,7 @@ export default async function GameDetailPage({
   const detailJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    name: game.name,
+    name: resolveGameName(game),
     applicationCategory: schemaApplicationCategory(game.type),
     operatingSystem: isWebGame ? 'Web Browser' : 'Android',
     inLanguage: 'zh-CN',
@@ -589,7 +590,7 @@ export default async function GameDetailPage({
       {
         '@type': 'ListItem',
         position: 3,
-        name: game.name,
+        name: resolveGameName(game),
         item: canonicalUrl,
       },
     ],
@@ -612,7 +613,7 @@ export default async function GameDetailPage({
   const relatedAppsJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: `${game.name} 相似推荐`,
+    name: `${resolveGameName(game)} 相似推荐`,
     itemListElement: recommendedGames.map((item, index) => ({
       '@type': 'ListItem',
       position: index + 1,

@@ -1,4 +1,5 @@
 import { trackedApiFetch } from '@/lib/api';
+import { resolveGameName } from '@/lib/game-display-name';
 import { getMyFollowedTopics, toCommunityPost, type ApiCommunityPost, type CommunityTopicItem } from '@/lib/community-api';
 import type { CommunityPost, Game } from '@/types';
 
@@ -184,7 +185,7 @@ export async function getMyReservationGames(params: {
     const list: Game[] = rawList.map((item) => ({
       id: String(item.app_id || item.pkg || '').trim(),
       pkg: String(item.pkg || '').trim() || undefined,
-      title: String(item.name || '未命名游戏').trim(),
+      title: resolveGameName(item) || '未命名游戏',
       description: String(item.summary || '').trim(),
       shortDescription: String(item.summary || '').trim(),
       imageUrl: String(item.icon || '/placeholder.svg').trim() || '/placeholder.svg',
@@ -238,7 +239,7 @@ export function extractFollowedGamesFromTopics(topics: CommunityTopicItem[]): Ga
     games.push({
       id: appId || pkg,
       pkg: pkg || undefined,
-      title: String(app.name || '未命名游戏').trim(),
+      title: resolveGameName(app) || '未命名游戏',
       description: String(app.summary || '').trim(),
       shortDescription: String(app.summary || '').trim(),
       imageUrl: String(app.icon || '/placeholder.svg').trim() || '/placeholder.svg',

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Star, ChevronRight as ChevronRightIcon, Gamepad2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { resolveGameName } from '@/lib/game-display-name';
 import { Badge } from '@/components/ui/badge';
 
 interface GameCarouselProps {
@@ -179,7 +180,7 @@ export default function GameCarousel({ bannerItems, autoPlayInterval = 5000 }: G
                     <div className="relative h-10 w-10 flex-shrink-0 sm:h-12 sm:w-12 md:h-14 md:w-14">
                       <Image
                         src={item.game.icon}
-                        alt={`${item.game.name} icon`}
+                        alt={`${resolveGameName(item.game)} icon`}
                         fill
                         className="rounded-xl object-cover"
                         sizes="64px"
@@ -235,7 +236,7 @@ export default function GameCarousel({ bannerItems, autoPlayInterval = 5000 }: G
                    <div className="flex items-center">
                       <Badge variant="outline" className="text-xs px-1.5 py-0.5">{item.game.tags?.[0] || '游戏'}</Badge>
                       <span className="mx-1.5">|</span>
-                      <Badge variant="outline" className="text-xs px-1.5 py-0.5">{item.game.metadata.region}</Badge>
+                      <Badge variant="outline" className="text-xs px-1.5 py-0.5">{item.game.metadata?.region}</Badge>
                    </div>
                    {item.game.star > 0 && (
                      <div className="flex items-center">

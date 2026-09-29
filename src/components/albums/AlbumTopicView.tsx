@@ -9,6 +9,7 @@ import {
   getAlbumStyleLabel,
   normalizeAlbumGames,
 } from '@/lib/albums';
+import { resolveGameName } from '@/lib/game-display-name';
 import type { ApiAlbum, ApiGame } from '@/types';
 
 const FALLBACK_IMAGE = '/favicon.ico';
@@ -242,13 +243,13 @@ function FeatureGameCard({
     <Link
       href={getGameHref(game)}
       data-acbox-action="album_feature_game_click"
-      data-acbox-label={normalizeText(game.name) || '专题首屏推荐'}
+      data-acbox-label={resolveGameName(game) || '专题首屏推荐'}
       className="group overflow-hidden rounded-2xl border border-white/12 bg-white/10 shadow-sm backdrop-blur"
     >
       <div className="relative h-56 overflow-hidden">
         <Image
           src={imageUrl || FALLBACK_IMAGE}
-          alt={normalizeText(game.name) || '专题精选'}
+          alt={resolveGameName(game) || '专题精选'}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
           sizes="(max-width: 1279px) 100vw, 360px"
@@ -262,7 +263,7 @@ function FeatureGameCard({
         </div>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xl font-semibold leading-tight">{normalizeText(game.name) || '专题内容'}</p>
+            <p className="text-xl font-semibold leading-tight">{resolveGameName(game) || '专题内容'}</p>
             <p className="mt-2 text-sm leading-6 text-white/82">{summary}</p>
           </div>
           <span className="rounded-full bg-white/14 px-2.5 py-1 text-xs font-bold text-white/88">
@@ -294,20 +295,20 @@ function SupportingGameCard({
     <Link
       href={getGameHref(game)}
       data-acbox-action="album_supporting_game_click"
-      data-acbox-label={normalizeText(game.name) || '专题辅助推荐'}
+      data-acbox-label={resolveGameName(game) || '专题辅助推荐'}
       className="group flex items-center gap-3 rounded-2xl border border-white/12 bg-white/10 p-3.5 text-white transition-transform hover:-translate-y-0.5"
     >
       <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl bg-white/8">
         <Image
           src={imageUrl || FALLBACK_IMAGE}
-          alt={normalizeText(game.name) || '专题推荐'}
+          alt={resolveGameName(game) || '专题推荐'}
           fill
           className="object-cover"
           sizes="64px"
         />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold">{normalizeText(game.name) || '未命名内容'}</p>
+        <p className="truncate text-sm font-semibold">{resolveGameName(game) || '未命名内容'}</p>
         <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/72">
           {clampText(normalizeText(game.summary) || normalizeText(game.tags?.[0]) || '专题推荐游戏', 44)}
         </p>
@@ -336,13 +337,13 @@ function ShowcaseCard({
     <Link
       href={getGameHref(game)}
       data-acbox-action="album_showcase_game_click"
-      data-acbox-label={normalizeText(game.name) || '专题精选游戏'}
+      data-acbox-label={resolveGameName(game) || '专题精选游戏'}
       className={`group overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-all hover:-translate-y-0.5 ${cardRing}`}
     >
       <div className="relative h-48 overflow-hidden bg-[#e9eef4]">
         <Image
           src={imageUrl || FALLBACK_IMAGE}
-          alt={normalizeText(game.name) || '专题推荐'}
+          alt={resolveGameName(game) || '专题推荐'}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
           sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw"
@@ -356,7 +357,7 @@ function ShowcaseCard({
       <div className="space-y-3 p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold text-[#15202b]">{normalizeText(game.name) || '未命名游戏'}</h3>
+            <h3 className="text-lg font-semibold text-[#15202b]">{resolveGameName(game) || '未命名游戏'}</h3>
             <p className="mt-1 text-sm font-semibold text-[#4a6074]">{buildGameMetaLine(game)}</p>
           </div>
           <span className="rounded-full bg-[#edf7ff] px-2.5 py-1 text-xs font-bold text-[#005e9f]">
@@ -398,7 +399,7 @@ function RankingRow({
     <Link
       href={getGameHref(game)}
       data-acbox-action="album_ranking_game_click"
-      data-acbox-label={`${index + 1}. ${normalizeText(game.name) || '专题榜单游戏'}`}
+      data-acbox-label={`${index + 1}. ${resolveGameName(game) || '专题榜单游戏'}`}
       className={`group flex items-center gap-4 rounded-2xl border border-border bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 ${cardRing}`}
     >
       <div className="flex w-10 flex-shrink-0 items-center justify-center text-xl font-semibold text-[#b71211]">
@@ -407,7 +408,7 @@ function RankingRow({
       <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl bg-[#e9eef4]">
         <Image
           src={imageUrl || FALLBACK_IMAGE}
-          alt={normalizeText(game.name) || '榜单游戏'}
+          alt={resolveGameName(game) || '榜单游戏'}
           fill
           className="object-cover"
           sizes="64px"
@@ -415,7 +416,7 @@ function RankingRow({
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <h3 className="truncate text-base font-semibold text-[#15202b]">{normalizeText(game.name) || '未命名游戏'}</h3>
+          <h3 className="truncate text-base font-semibold text-[#15202b]">{resolveGameName(game) || '未命名游戏'}</h3>
           {showFlame ? <Flame className="h-4 w-4 text-[#ff7a00]" /> : null}
         </div>
         <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#4a6074]">
@@ -453,21 +454,21 @@ function PreregCard({
     <Link
       href={getGameHref(game)}
       data-acbox-action="album_prereg_game_click"
-      data-acbox-label={normalizeText(game.name) || '预约专题游戏'}
+      data-acbox-label={resolveGameName(game) || '预约专题游戏'}
       className={`group flex h-full flex-col justify-between gap-5 rounded-2xl border border-border bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 ${cardRing}`}
     >
       <div className="flex items-start gap-4">
         <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl bg-[#f7ecef]">
           <Image
             src={imageUrl || FALLBACK_IMAGE}
-            alt={normalizeText(game.name) || '预约新游'}
+            alt={resolveGameName(game) || '预约新游'}
             fill
             className="object-cover"
             sizes="80px"
           />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-lg font-semibold text-[#15202b]">{clampText(normalizeText(game.name) || '预约内容', 18)}</h3>
+          <h3 className="text-lg font-semibold text-[#15202b]">{clampText(resolveGameName(game) || '预约内容', 18)}</h3>
           <p className="mt-1 text-sm font-semibold text-[#9a214f]">
             {normalizeText(game?.metadata?.region) || '国际服'}
           </p>
@@ -516,21 +517,21 @@ function CompactToolCard({
     <Link
       href={getGameHref(game)}
       data-acbox-action="album_tool_game_click"
-      data-acbox-label={normalizeText(game.name) || '工具专题应用'}
+      data-acbox-label={resolveGameName(game) || '工具专题应用'}
       className={`group rounded-2xl border border-border bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 ${cardRing}`}
     >
       <div className="flex items-center gap-3">
         <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-2xl bg-[#edf5ff]">
           <Image
             src={imageUrl || FALLBACK_IMAGE}
-            alt={normalizeText(game.name) || '工具应用'}
+            alt={resolveGameName(game) || '工具应用'}
             fill
             className="object-cover"
             sizes="56px"
           />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-semibold text-[#15202b]">{normalizeText(game.name) || '工具应用'}</h3>
+          <h3 className="truncate text-base font-semibold text-[#15202b]">{resolveGameName(game) || '工具应用'}</h3>
           <p className="mt-1 truncate text-sm text-[#4a6074]">{normalizeText(game.tags?.[0]) || '效率工具'}</p>
         </div>
         <span className="rounded-full bg-[#edf7ff] px-2.5 py-1 text-xs font-bold text-[#005e9f]">

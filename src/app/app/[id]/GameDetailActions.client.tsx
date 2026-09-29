@@ -15,6 +15,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { buildFeedbackCommonFields, submitFeedbackTicket } from '@/lib/feedback';
+import { resolveGameName } from '@/lib/game-display-name';
 import { getGamePrimaryActionKind, isWebGameType } from '@/lib/game-resource-type';
 import { cn } from '@/lib/utils';
 import type { ApiDownloadResource, ApiGameDetail, CardConfigItem } from '@/types';
@@ -82,7 +83,7 @@ export default function GameDetailActions({
   const handleShare = useCallback(async () => {
     try {
       if (navigator.share) {
-        await navigator.share({ title: game.name + ' - ACBOX', url: window.location.href });
+        await navigator.share({ title: resolveGameName(game) + ' - ACBOX', url: window.location.href });
         return;
       }
       if (navigator.clipboard?.writeText) {
@@ -92,7 +93,7 @@ export default function GameDetailActions({
     } catch {
       // 用户主动取消系统分享时无需提示错误。
     }
-  }, [game.name, toast]);
+  }, [resolveGameName(game), toast]);
 
   const handleFavoriteToggle = useCallback(() => {
     setIsFavorite((current) => {
@@ -138,7 +139,7 @@ export default function GameDetailActions({
           type: 'missing',
           title: '求添加资源反馈',
           description: [
-            '缺少资源：' + game.name,
+            '缺少资源：' + resolveGameName(game),
             '游戏包名：' + (game.pkg || '未提供'),
             '当前版本：' + (game.version || '未提供'),
             '提交用户：' + (common.nickname || '游客'),
@@ -181,7 +182,7 @@ export default function GameDetailActions({
           type="button"
           aria-haspopup="dialog"
           data-acbox-action={isWebGame ? 'web_game_app_guide_open' : 'game_download_open'}
-          data-acbox-label={game.name}
+          data-acbox-label={resolveGameName(game)}
           onClick={openPrimaryAction}
           className="group flex h-14 w-full items-center justify-between rounded-xl bg-primary px-5 text-white shadow-sm transition-colors [@media(hover:hover)]:hover:bg-primary/90"
         >
@@ -260,7 +261,7 @@ export default function GameDetailActions({
               isHeaderSolid ? 'text-[#2c2f30] opacity-100 dark:text-foreground' : 'max-w-[170px] text-white/90 opacity-0',
             )}
           >
-            {game.name}
+            {resolveGameName(game)}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -334,7 +335,7 @@ export default function GameDetailActions({
             type="button"
             aria-haspopup="dialog"
             data-acbox-action={isWebGame ? 'web_game_app_guide_open' : 'game_download_open'}
-            data-acbox-label={game.name}
+            data-acbox-label={resolveGameName(game)}
             onClick={openPrimaryAction}
             className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 px-4 text-sm font-bold text-white shadow-md shadow-teal-500/25 transition-[filter] active:from-teal-600 active:to-emerald-600 [@media(hover:hover)]:hover:brightness-105"
           >
@@ -361,8 +362,8 @@ export default function GameDetailActions({
           open={appGuideOpen}
           onOpenChange={setAppGuideOpen}
           title="请在 AC 盒子中游玩"
-          mobileDescription={game.name + ' 为页游，请先安装或打开 AC 盒子，在 App 内开始游玩。'}
-          desktopDescription={'请使用手机扫码下载 AC 盒子，在 App 内搜索 ' + game.name + ' 并开始游玩。'}
+          mobileDescription={resolveGameName(game) + ' 为页游，请先安装或打开 AC 盒子，在 App 内开始游玩。'}
+          desktopDescription={'请使用手机扫码下载 AC 盒子，在 App 内搜索 ' + resolveGameName(game) + ' 并开始游玩。'}
           mobileFeatureText="AC 盒子会在 App 内打开页游，并应用现有 WebView 加速策略。"
           desktopQrCaption="使用手机扫码下载 AC 盒子，安装后在 App 内开始游玩。"
           primaryActionLabel="前往下载 AC 盒子"

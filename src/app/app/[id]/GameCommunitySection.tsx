@@ -1,4 +1,5 @@
 import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
+import { resolveGameName } from '@/lib/game-display-name';
 import { getCommunityPostsByGame } from '@/lib/community-api';
 import type { CommunityPost, GameDetailData } from '@/types';
 import GameCommunityFeed from './GameCommunityFeed.client';
@@ -50,7 +51,7 @@ async function fetchFeed(game: GameCommunitySectionProps['game'], sort: 'latest'
     pageSize: 12,
     appId: game._id,
     pkg: game.pkg || undefined,
-    gameName: game.name,
+    gameName: resolveGameName(game),
     maxQueryCandidates: 2,
     fetchOptions: {
       cache: 'force-cache',
@@ -79,7 +80,7 @@ export default async function GameCommunitySection({ game }: GameCommunitySectio
   }
 
   // 卡片外壳与标题行统一由 GameCommunityFeed 渲染：排序切换和「进入完整专区」要和标题同处一行。
-  return <GameCommunityFeed gameName={game.name} latest={latest} hot={hot.length > 0 ? hot : latest} />;
+  return <GameCommunityFeed gameName={resolveGameName(game)} latest={latest} hot={hot.length > 0 ? hot : latest} />;
 }
 
 export function GameCommunitySkeleton() {
