@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 639e34b8d45276e3bded2fb0ada2939e27d69ec9b0b6747fe779311f64744e97
+ * @contract-sha256 1de83108892790ee588d01c83c57de5cc4f1f6e12ece3c675d009238bba53924
  */
 
 export interface paths {
@@ -8733,6 +8733,16 @@ export interface components {
              */
             append_mode: boolean;
         };
+        GlobalSearchGameMetadataDto: {
+            /** @example 胜利女神：妮姬 */
+            en?: string;
+            /** @example 胜利女神：妮姬 */
+            chs?: string;
+            /** @example 勝利女神：妮姬 */
+            cht?: string;
+            /** @example 国际服 */
+            region?: string;
+        };
         GlobalSearchItemDto: {
             /** @example 67f000000000000000000001 */
             id: string;
@@ -8757,6 +8767,8 @@ export interface components {
             region?: string;
             /** @example 4.8 */
             rating?: number;
+            /** @description 游戏多语言展示名；title 为 Google Play 原名，前端按语种从metadata 取值 */
+            metadata?: components["schemas"]["GlobalSearchGameMetadataDto"];
         };
         GlobalSearchSectionDto: {
             list: components["schemas"]["GlobalSearchItemDto"][];
