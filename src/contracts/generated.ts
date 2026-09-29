@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 0037d1386c753f197bae2f7c9d6be60cbf4e30c0ebb77abeb0866f0b89fc40d2
+ * @contract-sha256 639e34b8d45276e3bded2fb0ada2939e27d69ec9b0b6747fe779311f64744e97
  */
 
 export interface paths {
@@ -6176,8 +6176,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 设置远程资源 Worker 总并发上限 */
+        /** 设置远程资源 Worker 的并发预算 */
         post: operations["ResourceWorkerManagementController_setConcurrency"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/remote-workers/{workerId}/apkeep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 设置远程资源 Worker 的 apkeep 渠道开关（三态：true 强制启用 / false 强制关闭 / null 不干预，跟随节点本地配置） */
+        post: operations["ResourceWorkerManagementController_setApkeep"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8502,6 +8519,7 @@ export interface components {
         UpdateResourceWorkerStatusDto: Record<string, never>;
         UpdateResourceWorkerTaskProfileDto: Record<string, never>;
         UpdateResourceWorkerConcurrencyDto: Record<string, never>;
+        UpdateResourceWorkerApkeepDto: Record<string, never>;
         SystemLogItemDto: {
             /** @example combined-123-2026-03-22T10:30:08.000Z */
             id: string;
@@ -22527,6 +22545,29 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateResourceWorkerConcurrencyDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerManagementController_setApkeep: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateResourceWorkerApkeepDto"];
             };
         };
         responses: {
