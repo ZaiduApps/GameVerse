@@ -20,10 +20,13 @@ function clamp(input: string, max: number): string {
   return `${input.slice(0, Math.max(1, max - 3)).trim()}...`;
 }
 
-// /community 是静态预渲染页面，而 CommunityPageView 内部用了 useSearchParams()，
-// 必须在 Suspense 边界内渲染，否则 next build 会在预渲染阶段直接失败
-// （missing-suspense-with-csr-bailout）。骨架按 CommunityPageView 的三栏栅格 1:1 复刻，
-// 避免 hydration 完成时出现明显位移；页面级 JSON-LD 仍由服务端先行输出，不受影响。
+// 这个 Suspense 边界不能删。背景：b7d3686 为修「notFound() 遇到段级 Suspense 会把
+// 响应 flush 成 200」的软 404 缺陷，故意删掉了 src/app/community/loading.tsx，
+// 而 loading.tsx 提供的隐式边界正是本页 useSearchParams() 过去能通过预渲染的原因。
+// 边界删掉后 next build 会在预渲染阶段直接失败（missing-suspense-with-csr-bailout）。
+// 这里就地补回显式边界，既恢复可构建，又不把 loading.tsx 加回来、不复活软 404。
+// 骨架按 CommunityPageView 的三栏栅格 1:1 复刻以避免 hydration 位移；与改动前线上行为
+// 一致（feed 一直是客户端渲染），页面级 JSON-LD 仍由服务端先行输出。
 function CommunityPageSkeleton() {
   return (
     <div
