@@ -57,24 +57,53 @@ export interface PublicProfileData {
   posts: PublicProfilePost[];
 }
 
+/**
+ * Next.js 动态路由段可能仍是 percent-encoded 形态（例如 zaidu9528%40gmail.com）。
+ * 直接再走一次 encodeURIComponent 会二次编码成 %2540，接口按错误主键查询返回 404，
+ * 页面误判为「用户不存在」。这里先还原成明文，再由请求层统一编码一次。
+ */
+function decodeIfPercentEncoded(value: string): string {
+  if (!/%[0-9a-fA-F]{2}/.test(value)) return value;
+  try {
+    const decoded = decodeURIComponent(value);
+    return decoded === value ? value : decoded;
+  } catch {
+    // 非法转义序列保持原样交给接口判定，避免本地抛错导致整页 500。
+    return value;
+  }
+}
+
+async function requestPublicProfile(lookupKey: string): Promise<PublicProfileData | null> {
+  const res = await trackedApiFetch(`/users/public/${encodeURIComponent(lookupKey)}`, {
+    cache: 'force-cache',
+    next: { revalidate: PUBLIC_PROFILE_REVALIDATE_SECONDS },
+    timeoutMs: 8000,
+    logKey: 'public-profile',
+  });
+  const json = await res.json().catch(() => null);
+  if (!res.ok || json?.code !== 0 || !json?.data?.user) {
+    console.error('[public-profile] 解析失败', {
+      lookupKey,
+      status: res.status,
+      code: json?.code ?? null,
+      hasUser: Boolean(json?.data?.user),
+    });
+    return null;
+  }
+  return json.data as PublicProfileData;
+}
+
 export async function getPublicProfile(idOrUsername: string): Promise<PublicProfileData | null> {
   const id = String(idOrUsername || '').trim();
   if (!id) return null;
 
-  try {
-    const res = await trackedApiFetch(`/users/public/${encodeURIComponent(id)}`, {
-      cache: 'force-cache',
-      next: { revalidate: PUBLIC_PROFILE_REVALIDATE_SECONDS },
-      timeoutMs: 8000,
-    });
-    const json = await res.json().catch(() => null);
-    if (!res.ok || json?.code !== 0 || !json?.data?.user) {
-      return null;
-    }
-    return json.data as PublicProfileData;
-  } catch {
-    return null;
+  // 解码值优先；若用户名本身含字面量 % 序列导致解码后查不到，再用原值兜一次。
+  const candidates = Array.from(new Set([decodeIfPercentEncoded(id), id]));
+  for (const candidate of candidates) {
+    const data = await requestPublicProfile(candidate);
+    if (data) return data;
   }
+  return null;
 }
 
 export function publicProfilePostToCommunityPost(
