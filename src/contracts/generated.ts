@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 1de83108892790ee588d01c83c57de5cc4f1f6e12ece3c675d009238bba53924
+ * @contract-sha256 c2ac39ecf012ad054d6dc60d55b52ddd7baf6a70425acb38591835d84338bc1a
  */
 
 export interface paths {
@@ -8786,6 +8786,19 @@ export interface components {
             articles: components["schemas"]["GlobalSearchSectionDto"];
             posts: components["schemas"]["GlobalSearchSectionDto"];
             topics: components["schemas"]["GlobalSearchSectionDto"];
+        };
+        CreateResourceUpdateJobsDto: {
+            /** @description 包名列表，最多 20 个；与 pkg 二选一或同时给出 */
+            packages?: string[];
+            /** @description 单个包名，等价于 packages:[pkg] */
+            pkg?: string;
+            /**
+             * @description 执行方式；资源更新只支持 remote，internal 会在服务端被拒绝
+             * @enum {string}
+             */
+            execution_mode?: "internal" | "remote";
+            /** @description 强制重跑：该版本已有终态任务时复活它重新下载；任务仍在队列/执行中则拒绝，已被忽略或被新版本取代的终态任务不会被复活 */
+            force?: boolean;
         };
         UpsertApkeepAccountDto: {
             account_id: string;
@@ -23627,7 +23640,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateResourceUpdateJobsDto"];
+            };
+        };
         responses: {
             201: {
                 headers: {
