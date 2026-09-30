@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import AppLibraryView from './AppLibraryView';
 import { trackedApiFetch } from '@/lib/api';
+import { resolveGameName } from '@/lib/game-display-name';
 import {
   GAME_LIBRARY_BROWSE_PAGE_SIZE,
   GAME_LIBRARY_BROWSE_QUERIES,
@@ -269,7 +270,9 @@ export default async function GamesPage({
       '@type': 'ListItem',
       position: index + 1,
       url: absoluteUrl(getGameHref(game)),
-      name: String(game.name || '').trim() || '热门游戏',
+      // 结构化数据必须与页面可见内容一致：卡片渲染的是后台维护的中文名，
+      // 这里再写 Google Play 原名会被判为「结构化数据与页面内容不符」。
+      name: resolveGameName(game) || '热门游戏',
       image: String(game.header_image || game.icon || '').trim() || undefined,
     })),
   };

@@ -1,4 +1,5 @@
 import { trackedApiFetch, type TrackedFetchInit } from '@/lib/api';
+import { resolveGameName } from '@/lib/game-display-name';
 import { buildTrackingHeaders } from '@/lib/tracking-headers';
 import type { CommunityPost } from '@/types';
 
@@ -72,6 +73,9 @@ export interface ApiCommunityPost {
     summary?: string;
     metadata?: {
       region?: string;
+      chs?: string;
+      cht?: string;
+      en?: string;
     };
     tag_names?: string[];
   } | null;
@@ -332,6 +336,10 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
     ...topicNames,
     ...(item.app_info?.tag_names || []),
   ].filter((tag): tag is string => Boolean(tag && tag.trim()));
+  // app_info 有两种形态：实时 join 的带完整 metadata，建帖时存下的旧快照
+  // 只有 region。统一在这里解析一次展示名，下游不必再各自判断。
+  const appInfo = item.app_info || null;
+  const appInfoName = resolveGameName(appInfo);
   const uniqueTags = Array.from(new Set(tags));
   const topicIds = Array.from(
     new Set(
@@ -378,7 +386,7 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
     tags: uniqueTags.slice(0, 4),
     topicIds,
     topicNames: uniqueTopicNames,
-    category: topicNames[0] || item.app_info?.name || '社区',
+    category: topicNames[0] || appInfoName || '社区',
     commentsCount: Number(item.comment_count || 0),
     likesCount: Number(item.like_count || 0),
     dislikesCount: Number(item.dislike_count || 0),
@@ -413,15 +421,15 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
       : [],
     isTop: Boolean(item.is_top),
     isRecommended: Boolean(item.is_recommended),
-    relatedApp: item.app_info?.name
+    relatedApp: appInfo
       ? {
-          id: item.app_info._id,
-          name: item.app_info.name,
-          pkg: item.app_info.pkg,
-          icon: item.app_info.icon,
-          summary: item.app_info.summary,
-          regionTag: item.app_info.metadata?.region,
-          tags: (item.app_info.tag_names || []).slice(0, 3),
+          id: appInfo._id,
+          name: appInfoName,
+          pkg: appInfo.pkg,
+          icon: appInfo.icon,
+          summary: appInfo.summary,
+          regionTag: appInfo.metadata?.region,
+          tags: (appInfo.tag_names || []).slice(0, 3),
         }
       : undefined,
   };
@@ -799,6 +807,9 @@ const matchesRelatedGame = (
   if (optionName) {
     const title = (post.title || '').toLowerCase();
     const content = (post.content || '').toLowerCase();
+    // relatedApp.name 已经过 resolveGameName，与传进来的 options.gameName 同为
+    // 展示名；早前这里存的是 Google Play 原名，拿中文名去 includes 原名永远
+    // 匹配不上，只有 app_id / pkg 命中时才能找到该游戏的帖子。
     const relatedName = (post.relatedApp?.name || '').toLowerCase();
     if (relatedName.includes(optionName) || title.includes(optionName) || content.includes(optionName)) {
       return true;

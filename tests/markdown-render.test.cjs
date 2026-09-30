@@ -103,6 +103,28 @@ function loadSeoUtils() {
   return moduleObj.exports;
 }
 
+// game-display-name.ts 没有任何 import，可以直接转译后在沙箱里求值，
+// 不必为了测试再引一层别名解析。
+function loadGameDisplayName() {
+  const filePath = path.join(process.cwd(), 'src/lib/game-display-name.ts');
+  const source = fs.readFileSync(filePath, 'utf8');
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2020,
+    },
+  }).outputText;
+
+  const moduleObj = { exports: {} };
+  vm.runInNewContext(compiled, {
+    module: moduleObj,
+    exports: moduleObj.exports,
+    require,
+    process,
+  });
+  return moduleObj.exports;
+}
+
 function loadCommunityApiUtils(trackedApiFetch = async () => { throw new Error('mocked'); }) {
   const filePath = path.join(process.cwd(), 'src/lib/community-api.ts');
   const source = fs.readFileSync(filePath, 'utf8');
@@ -120,6 +142,7 @@ function loadCommunityApiUtils(trackedApiFetch = async () => { throw new Error('
     require: (id) => {
       if (id === '@/lib/api') return { trackedApiFetch };
       if (id === '@/lib/tracking-headers') return { buildTrackingHeaders: () => ({}) };
+      if (id === '@/lib/game-display-name') return loadGameDisplayName();
       return require(id);
     },
     URL,
