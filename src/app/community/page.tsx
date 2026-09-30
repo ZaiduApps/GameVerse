@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { cache } from 'react';
+import { Suspense, cache } from 'react';
 
 import CommunityPageView, { type CommunityPageInitialData } from './CommunityPageView';
 import { absoluteUrl, buildSeoDescription } from '@/lib/seo';
@@ -18,6 +18,35 @@ const COMMUNITY_PAGE_DESCRIPTION = buildSeoDescription(
 function clamp(input: string, max: number): string {
   if (input.length <= max) return input;
   return `${input.slice(0, Math.max(1, max - 3)).trim()}...`;
+}
+
+// /community 是静态预渲染页面，而 CommunityPageView 内部用了 useSearchParams()，
+// 必须在 Suspense 边界内渲染，否则 next build 会在预渲染阶段直接失败
+// （missing-suspense-with-csr-bailout）。骨架按 CommunityPageView 的三栏栅格 1:1 复刻，
+// 避免 hydration 完成时出现明显位移；页面级 JSON-LD 仍由服务端先行输出，不受影响。
+function CommunityPageSkeleton() {
+  return (
+    <div
+      aria-busy="true"
+      aria-label="正在加载社区动态"
+      className="mx-auto w-full max-w-[1440px] px-2 py-4 sm:px-4 sm:py-6 lg:py-8"
+    >
+      <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,720px)_320px]">
+        <div className="hidden lg:block">
+          <div className="h-96 animate-pulse rounded-2xl bg-[#dadddf]/40" />
+        </div>
+        <div className="min-w-0 space-y-3">
+          <div className="h-24 animate-pulse rounded-2xl bg-[#dadddf]/40" />
+          {[0, 1, 2].map((index) => (
+            <div key={index} className="h-36 animate-pulse rounded-2xl bg-[#dadddf]/40" />
+          ))}
+        </div>
+        <div className="hidden xl:block">
+          <div className="h-80 animate-pulse rounded-2xl bg-[#dadddf]/40" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const getCommunityPageData = cache(async (): Promise<{
@@ -160,7 +189,9 @@ export default async function CommunityPage() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(topicItemListJsonLd) }}
         />
       ) : null}
-      <CommunityPageView initialData={initialData} />
+      <Suspense fallback={<CommunityPageSkeleton />}>
+        <CommunityPageView initialData={initialData} />
+      </Suspense>
     </>
   );
 }
