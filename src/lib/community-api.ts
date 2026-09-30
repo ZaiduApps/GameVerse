@@ -39,6 +39,12 @@ export interface CommunityTopicItem {
     pkg?: string;
     icon?: string;
     summary?: string;
+    metadata?: {
+      region?: string;
+      chs?: string;
+      cht?: string;
+      en?: string;
+    } | null;
   } | null;
 }
 

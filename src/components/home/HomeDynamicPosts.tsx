@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { trackedApiFetch } from '@/lib/api';
 import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
+import { resolveGameName } from '@/lib/game-display-name';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
@@ -397,6 +398,9 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
           : post.app_id
             ? `/app/${encodeURIComponent(post.app_id)}`
             : null;
+        // 首页动态帖过去直接渲染 app_info.name（Google Play 原名），
+        // 与游戏库、详情页口径不一致；这里统一走 resolveGameName。
+        const appName = resolveGameName(post.app_info);
 
         return (
           <article
@@ -578,13 +582,13 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
               </div>
             )}
 
-            {post.app_info?.name && appHref ? (
+            {appName && appHref ? (
               <div className="relative mt-3 mr-auto inline-flex max-w-[420px] items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#f7f9fc] dark:hover:bg-[#223043]">
                 <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-md">
-                  {post.app_info.icon ? (
+                  {post.app_info?.icon ? (
                     <Image
                       src={post.app_info.icon}
-                      alt={post.app_info.name}
+                      alt={appName}
                       fill
                       className="object-cover"
                       sizes="32px"
@@ -594,16 +598,16 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-medium text-[#2c323a] dark:text-[#edf2fb]">{post.app_info.name}</p>
+                  <p className="truncate text-[13px] font-medium text-[#2c323a] dark:text-[#edf2fb]">{appName}</p>
                 </div>
                 <ChevronRight className="h-3.5 w-3.5 text-[#b0b7c3] dark:text-[#7f8da3]" />
                 <Link
                   href={appHref}
                   prefetch={false}
                   className="absolute inset-0 z-30 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
-                  aria-label={`查看${post.app_info.name}`}
+                  aria-label={`查看${appName}`}
                 >
-                  <span className="sr-only">查看{post.app_info.name}</span>
+                  <span className="sr-only">查看{appName}</span>
                 </Link>
               </div>
             ) : null}

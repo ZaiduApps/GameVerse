@@ -271,6 +271,12 @@ export interface ApiDynamicPost {
     icon?: string;
     summary?: string;
     tags?: string[];
+    metadata?: {
+      region?: string;
+      chs?: string;
+      cht?: string;
+      en?: string;
+    } | null;
   };
 }
 

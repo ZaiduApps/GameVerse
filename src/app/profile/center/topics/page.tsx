@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import CenterFilterBar from '../CenterFilterBar';
 import { useAuth } from '@/context/auth-context';
 import { followTopicById, getMyFollowedGameTopics, unfollowTopicById } from '@/lib/profile-dashboard-api';
+import { resolveGameName } from '@/lib/game-display-name';
 import type { CommunityTopicItem } from '@/lib/community-api';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
@@ -66,7 +67,7 @@ export default function ProfileCenterTopicsPage() {
 
   const canLoadMore = list.length < total;
   const filtered = list.filter((topic) => {
-    const text = `${topic.name || ''} ${topic.app_info?.name || ''} ${topic.app_info?.summary || ''}`.toLowerCase();
+    const text = `${topic.name || ''} ${resolveGameName(topic.app_info)} ${topic.app_info?.summary || ''}`.toLowerCase();
     return !keyword.trim() || text.includes(keyword.trim().toLowerCase());
   }).sort((a, b) => {
     if (sort === 'followers') return Number(b.followers_count || 0) - Number(a.followers_count || 0);
@@ -205,7 +206,7 @@ export default function ProfileCenterTopicsPage() {
                       取消关注
                     </Button>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{topic.app_info?.name || '游戏社区'} · 帖子 {Number(topic.post_count || 0)} · 关注 {Number(topic.followers_count || 0)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{resolveGameName(topic.app_info) || '游戏社区'} · 帖子 {Number(topic.post_count || 0)} · 关注 {Number(topic.followers_count || 0)}</p>
                 </div>
               );
             })

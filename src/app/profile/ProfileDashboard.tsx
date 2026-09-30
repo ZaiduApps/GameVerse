@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import PreregistrationGameCard from '@/components/home/PreregistrationGameCard';
 import GameCard from '@/components/game-card';
+import { resolveGameName } from '@/lib/game-display-name';
 import type { CommunityTopicItem } from '@/lib/community-api';
 import type { Game } from '@/types';
 import {
@@ -95,6 +96,7 @@ function DashboardTopicCard({ topic }: { topic: CommunityTopicItem }) {
   const href = topicId ? `/community/topic/${encodeURIComponent(slug || topicId)}` : '/community';
   const appPkg = String(topic.app_info?.pkg || '').trim();
   const appHref = appPkg ? `/app/${encodeURIComponent(appPkg)}` : null;
+  const appName = resolveGameName(topic.app_info);
   return (
     <div>
       <div className="flex items-start justify-between gap-2">
@@ -109,7 +111,7 @@ function DashboardTopicCard({ topic }: { topic: CommunityTopicItem }) {
         {topic.is_official ? <Badge variant="secondary" className="text-[10px]">官方</Badge> : null}
       </div>
       <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
-        {topic.app_info?.name || '游戏社区'} · 帖子 {Number(topic.post_count || 0)} · 关注 {Number(topic.followers_count || 0)}
+        {appName || '游戏社区'} · 帖子 {Number(topic.post_count || 0)} · 关注 {Number(topic.followers_count || 0)}
       </p>
       <div className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
         <span>热度 {Number(topic.heat_score || 0)}</span>
@@ -118,7 +120,7 @@ function DashboardTopicCard({ topic }: { topic: CommunityTopicItem }) {
             href={appHref}
             className="text-primary hover:underline"
             data-acbox-action="profile_dashboard_topic_game_detail"
-            data-acbox-label={topic.app_info?.name || '查看游戏'}
+            data-acbox-label={appName || '查看游戏'}
           >
             查看游戏
           </Link>
