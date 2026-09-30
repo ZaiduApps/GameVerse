@@ -70,6 +70,12 @@ function escapeHtml(input: string): string {
 
 function sanitizeRichHtml(input: string): string {
   return input
+    // 归一标题层级：游戏详情页本身已经有一个 h1（游戏名），DB 描述里再带
+    // <h1> 会让页面出现多个 h1，稀释主题语义。这里降级为 h2 而不是删除，保留
+    // 作者原本的段落结构。视觉零变化——Tailwind preflight 已把 h1~h6 的
+    // font-size / font-weight 重置为 inherit，标题标签本就不带字号字重差异。
+    .replace(/<h1(\s[^>]*)?>/gi, '<h2$1>')
+    .replace(/<\/h1\s*>/gi, '</h2>')
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/<(script|style|iframe|object|embed)[^>]*>[\s\S]*?<\/\1>/gi, '')
     .replace(/<\/?(?:script|style|iframe|object|embed|link|meta)[^>]*>/gi, '')
