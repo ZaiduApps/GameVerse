@@ -1167,6 +1167,40 @@ test('static page configured markdown renders rich html', () => {
   assert.match(html, /href="\/contact"/);
 });
 
+test('markdown document builder: 一级标题降级只换标签，样式与 TOC 层级不变', () => {
+  const input = '# 一级标题\n\n## 二级标题';
+
+  // 默认关闭：通用渲染语义不变，一级标题仍是 h1
+  const plain = buildRenderedMarkdownDocument(input, { preset: 'detail' });
+  assert.match(plain.html, /<h1[^>]*>一级标题<\/h1>/);
+  assert.equal(
+    plain.headings.find((item) => item.text === '一级标题').level,
+    1,
+  );
+
+  // 开启后：标签降为 h2，但 h1 的 class 原样保留，字号字重不变
+  const demoted = buildRenderedMarkdownDocument(input, {
+    preset: 'detail',
+    demoteLevelOneHeadings: true,
+  });
+  assert.doesNotMatch(demoted.html, /<h1\b/);
+  const demotedTag = demoted.html.match(/<h2[^>]*>一级标题<\/h2>/);
+  assert.ok(demotedTag, '一级标题应降级为 h2');
+  assert.match(demotedTag[0], /text-3xl/, 'h1 样式类应原样保留');
+  assert.match(demoted.html, /<h2[^>]*>二级标题<\/h2>/);
+
+  // TOC 仍记 markdown 原始层级：若跟着降级，原本被 TOC 过滤的 h1
+  // 会混进目录，凭空多出目录 UI。
+  assert.equal(
+    demoted.headings.find((item) => item.text === '一级标题').level,
+    1,
+  );
+  assert.equal(
+    demoted.headings.find((item) => item.text === '二级标题').level,
+    2,
+  );
+});
+
 test('community feed: 只查询后端真正读取的参数（app_id / q）', async () => {
   const requested = [];
   const { getCommunityPostsByGame } = loadCommunityApiUtils(async (path) => {

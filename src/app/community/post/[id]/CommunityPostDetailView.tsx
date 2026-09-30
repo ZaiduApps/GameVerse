@@ -405,6 +405,8 @@ export default function CommunityPostDetailView({
         injectHeadingAnchors: true,
         renderFirstHeadingMatchingTextAsPlainBlock: post.title || post.summary,
         hiddenHeadingTexts: ['Excerpt'],
+        // 帖子标题已占了页面 h1，正文再出 h1 会稀释主题语义。
+        demoteLevelOneHeadings: true,
       }),
     [post.content, post.summary, post.title],
   );

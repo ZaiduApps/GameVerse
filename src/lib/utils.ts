@@ -75,6 +75,9 @@ interface RenderMarkdownOptions {
   injectHeadingAnchors?: boolean;
   renderFirstHeadingMatchingTextAsPlainBlock?: string;
   hiddenHeadingTexts?: string[];
+  // 宿主页面上方已有 h1 时置 true：正文里的 markdown 一级标题降级为 h2，
+  // 避免一页多个 h1 稀释主题语义。默认关闭，保持通用渲染语义不变。
+  demoteLevelOneHeadings?: boolean;
 }
 
 export interface MarkdownHeadingItem {
@@ -808,13 +811,20 @@ export const buildRenderedMarkdownDocument = (
             : `${demotedAttrs} class="${classSet.demotedHeading}"`;
           return `<p${plainAttrs}>${inner}</p>`;
         }
-        const nextLevel = level;
+        // 一级标题是否降级取决于宿主页面的标题结构，渲染器自己不知道上下文，
+        // 所以由调用方显式声明（社区帖正文上方已有帖子标题 h1）。
+        // 降级只换标签、不动 rawAttrs —— 标题 class 在更早的 markdown→html
+        // 阶段就按原始层级分配好了（# 走 classSet.h1），所以字号字重完全不变。
+        // headings[].level 仍记 markdown 原始层级：它只驱动 TOC 缩进，跟着降级会让
+        // 原本被 TOC 过滤掉的 h1 混进目录，凭空多出目录 UI。
+        const demotedLevel =
+          options?.demoteLevelOneHeadings && Number(level) === 1 ? 2 : Number(level);
         const headingId = `post-heading-${headingIndex}`;
         headingIndex += 1;
         headings.push({
           id: headingId,
           text,
-          level: Number(nextLevel),
+          level: Number(level),
           source: /data-toc-source="inferred"/.test(rawAttrs) ? "inferred" : "heading",
         });
         const nextAttrs = resolveHeadingAttrs(
@@ -822,7 +832,7 @@ export const buildRenderedMarkdownDocument = (
           headingId,
           Boolean(options?.injectHeadingAnchors),
         );
-        return `<h${nextLevel}${nextAttrs}>${inner}</h${nextLevel}>`;
+        return `<h${demotedLevel}${nextAttrs}>${inner}</h${demotedLevel}>`;
       },
     );
 
