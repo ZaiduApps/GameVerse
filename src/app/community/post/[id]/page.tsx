@@ -16,6 +16,7 @@ import {
   buildCommunityPostSeoDescription,
   buildCommunityPostSeoTitle,
   getCommunityAuthorProfileUrl,
+  getCommunityPostPublishedTimes,
   getCommunityPostShareImage,
 } from '@/lib/community-seo';
 import { absoluteUrl, sanitizeSeoText } from '@/lib/seo';
@@ -50,6 +51,8 @@ export async function generateMetadata({
   const title = buildCommunityPostSeoTitle(post, siteName);
   const description = buildCommunityPostSeoDescription(post);
   const image = getCommunityPostShareImage(post, String(config?.basic?.share_image || '').trim());
+  // 公告类帖子标题高度雷同，article:published_time 是搜索引擎区分它们的主要依据。
+  const postTimes = getCommunityPostPublishedTimes(post);
   const authorUrl = getCommunityAuthorProfileUrl(post);
 
   return {
@@ -79,6 +82,8 @@ export async function generateMetadata({
       url: absoluteUrl(canonicalPath),
       siteName,
       type: 'article',
+      publishedTime: postTimes.published,
+      modifiedTime: postTimes.modified,
       locale: 'zh_CN',
       images: image
         ? [{ url: image, width: 1200, height: 630, alt: sanitizeSeoText(post.title || post.summary) || siteName }]

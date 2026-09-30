@@ -61,6 +61,23 @@ export function getCommunityPostShareImage(post: CommunityPost, fallbackImage: s
   return getCommunityPostContentImage(post) || normalizeSeoAssetUrl(fallbackImage);
 }
 
+/**
+ * 帖子发布/更新时间。
+ *
+ * OpenGraph 的 article:published_time / article:modified_time 与 JSON-LD 的
+ * datePublished / dateModified 必须同源取值，否则结构化数据与 head meta 会互相
+ * 矛盾。公告类帖子（如「维护通知」）标题高度雷同，发布日期正是搜索引擎区分
+ * 它们的主要依据，所以这里只补结构化时间，不去改标题文案。
+ */
+export function getCommunityPostPublishedTimes(post: CommunityPost): {
+  published?: string;
+  modified?: string;
+} {
+  const published = String(post.rawTimestamp || '').trim() || undefined;
+  const modified = String(post.updatedAt || '').trim() || published;
+  return { published, modified };
+}
+
 export function getCommunityAuthorProfileUrl(post: CommunityPost): string | undefined {
   const href = getCommunityAuthorProfileHref(post);
   return href ? absoluteUrl(href) : undefined;
@@ -138,8 +155,7 @@ export function buildCommunityPostDiscussionJsonLd(params: {
   const postDescription = buildCommunityPostSeoDescription(post);
   const postImage = getCommunityPostContentImage(post);
   const authorProfileUrl = getCommunityAuthorProfileUrl(post);
-  const postPublishedAt = post.rawTimestamp || post.updatedAt || undefined;
-  const postModifiedAt = post.updatedAt || post.rawTimestamp || undefined;
+  const { published: postPublishedAt, modified: postModifiedAt } = getCommunityPostPublishedTimes(post);
   const authorName = String(post.user?.name || '匿名用户').trim();
   const headline = sanitizeSeoText(post.title || '');
   const linkedPageMentions = buildLinkedPageMentions(post);
