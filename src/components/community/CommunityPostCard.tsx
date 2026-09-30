@@ -701,7 +701,7 @@ export default function CommunityPostCard({
           </div>
         ) : null}
       </CardContent>
-      <CardFooter className="p-4 pt-2 flex items-center justify-start gap-2 sm:gap-4 border-t">
+      <CardFooter className="p-4 pt-2 flex flex-wrap items-center justify-start gap-2 sm:gap-4 border-t">
         <Button
           type="button"
           variant="ghost"
