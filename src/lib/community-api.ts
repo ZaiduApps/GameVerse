@@ -857,11 +857,15 @@ export async function getCommunityPostsByGame(
     ['view', 'card'],
   ];
 
+  // 后端 /content/feed 只认 app_id 与 q。早前这里发的是 app_pkg / pkg / keyword，
+  // 三个都被后端静默忽略，返回的是未过滤的全站信息流（实测 total 与不带任何
+  // 过滤时完全一致），于是每张详情页都先浪费一次全站请求，再由
+  // matchesRelatedGame 在客户端兜底筛选。
+  // 候选顺序即优先级：app_id 精确命中 → q 走服务端标题/摘要/正文检索 →
+  // 全站流只作最后兜底（那时模糊匹配才有意义）。
   const queryCandidates: URLSearchParams[] = [];
-  if (options.pkg) queryCandidates.push(new URLSearchParams([...baseEntries, ['app_pkg', options.pkg]]));
   if (options.appId) queryCandidates.push(new URLSearchParams([...baseEntries, ['app_id', options.appId]]));
-  if (options.pkg) queryCandidates.push(new URLSearchParams([...baseEntries, ['pkg', options.pkg]]));
-  if (options.gameName) queryCandidates.push(new URLSearchParams([...baseEntries, ['keyword', options.gameName]]));
+  if (options.gameName) queryCandidates.push(new URLSearchParams([...baseEntries, ['q', options.gameName]]));
   queryCandidates.push(new URLSearchParams(baseEntries));
 
   const maxQueryCandidates = Math.max(

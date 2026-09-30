@@ -146,6 +146,7 @@ function loadCommunityApiUtils(trackedApiFetch = async () => { throw new Error('
       return require(id);
     },
     URL,
+    URLSearchParams,
     console,
     process,
   };
@@ -1164,4 +1165,36 @@ test('static page configured markdown renders rich html', () => {
   assert.match(html, /<ul[^>]*>/);
   assert.match(html, /<li[^>]*>游戏内容<\/li>/);
   assert.match(html, /href="\/contact"/);
+});
+
+test('community feed: 只查询后端真正读取的参数（app_id / q）', async () => {
+  const requested = [];
+  const { getCommunityPostsByGame } = loadCommunityApiUtils(async (path) => {
+    requested.push(String(path));
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ code: 0, message: 'ok', data: { list: [], total: 0 } }),
+    };
+  });
+
+  await getCommunityPostsByGame({
+    pageSize: 5,
+    appId: '68f5d0c08902ae6d797b83d6',
+    pkg: 'com.sega.pjsekai',
+    gameName: '★世界计划：初音未来日服',
+  });
+
+  assert.ok(requested.length > 0, '应当至少发起一次 feed 查询');
+  // 后端 /content/feed 只声明 app_id 与 q。早前发的 app_pkg / pkg / keyword
+  // 会被静默忽略并返回未过滤的全站信息流（实测 total 与不带过滤时一致）。
+  for (const path of requested) {
+    assert.doesNotMatch(path, /[?&](app_pkg|pkg|keyword)=/);
+  }
+  // 精确命中优先，其次才是服务端关键词检索。
+  assert.match(requested[0], /[?&]app_id=/);
+  assert.ok(
+    requested.some((path) => /[?&]q=/.test(path)),
+    '应当有 q 关键词检索作为第二候选',
+  );
 });
