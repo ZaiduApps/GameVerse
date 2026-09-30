@@ -105,6 +105,41 @@ pm2 show game-ve
 - Interface 日志没有 webhook 未配置或触发失败告警；
 - 生产磁盘可用空间不少于 5 GB，至少保留一个有效 `.deploy-backups` 回滚版本。
 
+## 动态路由 404（2026-09-30 起）
+
+`/app/{pkg}`、`/community/post/{id}`、`/community/topic/{idOrSlug}`、`/albums/{id}`、`/u/{handle}`
+在资源不存在时返回真 404（HTTP 404 + `noindex`），不再返回 200 软 404。实现方式是移除
+这些路由族的 `loading.tsx`：Suspense 边界会在 `notFound()` 抛出前先把响应壳写成 200，
+非预渲染响应同样受影响，不只是 ISR 路由。
+
+发布后必须清理已固化的 200 响应，否则改动不可观测：
+
+- 详情页 ISR 缓存中的 200（响应头 `x-nextjs-prerender: 1` 或 `s-maxage=300`）需失效；
+- 随机探测一个不存在的 ID，确认返回 404 而不是 200。
+
+副作用：客户端路由跳转不再展示骨架屏，停留上一页直到新页渲染完成。
+
+`/u/{handle}` 的 handle 含 `@` 时，动态路由段交付的是百分号编码值，取值前必须先解码，
+否则 `encodeURIComponent` 会二次编码成 `%2540` 并误判为用户不存在。
+
+## 构建阻塞：useSearchParams 未包 Suspense（2026-09-30 发现，未修）
+
+`observed`：`pnpm build` 在预渲染阶段失败，报
+`useSearchParams() should be wrapped in a suspense boundary`。这是 `main` 上的既有缺陷，
+与 SEO 改动无关（在 `3e6bf7a` 上同样复现），会阻塞任何 GameVerse 生产发布。
+
+涉及文件：
+
+- `src/app/profile/center/{games,posts,reservations,topics}/page.tsx`
+- `src/app/community/page.tsx`（经 `CommunityPageView.tsx`）
+
+这些页面都是 `'use client'` 且直接调用 `useSearchParams()`，整棵子树没有 Suspense 边界。
+注意 `'use client'` 文件不能导出路由段配置（`export const dynamic`），所以 `src/app/page.tsx` 那种写法在这几处无效。
+可选方案：
+
+- 用户中心四页：`noindex` 的登录后页面，语义上就该动态渲染，拆出 server 包装层 + `<Suspense>` 是最贴切的修法；
+- `/community`：SEO 关键页，**不要**用 `force-dynamic`，应给 `CommunityPageView` 包
+  `<Suspense>` 以保住静态生成。
 ## 失败处理与回滚
 
 - API 返回非 2xx：不重复写入，先保存脱敏错误和请求时间，确认数据库是否已改变。
