@@ -1,0 +1,2181 @@
+[
+  {
+    "viewport": 320,
+    "nowrap": {
+      "docOverflow": 97,
+      "docScrollW": 417,
+      "docClientW": 320,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "151,151,151,151,151,151,151,151,151,151,151,151",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 164,
+        "boxRight": 266,
+        "scrollW": 315,
+        "clientW": 164,
+        "clipped": 151,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 416.53,
+        "contentWidth": 314.53,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              4,
+              4,
+              4,
+              4
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 320,
+      "docClientW": 320,
+      "barCount": 12,
+      "lineCountsAllBars": "3,3,3,3,3,3,3,3,3,3,3,3",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 164,
+        "boxRight": 266,
+        "scrollW": 164,
+        "clientW": 164,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 3,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 172,
+        "contentWidth": 70,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 2,
+            "texts": [
+              "0",
+              "0"
+            ],
+            "gaps": [
+              58.32
+            ]
+          },
+          {
+            "n": 2,
+            "texts": [
+              "0",
+              "收藏"
+            ],
+            "gaps": [
+              41.16
+            ]
+          },
+          {
+            "n": 1,
+            "texts": [
+              "分享"
+            ],
+            "gaps": []
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 360,
+    "nowrap": {
+      "docOverflow": 58,
+      "docScrollW": 418,
+      "docClientW": 360,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "111,111,111,111,111,111,111,111,111,111,111,111",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 204,
+        "boxRight": 306,
+        "scrollW": 315,
+        "clientW": 204,
+        "clipped": 111,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 416.53,
+        "contentWidth": 314.53,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              4,
+              4,
+              4,
+              4
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 360,
+      "docClientW": 360,
+      "barCount": 12,
+      "lineCountsAllBars": "2,2,2,2,2,2,2,2,2,2,2,2",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 204,
+        "boxRight": 306,
+        "scrollW": 204,
+        "clientW": 204,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 2,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 306,
+        "contentWidth": 204,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 3,
+            "texts": [
+              "0",
+              "0",
+              "0"
+            ],
+            "gaps": [
+              22.74,
+              22.74
+            ]
+          },
+          {
+            "n": 2,
+            "texts": [
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              64
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 390,
+    "nowrap": {
+      "docOverflow": 27,
+      "docScrollW": 417,
+      "docClientW": 390,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "81,81,81,81,81,81,81,81,81,81,81,81",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 234,
+        "boxRight": 336,
+        "scrollW": 315,
+        "clientW": 234,
+        "clipped": 81,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 416.53,
+        "contentWidth": 314.53,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              4,
+              4,
+              4,
+              4
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 390,
+      "docClientW": 390,
+      "barCount": 12,
+      "lineCountsAllBars": "2,2,2,2,2,2,2,2,2,2,2,2",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 234,
+        "boxRight": 336,
+        "scrollW": 234,
+        "clientW": 234,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 2,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 336,
+        "contentWidth": 234,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 3,
+            "texts": [
+              "0",
+              "0",
+              "0"
+            ],
+            "gaps": [
+              37.74,
+              37.74
+            ]
+          },
+          {
+            "n": 2,
+            "texts": [
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              94
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 400,
+    "nowrap": {
+      "docOverflow": 17,
+      "docScrollW": 417,
+      "docClientW": 400,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "71,71,71,71,71,71,71,71,71,71,71,71",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 244,
+        "boxRight": 346,
+        "scrollW": 315,
+        "clientW": 244,
+        "clipped": 71,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 416.53,
+        "contentWidth": 314.53,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              4,
+              4,
+              4,
+              4
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 400,
+      "docClientW": 400,
+      "barCount": 12,
+      "lineCountsAllBars": "2,2,2,2,2,2,2,2,2,2,2,2",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 244,
+        "boxRight": 346,
+        "scrollW": 244,
+        "clientW": 244,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 2,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 172,
+        "contentWidth": 70,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 4,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏"
+            ],
+            "gaps": [
+              5.16,
+              5.16,
+              5.16
+            ]
+          },
+          {
+            "n": 1,
+            "texts": [
+              "分享"
+            ],
+            "gaps": []
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 410,
+    "nowrap": {
+      "docOverflow": 7,
+      "docScrollW": 417,
+      "docClientW": 410,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "61,61,61,61,61,61,61,61,61,61,61,61",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 254,
+        "boxRight": 356,
+        "scrollW": 315,
+        "clientW": 254,
+        "clipped": 61,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 416.53,
+        "contentWidth": 314.53,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              4,
+              4,
+              4,
+              4
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 410,
+      "docClientW": 410,
+      "barCount": 12,
+      "lineCountsAllBars": "2,2,2,2,2,2,2,2,2,2,2,2",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 254,
+        "boxRight": 356,
+        "scrollW": 254,
+        "clientW": 254,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 2,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 172,
+        "contentWidth": 70,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 4,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏"
+            ],
+            "gaps": [
+              8.49,
+              8.5,
+              8.48
+            ]
+          },
+          {
+            "n": 1,
+            "texts": [
+              "分享"
+            ],
+            "gaps": []
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 416,
+    "nowrap": {
+      "docOverflow": 1,
+      "docScrollW": 417,
+      "docClientW": 416,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "55,55,55,55,55,55,55,55,55,55,55,55",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 260,
+        "boxRight": 362,
+        "scrollW": 315,
+        "clientW": 260,
+        "clipped": 55,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 416.53,
+        "contentWidth": 314.53,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              4,
+              4,
+              4,
+              4
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 416,
+      "docClientW": 416,
+      "barCount": 12,
+      "lineCountsAllBars": "2,2,2,2,2,2,2,2,2,2,2,2",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 260,
+        "boxRight": 362,
+        "scrollW": 260,
+        "clientW": 260,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 2,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 172,
+        "contentWidth": 70,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 4,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏"
+            ],
+            "gaps": [
+              10.49,
+              10.5,
+              10.48
+            ]
+          },
+          {
+            "n": 1,
+            "texts": [
+              "分享"
+            ],
+            "gaps": []
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 417,
+    "nowrap": {
+      "docOverflow": 0,
+      "docScrollW": 417,
+      "docClientW": 417,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "54,54,54,54,54,54,54,54,54,54,54,54",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 261,
+        "boxRight": 363,
+        "scrollW": 315,
+        "clientW": 261,
+        "clipped": 54,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 416.53,
+        "contentWidth": 314.53,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              4,
+              4,
+              4,
+              4
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 417,
+      "docClientW": 417,
+      "barCount": 12,
+      "lineCountsAllBars": "2,2,2,2,2,2,2,2,2,2,2,2",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 261,
+        "boxRight": 363,
+        "scrollW": 261,
+        "clientW": 261,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 2,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 172,
+        "contentWidth": 70,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 4,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏"
+            ],
+            "gaps": [
+              10.83,
+              10.81,
+              10.83
+            ]
+          },
+          {
+            "n": 1,
+            "texts": [
+              "分享"
+            ],
+            "gaps": []
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 420,
+    "nowrap": {
+      "docOverflow": 0,
+      "docScrollW": 420,
+      "docClientW": 420,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "51,51,51,51,51,51,51,51,51,51,51,51",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 264,
+        "boxRight": 366,
+        "scrollW": 315,
+        "clientW": 264,
+        "clipped": 51,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 416.53,
+        "contentWidth": 314.53,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              4,
+              4,
+              4,
+              4
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 420,
+      "docClientW": 420,
+      "barCount": 12,
+      "lineCountsAllBars": "2,2,2,2,2,2,2,2,2,2,2,2",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 264,
+        "boxRight": 366,
+        "scrollW": 264,
+        "clientW": 264,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 2,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 172,
+        "contentWidth": 70,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 4,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏"
+            ],
+            "gaps": [
+              11.83,
+              11.81,
+              11.83
+            ]
+          },
+          {
+            "n": 1,
+            "texts": [
+              "分享"
+            ],
+            "gaps": []
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 430,
+    "nowrap": {
+      "docOverflow": 0,
+      "docScrollW": 430,
+      "docClientW": 430,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "41,41,41,41,41,41,41,41,41,41,41,41",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 274,
+        "boxRight": 376,
+        "scrollW": 315,
+        "clientW": 274,
+        "clipped": 41,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 416.53,
+        "contentWidth": 314.53,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              4,
+              4,
+              4,
+              4
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 430,
+      "docClientW": 430,
+      "barCount": 12,
+      "lineCountsAllBars": "2,2,2,2,2,2,2,2,2,2,2,2",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 274,
+        "boxRight": 376,
+        "scrollW": 274,
+        "clientW": 274,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 2,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 172,
+        "contentWidth": 70,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 4,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏"
+            ],
+            "gaps": [
+              15.16,
+              15.16,
+              15.16
+            ]
+          },
+          {
+            "n": 1,
+            "texts": [
+              "分享"
+            ],
+            "gaps": []
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 440,
+    "nowrap": {
+      "docOverflow": 0,
+      "docScrollW": 440,
+      "docClientW": 440,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "31,31,31,31,31,31,31,31,31,31,31,31",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 284,
+        "boxRight": 386,
+        "scrollW": 315,
+        "clientW": 284,
+        "clipped": 31,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 416.53,
+        "contentWidth": 314.53,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              4,
+              4,
+              4,
+              4
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 440,
+      "docClientW": 440,
+      "barCount": 12,
+      "lineCountsAllBars": "2,2,2,2,2,2,2,2,2,2,2,2",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 284,
+        "boxRight": 386,
+        "scrollW": 284,
+        "clientW": 284,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 2,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 172,
+        "contentWidth": 70,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 4,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏"
+            ],
+            "gaps": [
+              18.49,
+              18.5,
+              18.48
+            ]
+          },
+          {
+            "n": 1,
+            "texts": [
+              "分享"
+            ],
+            "gaps": []
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 450,
+    "nowrap": {
+      "docOverflow": 0,
+      "docScrollW": 450,
+      "docClientW": 450,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "21,21,21,21,21,21,21,21,21,21,21,21",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 294,
+        "boxRight": 396,
+        "scrollW": 315,
+        "clientW": 294,
+        "clipped": 21,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 416.53,
+        "contentWidth": 314.53,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              4,
+              4,
+              4,
+              4
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 450,
+      "docClientW": 450,
+      "barCount": 12,
+      "lineCountsAllBars": "2,2,2,2,2,2,2,2,2,2,2,2",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 294,
+        "boxRight": 396,
+        "scrollW": 294,
+        "clientW": 294,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 2,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 172,
+        "contentWidth": 70,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 4,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏"
+            ],
+            "gaps": [
+              21.83,
+              21.81,
+              21.83
+            ]
+          },
+          {
+            "n": 1,
+            "texts": [
+              "分享"
+            ],
+            "gaps": []
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 460,
+    "nowrap": {
+      "docOverflow": 0,
+      "docScrollW": 460,
+      "docClientW": 460,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "11,11,11,11,11,11,11,11,11,11,11,11",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 304,
+        "boxRight": 406,
+        "scrollW": 315,
+        "clientW": 304,
+        "clipped": 11,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 416.53,
+        "contentWidth": 314.53,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              4,
+              4,
+              4,
+              4
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 460,
+      "docClientW": 460,
+      "barCount": 12,
+      "lineCountsAllBars": "2,2,2,2,2,2,2,2,2,2,2,2",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 304,
+        "boxRight": 406,
+        "scrollW": 304,
+        "clientW": 304,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 2,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 172,
+        "contentWidth": 70,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 4,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏"
+            ],
+            "gaps": [
+              25.16,
+              25.16,
+              25.16
+            ]
+          },
+          {
+            "n": 1,
+            "texts": [
+              "分享"
+            ],
+            "gaps": []
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 470,
+    "nowrap": {
+      "docOverflow": 0,
+      "docScrollW": 470,
+      "docClientW": 470,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 314,
+        "boxRight": 416,
+        "scrollW": 315,
+        "clientW": 314,
+        "clipped": 1,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 416.53,
+        "contentWidth": 314.53,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              4,
+              4,
+              4,
+              4
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 470,
+      "docClientW": 470,
+      "barCount": 12,
+      "lineCountsAllBars": "2,2,2,2,2,2,2,2,2,2,2,2",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 314,
+        "boxRight": 416,
+        "scrollW": 314,
+        "clientW": 314,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 2,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 172,
+        "contentWidth": 70,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 4,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏"
+            ],
+            "gaps": [
+              28.49,
+              28.5,
+              28.48
+            ]
+          },
+          {
+            "n": 1,
+            "texts": [
+              "分享"
+            ],
+            "gaps": []
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 471,
+    "nowrap": {
+      "docOverflow": 0,
+      "docScrollW": 471,
+      "docClientW": 471,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 315,
+        "boxRight": 417,
+        "scrollW": 315,
+        "clientW": 315,
+        "clipped": 0,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 417,
+        "contentWidth": 315,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              4.13,
+              4.11,
+              4.12,
+              4.11
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 471,
+      "docClientW": 471,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 315,
+        "boxRight": 417,
+        "scrollW": 315,
+        "clientW": 315,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 417,
+        "contentWidth": 315,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              4.13,
+              4.11,
+              4.12,
+              4.11
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 480,
+    "nowrap": {
+      "docOverflow": 0,
+      "docScrollW": 480,
+      "docClientW": 480,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 324,
+        "boxRight": 426,
+        "scrollW": 324,
+        "clientW": 324,
+        "clipped": 0,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 426,
+        "contentWidth": 324,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              6.38,
+              6.36,
+              6.37,
+              6.36
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 480,
+      "docClientW": 480,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 324,
+        "boxRight": 426,
+        "scrollW": 324,
+        "clientW": 324,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 426,
+        "contentWidth": 324,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              6.38,
+              6.36,
+              6.37,
+              6.36
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 560,
+    "nowrap": {
+      "docOverflow": 0,
+      "docScrollW": 560,
+      "docClientW": 560,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 404,
+        "boxRight": 506,
+        "scrollW": 404,
+        "clientW": 404,
+        "clipped": 0,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 506,
+        "contentWidth": 404,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              26.38,
+              26.36,
+              26.37,
+              26.36
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 560,
+      "docClientW": 560,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 102,
+        "boxW": 404,
+        "boxRight": 506,
+        "scrollW": 404,
+        "clientW": 404,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 102,
+        "contentRightAbs": 506,
+        "contentWidth": 404,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              26.38,
+              26.36,
+              26.37,
+              26.36
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 640,
+    "nowrap": {
+      "docOverflow": 0,
+      "docScrollW": 640,
+      "docClientW": 640,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 106,
+        "boxW": 476,
+        "boxRight": 582,
+        "scrollW": 476,
+        "clientW": 476,
+        "clipped": 0,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 106,
+        "contentRightAbs": 582,
+        "contentWidth": 476,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              44.38,
+              44.36,
+              44.37,
+              44.36
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 640,
+      "docClientW": 640,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 106,
+        "boxW": 476,
+        "boxRight": 582,
+        "scrollW": 476,
+        "clientW": 476,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 106,
+        "contentRightAbs": 582,
+        "contentWidth": 476,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              44.38,
+              44.36,
+              44.37,
+              44.36
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "viewport": 1280,
+    "nowrap": {
+      "docOverflow": 0,
+      "docScrollW": 1280,
+      "docClientW": 1280,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 218,
+        "boxW": 892,
+        "boxRight": 1110,
+        "scrollW": 892,
+        "clientW": 892,
+        "clipped": 0,
+        "flexWrap": "nowrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 218,
+        "contentRightAbs": 1110,
+        "contentWidth": 892,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              148.38,
+              148.36,
+              148.37,
+              148.36
+            ]
+          }
+        ]
+      }
+    },
+    "wrap": {
+      "docOverflow": 0,
+      "docScrollW": 1280,
+      "docClientW": 1280,
+      "barCount": 12,
+      "lineCountsAllBars": "1,1,1,1,1,1,1,1,1,1,1,1",
+      "clippedAllBars": "0,0,0,0,0,0,0,0,0,0,0,0",
+      "allBarsIdentical": true,
+      "firstBar": {
+        "boxLeft": 218,
+        "boxW": 892,
+        "boxRight": 1110,
+        "scrollW": 892,
+        "clientW": 892,
+        "clipped": 0,
+        "flexWrap": "wrap",
+        "justify": "space-between",
+        "columnGap": "4px",
+        "lineCount": 1,
+        "contentLeftAbs": 218,
+        "contentRightAbs": 1110,
+        "contentWidth": 892,
+        "maxItemScrollOverflow": 0,
+        "itemWidths": [
+          52.84,
+          52.84,
+          52.84,
+          70,
+          70
+        ],
+        "itemScrollVsClient": [
+          "53/53",
+          "53/53",
+          "53/53",
+          "70/70",
+          "70/70"
+        ],
+        "lines": [
+          {
+            "n": 5,
+            "texts": [
+              "0",
+              "0",
+              "0",
+              "收藏",
+              "分享"
+            ],
+            "gaps": [
+              148.38,
+              148.36,
+              148.37,
+              148.36
+            ]
+          }
+        ]
+      }
+    }
+  }
+]

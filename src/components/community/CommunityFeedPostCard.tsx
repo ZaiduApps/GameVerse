@@ -568,7 +568,7 @@ export default function CommunityFeedPostCard({
             </Link>
           ) : null}
 
-          <div className="mt-3 flex items-center justify-between gap-1 border-t pt-2 text-muted-foreground">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-1 border-t pt-2 text-muted-foreground">
             <Button type="button" variant="ghost" size="sm" className={cn('h-8 px-2 text-xs', liked && 'text-primary')} onClick={() => void handleLike()} disabled={likePending}>
               <Heart className={cn('mr-1.5 h-4 w-4', liked && 'fill-current')} />
               {formatCount(likeCount)}
