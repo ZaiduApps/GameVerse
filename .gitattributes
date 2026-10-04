@@ -1,0 +1,12 @@
+# 与根仓 AGENTS.md 的「统一 LF 行尾」约定一致。
+# 本机 core.autocrlf=true 且本文件缺失时：git diff 会对每个改动文件提示
+# "LF will be replaced by CRLF"，新克隆的工作区也会被检出成 CRLF，
+# 与提交进对象库的 LF 形态不一致——后续任何整文件改写都会变成全文件行尾 diff。
+* text=auto eol=lf
+
+# 声明下载时恒定为 CRLF 的文件。
+*.{cmd,[cC][mM][dD]} text eol=crlf
+*.{bat,[bB][aA][tT]} text eol=crlf
+
+# 标记真正的二进制文件，不应被修改。
+*.{ico,png,jpg,jpeg,gif,webp,svg,woff,woff2} binary
