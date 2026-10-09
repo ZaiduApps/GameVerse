@@ -40,26 +40,38 @@ function normalizeAlbumData(album: ApiAlbum): ApiAlbum {
   };
 }
 
+// 取数结果只有「明确 404」才回 null（专辑不存在）；5xx / 429 / 超时 / 异常一律抛错，
+// 交给页面走 error.tsx / 500，避免后端抖动被固化成永久 noindex 的 404。
 const loadAlbumDetail = cache(async (albumId: string, revalidate: number): Promise<ApiAlbum | null> => {
   const safeAlbumId = normalizeText(albumId);
   if (!safeAlbumId) return null;
 
+  let res: Response;
   try {
-    const res = await trackedApiFetch(`/albums/album-details/${encodeURIComponent(safeAlbumId)}`, {
+    res = await trackedApiFetch(`/albums/album-details/${encodeURIComponent(safeAlbumId)}`, {
       cache: 'force-cache',
       next: { revalidate },
       timeoutMs: ALBUM_TIMEOUT_MS,
       logKey: 'album-detail',
     });
-    if (!res.ok) return null;
-
-    const json = (await res.json().catch(() => null)) as ApiResponse<ApiAlbum> | null;
-    if (!json || Number(json.code ?? -1) !== 0 || !json.data) return null;
-
-    return normalizeAlbumData(json.data);
-  } catch {
-    return null;
+  } catch (error) {
+    throw new Error(
+      '[album-detail] 请求失败：' + (error instanceof Error ? error.message : String(error)),
+    );
   }
+
+  if (!res.ok) {
+    if (res.status === 404) return null;
+    throw new Error('[album-detail] 上游返回 HTTP ' + String(res.status));
+  }
+
+  const json = (await res.json().catch(() => null)) as ApiResponse<ApiAlbum> | null;
+  if (!json || Number(json.code ?? -1) !== 0) {
+    throw new Error('[album-detail] 响应体异常：code=' + String(json?.code ?? null));
+  }
+  if (!json.data) return null;
+
+  return normalizeAlbumData(json.data);
 });
 
 export async function getAlbumDetail(

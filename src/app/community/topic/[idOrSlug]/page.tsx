@@ -5,7 +5,7 @@ import { cache } from 'react';
 import CommunityTopicBoardView from './CommunityTopicBoardView';
 import { absoluteUrl, buildSeoDescription, getSiteUrl, sanitizeSeoText } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
-import { getCommunityFeed, getCommunityTopicDetail, type CommunityFeedResult } from '@/lib/community-api';
+import { getCommunityFeed, getCommunityTopicDetailOrThrow, type CommunityFeedResult } from '@/lib/community-api';
 
 function clamp(input: string, max: number): string {
   if (input.length <= max) return input;
@@ -23,7 +23,9 @@ const EMPTY_FEED: CommunityFeedResult = {
 const getTopicPageData = cache(async (idOrSlug: string) => {
   const safeIdOrSlug = decodeURIComponent(String(idOrSlug || '').trim());
   const configPromise = getPublicSiteConfig(300);
-  const topic = await getCommunityTopicDetail(safeIdOrSlug);
+  // 用 OrThrow 变体：只有后端明确 404 才是「话题不存在」，
+  // 5xx / 超时 / 异常会抛错走 error.tsx / 500，不再折叠成永久 noindex 的 404。
+  const topic = await getCommunityTopicDetailOrThrow(safeIdOrSlug);
 
   if (!topic?._id) {
     return {
@@ -57,6 +59,8 @@ export async function generateMetadata({
   const { config, topic, latestFeed, hotFeed } = await getTopicPageData(idOrSlug);
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
 
+  // getCommunityTopicDetailOrThrow 只在后端明确 404 时返回 null，5xx / 超时等故障已抛错
+  // （走 error.tsx / 500），因此这里的 null 可以安全地当作「话题不存在」。
   if (!topic?._id) {
     notFound();
   }

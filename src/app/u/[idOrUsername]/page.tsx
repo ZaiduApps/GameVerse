@@ -11,6 +11,7 @@ import { sanitizePublicProfileSignature } from '@/lib/public-profile-safety';
 import { absoluteUrl, clampSeoDescription, normalizeSeoAssetUrl, sanitizeSeoText } from '@/lib/seo';
 import {
   getPublicProfile,
+  getPublicProfileOrThrow,
   publicProfilePostToCommunityPost,
   type PublicProfilePost,
 } from '@/lib/public-profile-api';
@@ -133,7 +134,11 @@ export default async function PublicUserPage({
   params: Promise<{ idOrUsername: string }>;
 }) {
   const { idOrUsername } = await params;
-  const data = await getPublicProfile(idOrUsername);
+  // 用 OrThrow 变体：只有后端明确 404 才是「用户不存在」，
+  // 5xx / 429 / 超时 / 异常抛错走 error.tsx / 500，不再折叠成永久 noindex 的 404。
+  const data = await getPublicProfileOrThrow(idOrUsername);
+  // getPublicProfileOrThrow 只在后端明确 404 时返回 null，5xx / 超时等故障已抛错
+  // （走 error.tsx / 500），因此这里的 null 可以安全地当作「用户不存在」。
   if (!data) notFound();
 
   const user = data.user;

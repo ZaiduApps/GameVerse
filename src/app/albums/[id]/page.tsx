@@ -66,6 +66,8 @@ export async function generateMetadata({
   const { id } = await params;
   const [config, album] = await Promise.all([getPublicSiteConfig(300), getAlbumDetail(id, revalidate)]);
 
+  // getAlbumDetail 只在后端明确 404 时返回 null，5xx / 超时等故障已抛错
+  // （走 error.tsx / 500），因此这里的 null 可以安全地当作「专辑不存在」。
   if (!album) {
     notFound();
   }
@@ -152,6 +154,8 @@ export default async function AlbumTopicPage({
   const { id } = await params;
   const [config, album] = await Promise.all([getPublicSiteConfig(300), getAlbumDetail(id, revalidate)]);
 
+  // getAlbumDetail 只在后端明确 404 时返回 null，5xx / 超时等故障已抛错
+  // （走 error.tsx / 500），因此这里的 null 可以安全地当作「专辑不存在」。
   if (!album) {
     notFound();
   }

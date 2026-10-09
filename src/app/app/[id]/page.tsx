@@ -238,7 +238,18 @@ async function getSiteConfig(): Promise<SiteConfig | null> {
   return getPublicSiteConfig(300);
 }
 
-const getGamePageSnapshot = cache(async (id: string): Promise<GamePageSnapshot | null> => {
+// 取数结果带上「失败原因」，供 getPageData 区分「游戏不存在」与「后端故障」：
+// 只有全部可用层级都明确不存在时才 404，任一环节是故障就抛错走 error.tsx / 500。
+type GameDataTierResult<T> =
+  | { kind: 'ok'; data: T }
+  | { kind: 'notFound' }
+  | { kind: 'failure'; reason: string };
+
+function tierFailureReason(result: GameDataTierResult<unknown>): string {
+  return result.kind === 'failure' ? result.reason : result.kind;
+}
+
+const getGamePageSnapshot = cache(async (id: string): Promise<GameDataTierResult<GamePageSnapshot>> => {
   try {
     const response = await trackedApiFetch(
       `/seo/game-page?pkg=${encodeURIComponent(id)}&qualityVersion=${SEO_SNAPSHOT_VERSION}`,
@@ -252,16 +263,23 @@ const getGamePageSnapshot = cache(async (id: string): Promise<GamePageSnapshot |
       logKey: 'game-page-snapshot',
       },
     );
-    if (!response.ok) return null;
+    if (!response.ok) {
+      // 404 = 该包名不在快照索引中，可回退详情接口；其余上游错误必须抛出，
+      // 否则一次后端抖动会被页面固化成永久 noindex 的 404。
+      if (response.status === 404) return { kind: 'notFound' };
+      return { kind: 'failure', reason: 'HTTP ' + String(response.status) };
+    }
     const payload = await response.json();
-    if (payload?.code !== undefined && payload.code !== 0) return null;
+    if (payload?.code !== undefined && payload.code !== 0) {
+      return { kind: 'failure', reason: 'code ' + String(payload?.code) };
+    }
     const data = payload?.data;
-    if (!data?.app) return null;
+    if (!data?.app) return { kind: 'notFound' };
     const snapshot = data as Record<string, unknown>;
     const rawApp = (snapshot.app || {}) as Record<string, unknown>;
     const rawReview = (snapshot.reviewSummary || snapshot.review_summary || null) as Record<string, unknown> | null;
     // 兼容后端 snake_case 字段，前端内部统一使用 camelCase。
-    return {
+    const mapped = {
       ...snapshot,
       app: {
         ...rawApp,
@@ -279,16 +297,17 @@ const getGamePageSnapshot = cache(async (id: string): Promise<GamePageSnapshot |
         : null,
       quality: snapshot.quality as GamePageSnapshot['quality'],
     } as GamePageSnapshot;
+    return { kind: 'ok', data: mapped };
   } catch (error) {
     console.error('[game-detail] SEO 快照请求失败', {
       id,
       error: error instanceof Error ? error.message : String(error),
     });
-    return null;
+    return { kind: 'failure', reason: error instanceof Error ? error.message : String(error) };
   }
 });
 
-const getGameDetails = cache(async (id: string): Promise<GameDetailData | null> => {
+const getGameDetails = cache(async (id: string): Promise<GameDataTierResult<GameDetailData>> => {
   try {
     const platform = process.env.NEXT_PUBLIC_CLIENT_PLATFORM || process.env.CLIENT_PLATFORM || 'android';
     const region = process.env.NEXT_PUBLIC_CLIENT_REGION || process.env.CLIENT_REGION || '';
@@ -308,7 +327,10 @@ const getGameDetails = cache(async (id: string): Promise<GameDetailData | null> 
       },
       timeoutMs: 12000,
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      if (res.status === 404) return { kind: 'notFound' };
+      return { kind: 'failure', reason: 'HTTP ' + String(res.status) };
+    }
     const json = await res.json();
     if (json.code !== 0) {
       const message = String(json.message || '').trim() || 'unknown';
@@ -322,15 +344,16 @@ const getGameDetails = cache(async (id: string): Promise<GameDetailData | null> 
       } else {
         console.error('[game-detail] invalid payload', logPayload);
       }
-      return null;
+      return { kind: 'failure', reason: 'code ' + String(json.code) };
     }
-    return json.data;
+    if (!json.data) return { kind: 'notFound' };
+    return { kind: 'ok', data: json.data as GameDetailData };
   } catch (error) {
     console.error('[game-detail] request failed', {
       id,
       error: error instanceof Error ? error.message : String(error),
     });
-    return null;
+    return { kind: 'failure', reason: error instanceof Error ? error.message : String(error) };
   }
 });
 
@@ -367,10 +390,19 @@ const getRecommendedGames = cache(async (
 
 const getPageData = cache(async (id: string): Promise<GamePageSnapshot | null> => {
   const snapshot = await getGamePageSnapshot(id);
-  if (snapshot) return snapshot;
+  if (snapshot.kind === 'ok') return snapshot.data;
 
   // 单条快照缺失时回退详情接口，避免生产构建被脏数据阻断。
-  return getGameDetails(id);
+  const detail = await getGameDetails(id);
+  if (detail.kind === 'ok') return detail.data;
+
+  // 只要有一级明确说「不存在」就是真 404；两级都只是故障时必须抛错走 error.tsx / 500，
+  // 不能把后端抖动固化成永久 noindex 的 404。
+  if (snapshot.kind === 'notFound' || detail.kind === 'notFound') return null;
+  throw new Error(
+    '[game-detail] 详情数据读取失败：' + String(id) +
+      '（snapshot=' + tierFailureReason(snapshot) + ', details=' + tierFailureReason(detail) + '）',
+  );
 });
 
 export async function generateMetadata({
@@ -384,6 +416,8 @@ export async function generateMetadata({
   }
   const [siteConfig, gameData] = await Promise.all([getSiteConfig(), getPageData(id)]);
 
+  // getPageData 只在后端明确 404 时返回 null，5xx / 超时等故障已抛错
+  // （走 error.tsx / 500），因此这里的 null 可以安全地当作「游戏不存在」。
   if (!gameData) {
     notFound();
   }
@@ -486,6 +520,8 @@ export default async function GameDetailPage({
   }
 
   const initialGameData = await getPageData(id);
+  // getPageData 只在后端明确 404 时返回 null，5xx / 超时等故障已抛错
+  // （走 error.tsx / 500），因此这里的 null 可以安全地当作「游戏不存在」。
   if (!initialGameData) {
     notFound();
   }

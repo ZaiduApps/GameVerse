@@ -851,6 +851,58 @@ test('community post mapper: drops malformed link previews from clipped content'
   ]);
 });
 
+test('community post detail: 404 becomes null but upstream failure throws', async () => {
+  const { getCommunityPostById: getMissingPost } = loadCommunityApiUtils(async () => ({
+    ok: false,
+    status: 404,
+    statusText: 'Not Found',
+    json: async () => ({ code: 404, message: 'post not found', data: null }),
+  }));
+  assert.equal(await getMissingPost('missing-post'), null);
+
+  const calls = [];
+  const { getCommunityPostById: getFailingPost } = loadCommunityApiUtils(async (path) => {
+    calls.push(path);
+    return {
+      ok: false,
+      status: 503,
+      statusText: 'Service Unavailable',
+      json: async () => ({ code: 503, message: 'db down', data: null }),
+    };
+  });
+  // 5xx 不是「帖子不存在」，必须抛错走 error.tsx / 500
+  await assert.rejects(() => getFailingPost('post-1'), /读取失败/);
+  // 默认 retries=1：5xx 重试一次后才放弃
+  assert.equal(calls.length, 2);
+});
+
+test('community topic detail: only explicit 404 becomes null', async () => {
+  const { getCommunityTopicDetailOrThrow } = loadCommunityApiUtils(async () => ({
+    ok: false,
+    status: 500,
+    statusText: 'Internal Server Error',
+    json: async () => ({ code: 500, message: 'boom', data: null }),
+  }));
+  await assert.rejects(() => getCommunityTopicDetailOrThrow('topic-slug'), /读取失败/);
+
+  const { getCommunityTopicDetailOrThrow: getMissingTopic } = loadCommunityApiUtils(async () => ({
+    ok: false,
+    status: 404,
+    statusText: 'Not Found',
+    json: async () => ({ code: 404, message: 'topic not found', data: null }),
+  }));
+  assert.equal(await getMissingTopic('topic-slug'), null);
+
+  // 客户端刷新用的宽容版本仍然「失败即 null」，行为不变
+  const { getCommunityTopicDetail } = loadCommunityApiUtils(async () => ({
+    ok: false,
+    status: 500,
+    statusText: 'Internal Server Error',
+    json: async () => ({ code: 500, message: 'boom', data: null }),
+  }));
+  assert.equal(await getCommunityTopicDetail('topic-slug'), null);
+});
+
 test('community author profile helper: prefers username over object id', () => {
   const post = toCommunityPost({
     _id: 'post-3',

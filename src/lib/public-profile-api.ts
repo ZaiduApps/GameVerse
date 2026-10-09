@@ -73,7 +73,15 @@ function decodeIfPercentEncoded(value: string): string {
   }
 }
 
-async function requestPublicProfile(lookupKey: string): Promise<PublicProfileData | null> {
+export type PublicProfileResultKind = 'ok' | 'notFound' | 'httpError' | 'invalidPayload';
+
+export interface PublicProfileResult {
+  data: PublicProfileData | null;
+  status: number | null;
+  kind: PublicProfileResultKind;
+}
+
+async function requestPublicProfileResult(lookupKey: string): Promise<PublicProfileResult> {
   const res = await trackedApiFetch(`/users/public/${encodeURIComponent(lookupKey)}`, {
     cache: 'force-cache',
     next: { revalidate: PUBLIC_PROFILE_REVALIDATE_SECONDS },
@@ -81,16 +89,35 @@ async function requestPublicProfile(lookupKey: string): Promise<PublicProfileDat
     logKey: 'public-profile',
   });
   const json = await res.json().catch(() => null);
-  if (!res.ok || json?.code !== 0 || !json?.data?.user) {
+  if (!res.ok) {
     console.error('[public-profile] 解析失败', {
       lookupKey,
       status: res.status,
       code: json?.code ?? null,
       hasUser: Boolean(json?.data?.user),
     });
-    return null;
+    // 只有明确的 404 才是「用户不存在」，5xx / 429 属于后端故障，不能折叠成 404
+    return {
+      data: null,
+      status: res.status,
+      kind: res.status === 404 ? 'notFound' : 'httpError',
+    };
   }
-  return json.data as PublicProfileData;
+  if (json?.code !== 0 || !json?.data?.user) {
+    console.error('[public-profile] 解析失败', {
+      lookupKey,
+      status: res.status,
+      code: json?.code ?? null,
+      hasUser: Boolean(json?.data?.user),
+    });
+    return { data: null, status: res.status, kind: 'invalidPayload' };
+  }
+  return { data: json.data as PublicProfileData, status: res.status, kind: 'ok' };
+}
+
+/** 兼容包装：失败一律 null，保持既有行为不变。 */
+async function requestPublicProfile(lookupKey: string): Promise<PublicProfileData | null> {
+  return (await requestPublicProfileResult(lookupKey)).data;
 }
 
 export async function getPublicProfile(idOrUsername: string): Promise<PublicProfileData | null> {
@@ -102,6 +129,31 @@ export async function getPublicProfile(idOrUsername: string): Promise<PublicProf
   for (const candidate of candidates) {
     const data = await requestPublicProfile(candidate);
     if (data) return data;
+  }
+  return null;
+}
+
+/**
+ * 页面专用：只有所有候选都明确 404（用户确实不存在）才返回 null 让调用方 notFound()，
+ * 其余失败（5xx / 429 / 超时 / 异常）抛错走 error.tsx / 500，
+ * 避免后端抖动被固化成永久 noindex 的 404。
+ */
+export async function getPublicProfileOrThrow(
+  idOrUsername: string,
+): Promise<PublicProfileData | null> {
+  const id = String(idOrUsername || '').trim();
+  if (!id) return null;
+
+  const candidates = Array.from(new Set([decodeIfPercentEncoded(id), id]));
+  for (const candidate of candidates) {
+    const result = await requestPublicProfileResult(candidate);
+    if (result.data) return result.data;
+    if (result.kind !== 'notFound') {
+      throw new Error(
+        '[public-profile] 读取失败：lookupKey=' + candidate +
+          ' kind=' + result.kind + ' status=' + String(result.status),
+      );
+    }
   }
   return null;
 }
