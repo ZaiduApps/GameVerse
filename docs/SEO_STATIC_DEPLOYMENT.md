@@ -122,24 +122,40 @@ pm2 show game-ve
 `/u/{handle}` 的 handle 含 `@` 时，动态路由段交付的是百分号编码值，取值前必须先解码，
 否则 `encodeURIComponent` 会二次编码成 `%2540` 并误判为用户不存在。
 
-## 构建阻塞：useSearchParams 未包 Suspense（2026-09-30 发现，未修）
+## 构建阻塞：useSearchParams 未包 Suspense（2026-09-30 发现，同日已修）
 
 `observed`：`pnpm build` 在预渲染阶段失败，报
 `useSearchParams() should be wrapped in a suspense boundary`。这是 `main` 上的既有缺陷，
 与 SEO 改动无关（在 `3e6bf7a` 上同样复现），会阻塞任何 GameVerse 生产发布。
 
-涉及文件：
+`fixed`：同日 13:39 由 `788238f` 修掉（`fix(build): 修复 /community 与用户中心的预渲染失败导致 next build 中断`），
+修法分两处：
 
-- `src/app/profile/center/{games,posts,reservations,topics}/page.tsx`
-- `src/app/community/page.tsx`（经 `CommunityPageView.tsx`）
+- `src/app/community/page.tsx:195`：给客户端视图 `CommunityPageView` 就地包一层
+  `<Suspense fallback={<CommunityPageSkeleton />}>`。该页是 SEO 关键页，必须保住静态预渲染，
+  所以**不能**改成 `force-dynamic`。骨架按 `CommunityPageView` 的三栏栅格 1:1 复刻以避免 hydration 位移，
+  页面级 JSON-LD 仍由服务端先行输出。
+- `src/app/profile/layout.tsx:7`：加 `export const dynamic = 'force-dynamic';`。
+  用户中心四页（`center/{games,posts,reservations,topics}`）都是登录后页面、`metadata.robots` 本就 `index: false`，
+  静态预渲染没有收益，所以在布局层统一豁免，而不是每页各包一层 Suspense。
+  注意 `'use client'` 文件不能导出路由段配置，`src/app/page.tsx` 那种写法在这几处无效。
 
-这些页面都是 `'use client'` 且直接调用 `useSearchParams()`，整棵子树没有 Suspense 边界。
-注意 `'use client'` 文件不能导出路由段配置（`export const dynamic`），所以 `src/app/page.tsx` 那种写法在这几处无效。
-可选方案：
+验证：`next build` 通过——`/community` 回到 `○ (Static)`，
+`/profile` 及四个 center 页为 `ƒ (Dynamic)`。
 
-- 用户中心四页：`noindex` 的登录后页面，语义上就该动态渲染，拆出 server 包装层 + `<Suspense>` 是最贴切的修法；
-- `/community`：SEO 关键页，**不要**用 `force-dynamic`，应给 `CommunityPageView` 包
-  `<Suspense>` 以保住静态生成。
+### 这个 Suspense 边界不可删除（风险提示）
+
+`5f7153f` 只改了 `src/app/community/page.tsx` 的代码注释（补写由来），没有回改本文档。
+该注释写明：
+
+- `b7d3686` 为修「`notFound()` 遇到段级 Suspense 会把响应 flush 成 200」的软 404 缺陷，
+  故意删掉了 `src/app/community/loading.tsx`；
+- 而 `loading.tsx` 提供的**隐式**边界，正是本页 `useSearchParams()` 过去能通过预渲染的原因；
+- 边界删掉后 `next build` 会在预渲染阶段直接失败（`missing-suspense-with-csr-bailout`）。
+
+**不要把 `788238f` 补回的 `<Suspense>` 当成 `loading.tsx` 的重复包装而清掉。**
+按旧描述（「未修」）去删这个边界，会立即重现 `next build` 中断，直接阻塞生产发布；
+要恢复构建只能再补一层等价边界，等于绕回原点。
 ## 失败处理与回滚
 
 - API 返回非 2xx：不重复写入，先保存脱敏错误和请求时间，确认数据库是否已改变。
