@@ -759,6 +759,38 @@ test('community post mapper: ignores code-block images when selecting cover', ()
   assert.deepEqual(plainJsonValue(post.previewImages), ['https://example.com/body.png']);
 });
 
+test('community post mapper: publish time prefers publish_at over last_commented_at', () => {
+  const post = toCommunityPost({
+    _id: 'post-published-time',
+    content: '正文',
+    publish_at: '2026-01-02T03:04:05.000Z',
+    created_at: '2026-01-01T00:00:00.000Z',
+    last_commented_at: '2026-06-06T10:00:00.000Z',
+    updated_at: '2026-06-06T10:00:00.000Z',
+  });
+
+  // rawTimestamp 会作为 published / datePublished 输出，必须是发布时间而非最后回复时间
+  assert.equal(post.rawTimestamp, '2026-01-02T03:04:05.000Z');
+  assert.equal(post.updatedAt, '2026-06-06T10:00:00.000Z');
+
+  // publish_at 缺失时退回 created_at，仍优先于 last_commented_at
+  const withoutPublishAt = toCommunityPost({
+    _id: 'post-published-time-fallback',
+    content: '正文',
+    created_at: '2026-01-01T00:00:00.000Z',
+    last_commented_at: '2026-06-06T10:00:00.000Z',
+  });
+  assert.equal(withoutPublishAt.rawTimestamp, '2026-01-01T00:00:00.000Z');
+
+  // 两个发布时间字段都缺失时，last_commented_at 才作最后兜底
+  const onlyCommentedAt = toCommunityPost({
+    _id: 'post-published-time-last-resort',
+    content: '正文',
+    last_commented_at: '2026-06-06T10:00:00.000Z',
+  });
+  assert.equal(onlyCommentedAt.rawTimestamp, '2026-06-06T10:00:00.000Z');
+});
+
 test('community post mapper: keeps link click ranking stats', () => {
   const post = toCommunityPost({
     _id: 'post-2',

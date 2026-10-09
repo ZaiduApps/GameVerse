@@ -361,8 +361,12 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
   );
   const uniqueTopicNames = Array.from(new Set(topicNames));
 
+  // 发布时间语义：publish_at 是入库/审核通过时确定的发布时间（后端信息流也按它排序），
+  // 缺则退回文档创建时间；last_commented_at 是「最后回复时间」，只作最后兜底。
+  // 早前把它排在首位，导致有过回复的帖子把 datePublished / article:published_time
+  // 输出成最后回复时间，且与 dateModified 恰好相等。
   const rawTimestamp = normalizeRawTimestamp(
-    item.last_commented_at || item.publish_at || item.created_at,
+    item.publish_at || item.created_at || item.last_commented_at,
   );
   const updatedAt = normalizeRawTimestamp(item.updated_at);
   const authorProfileTarget = String(item.author_username || item.author_id || '').trim();
