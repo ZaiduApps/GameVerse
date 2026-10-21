@@ -820,7 +820,7 @@ export default function CommunityTopicBoardView({
                             type="button"
                             variant="link"
                             size="sm"
-                            className="h-auto p-0 text-xs leading-none"
+                            className="inline-flex h-auto min-h-9 items-center px-2 -mr-2 text-xs leading-none"
                             data-acbox-action="topic_open_moderators"
                             data-acbox-label={topic?.name || safeIdOrSlug}
                             onClick={() => setModeratorDialogOpen(true)}
@@ -835,7 +835,7 @@ export default function CommunityTopicBoardView({
                             type="button"
                             variant="link"
                             size="sm"
-                            className="h-auto p-0 text-xs leading-none"
+                            className="inline-flex h-auto min-h-9 items-center px-2 -mr-2 text-xs leading-none"
                             data-acbox-action="topic_open_moderators"
                             data-acbox-label={topic?.name || safeIdOrSlug}
                             onClick={() => setModeratorDialogOpen(true)}

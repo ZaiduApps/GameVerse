@@ -168,7 +168,7 @@ export default function GameDetailActions({
   const reminderLabel = isReminderEnabled ? '已提醒' : '上线提醒';
 
   const floatingIconClass = cn(
-    'flex h-8 w-8 items-center justify-center rounded-full transition-colors',
+    'flex h-10 w-10 items-center justify-center rounded-full transition-colors lg:h-8 lg:w-8',
     isHeaderSolid
       ? 'bg-[#eff1f2] text-[#2c2f30] dark:bg-muted/70 dark:text-foreground'
       : 'bg-black/30 text-white backdrop-blur-sm',
@@ -291,7 +291,7 @@ export default function GameDetailActions({
             aria-label={isFavorite ? '取消收藏当前游戏' : '收藏当前游戏'}
             aria-pressed={isFavorite}
             onClick={handleFavoriteToggle}
-            className="flex flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
+            className="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
           >
             <Heart className={cn('h-5 w-5', isFavorite && 'fill-current text-tone-red')} />
             <span className="text-[10px]">想玩</span>
@@ -302,7 +302,7 @@ export default function GameDetailActions({
             aria-label="前往游戏社区"
             onMouseEnter={() => router.prefetch('/community')}
             onFocus={() => router.prefetch('/community')}
-            className="flex flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
+            className="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
           >
             <MessageSquare className="h-5 w-5" />
             <span className="text-[10px]">论坛</span>
@@ -313,7 +313,7 @@ export default function GameDetailActions({
               aria-label="提交催更请求"
               disabled={isSubmittingUrge}
               onClick={() => void handleUrge()}
-              className="flex flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
+              className="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
             >
               <RefreshCw className="h-5 w-5" />
               <span className="text-[10px]">{isSubmittingUrge ? '提交中' : '催更'}</span>
@@ -325,7 +325,7 @@ export default function GameDetailActions({
               aria-label="切换上线提醒"
               aria-pressed={isReminderEnabled}
               onClick={handleReminderToggle}
-              className={cn('flex flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground', isReminderEnabled && 'text-primary')}
+              className={cn('flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground', isReminderEnabled && 'text-primary')}
             >
               <BellPlus className={cn('h-5 w-5', isReminderEnabled && 'fill-current')} />
               <span className="text-[10px]">{reminderLabel}</span>

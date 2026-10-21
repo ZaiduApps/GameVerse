@@ -631,7 +631,7 @@ export default function AlbumTopicView({
         <div className="relative z-10 grid gap-8 p-6 sm:p-8 xl:grid-cols-[minmax(0,1.2fr)_380px] xl:p-10">
           <div>
             <nav className="mb-5 flex flex-wrap items-center gap-2 text-xs font-bold tracking-normal text-white/68">
-              <Link href="/" className="transition-colors hover:text-white">首页</Link>
+              <Link href="/" className="inline-flex min-h-8 items-center transition-colors hover:text-white">首页</Link>
               <span>/</span>
               <span>专题推荐</span>
               <span>/</span>
