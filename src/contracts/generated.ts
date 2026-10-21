@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 c2ac39ecf012ad054d6dc60d55b52ddd7baf6a70425acb38591835d84338bc1a
+ * @contract-sha256 5b6aeae712c9f4d72238f2053d1d5035e1cd655f8f25b4d0bd7a321a9511ff64
  */
 
 export interface paths {
@@ -5757,6 +5757,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/logs/admin/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** System log list */
+        get: operations["LogsController_getSystemLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/logs/admin/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin operation log list */
+        get: operations["LogsController_getAdminOperationLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/log-system/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 日志系统列表（默认返回定时任务日志，可按 source 切换） */
+        get: operations["LogSystemController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/resource-worker/v1/runtime-config": {
         parameters: {
             query?: never;
@@ -6218,57 +6269,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/logs/admin/list": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** System log list */
-        get: operations["LogsController_getSystemLogs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/logs/admin/operations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Admin operation log list */
-        get: operations["LogsController_getAdminOperationLogs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/log-system/list": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 日志系统列表（默认返回定时任务日志，可按 source 切换） */
-        get: operations["LogSystemController_list"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/mcp": {
         parameters: {
             query?: never;
@@ -6303,305 +6303,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/ai-assistant/admin/config": {
+    "/mcp/admin/audits": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** 获取 AI 助手配置 */
-        get: operations["AiAssistantController_getConfig"];
-        put?: never;
-        /** 更新 AI 助手配置 */
-        post: operations["AiAssistantController_updateConfig"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/tools": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 获取 AI 运营工具列表 */
-        get: operations["AiAssistantController_getTools"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/chat/stream": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** AI 对话流式输出（SSE） */
-        post: operations["AiAssistantController_chatStream"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/jobs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 获取 AI 助手任务列表 */
-        get: operations["AiAssistantController_getJobs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/jobs/{jobId}/steps": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 获取 AI 助手任务步骤 */
-        get: operations["AiAssistantController_getJobSteps"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/jobs/{jobId}/graph": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 获取 AI 助手任务步骤图 */
-        get: operations["AiAssistantController_getJobGraph"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/jobs/{jobId}/retry": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 重试 AI 助手任务 */
-        post: operations["AiAssistantController_retryJob"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/jobs/{jobId}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 取消 AI 助手任务 */
-        post: operations["AiAssistantController_cancelJob"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/jobs/{jobId}/resume": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 恢复 AI 助手任务（断点续跑） */
-        post: operations["AiAssistantController_resumeJob"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/jobs/{jobId}/rollback": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 记录 AI 助手任务回滚动作 */
-        post: operations["AiAssistantController_rollbackJob"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/ops/albums/random-preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 随机选取专辑游戏（预览） */
-        post: operations["AiAssistantController_previewRandomPick"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/ops/albums/random-apply": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 随机选取并写入专辑游戏 */
-        post: operations["AiAssistantController_applyRandomPick"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/seo/push": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 提交 URL 到 SEO 推送引擎（百度/IndexNow） */
-        post: operations["SeoController_push"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/seo/sitemap/games": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 获取游戏 sitemap 数据（公开） */
-        get: operations["SeoController_sitemapGames"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/seo/game-page": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 获取游戏详情页 SEO 快照（公开） */
-        get: operations["SeoController_gamePage"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/seo/audit/games": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 获取游戏 SEO 质量审计数据（公开） */
-        get: operations["SeoController_auditGames"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/seo/sitemap/users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 获取公开用户主页 sitemap 数据（公开） */
-        get: operations["SeoController_sitemapUsers"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/search/global": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 全站统一搜索 */
-        get: operations["SearchController_global"];
+        /** MCP 工具调用审计流水（只读） */
+        get: operations["McpController_listAudits"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7156,6 +6866,313 @@ export interface paths {
         put?: never;
         /** 创建 apkeep 账号认证测试任务 */
         post: operations["ApkeepAccountController_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai-assistant/admin/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取 AI 助手配置 */
+        get: operations["AiAssistantController_getConfig"];
+        put?: never;
+        /** 更新 AI 助手配置 */
+        post: operations["AiAssistantController_updateConfig"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai-assistant/admin/tools": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取 AI 运营工具列表 */
+        get: operations["AiAssistantController_getTools"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai-assistant/admin/chat/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** AI 对话流式输出（SSE） */
+        post: operations["AiAssistantController_chatStream"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai-assistant/admin/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取 AI 助手任务列表 */
+        get: operations["AiAssistantController_getJobs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai-assistant/admin/jobs/{jobId}/steps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取 AI 助手任务步骤 */
+        get: operations["AiAssistantController_getJobSteps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai-assistant/admin/jobs/{jobId}/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取 AI 助手任务步骤图 */
+        get: operations["AiAssistantController_getJobGraph"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai-assistant/admin/jobs/{jobId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 重试 AI 助手任务 */
+        post: operations["AiAssistantController_retryJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai-assistant/admin/jobs/{jobId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 取消 AI 助手任务 */
+        post: operations["AiAssistantController_cancelJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai-assistant/admin/jobs/{jobId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 恢复 AI 助手任务（断点续跑） */
+        post: operations["AiAssistantController_resumeJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai-assistant/admin/jobs/{jobId}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 记录 AI 助手任务回滚动作 */
+        post: operations["AiAssistantController_rollbackJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai-assistant/admin/ops/albums/random-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 随机选取专辑游戏（预览） */
+        post: operations["AiAssistantController_previewRandomPick"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai-assistant/admin/ops/albums/random-apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 随机选取并写入专辑游戏 */
+        post: operations["AiAssistantController_applyRandomPick"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/seo/push": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 提交 URL 到 SEO 推送引擎（百度/IndexNow） */
+        post: operations["SeoController_push"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/seo/sitemap/games": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取游戏 sitemap 数据（公开） */
+        get: operations["SeoController_sitemapGames"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/seo/game-page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取游戏详情页 SEO 快照（公开） */
+        get: operations["SeoController_gamePage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/seo/audit/games": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取游戏 SEO 质量审计数据（公开） */
+        get: operations["SeoController_auditGames"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/seo/sitemap/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取公开用户主页 sitemap 数据（公开） */
+        get: operations["SeoController_sitemapUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/search/global": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 全站统一搜索 */
+        get: operations["SearchController_global"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -8371,7 +8388,7 @@ export interface components {
              * @example admin.content.update
              * @enum {string}
              */
-            task_key?: "system.daily-log" | "tracking.daily-rollup" | "tracking.daily-rollup-yesterday" | "admin.post-gp" | "admin.content.update" | "admin.update.all-gp" | "admin.update.one-gp" | "admin.get-gp" | "admin.get-qoo" | "admin.resource.audit" | "system.task-run-log-retention" | "system.media-reclaim-scan" | "admin.apkeep.account-health";
+            task_key?: "system.daily-log" | "tracking.daily-rollup" | "tracking.daily-rollup-yesterday" | "admin.post-gp" | "admin.content.update" | "admin.update.all-gp" | "admin.update.one-gp" | "admin.get-gp" | "admin.get-qoo" | "admin.resource.audit" | "system.task-run-log-retention" | "system.media-reclaim-scan" | "admin.apkeep.account-health" | "system.admin-operation-log-retention";
             /** @description 任务名称 */
             name?: string;
             /** @description 任务说明 */
@@ -8452,74 +8469,6 @@ export interface components {
              */
             auto_disable_threshold?: number;
         };
-        RegisterResourceWorkerDto: Record<string, never>;
-        ResourceWorkerHeartbeatDto: Record<string, never>;
-        ClaimResourceTasksDto: Record<string, never>;
-        LeaseApkeepAccountDto: Record<string, never>;
-        HeartbeatResourceTaskDto: Record<string, never>;
-        ResourceTaskEventDto: Record<string, never>;
-        CompleteResourceTaskDto: Record<string, never>;
-        CompleteApkeepAuthExchangeDto: {
-            /** @description 执行任务的 Worker 标识 */
-            worker_id: string;
-            /** @description 当前任务租约令牌 */
-            lease_token: string;
-            /** @description 任务尝试序号 */
-            attempt_no: number;
-            /** @description Interface 分配的 apkeep 账号标识 */
-            account_id: string;
-            /**
-             * @description OAuth 兑换结果
-             * @enum {string}
-             */
-            status: "succeeded" | "failed";
-            /** @description 兑换成功得到的 AAS token，仅成功时提交，服务端不会返回 */
-            aas_token?: string;
-            /** @description 失败错误分类，不得包含凭证或邮箱 */
-            error_category?: string;
-        };
-        ApkeepAccountTestResultDto: {
-            /** @description 用于账号测试的公开 Android 包名 */
-            package_name: string;
-            /**
-             * @description apkeep 产物形态
-             * @enum {string}
-             */
-            artifact_mode: "single" | "bundle" | "split_directory";
-            /** @description 已验证的输出文件数 */
-            output_file_count: number;
-            /** @description 账号测试耗时（毫秒） */
-            elapsed_ms: number;
-            /**
-             * @description 账号测试档位：probe 只下基础 APK，full 为完整下载链路；缺省按 full
-             * @enum {string}
-             */
-            account_test_mode?: "probe" | "full";
-            /** @description 是否按 split APK 全量下载 */
-            split_apk?: boolean;
-        };
-        CompleteApkeepAccountTestDto: {
-            /** @description Interface 分配的 apkeep 账号标识 */
-            account_id: string;
-            /**
-             * @description 账号测试结果
-             * @enum {string}
-             */
-            status: "succeeded" | "failed";
-            result?: components["schemas"]["ApkeepAccountTestResultDto"];
-            /** @description 失败错误分类，不得包含凭证或邮箱 */
-            error_category?: string;
-        };
-        FailResourceTaskDto: Record<string, never>;
-        AbandonResourceTaskDto: Record<string, never>;
-        ClaimDetectionItemsDto: Record<string, never>;
-        CompleteDetectionItemDto: Record<string, never>;
-        FailDetectionItemDto: Record<string, never>;
-        CreateDetectionRunDto: Record<string, never>;
-        UpdateResourceWorkerStatusDto: Record<string, never>;
-        UpdateResourceWorkerTaskProfileDto: Record<string, never>;
-        UpdateResourceWorkerConcurrencyDto: Record<string, never>;
-        UpdateResourceWorkerApkeepDto: Record<string, never>;
         SystemLogItemDto: {
             /** @example combined-123-2026-03-22T10:30:08.000Z */
             id: string;
@@ -8657,6 +8606,133 @@ export interface components {
             /** @example 20 */
             pageSize: number;
         };
+        RegisterResourceWorkerDto: Record<string, never>;
+        ResourceWorkerHeartbeatDto: Record<string, never>;
+        ClaimResourceTasksDto: Record<string, never>;
+        LeaseApkeepAccountDto: Record<string, never>;
+        HeartbeatResourceTaskDto: Record<string, never>;
+        ResourceTaskEventDto: Record<string, never>;
+        CompleteResourceTaskDto: Record<string, never>;
+        CompleteApkeepAuthExchangeDto: {
+            /** @description 执行任务的 Worker 标识 */
+            worker_id: string;
+            /** @description 当前任务租约令牌 */
+            lease_token: string;
+            /** @description 任务尝试序号 */
+            attempt_no: number;
+            /** @description Interface 分配的 apkeep 账号标识 */
+            account_id: string;
+            /**
+             * @description OAuth 兑换结果
+             * @enum {string}
+             */
+            status: "succeeded" | "failed";
+            /** @description 兑换成功得到的 AAS token，仅成功时提交，服务端不会返回 */
+            aas_token?: string;
+            /** @description 失败错误分类，不得包含凭证或邮箱 */
+            error_category?: string;
+        };
+        ApkeepAccountTestResultDto: {
+            /** @description 用于账号测试的公开 Android 包名 */
+            package_name: string;
+            /**
+             * @description apkeep 产物形态
+             * @enum {string}
+             */
+            artifact_mode: "single" | "bundle" | "split_directory";
+            /** @description 已验证的输出文件数 */
+            output_file_count: number;
+            /** @description 账号测试耗时（毫秒） */
+            elapsed_ms: number;
+            /**
+             * @description 账号测试档位：probe 只下基础 APK，full 为完整下载链路；缺省按 full
+             * @enum {string}
+             */
+            account_test_mode?: "probe" | "full";
+            /** @description 是否按 split APK 全量下载 */
+            split_apk?: boolean;
+        };
+        CompleteApkeepAccountTestDto: {
+            /** @description Interface 分配的 apkeep 账号标识 */
+            account_id: string;
+            /**
+             * @description 账号测试结果
+             * @enum {string}
+             */
+            status: "succeeded" | "failed";
+            result?: components["schemas"]["ApkeepAccountTestResultDto"];
+            /** @description 失败错误分类，不得包含凭证或邮箱 */
+            error_category?: string;
+        };
+        FailResourceTaskDto: Record<string, never>;
+        AbandonResourceTaskDto: Record<string, never>;
+        ClaimDetectionItemsDto: Record<string, never>;
+        CompleteDetectionItemDto: Record<string, never>;
+        FailDetectionItemDto: Record<string, never>;
+        CreateDetectionRunDto: Record<string, never>;
+        UpdateResourceWorkerStatusDto: Record<string, never>;
+        UpdateResourceWorkerTaskProfileDto: Record<string, never>;
+        UpdateResourceWorkerConcurrencyDto: Record<string, never>;
+        UpdateResourceWorkerApkeepDto: Record<string, never>;
+        CreateResourceUpdateJobsDto: {
+            /** @description 包名列表，最多 20 个；与 pkg 二选一或同时给出 */
+            packages?: string[];
+            /** @description 单个包名，等价于 packages:[pkg] */
+            pkg?: string;
+            /**
+             * @description 执行方式；资源更新只支持 remote，internal 会在服务端被拒绝
+             * @enum {string}
+             */
+            execution_mode?: "internal" | "remote";
+            /** @description 强制重跑：该版本已有终态任务时复活它重新下载；任务仍在队列/执行中则拒绝，已被忽略或被新版本取代的终态任务不会被复活 */
+            force?: boolean;
+        };
+        UpsertApkeepAccountDto: {
+            account_id: string;
+            label?: string;
+            email: string;
+            /** @enum {string} */
+            auth_mode: "aas" | "auth";
+            aas_token?: string;
+            auth_token?: string;
+            oauth_token?: string;
+            device?: string;
+            locale?: string;
+            timezone?: string;
+            region?: string;
+            split_apk?: boolean;
+            accept_tos?: boolean;
+            weight?: number;
+            /** @enum {string} */
+            status?: "active" | "disabled" | "cooldown" | "invalid";
+        };
+        UpdateApkeepAccountDto: {
+            account_id?: string;
+            label?: string;
+            email?: string;
+            /** @enum {string} */
+            auth_mode?: "aas" | "auth";
+            aas_token?: string;
+            auth_token?: string;
+            oauth_token?: string;
+            device?: string;
+            locale?: string;
+            timezone?: string;
+            region?: string;
+            split_apk?: boolean;
+            accept_tos?: boolean;
+            weight?: number;
+            /** @enum {string} */
+            status?: "active" | "disabled" | "cooldown" | "invalid";
+        };
+        TestApkeepAccountDto: {
+            /**
+             * @description probe：只下基础包验证鉴权，不拆分、不上传、不解析，产物立即删除；full：按账号配置拆分下载
+             * @default probe
+             * @enum {string}
+             */
+            test_mode: "probe" | "full";
+        };
         AiChatMessageDto: {
             /**
              * @description 角色
@@ -8786,65 +8862,6 @@ export interface components {
             articles: components["schemas"]["GlobalSearchSectionDto"];
             posts: components["schemas"]["GlobalSearchSectionDto"];
             topics: components["schemas"]["GlobalSearchSectionDto"];
-        };
-        CreateResourceUpdateJobsDto: {
-            /** @description 包名列表，最多 20 个；与 pkg 二选一或同时给出 */
-            packages?: string[];
-            /** @description 单个包名，等价于 packages:[pkg] */
-            pkg?: string;
-            /**
-             * @description 执行方式；资源更新只支持 remote，internal 会在服务端被拒绝
-             * @enum {string}
-             */
-            execution_mode?: "internal" | "remote";
-            /** @description 强制重跑：该版本已有终态任务时复活它重新下载；任务仍在队列/执行中则拒绝，已被忽略或被新版本取代的终态任务不会被复活 */
-            force?: boolean;
-        };
-        UpsertApkeepAccountDto: {
-            account_id: string;
-            label?: string;
-            email: string;
-            /** @enum {string} */
-            auth_mode: "aas" | "auth";
-            aas_token?: string;
-            auth_token?: string;
-            oauth_token?: string;
-            device?: string;
-            locale?: string;
-            timezone?: string;
-            region?: string;
-            split_apk?: boolean;
-            accept_tos?: boolean;
-            weight?: number;
-            /** @enum {string} */
-            status?: "active" | "disabled" | "cooldown" | "invalid";
-        };
-        UpdateApkeepAccountDto: {
-            account_id?: string;
-            label?: string;
-            email?: string;
-            /** @enum {string} */
-            auth_mode?: "aas" | "auth";
-            aas_token?: string;
-            auth_token?: string;
-            oauth_token?: string;
-            device?: string;
-            locale?: string;
-            timezone?: string;
-            region?: string;
-            split_apk?: boolean;
-            accept_tos?: boolean;
-            weight?: number;
-            /** @enum {string} */
-            status?: "active" | "disabled" | "cooldown" | "invalid";
-        };
-        TestApkeepAccountDto: {
-            /**
-             * @description probe：只下基础包验证鉴权，不拆分、不上传、不解析，产物立即删除；full：按账号配置拆分下载
-             * @default probe
-             * @enum {string}
-             */
-            test_mode: "probe" | "full";
         };
         WebGameImportPreviewDto: Record<string, never>;
         WebGameImportDto: Record<string, never>;
@@ -21960,6 +21977,179 @@ export interface operations {
             };
         };
     };
+    LogsController_getSystemLogs: {
+        parameters: {
+            query?: {
+                /** @description Page number */
+                page?: number;
+                /** @description Page size */
+                pageSize?: number;
+                /** @description all | combined | error | tracking | import | task_scheduler | upload */
+                source?: "all" | "combined" | "error" | "tracking" | "import" | "task_scheduler" | "upload";
+                /** @description error | warn | info | debug | verbose */
+                level?: "error" | "warn" | "info" | "debug" | "verbose";
+                /** @description Log context */
+                context?: string;
+                /** @description Keyword search in message and payload */
+                keyword?: string;
+                /** @description Task log type filter, e.g. task_admin_update_all_gp / task_admin_content_update_gp */
+                log_type?: string;
+                /** @description Request id filter */
+                request_id?: string;
+                /** @description API key id filter */
+                api_key_id?: string;
+                /** @description Request path filter */
+                path?: string;
+                /** @description User id exact match */
+                user_id?: string;
+                /** @description User keyword in user_id or user_name */
+                user_keyword?: string;
+                /** @description IP exact or fuzzy match */
+                ip?: string;
+                /** @description IP region fuzzy match */
+                ip_region?: string;
+                /** @description Start timestamp (ISO string) */
+                start_time?: string;
+                /** @description End timestamp (ISO string) */
+                end_time?: string;
+                /** @description true/false */
+                realtime?: boolean;
+                /** @description Use previous next_cursor */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Query success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: components["schemas"]["SystemLogListDataDto"];
+                    };
+                };
+            };
+        };
+    };
+    LogsController_getAdminOperationLogs: {
+        parameters: {
+            query?: {
+                /** @description Page number */
+                page?: number;
+                /** @description Page size (max 200) */
+                pageSize?: number;
+                /** @description Keyword in username, name, path, or error */
+                keyword?: string;
+                /** @description Operator user id */
+                operator_id?: string;
+                /** @description Role code */
+                role_code?: string;
+                /** @description HTTP method */
+                method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+                /** @description Request path filter */
+                path?: string;
+                /** @description Operation success filter */
+                success?: boolean;
+                /** @description Start timestamp (ISO string) */
+                start_time?: string;
+                /** @description End timestamp (ISO string) */
+                end_time?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Query success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: components["schemas"]["AdminOperationLogListDataDto"];
+                    };
+                };
+            };
+        };
+    };
+    LogSystemController_list: {
+        parameters: {
+            query?: {
+                /** @description Page number */
+                page?: number;
+                /** @description Page size */
+                pageSize?: number;
+                /** @description all | combined | error | tracking | import | task_scheduler | upload */
+                source?: "all" | "combined" | "error" | "tracking" | "import" | "task_scheduler" | "upload";
+                /** @description error | warn | info | debug | verbose */
+                level?: "error" | "warn" | "info" | "debug" | "verbose";
+                /** @description Log context */
+                context?: string;
+                /** @description Keyword search in message and payload */
+                keyword?: string;
+                /** @description Task log type filter, e.g. task_admin_update_all_gp / task_admin_content_update_gp */
+                log_type?: string;
+                /** @description Request id filter */
+                request_id?: string;
+                /** @description API key id filter */
+                api_key_id?: string;
+                /** @description Request path filter */
+                path?: string;
+                /** @description User id exact match */
+                user_id?: string;
+                /** @description User keyword in user_id or user_name */
+                user_keyword?: string;
+                /** @description IP exact or fuzzy match */
+                ip?: string;
+                /** @description IP region fuzzy match */
+                ip_region?: string;
+                /** @description Start timestamp (ISO string) */
+                start_time?: string;
+                /** @description End timestamp (ISO string) */
+                end_time?: string;
+                /** @description true/false */
+                realtime?: boolean;
+                /** @description Use previous next_cursor */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Query success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: components["schemas"]["SystemLogListDataDto"];
+                    };
+                };
+            };
+        };
+    };
     ResourceWorkerGatewayController_runtimeConfigPayload: {
         parameters: {
             query?: never;
@@ -22621,179 +22811,6 @@ export interface operations {
             };
         };
     };
-    LogsController_getSystemLogs: {
-        parameters: {
-            query?: {
-                /** @description Page number */
-                page?: number;
-                /** @description Page size */
-                pageSize?: number;
-                /** @description all | combined | error | tracking | import | task_scheduler | upload */
-                source?: "all" | "combined" | "error" | "tracking" | "import" | "task_scheduler" | "upload";
-                /** @description error | warn | info | debug | verbose */
-                level?: "error" | "warn" | "info" | "debug" | "verbose";
-                /** @description Log context */
-                context?: string;
-                /** @description Keyword search in message and payload */
-                keyword?: string;
-                /** @description Task log type filter, e.g. task_admin_update_all_gp / task_admin_content_update_gp */
-                log_type?: string;
-                /** @description Request id filter */
-                request_id?: string;
-                /** @description API key id filter */
-                api_key_id?: string;
-                /** @description Request path filter */
-                path?: string;
-                /** @description User id exact match */
-                user_id?: string;
-                /** @description User keyword in user_id or user_name */
-                user_keyword?: string;
-                /** @description IP exact or fuzzy match */
-                ip?: string;
-                /** @description IP region fuzzy match */
-                ip_region?: string;
-                /** @description Start timestamp (ISO string) */
-                start_time?: string;
-                /** @description End timestamp (ISO string) */
-                end_time?: string;
-                /** @description true/false */
-                realtime?: boolean;
-                /** @description Use previous next_cursor */
-                cursor?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Query success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: components["schemas"]["SystemLogListDataDto"];
-                    };
-                };
-            };
-        };
-    };
-    LogsController_getAdminOperationLogs: {
-        parameters: {
-            query?: {
-                /** @description Page number */
-                page?: number;
-                /** @description Page size (max 200) */
-                pageSize?: number;
-                /** @description Keyword in username, name, path, or error */
-                keyword?: string;
-                /** @description Operator user id */
-                operator_id?: string;
-                /** @description Role code */
-                role_code?: string;
-                /** @description HTTP method */
-                method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-                /** @description Request path filter */
-                path?: string;
-                /** @description Operation success filter */
-                success?: boolean;
-                /** @description Start timestamp (ISO string) */
-                start_time?: string;
-                /** @description End timestamp (ISO string) */
-                end_time?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Query success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: components["schemas"]["AdminOperationLogListDataDto"];
-                    };
-                };
-            };
-        };
-    };
-    LogSystemController_list: {
-        parameters: {
-            query?: {
-                /** @description Page number */
-                page?: number;
-                /** @description Page size */
-                pageSize?: number;
-                /** @description all | combined | error | tracking | import | task_scheduler | upload */
-                source?: "all" | "combined" | "error" | "tracking" | "import" | "task_scheduler" | "upload";
-                /** @description error | warn | info | debug | verbose */
-                level?: "error" | "warn" | "info" | "debug" | "verbose";
-                /** @description Log context */
-                context?: string;
-                /** @description Keyword search in message and payload */
-                keyword?: string;
-                /** @description Task log type filter, e.g. task_admin_update_all_gp / task_admin_content_update_gp */
-                log_type?: string;
-                /** @description Request id filter */
-                request_id?: string;
-                /** @description API key id filter */
-                api_key_id?: string;
-                /** @description Request path filter */
-                path?: string;
-                /** @description User id exact match */
-                user_id?: string;
-                /** @description User keyword in user_id or user_name */
-                user_keyword?: string;
-                /** @description IP exact or fuzzy match */
-                ip?: string;
-                /** @description IP region fuzzy match */
-                ip_region?: string;
-                /** @description Start timestamp (ISO string) */
-                start_time?: string;
-                /** @description End timestamp (ISO string) */
-                end_time?: string;
-                /** @description true/false */
-                realtime?: boolean;
-                /** @description Use previous next_cursor */
-                cursor?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Query success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: components["schemas"]["SystemLogListDataDto"];
-                    };
-                };
-            };
-        };
-    };
     McpController_rpc: {
         parameters: {
             query?: never;
@@ -22830,117 +22847,18 @@ export interface operations {
             };
         };
     };
-    AiAssistantController_getConfig: {
+    McpController_listAudits: {
         parameters: {
             query?: {
-                key?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 获取 AI 配置成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    AiAssistantController_updateConfig: {
-        parameters: {
-            query?: {
-                key?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 更新 AI 配置成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    AiAssistantController_getTools: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 获取工具列表成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    AiAssistantController_chatStream: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AiChatStreamDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiAssistantController_getJobs: {
-        parameters: {
-            query: {
-                page: number;
-                pageSize: number;
-                status: string;
-                tool_name: string;
-                user_id: string;
+                to?: unknown;
+                from?: unknown;
+                user_id?: unknown;
+                source?: unknown;
+                status?: unknown;
+                api_key_id?: unknown;
+                tool_name?: unknown;
+                pageSize?: unknown;
+                page?: unknown;
             };
             header?: never;
             path?: never;
@@ -22953,381 +22871,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-        };
-    };
-    AiAssistantController_getJobSteps: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiAssistantController_getJobGraph: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiAssistantController_retryJob: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiAssistantController_cancelJob: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiAssistantController_resumeJob: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiAssistantController_rollbackJob: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiAssistantController_previewRandomPick: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AlbumRandomPickPreviewDto"];
-            };
-        };
-        responses: {
-            /** @description 预览成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    AiAssistantController_applyRandomPick: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AlbumRandomPickApplyDto"];
-            };
-        };
-        responses: {
-            /** @description 执行成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    SeoController_push: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description 单条或批量 URL 提交，最多 50 条 */
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @example https://apks.cc/app/com.tencent.ig */
-                    url?: string;
-                    /**
-                     * @example [
-                     *       "https://apks.cc/",
-                     *       "https://apks.cc/community/post/abc123"
-                     *     ]
-                     */
-                    urls?: string[];
-                    /**
-                     * @example [
-                     *       "baidu",
-                     *       "indexnow"
-                     *     ]
-                     */
-                    providers?: ("baidu" | "indexnow")[];
-                };
-            };
-        };
-        responses: {
-            /** @description 推送处理完成 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    SeoController_sitemapGames: {
-        parameters: {
-            query?: {
-                /** @description 页码，默认 1 */
-                page?: number;
-                /** @description 每页条数，默认 500，最大 1000 */
-                pageSize?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 获取成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    SeoController_gamePage: {
-        parameters: {
-            query: {
-                /** @description 游戏包名 */
-                pkg: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 获取成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    SeoController_auditGames: {
-        parameters: {
-            query?: {
-                /** @description 页码，默认 1 */
-                page?: number;
-                /** @description 每页条数，默认 100，最大 500 */
-                pageSize?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 获取成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    SeoController_sitemapUsers: {
-        parameters: {
-            query?: {
-                /** @description 页码，默认 1 */
-                page?: number;
-                /** @description 每页条数，默认 500，最大 1000 */
-                pageSize?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 获取成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    SearchController_global: {
-        parameters: {
-            query?: {
-                /** @description 每种内容类型返回数量，默认 6，最大 12 */
-                limitPerType?: unknown;
-                /** @description 关键词 */
-                q?: unknown;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 查询成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: components["schemas"]["GlobalSearchDataDto"];
-                    };
-                };
             };
         };
     };
@@ -24014,6 +23557,507 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    AiAssistantController_getConfig: {
+        parameters: {
+            query?: {
+                key?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取 AI 配置成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    AiAssistantController_updateConfig: {
+        parameters: {
+            query?: {
+                key?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 更新 AI 配置成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    AiAssistantController_getTools: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取工具列表成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    AiAssistantController_chatStream: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiChatStreamDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiAssistantController_getJobs: {
+        parameters: {
+            query: {
+                page: number;
+                pageSize: number;
+                status: string;
+                tool_name: string;
+                user_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiAssistantController_getJobSteps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiAssistantController_getJobGraph: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiAssistantController_retryJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiAssistantController_cancelJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiAssistantController_resumeJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiAssistantController_rollbackJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiAssistantController_previewRandomPick: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlbumRandomPickPreviewDto"];
+            };
+        };
+        responses: {
+            /** @description 预览成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    AiAssistantController_applyRandomPick: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlbumRandomPickApplyDto"];
+            };
+        };
+        responses: {
+            /** @description 执行成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    SeoController_push: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 单条或批量 URL 提交，最多 50 条 */
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @example https://apks.cc/app/com.tencent.ig */
+                    url?: string;
+                    /**
+                     * @example [
+                     *       "https://apks.cc/",
+                     *       "https://apks.cc/community/post/abc123"
+                     *     ]
+                     */
+                    urls?: string[];
+                    /**
+                     * @example [
+                     *       "baidu",
+                     *       "indexnow"
+                     *     ]
+                     */
+                    providers?: ("baidu" | "indexnow")[];
+                };
+            };
+        };
+        responses: {
+            /** @description 推送处理完成 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    SeoController_sitemapGames: {
+        parameters: {
+            query?: {
+                /** @description 页码，默认 1 */
+                page?: number;
+                /** @description 每页条数，默认 500，最大 1000 */
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    SeoController_gamePage: {
+        parameters: {
+            query: {
+                /** @description 游戏包名 */
+                pkg: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    SeoController_auditGames: {
+        parameters: {
+            query?: {
+                /** @description 页码，默认 1 */
+                page?: number;
+                /** @description 每页条数，默认 100，最大 500 */
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    SeoController_sitemapUsers: {
+        parameters: {
+            query?: {
+                /** @description 页码，默认 1 */
+                page?: number;
+                /** @description 每页条数，默认 500，最大 1000 */
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    SearchController_global: {
+        parameters: {
+            query?: {
+                /** @description 每种内容类型返回数量，默认 6，最大 12 */
+                limitPerType?: unknown;
+                /** @description 关键词 */
+                q?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 查询成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: components["schemas"]["GlobalSearchDataDto"];
+                    };
+                };
             };
         };
     };
