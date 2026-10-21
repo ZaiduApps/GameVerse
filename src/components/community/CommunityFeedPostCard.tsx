@@ -398,7 +398,7 @@ export default function CommunityFeedPostCard({
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground">
+                <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 text-muted-foreground lg:h-8 lg:w-8">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -569,11 +569,11 @@ export default function CommunityFeedPostCard({
           ) : null}
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-1 border-t pt-2 text-muted-foreground">
-            <Button type="button" variant="ghost" size="sm" className={cn('h-8 px-2 text-xs', liked && 'text-primary')} onClick={() => void handleLike()} disabled={likePending}>
+            <Button type="button" variant="ghost" size="sm" className={cn('h-10 px-2 text-xs lg:h-8', liked && 'text-primary')} onClick={() => void handleLike()} disabled={likePending}>
               <Heart className={cn('mr-1.5 h-4 w-4', liked && 'fill-current')} />
               {formatCount(likeCount)}
             </Button>
-            <Button type="button" variant="ghost" size="sm" className={cn('h-8 px-2 text-xs', disliked && 'text-primary')} onClick={() => void handleDislike()} disabled={dislikePending}>
+            <Button type="button" variant="ghost" size="sm" className={cn('h-10 px-2 text-xs lg:h-8', disliked && 'text-primary')} onClick={() => void handleDislike()} disabled={dislikePending}>
               <ThumbsDown className={cn('mr-1.5 h-4 w-4', disliked && 'fill-current')} />
               {formatCount(dislikeCount)}
             </Button>
@@ -581,7 +581,7 @@ export default function CommunityFeedPostCard({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-8 px-2 text-xs"
+              className="h-10 px-2 text-xs lg:h-8"
               onClick={() => {
                 persistReturnAndOpen();
                 router.push(`${postHref}#comments`);
@@ -590,11 +590,11 @@ export default function CommunityFeedPostCard({
               <MessageCircle className="mr-1.5 h-4 w-4" />
               {formatCount(post.commentsCount)}
             </Button>
-            <Button type="button" variant="ghost" size="sm" className={cn('h-8 px-2 text-xs', bookmarked && 'text-primary')} onClick={handleToggleBookmark}>
+            <Button type="button" variant="ghost" size="sm" className={cn('h-10 px-2 text-xs lg:h-8', bookmarked && 'text-primary')} onClick={handleToggleBookmark}>
               <Bookmark className={cn('mr-1.5 h-4 w-4', bookmarked && 'fill-current')} />
               收藏
             </Button>
-            <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs" onClick={() => void handleShare()}>
+            <Button type="button" variant="ghost" size="sm" className="h-10 px-2 text-xs lg:h-8" onClick={() => void handleShare()}>
               <Share2 className="mr-1.5 h-4 w-4" />
               分享
             </Button>

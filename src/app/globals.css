@@ -415,14 +415,17 @@ html {
   }
 }
 
-/* 移动端可读性下限 */
-@media (max-width: 639.98px) {
+/* 手机 + 平板（<1024）：字号下限 12px */
+@media (max-width: 1023.98px) {
   [class*='text-[10px]'],
   [class*='text-[11px]'] {
     font-size: 0.75rem;
     line-height: 1.35;
   }
-  /* iOS Safari 对 <16px 的输入框聚焦会强制缩放页面；用 html 前缀提高特异性压过 .text-sm */
+}
+
+/* 仅手机：输入框 16px；用 html 前缀提高特异性压过 .text-sm，桌面保持 14px */
+@media (max-width: 639.98px) {
   html input:not([type='checkbox']):not([type='radio']),
   html textarea:not([readonly]),
   html select:not([disabled]) {
