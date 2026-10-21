@@ -156,7 +156,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
     async function loadSummary() {
       setIsLoadingSummary(true);
       try {
-        const data = await getGameReviewSummary(identity);
+        const data = await getGameReviewSummary(identity, token);
         if (!cancelled) {
           setSummary(data);
         }
@@ -175,7 +175,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
     return () => {
       cancelled = true;
     };
-  }, [identity]);
+  }, [identity, token]);
 
   useEffect(() => {
     let cancelled = false;
@@ -300,7 +300,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
 
   const reloadSummary = async () => {
     try {
-      const data = await getGameReviewSummary(identity);
+      const data = await getGameReviewSummary(identity, token);
       setSummary(data);
     } catch {
       setSummary(null);

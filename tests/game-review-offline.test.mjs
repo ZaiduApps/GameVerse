@@ -191,6 +191,25 @@ test('code=0 且带 data 的成功响应继续正常解析', async () => {
   assert.match(requests[1].path, /^\/game\/reviews\/summary\?/);
 });
 
+test('summary 带 token 时发送 Authorization，不带 token 时不发送', async () => {
+  apiStub.handler = async () => jsonResponse(200, {
+    code: 0,
+    data: {
+      rating: 4.3,
+      rating_count: 1,
+    },
+  });
+
+  await getGameReviewSummary(identity, 'fake-token');
+  await getGameReviewSummary(identity);
+
+  assert.equal(
+    requests[0].init.headers.Authorization,
+    'Bearer fake-token',
+  );
+  assert.equal(requests[1].init.headers.Authorization, undefined);
+});
+
 test('无 code 且不含 data/result 的响应仍判为失败', async () => {
   apiStub.handler = async () => jsonResponse(200, {
     message: 'not a success envelope',

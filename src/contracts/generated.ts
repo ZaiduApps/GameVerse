@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 5b6aeae712c9f4d72238f2053d1d5035e1cd655f8f25b4d0bd7a321a9511ff64
+ * @contract-sha256 225aec3e677418bda73703b056df5332a7d6a2bd7442abd87ab3ca642d7dacd5
  */
 
 export interface paths {

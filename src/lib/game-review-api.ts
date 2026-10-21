@@ -286,12 +286,20 @@ function parseSummary(data: ApiGameReviewSummaryPayload | null, identity: GameRe
   };
 }
 
-export async function getGameReviewSummary(identity: GameReviewIdentity): Promise<GameReviewSummary | null> {
+export async function getGameReviewSummary(
+  identity: GameReviewIdentity,
+  token?: string | null,
+): Promise<GameReviewSummary | null> {
+  const normalizedToken = String(token || '').trim();
   const result = await request<ApiGameReviewSummaryPayload>(
     buildSummaryPath(identity),
     {
       method: 'GET',
       cache: 'no-store',
+      headers: {
+        ...buildTrackingHeaders(),
+        ...(normalizedToken ? { Authorization: `Bearer ${normalizedToken}` } : {}),
+      },
     },
   );
   if (result.ok) {
