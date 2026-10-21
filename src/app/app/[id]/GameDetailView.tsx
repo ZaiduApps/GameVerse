@@ -326,6 +326,13 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   const actionGame = { _id: game._id, pkg: game.pkg, name: resolveGameName(game), version: game.version, type: game.type, file_size: game.file_size };
   // 移动端三宫格只取综合评分 / 下载热度 / 适龄与平台，与稿件一致。
   const mobileMetrics = [heroMetrics[0], heroMetrics[2], heroMetrics[3]].filter(Boolean);
+  // 桌面与移动端共用同一份面包屑；JSON-LD 只由桌面那份输出一次。
+  const breadcrumbItems = [
+    { name: '首页', href: '/' },
+    { name: '游戏库', href: '/app' },
+    { name: primaryCategory, href: buildTagFilterHref(primaryCategory) },
+    { name: resolveGameName(game), href: `/app/${encodeURIComponent(game.pkg || game._id || '')}` },
+  ];
 
   return (
     <div className="game-detail-stitch relative min-h-screen overflow-x-clip bg-[#f5f6f7] text-[#2c2f30] dark:bg-[#080d14] dark:text-[#f3f6fb]">
@@ -338,14 +345,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
       ) : null}
 
       <div className="relative z-10 mx-auto hidden max-w-7xl px-4 sm:px-6 lg:block lg:px-16 lg:pb-5 lg:pt-6 2xl:px-20">
-        <Breadcrumbs
-          items={[
-            { name: '首页', href: '/' },
-            { name: '游戏库', href: '/app' },
-            { name: primaryCategory, href: buildTagFilterHref(primaryCategory) },
-            { name: resolveGameName(game), href: `/app/${encodeURIComponent(game.pkg || game._id || '')}` },
-          ]}
-        />
+        <Breadcrumbs items={breadcrumbItems} />
       </div>
 
             {/* Hero：单一响应式 DOM。移动端全宽沉浸封面 + 悬浮信息卡；PC 端限制画幅并在信息卡右侧叠放操作区。 */}
@@ -365,6 +365,10 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
           {/* 信息卡：移动端上浮压住封面 48px，PC 端退回常规栅格并与封面留出间距 */}
           <div data-stitch="info-card" className="relative -mt-12 px-4 lg:mt-6 lg:px-0">
             <div className="rounded-2xl border border-[#abadae]/20 bg-white p-4 shadow-sm lg:rounded-3xl lg:p-8 dark:border-border/45 dark:bg-card/80">
+              {/* 移动端面包屑：放在信息卡内首行；桌面那份已输出 JSON-LD，这里只画可见导航。 */}
+              <div className="mb-2 lg:hidden">
+                <Breadcrumbs items={breadcrumbItems} withJsonLd={false} />
+              </div>
               <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
                 <div className="flex items-center gap-3.5 lg:gap-6">
                   <div className="relative shrink-0">
