@@ -148,9 +148,9 @@ export default async function DownloadAppPage() {
           <div className="space-y-6">
             <p className="text-sm font-medium text-muted-foreground">最新版本 v{versionText}</p>
             <h1 className="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl md:text-6xl">
-              开启你的
+              下载与
               <br />
-              智能新境界
+              安装说明
             </h1>
             <p className="max-w-lg text-base leading-relaxed text-muted-foreground">{heroDescription}</p>
 
@@ -193,7 +193,7 @@ export default async function DownloadAppPage() {
               </div>
               <div className="rounded-2xl border border-border bg-background p-6">
                 <h3 className="text-lg font-semibold">灵动界面</h3>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">摒弃复杂回归简约，智能分类一目了然，让每次操作都更直观高效。</p>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">按游戏与应用分区展示，支持按分类、评分与更新时间筛选。</p>
               </div>
             </div>
           </div>
@@ -203,14 +203,7 @@ export default async function DownloadAppPage() {
           <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
             <div className="space-y-6">
               <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">千万玩家的青春共鸣</h2>
-              <blockquote className="text-base leading-relaxed text-muted-foreground">“界面真的很轻快，完全没有以前那种笨重感。作为二次元爱好者，这种通透的配色真的太戳我了！”</blockquote>
-              <div className="flex items-center gap-4">
-                <img className="h-14 w-14 rounded-full object-cover" alt="玩家 云川喵子 头像" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8wMxygPKyYwZ5_Sjib3WfbYtoEgOAAgzdyyzOq70yjEcVn3HEMvfmW1lvLHSLKvmXcNNNS0ywIOZKH7CwptH4y5AnmYPyF9PngyVRjmQd37CVmWEWBDcBqnbV8QFllpEa8o4Huh2HA9iFr8baiCm1gVoO35IkClznoS_Opdxe1Q_6UcwzIzsi1Qd3OE4IEInltBVFEtBuXVXv7odtGC-mASKSbIHDZDO3EHZl-IdYtsCIBl5f6GomXDuEVcR_6tb_n14VzBguhbSd" />
-                <div>
-                  <p className="font-medium">云川 喵子</p>
-                  <p className="text-sm text-muted-foreground">资深画师 & 极客玩家</p>
-                </div>
-              </div>
+              <p className="text-base leading-relaxed text-muted-foreground">收录游戏与应用详情、分类与评分，可查看更新记录与下载方式。</p>
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2">
