@@ -6,7 +6,9 @@ import { Calendar, CheckCircle2, MapPin, PenLine } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import CommunityFeedPostCard from '@/components/community/CommunityFeedPostCard';
+import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
 import { sanitizePublicProfileSignature } from '@/lib/public-profile-safety';
 import { absoluteUrl, clampSeoDescription, normalizeSeoAssetUrl, sanitizeSeoText } from '@/lib/seo';
 import {
@@ -194,30 +196,6 @@ export default async function PublicUserPage({
       ],
     },
   };
-  const breadcrumbJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: '首页',
-        item: absoluteUrl('/'),
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: '社区',
-        item: absoluteUrl('/community'),
-      },
-      {
-        '@type': 'ListItem',
-        position: 3,
-        name: displayName,
-        item: canonicalUrl,
-      },
-    ],
-  };
   const itemListJsonLd =
     data.posts.length > 0
       ? {
@@ -272,7 +250,13 @@ export default async function PublicUserPage({
   return (
     <section className="mx-auto max-w-5xl space-y-6 py-6 md:py-8" aria-label={`${displayName} 的社区主页`}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <Breadcrumbs
+        items={[
+          BREADCRUMB_ROOT,
+          { name: '社区', href: '/community' },
+          { name: displayName, href: canonicalPath },
+        ]}
+      />
       {itemListJsonLd ? (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }} />
       ) : null}

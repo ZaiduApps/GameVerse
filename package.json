@@ -12,6 +12,7 @@
     "contract:check": "node scripts/check-api-contract.mjs",
     "contract:sync": "node scripts/sync-api-contract.mjs",
     "test:markdown": "node --test tests/markdown-render.test.cjs",
+    "test:breadcrumbs": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/breadcrumbs.test.mjs",
     "test:seo-runner": "node --test tests/seo-write-game.test.mjs tests/seo-indexnow-boundary.test.mjs tests/deploy-fast-boundary.test.mjs",
     "test:game-detail": "node --test tests/game-detail-boundary.test.mjs tests/image-preview.test.mjs",
     "test:game-review": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/alias-loader.mjs --test tests/game-review-offline.test.mjs",

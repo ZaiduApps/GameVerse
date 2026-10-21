@@ -15,7 +15,7 @@ import DeferredGameReviewPanel from './DeferredGameReviewPanel.client';
 import GameCommunitySection, { GameCommunitySkeleton } from './GameCommunitySection';
 import DetailSection from './GameDetailSection';
 import GameDetailActions from './GameDetailActions.client';
-import GameDetailBreadcrumb from './GameDetailBreadcrumb';
+import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import GameDetailMobileTabs from './GameDetailMobileTabs.client';
 import GameHeroArtwork from './GameHeroArtwork.client';
 import GameScreenshotGallery from './GameScreenshotGallery.client';
@@ -338,11 +338,13 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
       ) : null}
 
       <div className="relative z-10 mx-auto hidden max-w-7xl px-4 sm:px-6 lg:block lg:px-16 lg:pb-5 lg:pt-6 2xl:px-20">
-        <GameDetailBreadcrumb
-          gameId={game.pkg || game._id || ''}
-          gameName={resolveGameName(game)}
-          category={primaryCategory}
-          categoryHref={buildTagFilterHref(primaryCategory)}
+        <Breadcrumbs
+          items={[
+            { name: '首页', href: '/' },
+            { name: '游戏库', href: '/app' },
+            { name: primaryCategory, href: buildTagFilterHref(primaryCategory) },
+            { name: resolveGameName(game), href: `/app/${encodeURIComponent(game.pkg || game._id || '')}` },
+          ]}
         />
       </div>
 

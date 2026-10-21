@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 
 import { ThemeToggle } from '@/components/theme-toggle';
+import Breadcrumbs from '@/components/layout/Breadcrumbs';
+import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
 import { getClientLandingAppData } from '@/lib/client-landing';
 import { getSiteUrl } from '@/lib/seo';
 
@@ -139,6 +141,9 @@ export default async function DownloadAppPage() {
       </header>
 
       <main>
+        <div className="mx-auto max-w-6xl px-4 pt-6 sm:px-6">
+          <Breadcrumbs items={[BREADCRUMB_ROOT, { name: '客户端下载', href: '/download/app' }]} />
+        </div>
         <section className="mx-auto grid max-w-6xl gap-12 px-4 pb-16 pt-12 sm:px-6 sm:pb-24 sm:pt-20 lg:grid-cols-2 lg:items-center">
           <div className="space-y-6">
             <p className="text-sm font-medium text-muted-foreground">最新版本 v{versionText}</p>

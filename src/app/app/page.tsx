@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 
 import AppLibraryView from './AppLibraryView';
+import Breadcrumbs from '@/components/layout/Breadcrumbs';
+import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
 import { trackedApiFetch } from '@/lib/api';
 import { resolveGameName } from '@/lib/game-display-name';
 import {
@@ -289,6 +291,7 @@ export default async function GamesPage({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
         />
       ) : null}
+      <Breadcrumbs items={[BREADCRUMB_ROOT, { name: '游戏库', href: '/app' }]} className="mb-4" />
       <section className="mb-8 rounded-2xl border bg-card p-6 shadow-sm">
         <h1 className="text-2xl font-semibold text-foreground">{siteName} 游戏库</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">

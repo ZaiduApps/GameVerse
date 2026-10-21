@@ -10,7 +10,6 @@ import {
   type CommunityCommentThread,
 } from '@/lib/community-api';
 import {
-  buildCommunityPostBreadcrumbJsonLd,
   buildCommunityPostDiscussionJsonLd,
   buildCommunityPostSeoDescription,
   buildCommunityPostSeoTitle,
@@ -120,18 +119,10 @@ export default async function CommunityPostPage({
     siteLogoUrl: config?.basic?.logo_url,
     canonicalUrl,
   });
-  const breadcrumbJsonLd = buildCommunityPostBreadcrumbJsonLd({
-    post: communityPost,
-    canonicalUrl,
-  });
 
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(discussionJsonLd) }} />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
       <CommunityPostDetailView
         post={post as CommunityPost}
         initialComments={apiComments as CommunityCommentThread[]}

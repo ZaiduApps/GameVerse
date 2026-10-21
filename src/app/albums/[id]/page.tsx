@@ -170,31 +170,6 @@ export default async function AlbumTopicPage({
   const canonicalUrl = absoluteUrl(canonicalPath);
   const shareImage = getAlbumShareImage(album, siteShareImage);
 
-  const breadcrumbJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: '首页',
-        item: absoluteUrl('/'),
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: '专题推荐',
-        item: canonicalUrl,
-      },
-      {
-        '@type': 'ListItem',
-        position: 3,
-        name: albumTitle,
-        item: canonicalUrl,
-      },
-    ],
-  };
-
   const collectionJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
@@ -241,10 +216,6 @@ export default async function AlbumTopicPage({
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}

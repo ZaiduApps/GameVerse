@@ -7,6 +7,8 @@ import * as z from 'zod';
 import { useState } from 'react';
 
 import AuthModal from '@/components/auth/auth-modal';
+import Breadcrumbs from '@/components/layout/Breadcrumbs';
+import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
 import { useAuth } from '@/context/auth-context';
 import { buildFeedbackCommonFields, submitFeedbackTicket } from '@/lib/feedback';
 import { useToast } from '@/hooks/use-toast';
@@ -188,6 +190,10 @@ export default function SubmitResourcePage() {
 
   return (
     <div className="container mx-auto max-w-2xl py-8 px-4 fade-in">
+      <Breadcrumbs
+        items={[BREADCRUMB_ROOT, { name: '资源投稿', href: '/submit-resource' }]}
+        className="mb-6"
+      />
       <div className="flex flex-col items-center mb-8">
         <UploadCloud className="mb-3 h-10 w-10 text-primary" />
         <h1 className="text-xl font-bold text-center">资源投稿</h1>

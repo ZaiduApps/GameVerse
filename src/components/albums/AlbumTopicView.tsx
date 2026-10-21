@@ -4,12 +4,15 @@ import { ArrowRight, Clock3, Download, Flame, Layers3, Sparkles, Star, Wrench } 
 
 import {
   getAlbumDescription,
+  getAlbumHref,
   getAlbumKeywords,
   getAlbumShareImage,
   getAlbumStyleLabel,
   normalizeAlbumGames,
 } from '@/lib/albums';
 import { resolveGameName } from '@/lib/game-display-name';
+import Breadcrumbs from '@/components/layout/Breadcrumbs';
+import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
 import type { ApiAlbum, ApiGame } from '@/types';
 
 const FALLBACK_IMAGE = '/favicon.ico';
@@ -630,13 +633,15 @@ export default function AlbumTopicView({
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.14),transparent_38%),linear-gradient(135deg,rgba(0,0,0,0.2),rgba(0,0,0,0.58))]" />
         <div className="relative z-10 grid gap-8 p-6 sm:p-8 xl:grid-cols-[minmax(0,1.2fr)_380px] xl:p-10">
           <div>
-            <nav className="mb-5 flex flex-wrap items-center gap-2 text-xs font-bold tracking-normal text-white/68">
-              <Link href="/" className="inline-flex min-h-8 items-center transition-colors hover:text-white">首页</Link>
-              <span>/</span>
-              <span>专题推荐</span>
-              <span>/</span>
-              <span className="text-white">{title}</span>
-            </nav>
+            <Breadcrumbs
+              tone="onDark"
+              className="mb-5 font-bold"
+              items={[
+                BREADCRUMB_ROOT,
+                { name: '游戏库', href: '/app' },
+                { name: title, href: getAlbumHref(album) },
+              ]}
+            />
             <div className="flex flex-wrap gap-2">
               <span className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-bold ${palette.chip}`}>
                 <Layers3 className="h-3.5 w-3.5" />

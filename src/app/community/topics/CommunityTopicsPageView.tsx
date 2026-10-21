@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
+import Breadcrumbs from '@/components/layout/Breadcrumbs';
+import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { CommunityTopicItem } from '@/lib/community-api';
@@ -262,6 +264,14 @@ export default function CommunityTopicsPageView({
   return (
     <div className="relative left-1/2 w-screen max-w-none -translate-x-1/2 overflow-x-hidden px-4 py-4 sm:py-6 lg:py-8">
       <div className="mx-auto w-full max-w-[1180px]">
+      <Breadcrumbs
+        items={[
+          BREADCRUMB_ROOT,
+          { name: '社区', href: '/community' },
+          { name: '话题', href: '/community/topics' },
+        ]}
+        className="mb-4"
+      />
       <div className="mb-5 flex flex-col gap-4 rounded-lg border bg-card px-4 py-4 shadow-sm sm:px-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">

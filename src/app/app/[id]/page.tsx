@@ -579,31 +579,6 @@ export default async function GameDetailPage({
       : undefined,
   };
 
-  const breadcrumbJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: '首页',
-        item: absoluteUrl('/'),
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: '游戏库',
-        item: absoluteUrl('/app'),
-      },
-      {
-        '@type': 'ListItem',
-        position: 3,
-        name: resolveGameName(game),
-        item: canonicalUrl,
-      },
-    ],
-  };
-
   const faqItems = normalizeGameFaqItems(initialGameData.faq);
   const faqJsonLd = {
     '@context': 'https://schema.org',
@@ -633,7 +608,6 @@ export default async function GameDetailPage({
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(detailJsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       {faqItems.length > 0 && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       )}

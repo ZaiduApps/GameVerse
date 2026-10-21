@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 import CommunityPostCard from '@/components/community/CommunityPostCard';
+import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,7 @@ import {
   unfollowTopic,
 } from '@/lib/community-api';
 import type { CommunityPost } from '@/types';
+import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
 import { ArrowLeft, Hash, Loader2, Megaphone, MoreHorizontal, PenSquare, Share2, Users } from 'lucide-react';
 
 interface CommunityTopicBoardViewProps {
@@ -730,6 +732,18 @@ export default function CommunityTopicBoardView({
 
   return (
     <div className="container mx-auto px-2 py-4 sm:px-4 sm:py-6 lg:py-8">
+      <Breadcrumbs
+        className="mb-3"
+        items={[
+          BREADCRUMB_ROOT,
+          { name: '社区', href: '/community' },
+          { name: '话题', href: '/community/topics' },
+          {
+            name: topic?.name || '话题',
+            href: `/community/topic/${encodeURIComponent(String(topic?.slug || safeIdOrSlug).trim())}`,
+          },
+        ]}
+      />
       <div className="mb-4">
         <Button variant="ghost" asChild className="px-2">
           <Link

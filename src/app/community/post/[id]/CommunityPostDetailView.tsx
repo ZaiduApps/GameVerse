@@ -9,6 +9,8 @@ import { createPortal } from 'react-dom';
 import { ArrowLeft, Bookmark, ChevronLeft, ChevronRight, ExternalLink, Eye, MessageSquare, RotateCcw, Send, Share2, ThumbsDown, ThumbsUp, X, ZoomIn, ZoomOut } from 'lucide-react';
 
 import { buildRenderedMarkdownDocument, cn } from '@/lib/utils';
+import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
+import { sanitizeSeoText } from '@/lib/seo';
 import { trackedApiFetch } from '@/lib/api';
 import {
   COMMUNITY_DETAIL_BLOCKED_LINK_HOSTS,
@@ -35,6 +37,7 @@ import {
   type CommunityCommentThread,
 } from '@/lib/community-api';
 import AppDownloadGuideDialog from '@/components/app-download-guide-dialog';
+import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -1779,6 +1782,16 @@ export default function CommunityPostDetailView({
 
   return (
     <div className="mx-auto w-full max-w-[1680px] space-y-6 py-8 fade-in">
+      <Breadcrumbs
+        items={[
+          BREADCRUMB_ROOT,
+          { name: '社区', href: '/community' },
+          {
+            name: sanitizeSeoText(post.title || post.summary) || '帖子详情',
+            href: `/community/post/${encodeURIComponent(post.id)}`,
+          },
+        ]}
+      />
       <Button
         variant="outline"
         size="sm"
