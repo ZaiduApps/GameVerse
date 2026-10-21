@@ -495,7 +495,7 @@ export default async function GameDetailPage({
   const canonicalPath = `/app/${encodeURIComponent(game.pkg || id)}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
   const heroImage = resolveGameSeoImage(game, getSiteShareImageUrl());
-  const description = buildGameDetailSeo({
+  const detailSeo = buildGameDetailSeo({
     name: resolveGameName(game),
     pkg: game.pkg,
     type: game.type,
@@ -503,7 +503,14 @@ export default async function GameDetailPage({
     manualTitle: game.seo?.title,
     manualDescription: game.seo?.description,
     manualKeywords: game.seo?.keywords,
-  }).description;
+    aliases: (
+      game.seo as
+        | (typeof game.seo & { aliases?: string[] })
+        | undefined
+    )?.aliases,
+  });
+  const description = detailSeo.description;
+  const aliases = detailSeo.aliases;
 
   const [relatedNews, recommendedGames] = await Promise.all([
     Array.isArray(initialGameData.relatedNews)
@@ -526,6 +533,7 @@ export default async function GameDetailPage({
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
     name: resolveGameName(game),
+    alternateName: aliases.length > 0 ? aliases : undefined,
     applicationCategory: schemaApplicationCategory(game.type),
     operatingSystem: isWebGame ? 'Web Browser' : 'Android',
     inLanguage: 'zh-CN',

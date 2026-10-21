@@ -3,6 +3,9 @@ const FALLBACK_SITE_URL = 'https://apks.cc';
 const DEFAULT_SITE_SHARE_IMAGE = '/opengraph-image.png';
 const FIRST_PARTY_FAVICON = '/favicon.ico';
 
+export const SEO_TITLE_MAX = 68;
+export const SEO_DESC_MAX = 160;
+
 export type GameDetailSeoInput = {
   name?: string | null;
   pkg?: string | null;
@@ -14,6 +17,7 @@ export type GameDetailSeoInput = {
   manualTitle?: string | null;
   manualDescription?: string | null;
   manualKeywords?: Array<string | null | undefined> | null;
+  aliases?: string[] | null;
   titleTemplate?: string | null;
   descriptionTemplate?: string | null;
   titleSuffix?: string | null;
@@ -157,7 +161,7 @@ export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc
   const titleWithSite = titleCore.includes(normalizedSiteName)
     ? titleCore
     : `${titleCore} | ${normalizedSiteName}`;
-  const title = clampSeoText(titleWithSite, 68);
+  const title = clampSeoText(titleWithSite, SEO_TITLE_MAX);
   const description = manualDescription || renderSeoTemplate(input.descriptionTemplate, {
     name,
     pkg,
@@ -183,7 +187,12 @@ export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc
     ...(Array.isArray(input.manualKeywords) ? input.manualKeywords : []),
   ];
   const keywords = Array.from(new Set(keywordCandidates.map((item) => sanitizeSeoText(item)).filter(Boolean))).slice(0, 20);
-  return { title, description: clampSeoText(description, 160), keywords };
+  const aliases = Array.from(new Set(
+    (Array.isArray(input.aliases) ? input.aliases : [])
+      .map((item) => sanitizeSeoText(item))
+      .filter((item) => item && item.length <= 40),
+  )).slice(0, 10);
+  return { title, description: clampSeoText(description, SEO_DESC_MAX), keywords, aliases };
 }
 
 function clampSeoText(input: string, maxLength: number): string {
