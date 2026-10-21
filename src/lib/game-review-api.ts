@@ -622,10 +622,13 @@ export async function getGameReviewAdminEmailSwitch(token: string): Promise<{ en
 export async function updateGameReviewAdminEmailSwitch(params: {
   token: string;
   enabled: boolean;
-}): Promise<{ ok: boolean; enabled: boolean; source: 'remote' | 'local'; message: string }> {
+}): Promise<
+  | { ok: true; enabled: boolean; source: 'remote'; message: string }
+  | { ok: false; message: string }
+> {
   const auth = String(params.token || '').trim();
   if (!auth) {
-    return { ok: false, enabled: Boolean(params.enabled), source: 'local', message: '登录状态已失效' };
+    return { ok: false, message: '登录状态已失效' };
   }
   const body = JSON.stringify({
     community_reply_email_enabled: Boolean(params.enabled),
@@ -644,8 +647,7 @@ export async function updateGameReviewAdminEmailSwitch(params: {
     body,
   });
   if (!result.ok) {
-    writeLocalBoolean(ADMIN_EMAIL_SWITCH_LOCAL_KEY, Boolean(params.enabled));
-    return { ok: true, enabled: Boolean(params.enabled), source: 'local', message: '已保存到本地' };
+    return { ok: false, message: result.message || '保存失败' };
   }
   writeLocalBoolean(ADMIN_EMAIL_SWITCH_LOCAL_KEY, Boolean(params.enabled));
   return { ok: true, enabled: Boolean(params.enabled), source: 'remote', message: result.message || '保存成功' };

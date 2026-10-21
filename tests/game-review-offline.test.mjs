@@ -5,6 +5,7 @@ import {
   getGameReviewSummary,
   submitGameRating,
   submitGameReviewComment,
+  updateGameReviewAdminEmailSwitch,
   updateGameReviewEmailPreference,
 } from '../src/lib/game-review-api.ts';
 
@@ -120,6 +121,42 @@ test('邮件偏好保存失败返回 ok:false，不写本地缓存', async () =>
   assert.equal(requests[0].path, '/users/preferences/game-reviews');
   assert.equal(requests[0].init.method, 'PATCH');
   assert.deepEqual(gameReviewStorageKeys(), []);
+});
+
+test('管理员邮件开关仅在 PATCH 成功后写入本地缓存', async () => {
+  const failed = await updateGameReviewAdminEmailSwitch({
+    token: 'fake-token',
+    enabled: true,
+  });
+
+  assert.deepEqual(failed, { ok: false, message: 'upstream down' });
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].path, '/game/reviews/admin/settings');
+  assert.equal(requests[0].init.method, 'PATCH');
+  assert.deepEqual(gameReviewStorageKeys(), []);
+
+  requests.length = 0;
+  apiStub.handler = async () => jsonResponse(200, {
+    code: 0,
+    message: 'saved',
+    data: { community_reply_email_enabled: true },
+  });
+
+  const saved = await updateGameReviewAdminEmailSwitch({
+    token: 'fake-token',
+    enabled: true,
+  });
+
+  assert.deepEqual(saved, {
+    ok: true,
+    enabled: true,
+    source: 'remote',
+    message: 'saved',
+  });
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].path, '/game/reviews/admin/settings');
+  assert.equal(requests[0].init.method, 'PATCH');
+  assert.equal(storage.get('game-review:admin-email-switch'), '1');
 });
 
 test('code=0 且带 data 的成功响应继续正常解析', async () => {
