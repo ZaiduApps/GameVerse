@@ -84,6 +84,10 @@ export default function RecentUpdatesSection({
     const start = mobilePage * PAGE_SIZE_MOBILE;
     return games.slice(start, start + PAGE_SIZE_MOBILE);
   }, [mobilePage, games]);
+  const initialPrefetchHrefs = useMemo(
+    () => new Set(games.slice(0, PAGE_SIZE_MOBILE).map(getGameHref)),
+    [games],
+  );
 
   const toPrevPage = () => {
     setDesktopPage((prev) => (prev - 1 + desktopTotalPages) % desktopTotalPages);
@@ -150,7 +154,7 @@ export default function RecentUpdatesSection({
           </span>
           <Link
             href={getGameHref(game)}
-            prefetch={false}
+            {...(!initialPrefetchHrefs.has(getGameHref(game)) ? { prefetch: false } : {})}
             className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
             aria-label={`查看${resolveGameName(game)}更新详情`}
           >

@@ -67,7 +67,7 @@ export async function generateStaticParams(): Promise<Array<{ id: string }>> {
     {
       cache: 'force-cache',
       next: { revalidate: DETAIL_REVALIDATE_SECONDS },
-      timeoutMs: 20000,
+      timeoutMs: 8000,
       logKey: 'game-static-params',
     },
   );
@@ -248,7 +248,7 @@ const getGamePageSnapshot = cache(async (id: string): Promise<GamePageSnapshot |
         revalidate: DETAIL_REVALIDATE_SECONDS,
         tags: [gamePageCacheTag(id)],
       },
-      timeoutMs: 20000,
+      timeoutMs: 8000,
       logKey: 'game-page-snapshot',
       },
     );

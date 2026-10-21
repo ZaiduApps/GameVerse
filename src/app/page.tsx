@@ -30,8 +30,7 @@ import { absoluteUrl, getSiteShareImageUrl } from '@/lib/seo';
 
 const FALLBACK_GAME_IMAGE = '/favicon.ico';
 const FALLBACK_AVATAR = '/favicon.ico';
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 60;
 
 function toNumber(value: string | undefined, fallback: number): number {
   const n = Number(value);
@@ -165,7 +164,8 @@ async function fetchHomeDataWithRetry(
     const startedAt = Date.now();
     try {
       const res = await trackedApiFetch(requestPath, {
-        cache: 'no-store',
+        cache: 'force-cache',
+        next: { revalidate: 60 },
         signal: AbortSignal.timeout(timeoutMs),
       });
       const durationMs = Date.now() - startedAt;
@@ -260,7 +260,7 @@ async function getHomeAndNewsData(): Promise<CombinedHomeData> {
         timeoutMs: 12000,
         retries: 1,
       }),
-      getClientLandingAppData('no-store').catch(() => null),
+      getClientLandingAppData(60).catch(() => null),
     ]);
     const safeArticles = Array.isArray(homeData?.articles) ? homeData.articles : [];
     const safeDynamicPosts = Array.isArray(homeData?.dynamic_posts) ? homeData.dynamic_posts : [];
@@ -767,7 +767,7 @@ export default async function HomePage() {
                     <MessageCircle className="h-5 w-5 text-[#b71211]" />
                     社区动态
                   </h3>
-                  <p className="mt-1 text-sm font-medium text-[#595c5d]">来自次元住民的实时分享</p>
+                  <p className="mt-1 text-sm font-medium text-[#595c5d]">玩家最近分享的动态</p>
                 </div>
                 <Link href="/community" prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
                   去社区

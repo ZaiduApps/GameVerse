@@ -112,7 +112,7 @@ function ActionLink({ href, className, children }: { href: string; className: st
     );
   }
   return (
-    <Link href={href} prefetch={false} className={className} data-no-drag="true">
+    <Link href={href} className={className} data-no-drag="true">
       {children}
     </Link>
   );
