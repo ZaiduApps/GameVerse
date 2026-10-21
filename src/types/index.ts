@@ -311,6 +311,13 @@ export interface ApiGameDetail {
   latest_content?: string;
   seo?: GameSeoContent;
   /**
+   * GP 媒体刷新/运营上传写入的视频源与封面，均可能为空：
+   * 有值是自托管 mp4 直链（asset:// 已被接口改写为 cdn.apks.cc）、YouTube 嵌入地址，
+   * 也可能残留 GP 抓取的失效 .bin 链接，播放前由详情页统一解析，不直接渲染。
+   */
+  video_preview?: string | null;
+  video_image?: string | null;
+  /**
    * 与 ApiGame.metadata 同源：region 只是详情页过去唯一用到的字段，
    * chs/cht/en 同样在库里，漏声明会让详情页拿不到后台维护的中文名。
    */

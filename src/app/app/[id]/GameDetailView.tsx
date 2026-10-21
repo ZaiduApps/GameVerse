@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Suspense, type ReactNode } from 'react';
-import { BadgeCheck, ChevronRight, CreditCard, Download, ExternalLink, MessageSquare, Play, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
+import { BadgeCheck, ChevronRight, CreditCard, Download, ExternalLink, MessageSquare, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
 
 import GameAnnouncements from '@/components/game-announcements';
 import GameFaqSection from '@/components/game-detail/GameFaqSection';
@@ -18,8 +18,10 @@ import GameDetailActions from './GameDetailActions.client';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import GameDetailMobileTabs from './GameDetailMobileTabs.client';
 import GameHeroArtwork from './GameHeroArtwork.client';
+import GameHeroVideo from './GameHeroVideo.client';
 import GameScreenshotGallery from './GameScreenshotGallery.client';
-import { BOX_DOWNLOAD_CARD, CERTIFICATION_CARD, GUIDE_SECTION_HINT, HERO_PV_PILL } from './game-detail-mock-copy';
+import { BOX_DOWNLOAD_CARD, CERTIFICATION_CARD, GUIDE_SECTION_HINT } from './game-detail-mock-copy';
+import { resolveHeroVideo } from './game-detail-video';
 import {
   buildHeroMetrics,
   buildHeroPurchaseNote,
@@ -293,6 +295,8 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   const screenshots = (Array.isArray(game.detail_images) ? game.detail_images : []).filter(Boolean);
   const displayScreenshots = screenshots.length > 0 ? screenshots : [game.header_image, game.icon].filter(Boolean);
   const heroImage = game.header_image || displayScreenshots[0] || game.icon || '';
+  // 没有可播放的源就不渲染 PV 入口，避免出现点开必失败的按钮。
+  const heroVideo = resolveHeroVideo(game);
   const facts = buildGameFactItems(game, { category: primaryCategory, resourceCount: resources.length, isWebGame });
   const highlights = Array.isArray(game.seo?.highlights) ? game.seo.highlights.map(cleanText).filter(Boolean).slice(0, 8) : [];
   const latestContent = cleanText(game.latest_content);
@@ -356,10 +360,14 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
             className="relative h-72 w-full overflow-hidden bg-[#e6e8ea] sm:h-80 lg:h-96 lg:rounded-3xl lg:border lg:border-[#abadae]/20 lg:shadow-sm dark:bg-[#121924]"
           >
             <GameHeroArtwork gameName={resolveGameName(game)} heroImage={heroImage} icon={game.icon} />
-            <span className="absolute bottom-16 right-4 z-10 inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/60 px-2.5 py-1 text-xs text-white backdrop-blur-sm lg:hidden">
-              <Play className="h-3 w-3 fill-current" aria-hidden="true" />
-              {HERO_PV_PILL}
-            </span>
+            {heroVideo ? (
+              <GameHeroVideo
+                gameName={resolveGameName(game)}
+                source={heroVideo.source}
+                poster={heroVideo.poster}
+                className="absolute bottom-16 right-4 z-10 lg:bottom-4"
+              />
+            ) : null}
           </div>
 
           {/* 信息卡：移动端上浮压住封面 48px，PC 端退回常规栅格并与封面留出间距 */}

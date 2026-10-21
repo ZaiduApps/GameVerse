@@ -22,7 +22,6 @@ export const HERO_TRUST_BADGES = ['官方正版', '编辑精选', '全新第4赛
 
 // Hero 副信息与封面角标。
 export const HERO_IN_APP_PURCHASE_NOTE = '包含应用内购买';
-export const HERO_PV_PILL = '实机 PV 01:24';
 export const HERO_PLATFORM_NOTE = '国际服 / 需加速';
 
 // 指标条兜底值：接口没有评分 / 评价数时用于撑住 Hero 指标条。
