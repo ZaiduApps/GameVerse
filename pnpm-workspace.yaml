@@ -1,6 +1,4 @@
 allowBuilds:
-  # 无 install/postinstall 脚本，仅纯 JS 运行时补丁，无需执行构建脚本。
-  '@firebase/util': false
   # postinstall: node install.js —— 下载/校验平台原生二进制，必须执行。
   esbuild: true
   # postinstall: node scripts/postinstall —— 生成/修补发布产物，必须执行。
