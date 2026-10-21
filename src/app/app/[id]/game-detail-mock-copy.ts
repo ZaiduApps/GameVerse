@@ -89,6 +89,3 @@ export const MOBILE_TABS = [
 
 // 攻略指南区块标题右侧的说明文案。
 export const GUIDE_SECTION_HINT = '新手与进阶问答';
-
-// 供质检脚本与维护者检索硬编码内容的来源标记。
-export const MOCK_COPY_SOURCE = 'stitch-mock-copy';

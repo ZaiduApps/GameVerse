@@ -7,7 +7,6 @@ import { Flame, Hash, ScrollText, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { MOCK_COMMUNITY_POSTS } from '@/lib/constants';
 import type { CommunityTopicItem } from '@/lib/community-api';
 import type { CommunityPost } from '@/types';
 
@@ -19,7 +18,7 @@ interface CommunityInfoPanelProps {
 
 export default function CommunityInfoPanel({ posts, searchValue = '', topics = [] }: CommunityInfoPanelProps) {
   const [keyword, setKeyword] = useState(searchValue);
-  const source = posts && posts.length > 0 ? posts : MOCK_COMMUNITY_POSTS;
+  const source = posts || [];
   const hotPosts: CommunityPost[] = [...source]
     .sort((a, b) => Number(b.likesCount || 0) - Number(a.likesCount || 0))
     .slice(0, 5);
@@ -117,7 +116,7 @@ export default function CommunityInfoPanel({ posts, searchValue = '', topics = [
             ))}
           </ul>
         ) : (
-          <p className="text-muted-foreground">暂无热门帖子</p>
+          <p className="text-muted-foreground">暂无社区内容</p>
         )}
       </CardContent>
 
