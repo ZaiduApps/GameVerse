@@ -225,7 +225,7 @@ function BoxDownloadCard() {
         <span className="text-xs font-normal text-[#757778] dark:text-muted-foreground">{BOX_DOWNLOAD_CARD.status}</span>
       </div>
       <Link
-        href="/download"
+        href="/download/app"
         className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-sm transition-colors [@media(hover:hover)]:hover:bg-primary/90"
       >
         <Download className="h-5 w-5" aria-hidden="true" />
