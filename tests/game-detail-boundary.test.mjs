@@ -20,6 +20,7 @@ const [
   nextConfigSource,
   layoutSource,
   globalsSource,
+  sourceLinkSource,
 ] = await Promise.all([
   readSource('../src/app/app/[id]/page.tsx'),
   readSource('../src/app/app/[id]/GameDetailView.tsx'),
@@ -36,6 +37,7 @@ const [
   readSource('../next.config.ts'),
   readSource('../src/app/layout.tsx'),
   readSource('../src/app/globals.css'),
+  readSource('../src/lib/game-source-link.ts'),
 ]);
 
 test('详情路由允许新包名按需生成并兼容页游 ObjectId', () => {
@@ -172,4 +174,18 @@ test('截图胶片条统一行高，不再按比例各给一套宽高', () => {
   assert.ok(gallerySource.includes('h-[160px] aspect-[9/16] lg:h-[240px]'));
   assert.ok(gallerySource.includes('h-[160px] aspect-[16/9] lg:h-[240px]'));
   assert.ok(!gallerySource.includes('items-end'));
+});
+
+test('GitHub 来源在详情页与下载弹窗显示官方源与仓库链接', () => {
+  assert.match(sourceLinkSource, /sourceType !== 'github'/);
+  assert.match(sourceLinkSource, /GitHub 官方源/);
+  assert.match(sourceLinkSource, /GPL-3\.0/);
+  assert.match(sourceLinkSource, /github\.com/);
+  assert.match(viewSource, /const gameSource = resolveGameSourceInfo\(game\)/);
+  assert.match(viewSource, /\{gameSource\.label\}/);
+  assert.match(viewSource, /href=\{gameSource\.repoUrl\}/);
+  assert.match(actionsSource, /sourceInfo=\{resolveGameSourceInfo\(game\)\}/);
+  assert.match(downloadDialogSource, /sourceInfo\?: GameSourceInfo \| null/);
+  assert.match(downloadDialogSource, /来源：\{sourceInfo\.label\}/);
+  assert.match(downloadDialogSource, /href=\{sourceInfo\.repoUrl\}/);
 });

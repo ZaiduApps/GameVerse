@@ -306,6 +306,8 @@ export interface ApiGameDetail {
   latest_at: string;
   release_at: string | null;
   tags: string[];
+  /** 来源渠道（GP/APKPURE/QOO/工口实验室/GITHUB），详情接口原样下发。 */
+  source_type?: string | null;
   version: string;
   file_size: number | null;
   latest_content?: string;

@@ -8,6 +8,7 @@ import GameFaqSection from '@/components/game-detail/GameFaqSection';
 import { normalizeGameFaqItems } from '@/lib/game-faq';
 import { resolveGameName } from '@/lib/game-display-name';
 import { isWebGameType } from '@/lib/game-resource-type';
+import { resolveGameSourceInfo } from '@/lib/game-source-link';
 import { prependAliasToDescription, resolveChineseAlias } from '@/lib/seo';
 import { getPreviewImageUrl } from '@/lib/image-preview';
 import { cn } from '@/lib/utils';
@@ -329,6 +330,8 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
     ? detailAnnouncements.length > 0
     : Boolean(detailAnnouncements && Object.values(detailAnnouncements).some((group) => Array.isArray(group) && group.length > 0));
   const showPreregReminder = isPreregGameLike(game) && !isWebGame;
+  // GitHub Release 分发的开源版单独标注来源与仓库；其它渠道不渲染这一行。
+  const gameSource = resolveGameSourceInfo(game);
 
   // 视觉稿视图模型：真实数据优先，缺失字段由 game-detail-stitch-mapper 统一回落。
   const trustBadges = buildTrustBadges(tags);
@@ -345,7 +348,16 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
     cleanText(game.description || game.summary),
     chineseAlias,
   );
-  const actionGame = { _id: game._id, pkg: game.pkg, name: resolveGameName(game), version: game.version, type: game.type, file_size: game.file_size };
+  const actionGame = {
+    _id: game._id,
+    pkg: game.pkg,
+    name: resolveGameName(game),
+    version: game.version,
+    type: game.type,
+    file_size: game.file_size,
+    source_type: game.source_type,
+    metadata: game.metadata,
+  };
   // 移动端三宫格只取综合评分 / 下载热度 / 适龄与平台，与稿件一致。
   const mobileMetrics = [heroMetrics[0], heroMetrics[2], heroMetrics[3]].filter(Boolean);
   // 桌面与移动端共用同一份面包屑；JSON-LD 只由桌面那份输出一次。
@@ -430,6 +442,25 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                       <span className="text-[#abadae]">•</span>
                       <span className="text-[#757778] dark:text-muted-foreground">{purchaseNote}</span>
                     </div>
+                    {gameSource ? (
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#595c5d] dark:text-muted-foreground">
+                        <span className="inline-flex items-center rounded-md bg-tone-blue/10 px-2 py-0.5 font-medium text-tone-blue">
+                          {gameSource.label}
+                        </span>
+                        {gameSource.repoUrl ? (
+                          <a
+                            className="inline-flex items-center gap-0.5 underline decoration-dotted underline-offset-2"
+                            href={gameSource.repoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            GitHub 仓库
+                            <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                          </a>
+                        ) : null}
+                        <span>遵循 {gameSource.license} 许可</span>
+                      </div>
+                    ) : null}
                     {heroDescription ? (
                       // line-clamp-2 与 lg:block 作用在同一元素上时，变体生成的 display:block 会覆盖 -webkit-box 导致截断失效，
                       // 因此外层只负责响应式显隐，内层单独负责行数截断。

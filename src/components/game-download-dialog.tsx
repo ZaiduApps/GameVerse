@@ -26,6 +26,7 @@ import type { ApiDownloadResource, CardConfigItem } from '@/types';
 import Image from 'next/image';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { trackedApiFetch } from '@/lib/api';
+import type { GameSourceInfo } from '@/lib/game-source-link';
 import AppDownloadGuideDialog from '@/components/app-download-guide-dialog';
 
 interface GameDownloadDialogProps {
@@ -33,6 +34,7 @@ interface GameDownloadDialogProps {
   appId?: string;
   pkg?: string | null;
   downloadNotices?: CardConfigItem[];
+  sourceInfo?: GameSourceInfo | null;
   triggerClassName?: string;
   triggerLabel?: string;
   open?: boolean;
@@ -53,6 +55,7 @@ export default function GameDownloadDialog({
   appId,
   pkg,
   downloadNotices,
+  sourceInfo,
   triggerClassName,
   triggerLabel,
   open,
@@ -163,6 +166,22 @@ export default function GameDownloadDialog({
             <DialogDescription>
               请选择您偏好的下载方式，点击渠道即可开始下载。
             </DialogDescription>
+            {sourceInfo ? (
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                <span>来源：{sourceInfo.label}</span>
+                {sourceInfo.repoUrl ? (
+                  <a
+                    className="underline decoration-dotted underline-offset-2 hover:text-foreground"
+                    href={sourceInfo.repoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    GitHub 仓库
+                  </a>
+                ) : null}
+                <span>遵循 {sourceInfo.license} 许可</span>
+              </p>
+            ) : null}
           </DialogHeader>
 
           {downloadNotices && downloadNotices.length > 0 && (

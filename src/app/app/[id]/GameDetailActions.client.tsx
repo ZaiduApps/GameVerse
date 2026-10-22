@@ -16,6 +16,7 @@ import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { buildFeedbackCommonFields, submitFeedbackTicket } from '@/lib/feedback';
 import { resolveGameName } from '@/lib/game-display-name';
+import { resolveGameSourceInfo } from '@/lib/game-source-link';
 import { getGamePrimaryActionKind, isWebGameType } from '@/lib/game-resource-type';
 import { cn } from '@/lib/utils';
 import type { ApiDownloadResource, ApiGameDetail, CardConfigItem } from '@/types';
@@ -33,7 +34,10 @@ const HEADER_SOLID_OFFSET = 120;
 const secondaryButtonClass =
   'inline-flex h-10 items-center justify-center gap-1 rounded-xl border border-[#abadae]/20 bg-[#eff1f2] px-3 text-xs font-medium text-[#2c2f30] transition-colors [@media(hover:hover)]:hover:bg-[#e6e8ea] dark:border-border/45 dark:bg-muted/60 dark:text-foreground dark:[@media(hover:hover)]:hover:bg-muted';
 
-export type GameDetailActionGame = Pick<ApiGameDetail, '_id' | 'pkg' | 'name' | 'version' | 'type' | 'file_size'>;
+export type GameDetailActionGame = Pick<
+  ApiGameDetail,
+  '_id' | 'pkg' | 'name' | 'version' | 'type' | 'file_size' | 'source_type' | 'metadata'
+>;
 
 export interface GameDetailActionsInput {
   game: GameDetailActionGame;
@@ -355,6 +359,7 @@ export default function GameDetailActions({
         pkg={game.pkg}
         resources={resources}
         downloadNotices={downloadNotices}
+        sourceInfo={resolveGameSourceInfo(game)}
         triggerLabel="立即下载"
       /> : null}
       {appGuideOpen ? (
