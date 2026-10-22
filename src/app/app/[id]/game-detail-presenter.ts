@@ -37,13 +37,68 @@ export const TAG_STYLE_PALETTES = [
   'border-tone-cyan/40 bg-tone-cyan/10 text-tone-cyan',
 ] as const;
 
+// 同一份原始描述同时喂给「游戏介绍」富文本和标题下的 hero 摘要、highlights、
+// latest_content 等纯文本字段。formatDescriptionHtml 只负责富文本那一侧；纯文本
+// 入口 cleanText 过去只剥 HTML 标签，于是从 GitHub Release 导入的 `### Features`、
+// `**加粗**`、`[#642](url)` 会以字面量留在摘要行里。下面这层只删 Markdown 标记
+// 本身，正文和换行结构原样保留，最后的空白折叠仍由 cleanText 统一收口。
+const MARKDOWN_LINE_RULES: ReadonlyArray<readonly [RegExp, string]> = [
+  // 单行的 ***、---、___ 是分隔线，APKPure 的描述正文里直接当分隔符用；纯文本里
+  // 没有意义，且必须先于行内 `**`/`*` 规则处理，否则 `***` 会被当成粗体残片留下。
+  // 整行删掉（不换成空行），只认「整行只有这些符号和空白」，正文里的 `2*3`、
+  // `a--b`、`file_name_x` 不受影响。
+  [/^[ \t]*(?:\*[ \t]*){3,}$/gm, ''],
+  [/^[ \t]*(?:-[ \t]*){3,}$/gm, ''],
+  [/^[ \t]*(?:_[ \t]*){3,}$/gm, ''],
+  // 行首标题/无序列表/有序列表：只去掉标记本身，不吞正文。
+  [/^[ \t]*#{1,6}[ \t]+/gm, ''],
+  [/^[ \t]*[-*+][ \t]+/gm, ''],
+  [/^[ \t]*\d+\.[ \t]+/gm, ''],
+];
+
+// 顺序有依赖：图片先于链接，加粗/删除线先于单星号斜体。
+// 边界条件（`2*3`、`game_name_field`）是为了不改动正常文案里的孤立星号和下划线；
+// 括号类正则允许 `)` 缺失，因为后台会把超长描述在 8000 字符处截断，最后一条链接
+// 常常没有闭合括号。
+const MARKDOWN_INLINE_RULES: ReadonlyArray<readonly [RegExp, string]> = [
+  [/!\[([^\]\n]*)\]\([^)\n]*(?:\)|$)/g, '$1'],
+  [/\[([^\]\n]+)\]\([^)\n]*(?:\)|$)/g, '$1'],
+  [/`([^`\n]+)`/g, '$1'],
+  // 删除线在发行说明里表示「已废弃/已删除」，摘要行里连内容一起去掉，
+  // 免得 hero 摘要出现「old new」这种自相矛盾的读法；完整介绍仍由富文本保留原文。
+  [/~~[^~\n]+~~/g, ''],
+  [/\*\*([^*\n]+)\*\*/g, '$1'],
+  [/(^|[^A-Za-z0-9_])__([^_\n]+)__(?![A-Za-z0-9_])/g, '$1$2'],
+  [/(^|[^A-Za-z0-9_*])\*([^*\n]+)\*(?![A-Za-z0-9_*])/g, '$1$2'],
+  [/(^|[^A-Za-z0-9_])_([^_\n]+)_(?![A-Za-z0-9_])/g, '$1$2'],
+];
+
+const HTML_ENTITY_PATTERN = /&(nbsp|amp|lt|gt|quot|#39|apos);/g;
+const HTML_ENTITY_REPLACEMENTS: Record<string, string> = {
+  nbsp: ' ',
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  '#39': "'",
+  apos: "'",
+};
+
+function stripMarkdownText(input: string): string {
+  const stripped = MARKDOWN_LINE_RULES.concat(MARKDOWN_INLINE_RULES).reduce(
+    (text, [pattern, replacement]) => text.replace(pattern, replacement),
+    input,
+  );
+  return stripped.replace(
+    HTML_ENTITY_PATTERN,
+    (match, name: string) => HTML_ENTITY_REPLACEMENTS[name] ?? match,
+  );
+}
+
 export function cleanText(input?: string | null): string {
   if (!input) return '';
-  return input
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const withoutTags = input.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '');
+  return stripMarkdownText(withoutTags).replace(/\s+/g, ' ').trim();
 }
 
 export function toPlainTextWithBreaks(input?: string | null): string {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { formatDescriptionHtml } from '../src/app/app/[id]/game-detail-presenter.ts';
+import { cleanText, formatDescriptionHtml } from '../src/app/app/[id]/game-detail-presenter.ts';
 
 // 样本按线上 com.droiddeck.launcher 的 GitHub Release 正文结构内联：HTML 骨架 +
 // Markdown 内容混排（线上原文被截断在最后一行的链接里，这里保留了完整句子）。
@@ -85,4 +85,28 @@ test('纯文本描述仍用 <br /> 换行', () => {
 test('空描述返回空串', () => {
   assert.equal(formatDescriptionHtml('   '), '');
   assert.equal(formatDescriptionHtml(undefined), '');
+});
+
+test('hero 摘要的纯文本入口去掉 Markdown 标记', () => {
+  assert.equal(
+    cleanText(
+      '<p align="center">### Features</p>\n- Added **SteamVR on Quest 3** ([#642](https://github.com/x/y/pull/642))\n- `Optional` ~~old~~ new',
+    ),
+    'Features Added SteamVR on Quest 3 (#642) Optional new',
+  );
+});
+
+test('cleanText 不吞正文，也不破坏孤立星号', () => {
+  assert.equal(cleanText('2*3=6'), '2*3=6', '孤立星号不应被当成斜体标记');
+  assert.equal(
+    cleanText('0.5.0 更新要点：\n- 标准 APK 支持 Quest 3'),
+    '0.5.0 更新要点： 标准 APK 支持 Quest 3',
+    '版本号与列表正文都应保留',
+  );
+  assert.equal(cleanText('game_name_field 字段'), 'game_name_field 字段', '下划线命名不应被当成斜体');
+});
+
+test('cleanText 去掉分隔线，但不误伤正文符号', () => {
+  assert.equal(cleanText('第一段\n***\n第二段'), '第一段 第二段');
+  assert.equal(cleanText('2*3=6 与 a--b'), '2*3=6 与 a--b');
 });
