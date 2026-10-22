@@ -87,7 +87,8 @@ export default function GameHeroArtwork({ gameName, heroImage, icon }: GameHeroA
             // 但 alt 不能留空：空 alt 在 SEO 审计里等同「缺 alt」，也会让图片无法被检索。
             alt={layer.decorative ? `${gameName} 封面背景` : `${gameName} 封面图`}
             aria-hidden={layer.decorative || undefined}
-            loading="eager"            decoding="async"
+            loading="eager"
+            decoding="async"
             fetchPriority={layer.decorative ? undefined : 'high'}
             className={cn('absolute inset-0 h-full w-full transition-all duration-500', layer.className)}
             onError={layer.decorative ? undefined : () => handleImageError(currentImage)}
