@@ -3,7 +3,7 @@ const FALLBACK_SITE_URL = 'https://apks.cc';
 const DEFAULT_SITE_SHARE_IMAGE = '/opengraph-image.png';
 const FIRST_PARTY_FAVICON = '/favicon.ico';
 
-export const SEO_TITLE_MAX = 68;
+export const SEO_TITLE_MAX = 60;
 export const SEO_DESC_MAX = 160;
 
 export type GameDetailSeoInput = {
@@ -115,17 +115,60 @@ export function buildSeoDescription(
   return clampSeoDescription(description, max);
 }
 
-/** 站点配置模板占位符渲染：{name} {pkg} {version} {region} {summary} {site_name} {title_suffix} {date}。 */
+/**
+ * 站点配置模板占位符渲染：{name} {pkg} {version} {alias} {region} {summary} {site_name} {title_suffix} {date}。
+ *
+ * - 未传值的占位渲染成空串；
+ * - 空 alias 留下的空括号（`（）`/`()`/`【】`/`[]`）和由此产生的多余空格会被清理；
+ * - 模板已带 `v` 前缀时不会拼出 `vv1.2`。
+ */
 export function renderSeoTemplate(
   template: string | null | undefined,
   vars: Record<string, string>,
 ): string {
   let out = String(template || '').trim();
   if (!out) return '';
-  for (const [key, value] of Object.entries(vars)) {
-    out = out.split(`{${key}}`).join(value);
+  // 版本被丢弃时（构建号/空值），模板里自带的 `v` 会变成孤立的 "v"（"… v Download …"），一并去掉。
+  if (!String(vars.version ?? '').trim()) {
+    out = out.replace(/[vV]\s*\{version\}/g, '');
   }
+  for (const key of SEO_TEMPLATE_PLACEHOLDERS) {
+    out = out.split(`{${key}}`).join(String(vars[key] ?? ''));
+  }
+  out = out
+    .replace(EMPTY_BRACKET_PATTERN, ' ')
+    .replace(/\bv\s*v+(?=[\d.])/gi, 'v');
   return sanitizeSeoText(out);
+}
+
+const SEO_TEMPLATE_PLACEHOLDERS = [
+  'name',
+  'pkg',
+  'version',
+  'alias',
+  'region',
+  'summary',
+  'site_name',
+  'title_suffix',
+  'date',
+] as const;
+
+/** 空占位留下的成对括号，连同两侧空白一起清掉（避免 `Name（）APK` / `Name () APK`）。 */
+const EMPTY_BRACKET_PATTERN = /\s*[（(【\[]\s*[）)】\]]\s*/g;
+
+const PURE_BUILD_NUMBER_VERSION = /^\d{6,}$/;
+
+/**
+ * 模板版本号归一化：
+ * - 纯数字构建号（Android versionCode，如 `160402020`）不是用户可读版本，丢弃；
+ * - 去掉重复的 `v` 前缀，统一成 `v1.2.3` 风格（模板自带 `v` 时不会拼成 `vv1.2`）。
+ */
+export function normalizeSeoTemplateVersion(input?: string | null): string {
+  const raw = sanitizeSeoText(input);
+  if (!raw) return '';
+  const bare = raw.replace(/^[vV]+/, '').trim();
+  if (!bare || PURE_BUILD_NUMBER_VERSION.test(bare)) return '';
+  return `v${bare}`;
 }
 
 function formatSeoDate(input?: string | null): string {
@@ -153,7 +196,7 @@ function normalizeSeoAliases(input?: string[] | null): string[] {
 /**
  * 从别名列表里取第一个中文别名（繁体也算），且不能与页面主名称重复。
  * 详情页的可见副标题 / meta 描述 / 正文首段都以此为准，保证口径一致。
- * 标题不再用别名改写，避免拼出「别名（别名(English)）版本号…」这类畸形标题。
+ * 标题只在站点模板显式写了 `{alias}` 时才使用别名，不会自动把别名拼进标题。
  */
 export function resolveChineseAlias(aliases: unknown, name?: string | null): string {
   const list = Array.isArray(aliases) ? aliases : [];
@@ -191,38 +234,29 @@ export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc
   const manualDescription = sanitizeSeoText(input.manualDescription);
   const normalizedSiteName = sanitizeSeoText(siteName) || 'APKScc';
   const regionPhrase = region ? `，提供${region}相关下载信息` : '';
-  const titleCore = manualTitle || renderSeoTemplate(input.titleTemplate, {
+  const aliases = normalizeSeoAliases(input.aliases);
+  const chineseAlias = resolveChineseAlias(aliases, name);
+  const version = normalizeSeoTemplateVersion(input.version);
+  const templateVars = {
     name,
     pkg,
-    version: sanitizeSeoText(input.version),
+    version,
+    alias: chineseAlias,
     region,
     summary: sanitizeSeoText(input.summary),
     site_name: normalizedSiteName,
     title_suffix: String(input.titleSuffix || '').replace(/\s+/g, ' '),
     date: formatSeoDate(input.latestAt),
-  }) || (
+  };
+  const titleCore = manualTitle || renderSeoTemplate(input.titleTemplate, templateVars) || (
     isWebGame
       ? `${name} 网页游戏${region ? ` ${region}` : ''} - 在线游玩`
       : `${name} APK下载${region ? ` - ${region}下载` : ''}`
   );
-  const titleWithSite = titleCore.includes(normalizedSiteName)
-    ? titleCore
-    : `${titleCore} | ${normalizedSiteName}`;
-  const aliases = normalizeSeoAliases(input.aliases);
-  const chineseAlias = resolveChineseAlias(aliases, name);
-  // 标题只走模板/内置文案：别名改写标题会拼出「别名（游戏名(English)）版本号…」这类畸形标题，
-  // 对点击的帮助远小于损失；别名改在可见副标题与描述里出现。
-  const title = clampSeoText(titleWithSite, SEO_TITLE_MAX);
-  const baseDescription = manualDescription || renderSeoTemplate(input.descriptionTemplate, {
-    name,
-    pkg,
-    version: sanitizeSeoText(input.version),
-    region,
-    summary: sanitizeSeoText(input.summary),
-    site_name: normalizedSiteName,
-    title_suffix: String(input.titleSuffix || '').replace(/\s+/g, ' '),
-    date: formatSeoDate(input.latestAt),
-  }) || (
+  // 标题先截主体再挂站点后缀，保证整条 ≤ SEO_TITLE_MAX 且后缀不被截掉；
+  // 构建号版本已在模板变量里归一化成空串，不会出现 v160402020。
+  const title = buildSeoTitle(titleCore, normalizedSiteName, SEO_TITLE_MAX);
+  const baseDescription = manualDescription || renderSeoTemplate(input.descriptionTemplate, templateVars) || (
     isWebGame
       ? `获取${name}网页游戏入口，查看游戏介绍、玩法特色和社区资讯${regionPhrase}。通过${normalizedSiteName}快速找到${name}并开始游玩。`
       : `下载${name}安卓版 APK，获取安全可靠的游戏下载入口${regionPhrase}。在${normalizedSiteName}查看游戏介绍、玩法特色和可用资源，快速安装并开始游玩。`
@@ -241,6 +275,39 @@ export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc
   ];
   const keywords = Array.from(new Set(keywordCandidates.map((item) => sanitizeSeoText(item)).filter(Boolean))).slice(0, 20);
   return { title, description: clampSeoDescription(description), keywords, aliases };
+}
+
+/**
+ * 标题定稿：主体截到预算内，站点后缀始终保留。
+ *
+ * 模板里已经写了站点名（`... | APKScc`）时，把结尾的「分隔符 + 站点名」当固定后缀，
+ * 只截主体；否则自动补 ` | 站点名`。整条标题不会超过 maxLength。
+ */
+export function buildSeoTitle(
+  coreInput: string,
+  siteName = 'APKScc',
+  maxLength = SEO_TITLE_MAX,
+): string {
+  const core = sanitizeSeoText(coreInput);
+  const site = sanitizeSeoText(siteName) || 'APKScc';
+  if (!core) return site;
+
+  const suffix = ` | ${site}`;
+  const escapedSite = site.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const trailingSuffix = core.match(
+    new RegExp(`\\s*[|｜\\-–—·]\\s*${escapedSite}\\s*$`, 'i'),
+  );
+  if (trailingSuffix?.index !== undefined) {
+    const body = core.slice(0, trailingSuffix.index).trim();
+    if (!body) return site;
+    const tail = suffix.length <= maxLength ? suffix : trailingSuffix[0].trim();
+    return `${clampSeoText(body, Math.max(1, maxLength - tail.length))}${tail}`.trim();
+  }
+
+  if (core.toLowerCase().includes(site.toLowerCase())) {
+    return clampSeoText(core, maxLength);
+  }
+  return `${clampSeoText(core, Math.max(1, maxLength - suffix.length))}${suffix}`;
 }
 
 function clampSeoText(input: string, maxLength: number): string {

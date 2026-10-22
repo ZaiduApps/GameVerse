@@ -11,6 +11,8 @@ import type { ApiBanner } from '@/types';
 
 const FALLBACK_BANNER_IMAGE = '/favicon.ico';
 const AUTOPLAY_MS = 4500;
+// 首屏图按视口取 interface 的 /media/variants 变体（302 到 CDN webp）。
+const VARIANT_WIDTHS = [480, 720, 1080] as const;
 
 function isExternalUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
@@ -91,6 +93,25 @@ function getBannerImage(banner?: ApiBanner): string {
   return banner.url_image || banner.game?.header_image || banner.game?.icon || FALLBACK_BANNER_IMAGE;
 }
 
+/**
+ * 变体端点只接受 http(s) 绝对地址；站内相对图（含兜底 favicon）不参与变体，
+ * 继续走原图，避免把相对路径当成第三方面板图源送出去。
+ */
+function toVariantSource(value: string): string | null {
+  const raw = String(value || '').trim();
+  if (!raw || raw === FALLBACK_BANNER_IMAGE) return null;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith('//')) return `https:${raw}`;
+  return null;
+}
+
+function buildVariantSrcSet(value: string): string | undefined {
+  const source = toVariantSource(value);
+  if (!source) return undefined;
+  const encoded = encodeURIComponent(source);
+  return VARIANT_WIDTHS.map((width) => `/api/media/variants?url=${encoded}&w=${width} ${width}w`).join(', ');
+}
+
 function getWrappedIndex(index: number, length: number): number {
   if (length <= 0) return 0;
   return (index % length + length) % length;
@@ -132,6 +153,7 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
+  const [heroVariantFailed, setHeroVariantFailed] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isSnapAnimating, setIsSnapAnimating] = useState(false);
@@ -186,7 +208,15 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
     }
   }, [activeIndex, safeItems.length]);
 
+  // 回到首屏时重新尝试变体（上一次失败可能只是端点临时不可用）。
+  useEffect(() => {
+    setHeroVariantFailed(false);
+  }, [activeIndex]);
+
   const current = safeItems[activeIndex];
+  const heroImageSrc = getBannerImage(current);
+  const isHeroFirstSlide = activeIndex === 0;
+  const heroVariantSrcSet = isHeroFirstSlide && !heroVariantFailed ? buildVariantSrcSet(heroImageSrc) : undefined;
   const title = current?.name || '次元世界，尽在 ACBOX';
   const description = current?.description || '发现优质二次元游戏，获取一线资讯和社区攻略。';
   const primaryHref = current ? getBannerHref(current) : '/app';
@@ -356,16 +386,41 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
               zIndex: isSnapAnimating ? 25 : 20,
             }}
           >
-            <Image
-              src={getBannerImage(current)}
-              alt={title}
-              fill
-              priority={activeIndex === 0}
-              fetchPriority={activeIndex === 0 ? 'high' : 'auto'}
-              loading={activeIndex === 0 ? 'eager' : 'lazy'}
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 1200px"
-            />
+            {isHeroFirstSlide ? (
+              // 首屏用原生 img：next/image 在 `images.unoptimized: true` 下会把自定义
+              // srcSet/sizes 覆盖成 undefined（见 get-img-props 的 generateImgAttrs），
+              // 只有原生 img 才能带上 /media/variants 的 480/720/1080 三档。
+              <img
+                src={heroImageSrc}
+                srcSet={heroVariantSrcSet}
+                sizes={heroVariantSrcSet ? '(max-width: 768px) 100vw, 1200px' : undefined}
+                alt={title}
+                className="absolute inset-0 h-full w-full object-cover"
+                fetchPriority="high"
+                loading="eager"
+                decoding="async"
+                onError={(event) => {
+                  if (!heroVariantSrcSet) return;
+                  // 变体端点不可用时浏览器不会自动回退到 src，这里手动退回原图。
+                  const img = event.currentTarget;
+                  img.removeAttribute('srcset');
+                  img.removeAttribute('sizes');
+                  img.src = heroImageSrc;
+                  setHeroVariantFailed(true);
+                }}
+              />
+            ) : (
+              <Image
+                src={heroImageSrc}
+                alt={title}
+                fill
+                priority={false}
+                fetchPriority="auto"
+                loading="lazy"
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 1200px"
+              />
+            )}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/85 via-black/38 to-transparent" />
 
             {!compact && (
