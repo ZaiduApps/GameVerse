@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import PageTransitionLoader from '@/components/layout/PageTransitionLoader';
+import ScreenViewTracker from '@/components/layout/ScreenViewTracker';
 import { Toaster } from '@/components/ui/toaster';
 import type { SiteConfig } from '@/types';
 
@@ -62,6 +63,7 @@ export default function AppShell({ children, siteName, logoUrl, siteConfig }: Ap
       >
         跳到主要内容
       </a>
+      <ScreenViewTracker />
       <Suspense fallback={null}>
         <PageTransitionLoader />
       </Suspense>

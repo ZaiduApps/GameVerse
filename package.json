@@ -18,6 +18,7 @@
     "test:game-detail": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/game-detail-boundary.test.mjs tests/image-preview.test.mjs tests/seo-template.test.mjs",
     "test:game-review": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/alias-loader.mjs --test tests/game-review-offline.test.mjs",
     "test:game-display-name": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/game-display-name.test.mjs",
+    "test:route-template": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/route-template.test.mjs",
     "seo:audit": "node scripts/seo-daily-audit.mjs",
     "seo:write-game": "node scripts/seo-write-game.mjs",
     "preinstall": "node -e \"const ua=process.env.npm_config_user_agent||'';if(ua.indexOf('pnpm/')!==0){console.error('[preinstall] 本项目只允许使用 pnpm 安装依赖，请改用 pnpm install');process.exit(1)}\"",
