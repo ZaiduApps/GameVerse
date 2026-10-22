@@ -372,12 +372,14 @@ export default function GamesPage({
   initialGames = [],
   initialHasMorePages = false,
   initialDataReady = false,
+  initialPage = 1,
 }: {
   initialKeyword?: string;
   initialCategory?: string;
   initialGames?: ApiGame[];
   initialHasMorePages?: boolean;
   initialDataReady?: boolean;
+  initialPage?: number;
 }) {
   const normalizedInitialKeyword = String(initialKeyword || '').trim();
   const safeInitialCategory = String(initialCategory || '').trim() || 'all';
@@ -391,7 +393,8 @@ export default function GamesPage({
       initialGames.map((game, index) => transformApiGameToGame(game, index)),
     ),
   );
-  const [currentPage, setCurrentPage] = useState(1);
+  // 服务端分页的初始页：加载更多要从当前页继续，不能退回第 1 页。
+  const [currentPage, setCurrentPage] = useState(() => Math.max(1, Number(initialPage) || 1));
   const [hasMorePages, setHasMorePages] = useState(initialHasMorePages);
   const [loadError, setLoadError] = useState('');
   const [reloadToken, setReloadToken] = useState(0);

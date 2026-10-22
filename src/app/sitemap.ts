@@ -285,11 +285,16 @@ async function fetchIndexableGamePackages(): Promise<Set<string> | null> {
 function toUserEntry(item: UserSitemapItem): MetadataRoute.Sitemap[number] | null {
   const username = String(item?.username || '').trim();
   const id = String(item?._id || '').trim();
+
+  // 邮箱型用户名属于 PII，且这类主页通常是薄页面；即使认证过也不进 sitemap。
+  if (username.includes('@')) return null;
+
   const pathTarget = username || id;
   if (!pathTarget) return null;
 
   const postCount = Number(item?.post_count || 0);
-  if (postCount <= 0 && !item?.isVerified) return null;
+  // 只有可认证作者或至少 3 条公开动态的主页才值得收录。
+  if (!item?.isVerified && postCount < 3) return null;
 
   return {
     url: absoluteUrl(`/u/${encodeURIComponent(pathTarget)}`),

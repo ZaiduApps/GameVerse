@@ -337,7 +337,7 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
                   src={getBannerImage(previewItem)}
                   alt={previewItem.name || '预览图'}
                   fill
-                  loading="eager"
+                  loading="lazy"
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 1200px"
                 />
@@ -360,8 +360,9 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
               src={getBannerImage(current)}
               alt={title}
               fill
-              priority
-              fetchPriority="high"
+              priority={activeIndex === 0}
+              fetchPriority={activeIndex === 0 ? 'high' : 'auto'}
+              loading={activeIndex === 0 ? 'eager' : 'lazy'}
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 1200px"
             />

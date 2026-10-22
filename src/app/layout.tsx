@@ -109,6 +109,8 @@ export default async function RootLayout({
       <head>
         <link rel="llms" href="/llms.txt" type="text/plain" />
         <link rel="preconnect" href="https://tc-new.z.wiki" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://uu.fp.ps.netease.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://p.ps.netease.com" crossOrigin="anonymous" />
         {siteConfig?.header?.custom_css && (
           <style dangerouslySetInnerHTML={{ __html: siteConfig.header.custom_css }} />
         )}

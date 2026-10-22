@@ -32,6 +32,33 @@ export function normalizeGameFaqItems(
   );
 }
 
+// 全站通用的安装/格式说明；即使上游误标成 game 来源，也不当成页面专属 FAQ。
+const DEFAULT_GLOBAL_FAQ_QUESTIONS = new Set([
+  '如何安装游戏?',
+  '什么是APKS格式的游戏?',
+  'APKS和普通APK有什么区别?',
+]);
+
+function normalizeFaqQuestion(question: unknown): string {
+  return String(question || '')
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/？/g, '?');
+}
+
+/**
+ * 只挑该游戏自己的 FAQ 用于 FAQPage 结构化数据。
+ * 全站复用同一组模板问题属于重复结构化数据，宁可不输出也不要每页复制一遍。
+ */
+export function selectDedicatedGameFaqItems(
+  faq?: GameDetailData['faq'] | null,
+): GameFaqItem[] {
+  return normalizeGameFaqItems(faq).filter((item) => {
+    if (String(item.source || '').trim().toLowerCase() !== 'game') return false;
+    return !DEFAULT_GLOBAL_FAQ_QUESTIONS.has(normalizeFaqQuestion(item.question));
+  });
+}
+
 export function faqMarkdownToPlainText(markdown: unknown): string {
   const html = renderMarkdown(markdown).__html;
   return decodeHtmlEntities(html)

@@ -18,6 +18,8 @@ export type GameDetailSeoInput = {
   manualDescription?: string | null;
   manualKeywords?: Array<string | null | undefined> | null;
   aliases?: string[] | null;
+  /** 详情页首个标签，用作别名标题里的“题材”。 */
+  genre?: string | null;
   titleTemplate?: string | null;
   descriptionTemplate?: string | null;
   titleSuffix?: string | null;
@@ -133,6 +135,51 @@ function formatSeoDate(input?: string | null): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
 }
 
+const CJK_PATTERN = /[㐀-鿿]/;
+
+/** 别名尾部的英文括注（如 `部落冲突:皇室战争(Clash Royale)` 的括号部分）对中文用户没有信息量，展示前剥掉。 */
+const TRAILING_LATIN_ALIAS_SUFFIX = /\s*[(（][A-Za-z0-9 .,:'"&!\-]+[)）]\s*$/;
+
+function normalizeSeoAliases(input?: string[] | null): string[] {
+  return Array.from(
+    new Set(
+      (Array.isArray(input) ? input : [])
+        .map((item) => sanitizeSeoText(item))
+        .filter((item) => item && item.length <= 40),
+    ),
+  ).slice(0, 10);
+}
+
+/**
+ * 从别名列表里取第一个中文别名（繁体也算），且不能与页面主名称重复。
+ * 详情页的可见副标题 / meta 描述 / 正文首段都以此为准，保证口径一致。
+ * 标题不再用别名改写，避免拼出「别名（别名(English)）版本号…」这类畸形标题。
+ */
+export function resolveChineseAlias(aliases: unknown, name?: string | null): string {
+  const list = Array.isArray(aliases) ? aliases : [];
+  const normalizedName = sanitizeSeoText(name).toLowerCase();
+  for (const item of list) {
+    const alias = sanitizeSeoText(item)
+      .replace(TRAILING_LATIN_ALIAS_SUFFIX, '')
+      .trim();
+    if (!alias || !CJK_PATTERN.test(alias)) continue;
+    if (normalizedName && alias.toLowerCase() === normalizedName) continue;
+    return alias;
+  }
+  return '';
+}
+
+/** 正文首段只在开头引入一次别名，原文已经提到别名时不再重复。 */
+export function prependAliasToDescription(
+  description?: string | null,
+  alias?: string | null,
+): string {
+  const text = String(description || '').trim();
+  const aliasText = sanitizeSeoText(alias);
+  if (!text || !aliasText || text.includes(aliasText)) return text;
+  return `中文名「${aliasText}」。${text}`;
+}
+
 /** 详情页使用稳定下载意图文案，版本、日期、大小等易过期字段不进入主描述。优先级：人工 SEO > 站点模板 > 内置模板。 */
 export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc') {
   const name = sanitizeSeoText(input.name) || sanitizeSeoText(input.pkg) || '安卓游戏';
@@ -161,8 +208,12 @@ export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc
   const titleWithSite = titleCore.includes(normalizedSiteName)
     ? titleCore
     : `${titleCore} | ${normalizedSiteName}`;
+  const aliases = normalizeSeoAliases(input.aliases);
+  const chineseAlias = resolveChineseAlias(aliases, name);
+  // 标题只走模板/内置文案：别名改写标题会拼出「别名（游戏名(English)）版本号…」这类畸形标题，
+  // 对点击的帮助远小于损失；别名改在可见副标题与描述里出现。
   const title = clampSeoText(titleWithSite, SEO_TITLE_MAX);
-  const description = manualDescription || renderSeoTemplate(input.descriptionTemplate, {
+  const baseDescription = manualDescription || renderSeoTemplate(input.descriptionTemplate, {
     name,
     pkg,
     version: sanitizeSeoText(input.version),
@@ -176,6 +227,8 @@ export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc
       ? `获取${name}网页游戏入口，查看游戏介绍、玩法特色和社区资讯${regionPhrase}。通过${normalizedSiteName}快速找到${name}并开始游玩。`
       : `下载${name}安卓版 APK，获取安全可靠的游戏下载入口${regionPhrase}。在${normalizedSiteName}查看游戏介绍、玩法特色和可用资源，快速安装并开始游玩。`
   );
+  // 中文别名必须出现在 meta description 里（别名是用户实际搜索词）；已包含则不重复前置，最后统一截到 155。
+  const description = prependAliasToDescription(baseDescription, chineseAlias);
   const keywordCandidates = [
     name,
     pkg,
@@ -187,12 +240,7 @@ export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc
     ...(Array.isArray(input.manualKeywords) ? input.manualKeywords : []),
   ];
   const keywords = Array.from(new Set(keywordCandidates.map((item) => sanitizeSeoText(item)).filter(Boolean))).slice(0, 20);
-  const aliases = Array.from(new Set(
-    (Array.isArray(input.aliases) ? input.aliases : [])
-      .map((item) => sanitizeSeoText(item))
-      .filter((item) => item && item.length <= 40),
-  )).slice(0, 10);
-  return { title, description: clampSeoText(description, SEO_DESC_MAX), keywords, aliases };
+  return { title, description: clampSeoDescription(description), keywords, aliases };
 }
 
 function clampSeoText(input: string, maxLength: number): string {

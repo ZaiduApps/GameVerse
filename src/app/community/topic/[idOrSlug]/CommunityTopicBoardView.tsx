@@ -789,7 +789,7 @@ export default function CommunityTopicBoardView({
                   />
                     <div className="min-w-0">
                       <h1 className="line-clamp-2 text-xl font-semibold leading-none tracking-tight">
-                        #{topic?.name || '话题'}
+                        {topic?.name || '话题'}
                       </h1>
                     <CardDescription className="mt-1 line-clamp-3 text-foreground/70">
                       {topic?.description?.trim() || '该话题暂无简介。'}

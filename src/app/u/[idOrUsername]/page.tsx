@@ -98,15 +98,20 @@ export async function generateMetadata({
   const canonicalTarget = data.user.username || idOrUsername;
   const canonicalPath = `/u/${encodeURIComponent(canonicalTarget)}`;
   const avatarUrl = normalizeSeoAssetUrl(data.user.avatar);
+  // 邮箱型用户名（PII）与低活跃度未认证主页保持可访问，但不让搜索引擎收录。
+  const username = String(data.user.username || '').trim();
+  const shouldIndex =
+    !username.includes('@') &&
+    (Number(data.stats.post_count || 0) >= 3 || Boolean(data.user.isVerified));
 
   return {
     title: `${name} 的主页 | 社区`,
     description,
     robots: {
-      index: true,
+      index: shouldIndex,
       follow: true,
       googleBot: {
-        index: true,
+        index: shouldIndex,
         follow: true,
         'max-image-preview': 'large',
         'max-snippet': -1,

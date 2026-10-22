@@ -7,6 +7,9 @@ import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityFeed, getCommunityTopics } from '@/lib/community-api';
 
 const COMMUNITY_JSONLD_LIMIT = 12;
+// 首屏要在 SSR HTML 里带出足够多的帖子内链：20 条帖子每条至少输出一个详情链接，
+// 满足搜索引擎对列表页可发现性的最低要求；JSON-LD 仍只取前 12 条。
+const COMMUNITY_SSR_FEED_PAGE_SIZE = 20;
 const COMMUNITY_PAGE_DESCRIPTION = buildSeoDescription(
   '浏览 APKScc 社区最新帖子、热门话题、安卓游戏讨论、攻略分享、资源反馈、版本体验和玩家互动动态',
   [
@@ -24,9 +27,9 @@ function clamp(input: string, max: number): string {
 // 响应 flush 成 200」的软 404 缺陷，故意删掉了 src/app/community/loading.tsx，
 // 而 loading.tsx 提供的隐式边界正是本页 useSearchParams() 过去能通过预渲染的原因。
 // 边界删掉后 next build 会在预渲染阶段直接失败（missing-suspense-with-csr-bailout）。
-// 这里就地补回显式边界，既恢复可构建，又不把 loading.tsx 加回来、不复活软 404。
-// 骨架按 CommunityPageView 的三栏栅格 1:1 复刻以避免 hydration 位移；与改动前线上行为
-// 一致（feed 一直是客户端渲染），页面级 JSON-LD 仍由服务端先行输出。
+// 现在页面读取 searchParams 后按请求动态渲染，首屏 feed 会真实输出帖子链接；
+// 边界继续保留，既兜住 useSearchParams 的 CSR 回退，也不把 loading.tsx 加回来。
+// 骨架按 CommunityPageView 的三栏栅格 1:1 复刻以避免 hydration 位移。
 function CommunityPageSkeleton() {
   return (
     <div
@@ -52,14 +55,23 @@ function CommunityPageSkeleton() {
   );
 }
 
-const getCommunityPageData = cache(async (): Promise<{
+const getCommunityPageData = cache(async (feedKeyword: string): Promise<{
   config: Awaited<ReturnType<typeof getPublicSiteConfig>>;
   initialData: CommunityPageInitialData;
 }> => {
+  const keyword = String(feedKeyword || '').trim();
   const [config, latestFeed, hotFeed, topics] = await Promise.all([
     getPublicSiteConfig(300),
-    getCommunityFeed('latest', { page: 1, pageSize: COMMUNITY_JSONLD_LIMIT }),
-    getCommunityFeed('hot', { page: 1, pageSize: COMMUNITY_JSONLD_LIMIT }),
+    getCommunityFeed('latest', {
+      page: 1,
+      pageSize: COMMUNITY_SSR_FEED_PAGE_SIZE,
+      q: keyword || undefined,
+    }),
+    getCommunityFeed('hot', {
+      page: 1,
+      pageSize: COMMUNITY_SSR_FEED_PAGE_SIZE,
+      q: keyword || undefined,
+    }),
     getCommunityTopics({ page: 1, pageSize: COMMUNITY_JSONLD_LIMIT, sort: 'hot' }),
   ]);
 
@@ -73,8 +85,18 @@ const getCommunityPageData = cache(async (): Promise<{
   };
 });
 
+type CommunityPageSearchParams = {
+  q?: string;
+  topicName?: string;
+};
+
+/** 页面读取 searchParams 后路由按请求动态渲染，useSearchParams 才能在 SSR 阶段拿到真实值。 */
+function resolveFeedKeyword(params: CommunityPageSearchParams | undefined): string {
+  return String(params?.q || params?.topicName || '').trim();
+}
+
 export async function generateMetadata(): Promise<Metadata> {
-  const { config } = await getCommunityPageData();
+  const config = await getPublicSiteConfig(300);
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
   const title = `${siteName} 社区 - 安卓游戏讨论、攻略分享与资源反馈动态`;
   const description = COMMUNITY_PAGE_DESCRIPTION;
@@ -119,11 +141,18 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function CommunityPage() {
-  const { config, initialData } = await getCommunityPageData();
+export default async function CommunityPage({
+  searchParams,
+}: {
+  searchParams: Promise<CommunityPageSearchParams>;
+}) {
+  const params = await searchParams;
+  const feedKeyword = resolveFeedKeyword(params);
+  const { config, initialData } = await getCommunityPageData(feedKeyword);
 
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
   const postList = Array.isArray(initialData.latestFeed?.list) ? initialData.latestFeed.list : [];
+  const jsonLdPosts = postList.slice(0, COMMUNITY_JSONLD_LIMIT);
   const topicList = Array.isArray(initialData.topics) ? initialData.topics : [];
 
   const collectionJsonLd = {
@@ -145,8 +174,8 @@ export default async function CommunityPage() {
     '@type': 'ItemList',
     name: `${siteName} 社区最新帖子`,
     itemListOrder: 'https://schema.org/ItemListOrderDescending',
-    numberOfItems: postList.length,
-    itemListElement: postList.map((post, index) => {
+    numberOfItems: jsonLdPosts.length,
+    itemListElement: jsonLdPosts.map((post, index) => {
       const postTitle = clamp(String(post.title || post.summary || '社区帖子').trim(), 80);
       const postSummary = clamp(String(post.summary || post.content || '').trim(), 180);
       const postUrl = absoluteUrl(`/community/post/${encodeURIComponent(post.id)}`);

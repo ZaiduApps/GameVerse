@@ -210,7 +210,8 @@ export function buildResourceLinks(items: CardConfigItem[]): ResourceLinkView[] 
 
 // 相似推荐：真实推荐优先，为空时用稿件三款游戏（无跳转，仅撑版式）。
 export function buildSimilarGames(items: ApiRecommendedGame[]): SimilarGameView[] {
-  const real = items.slice(0, 3);
+  // 详情页内链密度：用后端已返回的推荐列表，最多渲染 10 个 /app/{pkg} 链接。
+  const real = items.slice(0, 10);
   if (real.length === 0) {
     return SIMILAR_GAMES_FALLBACK.map((item, index) => ({
       key: `mock-similar-${index}`,

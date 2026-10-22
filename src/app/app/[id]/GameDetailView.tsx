@@ -8,6 +8,7 @@ import GameFaqSection from '@/components/game-detail/GameFaqSection';
 import { normalizeGameFaqItems } from '@/lib/game-faq';
 import { resolveGameName } from '@/lib/game-display-name';
 import { isWebGameType } from '@/lib/game-resource-type';
+import { prependAliasToDescription, resolveChineseAlias } from '@/lib/seo';
 import { getPreviewImageUrl } from '@/lib/image-preview';
 import { cn } from '@/lib/utils';
 import type { ApiRecommendedGame, CardConfigItem, GamePageSnapshot } from '@/types';
@@ -284,6 +285,20 @@ function SimilarGamesCard({ items }: { items: ReturnType<typeof buildSimilarGame
 
 export default function GameDetailView({ gameData, recommendedGames, relatedNews }: GameDetailViewProps) {
   const game = gameData.app;
+  const displayName = resolveGameName(game);
+  const storedAliases = (
+    game.seo as (typeof game.seo & { aliases?: string[] | null }) | undefined
+  )?.aliases;
+  // 两代别名来源：seo.aliases（后台写入）与 metadata.chs|cht（采集到的多语言名）。
+  // 线上很多游戏前者为空、中文名只躺在后者里，副标题要一起兜底才看得见。
+  const chineseAlias = resolveChineseAlias(
+    [
+      ...(Array.isArray(storedAliases) ? storedAliases : []),
+      game.metadata?.chs,
+      game.metadata?.cht,
+    ],
+    displayName,
+  );
   const resources = Array.isArray(gameData.resources) ? gameData.resources : [];
   const isWebGame = isWebGameType(game.type);
   const tags = getGameTags(game);
@@ -308,7 +323,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
       if (!pkg || pkg === String(game.pkg || '').trim().toLowerCase() || item._id === game._id) return false;
       return list.findIndex((candidate) => String(candidate.pkg || '').trim().toLowerCase() === pkg) === index;
     })
-    .slice(0, 5);
+    .slice(0, 10);
   const detailAnnouncements = gameData.Announcements ?? gameData.announcements;
   const hasDetailAnnouncements = Array.isArray(detailAnnouncements)
     ? detailAnnouncements.length > 0
@@ -326,7 +341,10 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   const relatedPosts = buildRelatedPosts(relatedNews);
   const ratingCount = Math.max(0, Number(gameData.reviewSummary?.ratingCount || 0));
   const reviewCountLabel = ratingCount > 0 ? formatCompactCount(ratingCount) : undefined;
-  const heroDescription = cleanText(game.description || game.summary);
+  const heroDescription = prependAliasToDescription(
+    cleanText(game.description || game.summary),
+    chineseAlias,
+  );
   const actionGame = { _id: game._id, pkg: game.pkg, name: resolveGameName(game), version: game.version, type: game.type, file_size: game.file_size };
   // 移动端三宫格只取综合评分 / 下载热度 / 适龄与平台，与稿件一致。
   const mobileMetrics = [heroMetrics[0], heroMetrics[2], heroMetrics[3]].filter(Boolean);
@@ -401,6 +419,9 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                   <div className="min-w-0 space-y-2">
                     <HeroBadges badges={trustBadges} />
                     <h1 className="text-lg font-bold leading-snug tracking-tight text-[#2c2f30] sm:text-xl lg:text-2xl dark:text-foreground">{resolveGameName(game)}</h1>
+                    {chineseAlias ? (
+                      <p className="mt-1 text-sm text-muted-foreground">中文名：{chineseAlias}</p>
+                    ) : null}
                     <div className="flex items-center gap-2 text-xs font-medium text-[#595c5d] dark:text-muted-foreground">
                       <span className="inline-flex items-center gap-1 text-[#2c2f30] dark:text-foreground">
                         {game.developer || '开发者未提供'}

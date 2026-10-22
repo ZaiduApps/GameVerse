@@ -14,15 +14,20 @@ import {
   sanitizeSeoText,
 } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
-import { getCommunityPostsByGame } from '@/lib/community-api';
-import { faqMarkdownToPlainText, normalizeGameFaqItems } from '@/lib/game-faq';
+import { getCommunityFeed, getCommunityPostsByGame } from '@/lib/community-api';
+import {
+  faqMarkdownToPlainText,
+  selectDedicatedGameFaqItems,
+} from '@/lib/game-faq';
 import { isWebGameType } from '@/lib/game-resource-type';
 import { gamePageCacheTag } from '@/lib/game-page-cache';
 import type { ApiRecommendedGame, CommunityPost, GameDetailData, GamePageSnapshot, SiteConfig } from '@/types';
 
 const DETAIL_REVALIDATE_SECONDS = 900;
 const SEO_SNAPSHOT_VERSION = '2';
-const MAX_SERVER_RECOMMENDED_GAMES = 5;
+const MAX_SERVER_RECOMMENDED_GAMES = 10;
+const MIN_DETAIL_RELATED_NEWS = 3;
+const MAX_DETAIL_RELATED_NEWS = 5;
 const RECOMMENDED_GAMES_TIMEOUT_MS = 2500;
 const STATIC_PARAMS_DEFAULT_LIMIT = 100;
 const STATIC_PARAMS_HARD_LIMIT = 500;
@@ -170,12 +175,82 @@ async function getRelatedNews(game: GameDetailData['app']): Promise<RelatedNewsI
   }
 }
 
+function mergeRelatedNewsItems(...groups: RelatedNewsItem[][]): RelatedNewsItem[] {
+  const byId = new Map<string, RelatedNewsItem>();
+  for (const group of groups) {
+    for (const item of group) {
+      if (!item?.id || byId.has(item.id)) continue;
+      byId.set(item.id, item);
+    }
+  }
+  return Array.from(byId.values());
+}
+
+// 部分游戏在社区里没有多少帖子，相关讨论不足 3 条时用全站最新讨论补位，
+// 保证详情页始终有可爬取的 /community/post/ 内链。
+async function getLatestCommunityDiscussions(limit: number): Promise<RelatedNewsItem[]> {
+  try {
+    const feed = await getCommunityFeed('latest', { page: 1, pageSize: limit * 3 });
+    return feed.list
+      .filter((post) => Boolean(String(post.title || '').trim()))
+      .map(toRelatedNewsItem)
+      .filter((item): item is RelatedNewsItem => Boolean(item))
+      .slice(0, limit);
+  } catch {
+    return [];
+  }
+}
+
+async function resolveDetailRelatedNews(
+  game: GameDetailData['app'],
+  rawRelatedNews: unknown,
+): Promise<RelatedNewsItem[]> {
+  const snapshotItems = Array.isArray(rawRelatedNews)
+    ? normalizeRelatedNewsPayload(rawRelatedNews)
+    : [];
+  let items = snapshotItems;
+  if (items.length < MIN_DETAIL_RELATED_NEWS) {
+    items = mergeRelatedNewsItems(items, await getRelatedNews(game));
+  }
+  if (items.length < MIN_DETAIL_RELATED_NEWS) {
+    items = mergeRelatedNewsItems(items, await getLatestCommunityDiscussions(MAX_DETAIL_RELATED_NEWS));
+  }
+  return items.slice(0, MAX_DETAIL_RELATED_NEWS);
+}
+
 function formatFileSize(bytes?: number | null): string | undefined {
   if (!bytes || bytes <= 0) return undefined;
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
   const value = bytes / Math.pow(1024, index);
   return `${value.toFixed(index === 0 ? 0 : 2)} ${units[index]}`;
+}
+
+// GameSeoContent 类型尚未声明 aliases，但后台写入与快照都会原样下发该字段。
+// 数据侧存在两代来源：seo.aliases（人工/后台写入）与 metadata.chs|cht|en（采集时
+// 抓到的多语言名称）。后者在中文游戏上就是用户实际搜索的别名，这里合并兜底，
+// 避免「有中文名但标题里看不到」的情况。
+function readGameSeoAliases(game: GameDetailData['app']): string[] | null {
+  const stored = (
+    game.seo as (typeof game.seo & { aliases?: string[] | null }) | undefined
+  )?.aliases;
+  const candidates: string[] = Array.isArray(stored) ? [...stored] : [];
+  const metadata = game.metadata as
+    | { chs?: unknown; cht?: unknown; en?: unknown }
+    | undefined;
+  for (const value of [metadata?.chs, metadata?.cht, metadata?.en]) {
+    if (typeof value === 'string') candidates.push(value);
+  }
+  const aliases = candidates
+    .map((value) =>
+      value
+        .replace(/\s*[(（][A-Za-z0-9 .,:'"&!\-]+[)）]\s*$/, '')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    )
+    .filter((value) => value && value !== (game.name || '').trim());
+  const unique = [...new Set(aliases)];
+  return unique.length ? unique : null;
 }
 
 function schemaApplicationCategory(input?: string | null): string {
@@ -413,12 +488,13 @@ export async function generateMetadata({
     manualTitle: game.seo?.title,
     manualDescription: game.seo?.description,
     manualKeywords: game.seo?.keywords,
+    aliases: readGameSeoAliases(game),
+    genre: Array.isArray(game.tags) ? game.tags[0] : '',
     titleTemplate: siteConfig?.app_seo?.app_title_template,
     descriptionTemplate: siteConfig?.app_seo?.app_description_template,
     titleSuffix: siteConfig?.seo?.title_suffix,
   }, siteName);
   const title = detailSeo.title;
-  const faqItems = normalizeGameFaqItems(gameData.faq);
   const description = detailSeo.description;
 
   const heroImage = resolveGameSeoImage(game, basic.share_image);
@@ -503,19 +579,13 @@ export default async function GameDetailPage({
     manualTitle: game.seo?.title,
     manualDescription: game.seo?.description,
     manualKeywords: game.seo?.keywords,
-    aliases: (
-      game.seo as
-        | (typeof game.seo & { aliases?: string[] })
-        | undefined
-    )?.aliases,
+    aliases: readGameSeoAliases(game),
   });
   const description = detailSeo.description;
   const aliases = detailSeo.aliases;
 
   const [relatedNews, recommendedGames] = await Promise.all([
-    Array.isArray(initialGameData.relatedNews)
-      ? normalizeRelatedNewsPayload(initialGameData.relatedNews)
-      : getRelatedNews(game),
+    resolveDetailRelatedNews(game, initialGameData.relatedNews),
     Array.isArray(initialGameData.recommendedGames)
       ? normalizeRecommendedGamesPayload(initialGameData.recommendedGames, game)
       : getRecommendedGames(game),
@@ -579,11 +649,11 @@ export default async function GameDetailPage({
       : undefined,
   };
 
-  const faqItems = normalizeGameFaqItems(initialGameData.faq);
+  const dedicatedFaqItems = selectDedicatedGameFaqItems(initialGameData.faq);
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: faqItems.map((item) => ({
+    mainEntity: dedicatedFaqItems.map((item) => ({
       '@type': 'Question',
       name: item.question,
       acceptedAnswer: {
@@ -608,7 +678,7 @@ export default async function GameDetailPage({
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(detailJsonLd) }} />
-      {faqItems.length > 0 && (
+      {dedicatedFaqItems.length > 0 && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       )}
       {recommendedGames.length > 0 && (

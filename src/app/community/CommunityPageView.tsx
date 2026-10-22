@@ -77,7 +77,8 @@ interface CommunityPageViewProps {
 }
 
 export default function CommunityPageView({ initialData }: CommunityPageViewProps) {
-  const FEED_PAGE_SIZE = 10;
+  // 与服务端首屏 SSR 的 pageSize 保持一致，否则「加载更多」会从第 11 条开始重复。
+  const FEED_PAGE_SIZE = 20;
   const HOT_TOPICS_LIMIT = 6;
   const router = useRouter();
   const searchParams = useSearchParams();
