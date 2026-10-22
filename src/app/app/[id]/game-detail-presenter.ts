@@ -1,4 +1,5 @@
 import { resolveGameName } from '@/lib/game-display-name';
+import { buildRenderedMarkdownDocument } from '@/lib/utils';
 import type { CardConfigItem, GameDetailData } from '@/types';
 
 export interface GameFactItem {
@@ -83,9 +84,56 @@ function sanitizeRichHtml(input: string): string {
     .replace(/\s(href|src)\s*=\s*("|')\s*javascript:[\s\S]*?\2/gi, ' $1="#"');
 }
 
+// 从 GitHub Release 正文导入的描述是 HTML 与 Markdown 混排：结构是 <p>/<details>，
+// 内容是 ### / ** / 列表 / 链接。只按「有没有 HTML 标签」分流会把它整段当富文本原样输出，
+// 读者看到的是字面量 `### Features`。这里先认 Markdown，再决定用哪条渲染链。
+const MARKDOWN_DESCRIPTION_HINT =
+  /^(?:#{1,6}\s|\s*[-*+]\s|\d+\.\s|>\s|\|.*\|)|(\*\*[^*\n]+\*\*|`[^`\n]+`|\[[^\]\n]+\]\([^)\n]+\))/m;
+
+// 白名单不成立：线上描述里还会出现 <font color>、<b>、<u> 这类花色标签，
+// 漏掉任何一个都会被 Markdown 渲染器转义成可见的 `&lt;font&gt;` 文本。
+// 这里通用暂存所有剩余标签，安全性由还原后的 sanitizeRichHtml 兜底。
+const HTML_TAG_PATTERN = /<[^>]+>/g;
+
+function renderMixedMarkdownDescription(raw: string): string {
+  const inlineTags: string[] = [];
+  const normalized = raw
+    // 换行与块级结束标签先还原成真实换行，Markdown 的行结构才成立。
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(?:p|div|h[1-6]|li|tr|ul|ol|details|summary)>/gi, '\n')
+    // 块级开标签直接删掉：段落、列表、表格的骨架改由 Markdown 渲染器生成，
+    // 留着会让块级标签嵌进 Markdown 段落里。
+    .replace(
+      /<(?:p|div|ul|ol|table|thead|tbody|tr|td|th|details|summary)\b[^>]*>/gi,
+      '',
+    )
+    // 原来的 HTML 标题统一转成 Markdown 标题，输出后与正文里的 `###` 是同一套样式。
+    .replace(/<h([1-6])\b[^>]*>/gi, (_match, level: string) => `\n${'#'.repeat(Number(level))} `)
+    // 剩余标签（行内标签、花色标签）统一交给占位符托管：Markdown 渲染器会把
+    // 正文里剩下的 `<`/`>` 转义，不暂存的话 <a>/<img>/<font> 会变成可见的标签文本。
+    .replace(HTML_TAG_PATTERN, (tag) => {
+      const index = inlineTags.length;
+      inlineTags.push(tag);
+      return `\u0000${index}\u0000`;
+    });
+
+  const rendered = buildRenderedMarkdownDocument(normalized, {
+    preset: 'detail',
+    demoteLevelOneHeadings: true,
+  }).html;
+  const restored = rendered.replace(
+    /\u0000(\d+)\u0000/g,
+    (_match, index: string) => inlineTags[Number(index)] ?? '',
+  );
+  return sanitizeRichHtml(restored);
+}
+
 export function formatDescriptionHtml(input?: string | null): string {
   const raw = String(input || '').replace(/\r\n?/g, '\n').trim();
   if (!raw) return '';
+  if (MARKDOWN_DESCRIPTION_HINT.test(raw)) {
+    return renderMixedMarkdownDescription(raw);
+  }
   if (/<\/?[a-z][^>]*>/i.test(raw)) {
     return sanitizeRichHtml(raw).replace(/\n/g, '<br />');
   }
