@@ -195,23 +195,26 @@ export async function generateMetadata({
   const description = COMMUNITY_PAGE_DESCRIPTION;
   const shareImage = String(config?.basic?.share_image || '').trim();
   // 第 1 页归一到 /community；从第 2 页起内容不同，canonical 自引用。
-  // 关键词检索页（?q=）仍是同一个入口页，canonical 指回 /community。
+  // 关键词检索页（?q=）是用户生成的搜索结果，不收录也不给分页页做自引用：
+  // canonical 指回 /community，并整体 noindex,follow。
   const canonicalPath = page > 1 && !feedKeyword ? `/community?page=${page}` : '/community';
 
   return {
     title: { absolute: title },
     description,
-    robots: {
-      index: true,
-      follow: true,
-      googleBot: {
-        index: true,
-        follow: true,
-        'max-image-preview': 'large',
-        'max-snippet': -1,
-        'max-video-preview': -1,
-      },
-    },
+    robots: feedKeyword
+      ? { index: false, follow: true }
+      : {
+          index: true,
+          follow: true,
+          googleBot: {
+            index: true,
+            follow: true,
+            'max-image-preview': 'large',
+            'max-snippet': -1,
+            'max-video-preview': -1,
+          },
+        },
     alternates: {
       canonical: canonicalPath,
       languages: {
