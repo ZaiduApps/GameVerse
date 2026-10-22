@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { Suspense } from 'react';
+import { notFound } from 'next/navigation';
+import { Suspense, cache } from 'react';
 
 import AppLibraryView from './AppLibraryView';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
@@ -88,10 +89,12 @@ async function getHomeFallbackGames(): Promise<ApiGame[]> {
   }
 }
 
+// 只做合法性归一，不设固定上限：真正的页面上限由后端结果集决定（见 getLibraryPageOneBounds）。
+// 过去这里 clamp 到 500，导致 501 页以后共用「第 500 页」的正文和 canonical。
 function parsePageParam(value: unknown): number {
   const parsed = Number.parseInt(String(value ?? ''), 10);
   if (!Number.isFinite(parsed) || parsed < 1) return 1;
-  return Math.min(parsed, 500);
+  return parsed;
 }
 
 async function fetchLibraryQuery(
@@ -128,28 +131,67 @@ async function fetchLibraryQuery(
   }
 }
 
+type LibraryBounds = {
+  browseMode: boolean;
+  pageSize: number;
+  /** 每个查询词的第 1 页结果；请求失败为 null。 */
+  firstPages: Array<{ query: string; result: LibraryQueryResult | null }>;
+  /** 各查询词结果集的真实最大有效页；超出即无内容可翻。 */
+  maxPage: number;
+  /** 至少有一个查询词拿到了第 1 页数据。 */
+  ready: boolean;
+};
+
+// 页面是否越界必须在任何 Suspense 边界之前判定，否则响应已经按 200 流式发出，
+// notFound() 只能改渲染内容、改不了状态码。第 1 页永远有效，不需要探测；
+// 深页先取各词第 1 页拿 total，再用 cache() 与正文渲染共享这批请求。
+const getLibraryBounds = cache(async (keyword: string): Promise<LibraryBounds> => {
+  const normalizedKeyword = String(keyword || '').trim();
+  const browseMode = !normalizedKeyword;
+  const queries = browseMode ? [...GAME_LIBRARY_BROWSE_QUERIES] : [normalizedKeyword];
+  const pageSize = browseMode ? GAME_LIBRARY_BROWSE_PAGE_SIZE : GAME_LIBRARY_PAGE_SIZE;
+  const firstPages = await Promise.all(
+    queries.map(async (query) => ({
+      query,
+      result: await fetchLibraryQuery(query, pageSize, 1, browseMode),
+    })),
+  );
+  const successful = firstPages
+    .map((entry) => entry.result)
+    .filter((result): result is LibraryQueryResult => result !== null);
+  const maxPage = successful.reduce(
+    (max, result) => Math.max(max, Math.ceil(result.total / result.pageSize)),
+    1,
+  );
+  return { browseMode, pageSize, firstPages, maxPage, ready: successful.length > 0 };
+});
+
 async function getInitialLibraryData(
   keyword: string,
   requestedPage: number,
 ): Promise<InitialLibraryData> {
   const normalizedKeyword = String(keyword || '').trim();
-  const browseMode = !normalizedKeyword;
-  const queries = browseMode ? [...GAME_LIBRARY_BROWSE_QUERIES] : [normalizedKeyword];
-  const pageSize = browseMode ? GAME_LIBRARY_BROWSE_PAGE_SIZE : GAME_LIBRARY_PAGE_SIZE;
-  // 第 2 页起额外取一次第 1 页：多个浏览词并发时，同一款游戏可能在第 1 页
-  // 从 A 词进入、在第 2 页从 B 词再次出现，必须按第 1 页集合去重，
-  // 否则分页链接集合与首页高度重叠，分页对爬虫没有增量价值。
-  const pagesToFetch = requestedPage > 1 ? [1, requestedPage] : [requestedPage];
+  const { browseMode, pageSize, firstPages, maxPage } = await getLibraryBounds(normalizedKeyword);
+  // 第 2 页起要按第 1 页集合去重：多个浏览词并发时，同一款游戏可能在第 1 页
+  // 从 A 词进入、在第 2 页从 B 词再次出现，否则分页链接集合与首页高度重叠，
+  // 分页对爬虫没有增量价值。第 1 页结果来自 getLibraryBounds，不重复请求。
   const resultGroups = await Promise.all(
-    queries.map((query) =>
-      Promise.all(
-        pagesToFetch.map((pageNumber) =>
-          fetchLibraryQuery(query, pageSize, pageNumber, browseMode),
-        ),
-      ),
-    ),
+    firstPages.map(async ({ query, result: firstPage }) => {
+      if (requestedPage === 1) {
+        return firstPage ? [firstPage] : [];
+      }
+      const [first, current] = await Promise.all([
+        firstPage
+          ? Promise.resolve(firstPage)
+          : fetchLibraryQuery(query, pageSize, 1, browseMode),
+        fetchLibraryQuery(query, pageSize, requestedPage, browseMode),
+      ]);
+      return [first, current].filter(
+        (result): result is LibraryQueryResult => result !== null,
+      );
+    }),
   );
-  const results = resultGroups.map((group) => group[group.length - 1]);
+  const results = resultGroups.map((group) => group[group.length - 1] ?? null);
   const successfulResults = results.filter((result): result is LibraryQueryResult => result !== null);
 
   if (successfulResults.length === 0) {
@@ -185,10 +227,6 @@ async function getInitialLibraryData(
   });
 
   // 浏览模式会并发查询多个词，每个词的分页进度独立；可翻页数取各词的最大页数。
-  const totalPages = successfulResults.reduce(
-    (max, result) => Math.max(max, Math.ceil(result.total / result.pageSize)),
-    1,
-  );
   const responsePage = successfulResults.reduce(
     (max, result) => Math.max(max, result.page),
     requestedPage,
@@ -201,7 +239,7 @@ async function getInitialLibraryData(
     ),
     ready: true,
     page: Math.max(1, responsePage),
-    totalPages: Math.max(1, totalPages),
+    totalPages: Math.max(1, maxPage),
   };
 }
 
@@ -519,11 +557,21 @@ async function GameLibraryContent({
   );
 }
 
-export default function GamesPage({
+export default async function GamesPage({
   searchParams,
 }: {
   searchParams: Promise<GamesPageSearchParams>;
 }) {
+  const params = await searchParams;
+  const currentPage = parsePageParam(params?.page);
+  // 越界页返回真实 404：页面上限取各浏览词结果集的真实最大页，不再用固定 500 兜底。
+  // 判定放在 Suspense 之外，响应尚未开始流式输出，状态码才改得掉。
+  if (currentPage > 1) {
+    const bounds = await getLibraryBounds(String(params?.q || '').trim());
+    if (bounds.ready && currentPage > bounds.maxPage) {
+      notFound();
+    }
+  }
   return (
     <Suspense fallback={<GameLibraryLoading />}>
       <GameLibraryContent searchParams={searchParams} />
