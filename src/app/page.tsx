@@ -768,7 +768,7 @@ export default async function HomePage() {
           })}
 
           {safeDynamicPosts.length > 0 && (
-            <section className="rounded-2xl border border-border/70 bg-white p-4 shadow-sm sm:p-5">
+            <section className="rounded-2xl border border-border/70 bg-white p-3 shadow-sm sm:p-5">
               <div className="mb-4 flex items-end justify-between">
                 <div>
                   <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">

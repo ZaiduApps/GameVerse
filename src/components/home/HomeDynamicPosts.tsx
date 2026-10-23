@@ -19,15 +19,27 @@ interface HomeDynamicPostsProps {
   posts: ApiDynamicPost[];
 }
 
-function formatRelativeTime(dateStr?: string): string {
+// 时间固定按 Asia/Shanghai 显示：SSR 跑在服务器时区、客户端跑在用户时区，
+// 只要用运行环境本地时间格式化就必然水合不一致，所以时区必须写死。
+const POST_TIME_FORMATTER = new Intl.DateTimeFormat('zh-CN', {
+  timeZone: 'Asia/Shanghai',
+  hourCycle: 'h23',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+/** 动态的绝对时间：`MM-DD HH:mm`（Asia/Shanghai）。 */
+function formatPostTime(dateStr?: string): string {
   if (!dateStr) return '刚刚';
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return '刚刚';
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const dayNum = String(d.getDate()).padStart(2, '0');
-  const hour = String(d.getHours()).padStart(2, '0');
-  const minute = String(d.getMinutes()).padStart(2, '0');
-  return `${month}-${dayNum} ${hour}:${minute}`;
+  const parts = POST_TIME_FORMATTER.formatToParts(d);
+  const pick = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value || '';
+  const hour = pick('hour') === '24' ? '00' : pick('hour');
+  return `${pick('month')}-${pick('day')} ${hour}:${pick('minute')}`;
 }
 
 function normalizeComparableText(value: string): string {
@@ -303,6 +315,9 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
   const [focusPaused, setFocusPaused] = useState(false);
   const [docHidden, setDocHidden] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
+  // 模块不在视口内时不轮转：默认 true（SSR 与首帧都按「可见」处理）。
+  const [inViewport, setInViewport] = useState(true);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const smQuery = window.matchMedia('(min-width: 640px)');
@@ -332,6 +347,18 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, []);
 
+  // 滚出视口的轮播没人看，暂停自动翻页把注意力留给用户正在看的内容；
+  // 手动翻页不受影响（只影响自动轮转的 paused 判定）。
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) setInViewport(entry.isIntersecting);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   const visiblePosts = Math.min(visibleCount, Math.max(1, totalPosts));
   const totalPages = Math.max(1, Math.ceil(totalPosts / visiblePosts));
   const activePage = Math.min(pageIndex, totalPages - 1);
@@ -340,7 +367,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
   const windowPosts = posts.slice(windowStart, windowStart + visiblePosts);
   const rangeStart = windowStart + 1;
   const rangeEnd = windowStart + visiblePosts;
-  const rotationPaused = hoverPaused || focusPaused || docHidden || reduceMotion;
+  const rotationPaused = hoverPaused || focusPaused || docHidden || reduceMotion || !inViewport;
 
   useEffect(() => {
     if (totalPages <= 1 || rotationPaused) return;
@@ -478,6 +505,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
   return (
     <>
     <div
+      ref={containerRef}
       className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white dark:border-[#2a3442] dark:bg-[#111824]"
       role="group"
       aria-label="社区动态"
@@ -523,7 +551,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
           <article
             key={postId}
             className={cn(
-              'px-4 py-4 transition-colors hover:bg-[#fafbfd] dark:hover:bg-[#162132] sm:px-5 sm:py-5',
+              'px-3 py-4 transition-colors hover:bg-[#fafbfd] dark:hover:bg-[#162132] sm:px-5 sm:py-5',
               index !== windowPosts.length - 1 && 'border-b border-[#eef1f4] dark:border-[#223043]',
             )}
           >
@@ -531,16 +559,16 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
               <AuthorAvatar src={post.author_avatar} name={post.author_name} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[14px] font-semibold text-[#1f2329] dark:text-[#edf2fb]">{post.author_name || '匿名用户'}</p>
-                <p className="mt-0.5 text-[12px] text-[#98a2b3] dark:text-[#7f8da3]">{formatRelativeTime(post.last_commented_at || post.publish_at)}</p>
+                <p className="mt-0.5 text-[12px] text-[#98a2b3] dark:text-[#7f8da3]">{formatPostTime(post.last_commented_at || post.publish_at)}</p>
               </div>
             </div>
 
             <div className="relative">
-              {hasMeaningfulTitle ? <p className="line-clamp-2 text-[16px] font-semibold leading-[1.45] text-[#2a3038] dark:text-[#edf2fb]">{titleText}</p> : null}
+              {hasMeaningfulTitle ? <p className="line-clamp-1 text-[16px] font-semibold leading-[1.45] text-[#2a3038] dark:text-[#edf2fb] sm:line-clamp-2">{titleText}</p> : null}
               <p
                 className={cn(
-                  'text-[14px] leading-[1.62] text-[#5a6270] dark:text-[#9ca6b8] sm:text-[15px] sm:line-clamp-8',
-                  hasMeaningfulTitle ? 'mt-1 line-clamp-6' : 'line-clamp-8',
+                  'line-clamp-3 text-[14px] leading-[1.62] text-[#5a6270] dark:text-[#9ca6b8] sm:text-[15px]',
+                  hasMeaningfulTitle ? 'mt-1 sm:line-clamp-6' : 'sm:line-clamp-8',
                 )}
               >
                 {previewText}
