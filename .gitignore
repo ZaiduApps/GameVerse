@@ -21,6 +21,9 @@
 # production
 /build
 
+# 构建期生成的静态 sitemap（scripts/generate-sitemap.mjs 产出，不入库）
+/public/sitemap.xml
+
 # misc
 .DS_Store
 *.pem
