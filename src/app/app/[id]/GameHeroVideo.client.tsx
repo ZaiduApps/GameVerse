@@ -83,29 +83,18 @@ export default function GameHeroVideo({ source, poster, gameName, className }: G
               </button>
               <div className="relative w-full max-w-5xl" onClick={(event) => event.stopPropagation()}>
                 <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black">
-                  {source.kind === 'file' ? (
-                    <video
-                      src={source.url}
-                      controls
-                      autoPlay
-                      playsInline
-                      preload="metadata"
-                      poster={poster}
-                      className="h-full w-full"
-                      onError={() => setFailed(true)}
-                    />
-                  ) : (
-                    <iframe
-                      src={source.url}
-                      title={`${gameName} 实机 PV`}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                      referrerPolicy="strict-origin-when-cross-origin"
-                      className="h-full w-full"
-                    />
-                  )}
+                  <video
+                    src={source.url}
+                    controls
+                    autoPlay
+                    playsInline
+                    preload="metadata"
+                    poster={poster}
+                    className="h-full w-full"
+                    onError={() => setFailed(true)}
+                  />
                 </div>
-                {source.kind === 'file' && failed ? (
+                {failed ? (
                   <p role="status" className="mt-3 text-center text-sm text-white/85">
                     视频加载失败，源地址可能已失效。
                   </p>
