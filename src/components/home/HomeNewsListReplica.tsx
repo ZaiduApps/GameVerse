@@ -36,6 +36,12 @@ function toTime(input?: string): number {
   return Number.isFinite(ms) ? ms : 0;
 }
 
+// publish_at 目前接口未返回（字段不在 ApiArticle 里），保留读取以便后端补齐后自动生效。
+function articleTime(article: ApiArticle): number {
+  const publishAt = (article as { publish_at?: string }).publish_at;
+  return toTime(publishAt || article.updated_at || article.latest_at || article.release_at);
+}
+
 export default function HomeNewsListReplica({
   title = '社区动态',
   subtitle = '最新讨论、活动反馈与玩家内容',
@@ -43,18 +49,10 @@ export default function HomeNewsListReplica({
   articles,
   fallbackImage,
 }: HomeNewsListReplicaProps) {
+  // 纯时间倒序：is_top / is_recommended 会把 5 月的推荐文章顶到 10 月的新闻前面，
+  // 这块是「最新资讯」，排序只认时间。
   const items = [...articles]
-    .sort((a, b) => {
-      const aTop = isTruthyFlag(a.is_top) ? 1 : 0;
-      const bTop = isTruthyFlag(b.is_top) ? 1 : 0;
-      if (aTop !== bTop) return bTop - aTop;
-
-      const aRec = isTruthyFlag(a.is_recommended) ? 1 : 0;
-      const bRec = isTruthyFlag(b.is_recommended) ? 1 : 0;
-      if (aRec !== bRec) return bRec - aRec;
-
-      return toTime(b.updated_at || b.latest_at || b.release_at) - toTime(a.updated_at || a.latest_at || a.release_at);
-    })
+    .sort((a, b) => articleTime(b) - articleTime(a))
     .slice(0, 9);
 
   return (
@@ -134,9 +132,9 @@ export default function HomeNewsListReplica({
                 href={articleHref}
                 prefetch={false}
                 className="absolute inset-0 z-30 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
-                aria-label={`查看社区动态：${article.name}`}
+                aria-label={`查看${title}：${article.name}`}
               >
-                <span className="sr-only">查看社区动态：{article.name}</span>
+                <span className="sr-only">查看{title}：{article.name}</span>
               </Link>
             </article>
           );

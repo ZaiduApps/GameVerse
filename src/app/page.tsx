@@ -22,6 +22,7 @@ import HomeQuickSearchCard from '@/components/home/HomeQuickSearchCard';
 import RecentUpdatesSection from '@/components/home/RecentUpdatesSection';
 import { getAlbumHref } from '@/lib/albums';
 import { getClientLandingAppData, type ClientLandingAppData } from '@/lib/client-landing';
+import { getHomeLatestCommunityPosts } from '@/lib/home-community-posts';
 import { resolveGameName } from '@/lib/game-display-name';
 import type { Announcement, ApiAlbum, ApiArticle, ApiBanner, ApiDynamicPost, ApiGame, HomeData } from '@/types';
 import { trackedApiFetch } from '@/lib/api';
@@ -255,15 +256,21 @@ async function getHomeAndNewsData(): Promise<CombinedHomeData> {
     if (region) params.set('region', region);
     if (clientVersion) params.set('client_version', clientVersion);
 
-    const [homeData, clientLanding] = await Promise.all([
+    const [homeData, clientLanding, latestCommunityPosts] = await Promise.all([
       fetchHomeDataWithRetry(params.toString(), {
         timeoutMs: 12000,
         retries: 1,
       }),
       getClientLandingAppData(60).catch(() => null),
+      getHomeLatestCommunityPosts(20).catch(() => [] as ApiDynamicPost[]),
     ]);
     const safeArticles = Array.isArray(homeData?.articles) ? homeData.articles : [];
-    const safeDynamicPosts = Array.isArray(homeData?.dynamic_posts) ? homeData.dynamic_posts : [];
+    // 首页动态优先用 /content/feed 的真正最新 20 条；该请求失败时回退 /home 的抽样结果。
+    const fallbackDynamicPosts = Array.isArray(homeData?.dynamic_posts) ? homeData.dynamic_posts : [];
+    const safeDynamicPosts =
+      Array.isArray(latestCommunityPosts) && latestCommunityPosts.length > 0
+        ? latestCommunityPosts
+        : fallbackDynamicPosts;
 
     return {
       homeData,
@@ -371,7 +378,8 @@ export default async function HomePage() {
       const valueA = Number.isFinite(timeA) ? timeA : -1;
       const valueB = Number.isFinite(timeB) ? timeB : -1;
       return valueB - valueA;
-    });
+    })
+    .slice(0, 20);
 
   const heavyweightAlbum =
     takeAlbum(allAlbums, (album) => matchByTitle(album, ['重磅推荐'])) ??
@@ -773,7 +781,7 @@ export default async function HomePage() {
                   去社区
                 </Link>
               </div>
-              <HomeDynamicPosts posts={safeDynamicPosts.slice(0, 8)} />
+              <HomeDynamicPosts posts={safeDynamicPosts} />
             </section>
           )}
 
@@ -921,9 +929,9 @@ export default async function HomePage() {
 
       {safeNewsItems.length > 0 && (
         <HomeNewsListReplica
-          title="社区动态"
-          subtitle="发现次元世界的玩家讨论与一线反馈"
-          moreHref="/community"
+          title="最新资讯"
+          subtitle="最新上架的资讯与公告"
+          moreHref="/news"
           articles={safeNewsItems}
           fallbackImage={FALLBACK_GAME_IMAGE}
         />
