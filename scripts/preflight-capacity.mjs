@@ -191,6 +191,28 @@ function runSsh(host, remoteCommand, timeoutMs) {
     return String(result.stdout || '');
 }
 
+// 诊断专用 ssh：任何失败都只回传结果，绝不 fail()/exit。
+// 容量结论在诊断开始前已经形成，诊断取不到数据只能少给信息，不能改判结论。
+function runSshQuiet(host, remoteCommand, timeoutMs) {
+    const result = spawnSync('ssh', ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', host, remoteCommand], {
+        encoding: 'utf8',
+        timeout: timeoutMs,
+        maxBuffer: 8 * 1024 * 1024,
+    });
+    if (result.error) {
+        const reason =
+            result.error.code === 'ETIMEDOUT'
+                ? '超时 ' + Math.round(timeoutMs / 1000) + 's 未返回'
+                : result.error.message;
+        return { ok: false, stdout: '', reason };
+    }
+    if (result.status !== 0) {
+        const detail = String(result.stderr || '').trim();
+        return { ok: false, stdout: '', reason: 'ssh rc=' + result.status + (detail ? '：' + detail : '') };
+    }
+    return { ok: true, stdout: String(result.stdout || ''), reason: '' };
+}
+
 // `df -P -m / | tail -1` → 文件系统 总MB 已用MB 可用MB 使用率 挂载点
 function parseRemoteDfLine(line) {
     const fields = line.trim().split(/\s+/);
@@ -205,15 +227,26 @@ function parseRemoteDfLine(line) {
 }
 
 function printRemoteTopUsage(host) {
-    const command = 'du -x -d1 -m ' + REMOTE_KEY_DIRS.join(' ') + ' 2>/dev/null | sort -rn | head -' + TOP_USAGE_LIMIT;
-    const output = runSsh(host, command, DU_TIMEOUT_MS).trimEnd();
+    // 远端自己限时，避免 du 在满盘机上拖住 ssh 通道；管道末端是 head，退出码不可靠，
+    // 因此「没有输出」也按诊断失败处理。
+    const remoteTimeoutSec = Math.max(1, Math.ceil(DU_TIMEOUT_MS / 3000));
+    const command =
+        'timeout ' +
+        remoteTimeoutSec +
+        ' du -x -d1 -m ' +
+        REMOTE_KEY_DIRS.join(' ') +
+        ' 2>/dev/null | sort -rn | head -' +
+        TOP_USAGE_LIMIT;
+    const result = runSshQuiet(host, command, DU_TIMEOUT_MS + 5000);
+    const output = result.ok ? result.stdout.trimEnd() : '';
+    if (!output) {
+        const reason = result.ok ? 'du 超时或无结果（远端 timeout ' + remoteTimeoutSec + 's）' : result.reason;
+        log('诊断获取失败（不影响上面的容量判定）：目标机 ' + host + '，' + reason);
+        return;
+    }
     log(
         '占用 Top ' + TOP_USAGE_LIMIT + '（目标机 ' + host + '，单位 MB，du -x -d1，扫描：' + REMOTE_KEY_DIRS.join(' ') + '）',
     );
-    if (!output) {
-        log('  未能获取（du 无结果）');
-        return;
-    }
     for (const line of output.split(/\r?\n/)) {
         const match = /^(\d+)\t(.+)$/.exec(line);
         console.log(match ? '  ' + match[2] + '  ' + match[1] + ' MB' : '  ' + line);
