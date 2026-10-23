@@ -7,6 +7,10 @@ const HOME_COMMUNITY_FEED_REVALIDATE_SECONDS = 120;
 const HOME_COMMUNITY_FEED_TIMEOUT_MS = 8000;
 const HOME_COMMUNITY_POSTS_MAX = 20;
 
+// 闸门逻辑在 `home-post-author-cap.ts`（纯函数、零 import，可直接被 node --test 加载），
+// 这里只做转出，保持调用点 `@/lib/home-community-posts` 不变。
+export { capByAuthor } from '@/lib/home-post-author-cap';
+
 function toSortTime(post: ApiDynamicPost): number {
   // feed 还会带 created_at，但 ApiDynamicPost 未声明，按需兜底读取。
   const createdAt = (post as { created_at?: string }).created_at;

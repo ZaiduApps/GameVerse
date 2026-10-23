@@ -22,7 +22,7 @@ import HomeQuickSearchCard from '@/components/home/HomeQuickSearchCard';
 import RecentUpdatesSection from '@/components/home/RecentUpdatesSection';
 import { getAlbumHref } from '@/lib/albums';
 import { getClientLandingAppData, type ClientLandingAppData } from '@/lib/client-landing';
-import { getHomeLatestCommunityPosts } from '@/lib/home-community-posts';
+import { capByAuthor, getHomeLatestCommunityPosts } from '@/lib/home-community-posts';
 import { resolveGameName } from '@/lib/game-display-name';
 import type { Announcement, ApiAlbum, ApiArticle, ApiBanner, ApiDynamicPost, ApiGame, HomeData } from '@/types';
 import { trackedApiFetch } from '@/lib/api';
@@ -368,18 +368,24 @@ export default async function HomePage() {
   const safeNewsItems = (Array.isArray(newsData) ? newsData : []).filter(
     (item): item is ApiArticle => Boolean(item && (item._id || item.gid)),
   );
-  const safeDynamicPosts = (Array.isArray(dynamicPosts) ? dynamicPosts : [])
-    .filter(
-      (post): post is ApiDynamicPost => Boolean(post && post._id && isSeoSafeDynamicPost(post)),
-    )
-    .sort((a, b) => {
-      const timeA = Date.parse(String(a.publish_at || a.last_commented_at || ''));
-      const timeB = Date.parse(String(b.publish_at || b.last_commented_at || ''));
-      const valueA = Number.isFinite(timeA) ? timeA : -1;
-      const valueB = Number.isFinite(timeB) ? timeB : -1;
-      return valueB - valueA;
-    })
-    .slice(0, 20);
+  // 社区位只出 6 条，同作者最多 2 条（不足 6 条按原顺序回填）。
+  // 去重键必须是 author_name：线上 zaidu 与「聪明牛🐮」共用同一个 author_id。
+  const safeDynamicPosts = capByAuthor(
+    (Array.isArray(dynamicPosts) ? dynamicPosts : [])
+      .filter(
+        (post): post is ApiDynamicPost => Boolean(post && post._id && isSeoSafeDynamicPost(post)),
+      )
+      .sort((a, b) => {
+        const timeA = Date.parse(String(a.publish_at || a.last_commented_at || ''));
+        const timeB = Date.parse(String(b.publish_at || b.last_commented_at || ''));
+        const valueA = Number.isFinite(timeA) ? timeA : -1;
+        const valueB = Number.isFinite(timeB) ? timeB : -1;
+        return valueB - valueA;
+      }),
+    2,
+    6,
+    ['author_name'],
+  );
 
   const heavyweightAlbum =
     takeAlbum(allAlbums, (album) => matchByTitle(album, ['重磅推荐'])) ??
@@ -554,6 +560,16 @@ export default async function HomePage() {
       </section>
 
       {homeData.announcements ? <GameAnnouncements announcements={homeData.announcements} position="home" /> : null}
+
+      {safeNewsItems.length > 0 && (
+        <HomeNewsListReplica
+          title="最新资讯"
+          subtitle="最新上架的资讯与公告"
+          moreHref="/community"
+          articles={safeNewsItems}
+          fallbackImage={FALLBACK_GAME_IMAGE}
+        />
+      )}
 
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 xl:gap-10">
         <div className="space-y-8 xl:col-span-8">
@@ -926,16 +942,6 @@ export default async function HomePage() {
           ) : null}
         </aside>
       </div>
-
-      {safeNewsItems.length > 0 && (
-        <HomeNewsListReplica
-          title="最新资讯"
-          subtitle="最新上架的资讯与公告"
-          moreHref="/news"
-          articles={safeNewsItems}
-          fallbackImage={FALLBACK_GAME_IMAGE}
-        />
-      )}
     </div>
   );
 }
