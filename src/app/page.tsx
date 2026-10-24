@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 
 import GameAnnouncements from '@/components/game-announcements';
+import HeroScrollSection from '@/components/home/HeroScrollSection';
 import HomeDynamicPosts from '@/components/home/HomeDynamicPosts';
 import HomeHeroCarousel from '@/components/home/HomeHeroCarousel';
 import HomeNewsListReplica from '@/components/home/HomeNewsListReplica';
@@ -164,14 +165,6 @@ function buildAlbumSections(albums: ApiAlbum[]): AlbumSection[] {
   }
 
   return sections;
-}
-
-function clampText(value: string | null | undefined, maxChars: number): string {
-  const normalized = String(value || '').trim();
-  if (!normalized) return '';
-  const chars = Array.from(normalized);
-  if (chars.length <= maxChars) return normalized;
-  return `${chars.slice(0, maxChars).join('')}...`;
 }
 
 function formatDeviceLabel(value: string | null | undefined): string {
@@ -667,6 +660,7 @@ export default async function HomePage() {
             }
 
             if (kind === 'prereg') {
+              // logo 墙：四列图标 + 单行游戏名，靠图标分隔，预约转化交给详情页。
               return (
                 <section key={album._id}>
                   <div className="mb-5 flex items-end justify-between gap-3">
@@ -676,153 +670,81 @@ export default async function HomePage() {
                       <span className="sr-only">{album.title || '事前登录'}</span>
                     </Link>
                   </div>
-                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                    {games.slice(0, 4).map((game, index) => (
-                      (() => {
-                        const region = String(game.metadata?.region || '').trim();
-                        const score = typeof game.star === 'number' ? game.star : Number(game.star || 0);
-                        const hasScore = Number.isFinite(score) && score > 0;
-                        const deviceLabels = Array.from(
-                          new Set((Array.isArray(game.metadata?.deviceList) ? game.metadata.deviceList : []).map((item) => formatDeviceLabel(item)).filter(Boolean)),
-                        ).slice(0, 2);
-                        const hasMetrics = hasScore || deviceLabels.length > 0;
-    
-                        return (
-                      <article
-                        key={game._id}
-                        className="group relative flex h-full flex-col justify-between gap-4 rounded-2xl border border-border/60 bg-[#eff1f2] p-4 transition-colors hover:bg-[#e6e8ea] dark:bg-[#162132] dark:hover:bg-[#1c2b40] sm:h-full sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl bg-[#dadddf] dark:bg-[#223043]">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                    {games.slice(0, 24).map((game) => {
+                      const score = typeof game.star === 'number' ? game.star : Number(game.star || 0);
+                      const hasScore = Number.isFinite(score) && score > 0;
+                      const deviceLabel = Array.from(
+                        new Set(
+                          (Array.isArray(game.metadata?.deviceList) ? game.metadata.deviceList : [])
+                            .map((item) => formatDeviceLabel(item))
+                            .filter(Boolean),
+                        ),
+                      )
+                        .slice(0, 2)
+                        .join(' / ');
+
+                      return (
+                        <article
+                          key={game._id}
+                          className="group relative flex flex-col items-center gap-2 rounded-xl px-2 py-2 text-center transition-colors hover:bg-[#eff1f2] dark:hover:bg-[#162132]"
+                        >
+                          <div className="relative aspect-square w-full max-w-[88px] overflow-hidden rounded-2xl bg-[#dadddf] dark:bg-[#1a2433]">
                             <Image
                               src={game.icon || FALLBACK_GAME_IMAGE}
                               alt={resolveGameName(game)}
                               fill
                               className="object-cover"
-                              sizes="80px"
+                              sizes="(max-width: 639px) 40vw, (max-width: 1023px) 28vw, 88px"
                             />
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <h4 className="min-w-0 flex-1 truncate text-lg font-semibold" title={resolveGameName(game)}>{clampText(resolveGameName(game), 16)}</h4>
-                              {region && (
-                                <span className="inline-flex shrink-0 rounded-md bg-[#dadddf] px-1.5 py-0.5 text-[10px] font-bold text-[#595c5d] dark:bg-[#2a3b52] dark:text-[#9ca6b8]">
-                                  {region}
-                                </span>
+                          <p
+                            className="w-full truncate text-xs font-semibold dark:text-[#edf2fb]"
+                            title={resolveGameName(game)}
+                          >
+                            {resolveGameName(game)}
+                          </p>
+                          {(hasScore || deviceLabel) && (
+                            <span className="inline-flex max-w-full items-center gap-1 truncate text-[10px] font-semibold text-[#595c5d] dark:text-[#9ca6b8]">
+                              {hasScore ? (
+                                <>
+                                  <Star className="h-3 w-3 shrink-0 fill-[#fdc003] text-[#fdc003]" />
+                                  {score.toFixed(1)}
+                                </>
+                              ) : (
+                                <>
+                                  <Smartphone className="h-3 w-3 shrink-0 text-tone-blue" />
+                                  {deviceLabel}
+                                </>
                               )}
-                            </div>
-                            <p className="mt-1 line-clamp-1 text-sm font-medium text-[#595c5d] dark:text-[#9ca6b8]">{game.summary || '预约开启中'}</p>
-                            {hasMetrics && (
-                              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-[#595c5d] dark:text-[#9ca6b8]">
-                                {hasScore && (
-                                  <span className="inline-flex items-center gap-1">
-                                    <Star className="h-3.5 w-3.5 fill-[#fdc003] text-[#fdc003]" />
-                                    {score.toFixed(1)}
-                                  </span>
-                                )}
-                                {deviceLabels.length > 0 && (
-                                  <span className="inline-flex items-center gap-1">
-                                    <Smartphone className="h-3.5 w-3.5 text-tone-blue" />
-                                    {deviceLabels.join(' / ')}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            {(game.tags || []).length > 0 && (
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                {(game.tags || []).slice(0, 3).map((tag) => (
-                                <span key={`${game._id}-${tag}`} className="rounded-md bg-[#dadddf] px-2 py-1 text-[10px] font-bold text-[#595c5d] dark:bg-[#2a3b52] dark:text-[#9ca6b8]">
-                                  {tag}
-                                </span>
-                              ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <span className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[#b71211] px-6 py-2 text-sm font-semibold leading-none text-white transition-opacity group-hover:opacity-90">
-                          预约
-                        </span>
-                        <Link
-                          href={getGameHref(game)}
-                          prefetch={false}
-                          className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
-                          aria-label={`查看${resolveGameName(game)}预约详情`}
-                        >
-                          <span className="sr-only">查看{resolveGameName(game)}预约详情</span>
-                        </Link>
-                      </article>
-                        );
-                      })()
-                    ))}
+                            </span>
+                          )}
+                          <Link
+                            href={getGameHref(game)}
+                            prefetch={false}
+                            className="absolute inset-0 z-30 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                            aria-label={`查看${resolveGameName(game)}预约详情`}
+                          >
+                            <span className="sr-only">查看{resolveGameName(game)}预约详情</span>
+                          </Link>
+                        </article>
+                      );
+                    })}
                   </div>
                 </section>
               );
             }
 
             if (kind === 'hero') {
-              // App Store「今日」式大卡：全宽单行，最多两款游戏并排。
-              const heroGames = games.slice(0, 2);
+              // 宽屏三张 21:9 大卡横滑（客户端组件负责左右按钮与原生横滑）。
               return (
-                <section key={album._id}>
-                  <div className="mb-5 flex items-end justify-between gap-3">
-                    <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
-                      <Sparkles className="h-5 w-5 text-tone-blue" />
-                      {album.title || '今日推荐'}
-                    </h3>
-                    <Link href={getAlbumHref(album)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
-                      查看全部
-                      <span className="sr-only">{album.title || '今日推荐'}</span>
-                    </Link>
-                  </div>
-                  <div className={`grid grid-cols-1 gap-3 ${heroGames.length > 1 ? 'md:grid-cols-2' : ''}`}>
-                    {heroGames.map((game) => (
-                      <article
-                        key={game._id}
-                        className="group relative overflow-hidden rounded-2xl border border-border/60 bg-[#e6e8ea] shadow-sm transition-shadow hover:shadow-md dark:bg-[#1a2433]"
-                      >
-                        <div className="relative aspect-[21/9] w-full">
-                          <Image
-                            src={game.header_image || game.icon || FALLBACK_GAME_IMAGE}
-                            alt={resolveGameName(game)}
-                            fill
-                            className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                            sizes="(max-width: 767px) 100vw, 50vw"
-                          />
-                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-                          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
-                            <div className="min-w-0">
-                              <h4 className="truncate text-lg font-semibold text-white">{resolveGameName(game)}</h4>
-                              {(game.tags || []).length > 0 && (
-                                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                                  {(game.tags || []).slice(0, 3).map((tag) => (
-                                    <span
-                                      key={`${game._id}-${tag}`}
-                                      className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur"
-                                    >
-                                      {tag}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-4 py-2 text-xs font-bold leading-none text-[#2c2f30]">
-                              <Download className="h-3.5 w-3.5" />
-                              下载
-                            </span>
-                          </div>
-                        </div>
-                        <Link
-                          href={getGameHref(game)}
-                          prefetch={false}
-                          className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
-                          aria-label={`查看${resolveGameName(game)}详情`}
-                        >
-                          <span className="sr-only">查看{resolveGameName(game)}详情</span>
-                        </Link>
-                      </article>
-                    ))}
-                  </div>
-                </section>
+                <HeroScrollSection
+                  key={album._id}
+                  title={album.title || '今日推荐'}
+                  games={games}
+                  fallbackImage={FALLBACK_GAME_IMAGE}
+                  viewAllHref={getAlbumHref(album)}
+                />
               );
             }
 
