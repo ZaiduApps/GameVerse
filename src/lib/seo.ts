@@ -329,13 +329,30 @@ export function absoluteUrl(path = '/'): string {
   return `${siteUrl}${path}`;
 }
 
+/** 运营占位假图专用域（如 `https://example.com/covers/x.jpg`，线上 404），任何 SEO/分享图位置都不得采用。 */
+const PLACEHOLDER_ASSET_HOSTS = new Set(['example.com', 'www.example.com']);
+
+function getUrlHost(url: string): string {
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
 export function normalizeSeoAssetUrl(input?: string | null): string {
   const raw = String(input || '').trim();
   if (!raw) return '';
 
-  if (/^https?:\/\//i.test(raw)) return raw;
-  if (raw.startsWith('//')) return `https:${raw}`;
-  return absoluteUrl(raw.startsWith('/') ? raw : `/${raw}`);
+  const absolute = /^https?:\/\//i.test(raw)
+    ? raw
+    : raw.startsWith('//')
+      ? `https:${raw}`
+      : absoluteUrl(raw.startsWith('/') ? raw : `/${raw}`);
+
+  // 占位假图护栏：判空后调用方自动回退到下一级真实图（游戏图 → 站点默认分享图）。
+  if (PLACEHOLDER_ASSET_HOSTS.has(getUrlHost(absolute))) return '';
+  return absolute;
 }
 
 export function getSiteShareImageUrl(input?: string | null): string {

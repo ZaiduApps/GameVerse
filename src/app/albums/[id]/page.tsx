@@ -32,6 +32,11 @@ function getGameHref(game: { pkg?: string | null; _id?: string | null }): string
   return target ? `/app/${encodeURIComponent(target)}` : '/app';
 }
 
+function isValidDate(value?: string | null): boolean {
+  if (!normalizeText(value)) return false;
+  return !Number.isNaN(new Date(String(value)).getTime());
+}
+
 function collectRegions(input: Array<{ metadata?: { region?: string | null } }>): string[] {
   return Array.from(
     new Set(
@@ -179,6 +184,8 @@ export default async function AlbumTopicPage({
     url: canonicalUrl,
     image: shareImage || undefined,
     inLanguage: 'zh-CN',
+    // 只在后台给出有效更新时间时才声明，避免输出非法日期。
+    ...(isValidDate(album.updated_at) ? { dateModified: album.updated_at } : {}),
     isPartOf: {
       '@type': 'WebSite',
       name: siteName,
