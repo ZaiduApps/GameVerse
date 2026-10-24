@@ -20,6 +20,7 @@ import HomeDynamicPosts from '@/components/home/HomeDynamicPosts';
 import HomeHeroCarousel from '@/components/home/HomeHeroCarousel';
 import HomeNewsListReplica from '@/components/home/HomeNewsListReplica';
 import HomeQuickSearchCard from '@/components/home/HomeQuickSearchCard';
+import PreregFollowButton from '@/components/home/PreregFollowButton.client';
 import RecentUpdatesSection from '@/components/home/RecentUpdatesSection';
 import { getAlbumHref } from '@/lib/albums';
 import { getClientLandingAppData, type ClientLandingAppData } from '@/lib/client-landing';
@@ -660,17 +661,22 @@ export default async function HomePage() {
             }
 
             if (kind === 'prereg') {
-              // logo 墙：四列图标 + 单行游戏名，靠图标分隔，预约转化交给详情页。
+              // 信息列表：48px 图标 + 名字/评分/简介三行 + 关注胶囊，行间只用分隔线，不用卡片。
               return (
                 <section key={album._id}>
-                  <div className="mb-5 flex items-end justify-between gap-3">
-                    <h3 className="text-xl font-semibold tracking-tight">{album.title || '事前登录'}</h3>
-                    <Link href={getAlbumHref(album)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
+                  <div className="mb-4 flex items-end justify-between gap-3">
+                    <div>
+                      <h3 className="text-xl font-semibold tracking-tight sm:text-2xl">{album.title || '事前登录'}</h3>
+                      {album.subtitle && (
+                        <p className="mt-1 text-sm text-[#595c5d] dark:text-[#9ca6b8]">{album.subtitle}</p>
+                      )}
+                    </div>
+                    <Link href={getAlbumHref(album)} prefetch={false} className="shrink-0 text-sm font-bold text-[#005e9f] hover:underline">
                       查看全部
                       <span className="sr-only">{album.title || '事前登录'}</span>
                     </Link>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
                     {games.slice(0, 24).map((game) => {
                       const score = typeof game.star === 'number' ? game.star : Number(game.star || 0);
                       const hasScore = Number.isFinite(score) && score > 0;
@@ -683,49 +689,56 @@ export default async function HomePage() {
                       )
                         .slice(0, 2)
                         .join(' / ');
+                      const gameName = resolveGameName(game);
 
                       return (
                         <article
                           key={game._id}
-                          className="group relative flex flex-col items-center gap-2 rounded-xl px-2 py-2 text-center transition-colors hover:bg-[#eff1f2] dark:hover:bg-[#162132]"
+                          className="group relative flex items-center gap-3 border-b border-border/60 py-2.5"
                         >
-                          <div className="relative aspect-square w-full max-w-[88px] overflow-hidden rounded-2xl bg-[#dadddf] dark:bg-[#1a2433]">
+                          <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-xl bg-[#eff1f2] dark:bg-[#223043]">
                             <Image
                               src={game.icon || FALLBACK_GAME_IMAGE}
-                              alt={resolveGameName(game)}
+                              alt={gameName}
                               fill
                               className="object-cover"
-                              sizes="(max-width: 639px) 40vw, (max-width: 1023px) 28vw, 88px"
+                              sizes="48px"
                             />
                           </div>
-                          <p
-                            className="w-full truncate text-xs font-semibold dark:text-[#edf2fb]"
-                            title={resolveGameName(game)}
-                          >
-                            {resolveGameName(game)}
-                          </p>
-                          {(hasScore || deviceLabel) && (
-                            <span className="inline-flex max-w-full items-center gap-1 truncate text-[10px] font-semibold text-[#595c5d] dark:text-[#9ca6b8]">
+                          <div className="min-w-0 flex-1">
+                            <p
+                              className="truncate text-sm font-semibold transition-colors group-hover:text-[#005e9f]"
+                              title={gameName}
+                            >
+                              {gameName}
+                            </p>
+                            <p className="mt-0.5 flex items-center gap-1 truncate text-[11px] font-semibold text-[#595c5d] dark:text-[#9ca6b8]">
                               {hasScore ? (
                                 <>
                                   <Star className="h-3 w-3 shrink-0 fill-[#fdc003] text-[#fdc003]" />
                                   {score.toFixed(1)}
                                 </>
-                              ) : (
+                              ) : deviceLabel ? (
                                 <>
                                   <Smartphone className="h-3 w-3 shrink-0 text-tone-blue" />
                                   {deviceLabel}
                                 </>
+                              ) : (
+                                <span>{game.tags?.[0] || '预约中'}</span>
                               )}
-                            </span>
-                          )}
+                            </p>
+                            <p className="mt-0.5 truncate text-[11px] text-[#8a8d8f] dark:text-[#7c8798]">
+                              {game.summary || '上线前预约，开服第一时间收到提醒'}
+                            </p>
+                          </div>
+                          <PreregFollowButton appId={game._id} gameName={gameName} />
                           <Link
                             href={getGameHref(game)}
                             prefetch={false}
                             className="absolute inset-0 z-30 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
-                            aria-label={`查看${resolveGameName(game)}预约详情`}
+                            aria-label={`查看${gameName}预约详情`}
                           >
-                            <span className="sr-only">查看{resolveGameName(game)}预约详情</span>
+                            <span className="sr-only">查看{gameName}预约详情</span>
                           </Link>
                         </article>
                       );
@@ -749,44 +762,64 @@ export default async function HomePage() {
             }
 
             if (kind === 'marquee') {
-              // TapTap 式横滑胶囊：96px 圆角图标 + 单行游戏名，原生横滑。
+              // 横滑小条：48px 图标 + 名字/评分两行，无卡片底板，原生横滑。
               return (
-                <section key={album._id} className="rounded-2xl border border-border/60 bg-white p-4 shadow-sm dark:bg-[#111824]">
+                <section key={album._id}>
                   <div className="mb-3 flex items-end justify-between gap-3">
                     <h3 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
                       <Flame className="h-4 w-4 text-tone-amber" />
                       {album.title || '热门推荐'}
                     </h3>
-                    <Link href={getAlbumHref(album)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
+                    <Link href={getAlbumHref(album)} prefetch={false} className="shrink-0 text-sm font-bold text-[#005e9f] hover:underline">
                       查看全部
                       <span className="sr-only">{album.title || '热门推荐'}</span>
                     </Link>
                   </div>
-                  <div className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [scrollbar-width:none] [-ms-overflow-style:none]">
-                    {games.slice(0, 12).map((game) => (
-                      <article key={game._id} className="group relative w-24 flex-shrink-0">
-                        <div className="relative mb-2 h-24 w-24 overflow-hidden rounded-2xl bg-[#e6e8ea] dark:bg-[#1a2433]">
-                          <Image
-                            src={game.icon || FALLBACK_GAME_IMAGE}
-                            alt={resolveGameName(game)}
-                            fill
-                            className="object-cover"
-                            sizes="96px"
-                          />
-                        </div>
-                        <p className="truncate text-center text-xs font-semibold" title={resolveGameName(game)}>
-                          {resolveGameName(game)}
-                        </p>
-                        <Link
-                          href={getGameHref(game)}
-                          prefetch={false}
-                          className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
-                          aria-label={`查看${resolveGameName(game)}详情`}
+                  <div className="flex gap-4 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [scrollbar-width:none] [-ms-overflow-style:none]">
+                    {games.slice(0, 12).map((game) => {
+                      const score = typeof game.star === 'number' ? game.star : Number(game.star || 0);
+                      const hasScore = Number.isFinite(score) && score > 0;
+                      const gameName = resolveGameName(game);
+                      const metaText = hasScore ? `${score.toFixed(1)}分` : '新游';
+                      const tag = String(game.tags?.[0] || '').trim();
+
+                      return (
+                        <article
+                          key={game._id}
+                          className="group relative flex w-auto flex-shrink-0 items-center gap-2.5"
                         >
-                          <span className="sr-only">查看{resolveGameName(game)}详情</span>
-                        </Link>
-                      </article>
-                    ))}
+                          <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-xl bg-[#eff1f2] dark:bg-[#223043]">
+                            <Image
+                              src={game.icon || FALLBACK_GAME_IMAGE}
+                              alt={gameName}
+                              fill
+                              className="object-cover"
+                              sizes="48px"
+                            />
+                          </div>
+                          <div className="min-w-0 max-w-[9rem]">
+                            <p
+                              className="truncate text-xs font-semibold transition-colors group-hover:text-[#005e9f]"
+                              title={gameName}
+                            >
+                              {gameName}
+                            </p>
+                            <p className="truncate text-[11px] text-[#595c5d] dark:text-[#9ca6b8]">
+                              {metaText}
+                              {tag ? ` · ${tag}` : ''}
+                            </p>
+                          </div>
+                          <Link
+                            href={getGameHref(game)}
+                            prefetch={false}
+                            className="absolute inset-0 z-30 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                            aria-label={`查看${gameName}详情`}
+                          >
+                            <span className="sr-only">查看{gameName}详情</span>
+                          </Link>
+                        </article>
+                      );
+                    })}
                   </div>
                 </section>
               );
