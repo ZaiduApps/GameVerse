@@ -113,7 +113,7 @@ function normalizeAlbumGames(album: ApiAlbum | null | undefined): ApiGame[] {
   return album.games.filter((game): game is ApiGame => Boolean(game && game._id));
 }
 
-type AlbumSectionKind = 'showcase' | 'recent' | 'prereg' | 'ranking' | 'tools' | 'generic';
+type AlbumSectionKind = 'showcase' | 'recent' | 'prereg' | 'ranking' | 'tools' | 'hero' | 'marquee' | 'generic';
 
 interface AlbumSection {
   kind: AlbumSectionKind;
@@ -150,6 +150,14 @@ function buildAlbumSections(albums: ApiAlbum[]): AlbumSection[] {
       // 第一个 Grid 用作「重磅精选」网格，其余 Grid 用最近更新渲染器。
       sections.push({ kind: gridSlot === 0 ? 'showcase' : 'recent', album, games });
       gridSlot += 1;
+      continue;
+    }
+    if (style === 'Hero') {
+      sections.push({ kind: 'hero', album, games });
+      continue;
+    }
+    if (style === 'Marquee') {
+      sections.push({ kind: 'marquee', album, games });
       continue;
     }
     sections.push({ kind: 'generic', album, games });
@@ -745,6 +753,117 @@ export default async function HomePage() {
                       </article>
                         );
                       })()
+                    ))}
+                  </div>
+                </section>
+              );
+            }
+
+            if (kind === 'hero') {
+              // App Store「今日」式大卡：全宽单行，最多两款游戏并排。
+              const heroGames = games.slice(0, 2);
+              return (
+                <section key={album._id}>
+                  <div className="mb-5 flex items-end justify-between gap-3">
+                    <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
+                      <Sparkles className="h-5 w-5 text-tone-blue" />
+                      {album.title || '今日推荐'}
+                    </h3>
+                    <Link href={getAlbumHref(album)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
+                      查看全部
+                      <span className="sr-only">{album.title || '今日推荐'}</span>
+                    </Link>
+                  </div>
+                  <div className={`grid grid-cols-1 gap-3 ${heroGames.length > 1 ? 'md:grid-cols-2' : ''}`}>
+                    {heroGames.map((game) => (
+                      <article
+                        key={game._id}
+                        className="group relative overflow-hidden rounded-2xl border border-border/60 bg-[#e6e8ea] shadow-sm transition-shadow hover:shadow-md dark:bg-[#1a2433]"
+                      >
+                        <div className="relative aspect-[21/9] w-full">
+                          <Image
+                            src={game.header_image || game.icon || FALLBACK_GAME_IMAGE}
+                            alt={resolveGameName(game)}
+                            fill
+                            className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                            sizes="(max-width: 767px) 100vw, 50vw"
+                          />
+                          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
+                            <div className="min-w-0">
+                              <h4 className="truncate text-lg font-semibold text-white">{resolveGameName(game)}</h4>
+                              {(game.tags || []).length > 0 && (
+                                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                  {(game.tags || []).slice(0, 3).map((tag) => (
+                                    <span
+                                      key={`${game._id}-${tag}`}
+                                      className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur"
+                                    >
+                                      {tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white px-4 py-2 text-xs font-bold leading-none text-[#2c2f30]">
+                              <Download className="h-3.5 w-3.5" />
+                              下载
+                            </span>
+                          </div>
+                        </div>
+                        <Link
+                          href={getGameHref(game)}
+                          prefetch={false}
+                          className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                          aria-label={`查看${resolveGameName(game)}详情`}
+                        >
+                          <span className="sr-only">查看{resolveGameName(game)}详情</span>
+                        </Link>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              );
+            }
+
+            if (kind === 'marquee') {
+              // TapTap 式横滑胶囊：96px 圆角图标 + 单行游戏名，原生横滑。
+              return (
+                <section key={album._id} className="rounded-2xl border border-border/60 bg-white p-4 shadow-sm dark:bg-[#111824]">
+                  <div className="mb-3 flex items-end justify-between gap-3">
+                    <h3 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+                      <Flame className="h-4 w-4 text-tone-amber" />
+                      {album.title || '热门推荐'}
+                    </h3>
+                    <Link href={getAlbumHref(album)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
+                      查看全部
+                      <span className="sr-only">{album.title || '热门推荐'}</span>
+                    </Link>
+                  </div>
+                  <div className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [scrollbar-width:none] [-ms-overflow-style:none]">
+                    {games.slice(0, 12).map((game) => (
+                      <article key={game._id} className="group relative w-24 flex-shrink-0">
+                        <div className="relative mb-2 h-24 w-24 overflow-hidden rounded-2xl bg-[#e6e8ea] dark:bg-[#1a2433]">
+                          <Image
+                            src={game.icon || FALLBACK_GAME_IMAGE}
+                            alt={resolveGameName(game)}
+                            fill
+                            className="object-cover"
+                            sizes="96px"
+                          />
+                        </div>
+                        <p className="truncate text-center text-xs font-semibold" title={resolveGameName(game)}>
+                          {resolveGameName(game)}
+                        </p>
+                        <Link
+                          href={getGameHref(game)}
+                          prefetch={false}
+                          className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                          aria-label={`查看${resolveGameName(game)}详情`}
+                        >
+                          <span className="sr-only">查看{resolveGameName(game)}详情</span>
+                        </Link>
+                      </article>
                     ))}
                   </div>
                 </section>

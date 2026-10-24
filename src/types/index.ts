@@ -187,7 +187,7 @@ export interface ApiAlbum {
   description?: string;
   cover?: string;
   icon?: string;
-  style: 'Grid' | 'Box' | 'Pre' | 'List' | string; // Grid: NewRelease, Box: Popular, Pre: Prereg
+  style: 'Grid' | 'Box' | 'Pre' | 'List' | 'Hero' | 'Marquee' | string; // Grid: NewRelease, Box: Popular, Pre: Prereg, Hero: 大卡, Marquee: 横滑胶囊
   mode?: 'manual' | 'auto' | string;
   tags?: string[];
   sort?: number;
