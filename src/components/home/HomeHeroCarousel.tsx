@@ -11,6 +11,8 @@ import type { ApiBanner } from '@/types';
 
 const FALLBACK_BANNER_IMAGE = '/favicon.ico';
 const AUTOPLAY_MS = 4500;
+// 首屏图按视口取 interface 的 /media/variants 变体（302 到 CDN webp）。
+const VARIANT_WIDTHS = [480, 720, 1080] as const;
 
 function isExternalUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
@@ -91,6 +93,25 @@ function getBannerImage(banner?: ApiBanner): string {
   return banner.url_image || banner.game?.header_image || banner.game?.icon || FALLBACK_BANNER_IMAGE;
 }
 
+/**
+ * 变体端点只接受 http(s) 绝对地址；站内相对图（含兜底 favicon）不参与变体，
+ * 继续走原图，避免把相对路径当成第三方面板图源送出去。
+ */
+function toVariantSource(value: string): string | null {
+  const raw = String(value || '').trim();
+  if (!raw || raw === FALLBACK_BANNER_IMAGE) return null;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith('//')) return `https:${raw}`;
+  return null;
+}
+
+function buildVariantSrcSet(value: string): string | undefined {
+  const source = toVariantSource(value);
+  if (!source) return undefined;
+  const encoded = encodeURIComponent(source);
+  return VARIANT_WIDTHS.map((width) => `/api/media/variants?url=${encoded}&w=${width} ${width}w`).join(', ');
+}
+
 function getWrappedIndex(index: number, length: number): number {
   if (length <= 0) return 0;
   return (index % length + length) % length;
@@ -112,10 +133,24 @@ function ActionLink({ href, className, children }: { href: string; className: st
     );
   }
   return (
-    <Link href={href} prefetch={false} className={className} data-no-drag="true">
+    <Link href={href} className={className} data-no-drag="true">
       {children}
     </Link>
   );
+}
+
+function usePrefersReducedMotion(): boolean {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setPrefersReducedMotion(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+
+  return prefersReducedMotion;
 }
 
 interface HomeHeroCarouselProps {
@@ -131,10 +166,17 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
   );
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocusWithin, setIsFocusWithin] = useState(false);
+  const [isDocumentHidden, setIsDocumentHidden] = useState(false);
   const [searchOverlayOpen, setSearchOverlayOpen] = useState(false);
+  const [heroVariantFailed, setHeroVariantFailed] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isSnapAnimating, setIsSnapAnimating] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  // 指针按下时的起点；水平意图确认前不进入拖拽态，纵向手势交还页面滚动。
+  const pointerStartRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const dragStartXRef = useRef<number | null>(null);
   const dragDeltaXRef = useRef(0);
   const draggingRef = useRef(false);
@@ -143,7 +185,8 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
   const snapTimerRef = useRef<number | null>(null);
   const settleTimerRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const hoverPausedRef = useRef(false);
+  // 触屏点击会合成 mouseenter 且没有对应的 mouseleave，据此把手势暂停与真悬停区分开。
+  const lastPointerTypeRef = useRef<string | null>(null);
 
   function clearTransitionTimers() {
     if (snapTimerRef.current) {
@@ -166,13 +209,23 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
     setActiveIndex((prev) => getWrappedIndex(prev - 1, safeItems.length));
   }
 
+  const isAutoplaySuspended =
+    isPaused || isHovered || isFocusWithin || isDocumentHidden || prefersReducedMotion;
+
   useEffect(() => {
-    if (safeItems.length <= 1 || isPaused) return;
+    if (safeItems.length <= 1 || isAutoplaySuspended) return;
     const timer = window.setInterval(() => {
       goToNext();
     }, AUTOPLAY_MS);
     return () => window.clearInterval(timer);
-  }, [isPaused, safeItems.length]);
+  }, [isAutoplaySuspended, safeItems.length]);
+
+  useEffect(() => {
+    const update = () => setIsDocumentHidden(document.visibilityState === 'hidden');
+    update();
+    document.addEventListener('visibilitychange', update);
+    return () => document.removeEventListener('visibilitychange', update);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -186,7 +239,15 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
     }
   }, [activeIndex, safeItems.length]);
 
+  // 回到首屏时重新尝试变体（上一次失败可能只是端点临时不可用）。
+  useEffect(() => {
+    setHeroVariantFailed(false);
+  }, [activeIndex]);
+
   const current = safeItems[activeIndex];
+  const heroImageSrc = getBannerImage(current);
+  const isHeroFirstSlide = activeIndex === 0;
+  const heroVariantSrcSet = isHeroFirstSlide && !heroVariantFailed ? buildVariantSrcSet(heroImageSrc) : undefined;
   const title = current?.name || '次元世界，尽在 ACBOX';
   const description = current?.description || '发现优质二次元游戏，获取一线资讯和社区攻略。';
   const primaryHref = current ? getBannerHref(current) : '/app';
@@ -195,9 +256,10 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
   const dragDirection = dragOffset < 0 ? 1 : dragOffset > 0 ? -1 : 0;
   const previewItem =
     dragDirection === 0 ? null : safeItems[getWrappedIndex(activeIndex + dragDirection, safeItems.length)];
-  const transitionStyle = isDragging
-    ? 'none'
-    : 'transform 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 280ms ease';
+  const transitionStyle =
+    isDragging || prefersReducedMotion
+      ? 'none'
+      : 'transform 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 280ms ease';
   const mainScale = 1 - Math.min(0.075, Math.abs(dragRatio) * 0.075);
   const mainRotate = -dragRatio * 14;
   const mainTransform = `translate3d(${dragOffset}px,0,0) rotateY(${mainRotate}deg) scale(${mainScale})`;
@@ -208,48 +270,109 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
   const previewTransform = `translate3d(${previewX}px,0,0) rotateY(${previewRotate}deg) scale(${previewScale})`;
   const previewOpacity = Math.min(1, Math.abs(dragRatio) * 1.15);
 
-  function handlePointerDown(event: React.PointerEvent<HTMLElement>) {
-    if (safeItems.length <= 1) return;
-    if (event.button !== 0) return;
-    const target = event.target as HTMLElement | null;
-    if (target?.closest('input,textarea,select,[data-no-drag="true"]')) return;
-    event.preventDefault();
-    clearTransitionTimers();
-    pointerIdRef.current = event.pointerId;
-    try {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    } catch {}
-    dragStartXRef.current = event.clientX;
+  function clearPointerState() {
+    pointerStartRef.current = null;
+    dragStartXRef.current = null;
     dragDeltaXRef.current = 0;
-    draggingRef.current = true;
-    draggedRef.current = false;
-    setIsDragging(true);
+    pointerIdRef.current = null;
+    draggingRef.current = false;
+  }
+
+  /** pointercancel / 放弃拖拽：完全复位，不切换，不留半拖状态。 */
+  function resetDragState() {
+    clearTransitionTimers();
+    clearPointerState();
+    setIsDragging(false);
     setIsSnapAnimating(false);
     setDragOffset(0);
-    setIsPaused(true);
+    setIsPaused(false);
+    window.setTimeout(() => {
+      draggedRef.current = false;
+    }, 0);
+  }
+
+  function handlePointerDown(event: React.PointerEvent<HTMLElement>) {
+    lastPointerTypeRef.current = event.pointerType;
+    if (safeItems.length <= 1) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('input,textarea,select,[data-no-drag="true"]')) return;
+    // 不 preventDefault、不 setPointerCapture：先只记起点，等水平意图确认再接管，
+    // 否则浏览器会把纵向手势判成取消（pointercancel）导致页面滚不动。
+    pointerStartRef.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
+    pointerIdRef.current = event.pointerId;
+    draggedRef.current = false;
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLElement>) {
+    lastPointerTypeRef.current = event.pointerType;
     if (pointerIdRef.current !== null && event.pointerId !== pointerIdRef.current) return;
-    if (!draggingRef.current || dragStartXRef.current === null) return;
+
+    if (!draggingRef.current) {
+      const start = pointerStartRef.current;
+      if (!start || start.pointerId !== event.pointerId) return;
+      const dx = event.clientX - start.x;
+      const dy = event.clientY - start.y;
+      const movedHorizontally = Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy);
+      if (!movedHorizontally) {
+        // 明显纵向或停滞：放弃拖拽，把手势交还页面滚动。
+        if (Math.abs(dy) > 8 && Math.abs(dy) >= Math.abs(dx)) {
+          clearPointerState();
+        }
+        return;
+      }
+      clearTransitionTimers();
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {}
+      dragStartXRef.current = event.clientX;
+      dragDeltaXRef.current = 0;
+      draggingRef.current = true;
+      draggedRef.current = true;
+      setIsDragging(true);
+      setIsSnapAnimating(false);
+      setDragOffset(0);
+      setIsPaused(true);
+    }
+
+    if (dragStartXRef.current === null) return;
     event.preventDefault();
     const rawDeltaX = event.clientX - dragStartXRef.current;
     const limit = containerWidth * 0.96;
     const deltaX = Math.max(-limit, Math.min(limit, rawDeltaX));
     dragDeltaXRef.current = deltaX;
     setDragOffset(deltaX);
-    if (Math.abs(deltaX) > 8) {
-      draggedRef.current = true;
-    }
   }
 
-  function handlePointerEnd(event?: React.PointerEvent<HTMLElement>) {
-    if (event && pointerIdRef.current !== null && event.pointerId !== pointerIdRef.current) return;
-    if (!draggingRef.current) return;
+  function releaseCapture(event: React.PointerEvent<HTMLElement>) {
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {}
+  }
+
+  function handlePointerCancel(event: React.PointerEvent<HTMLElement>) {
+    if (pointerIdRef.current !== null && event.pointerId !== pointerIdRef.current) return;
+    const wasDragging = draggingRef.current;
+    releaseCapture(event);
+    if (!wasDragging) {
+      clearPointerState();
+      return;
+    }
+    resetDragState();
+  }
+
+  function handlePointerEnd(event: React.PointerEvent<HTMLElement>) {
+    if (pointerIdRef.current !== null && event.pointerId !== pointerIdRef.current) return;
+    releaseCapture(event);
+    const wasDragging = draggingRef.current;
+    const deltaX = dragDeltaXRef.current;
+    clearPointerState();
+    if (!wasDragging) return;
+
     const width = Math.max(1, containerRef.current?.clientWidth || 1);
     const threshold = Math.max(56, width * 0.12);
-    const shouldSwitch = Math.abs(dragDeltaXRef.current) > threshold;
-    const direction = dragDeltaXRef.current < 0 ? 1 : -1;
+    const shouldSwitch = Math.abs(deltaX) > threshold;
+    const direction = deltaX < 0 ? 1 : -1;
 
     setIsDragging(false);
     setIsSnapAnimating(true);
@@ -272,18 +395,7 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
       }, 280);
     }
 
-    draggingRef.current = false;
-    pointerIdRef.current = null;
-    dragStartXRef.current = null;
-    dragDeltaXRef.current = 0;
-    if (event) {
-      try {
-        event.currentTarget.releasePointerCapture(event.pointerId);
-      } catch {}
-    }
-    if (!hoverPausedRef.current) {
-      setIsPaused(false);
-    }
+    setIsPaused(false);
     window.setTimeout(() => {
       draggedRef.current = false;
     }, 0);
@@ -298,27 +410,33 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
   return (
     <>
       <section
-        className={`relative overflow-hidden rounded-2xl border border-border bg-[#dadddf] shadow-sm ${
+        className={`relative touch-pan-y overflow-hidden rounded-2xl border border-border bg-[#dadddf] shadow-sm ${
           safeItems.length > 1 ? 'cursor-grab select-none active:cursor-grabbing' : ''
         } ${className}`}
         onMouseEnter={() => {
-          hoverPausedRef.current = true;
-          setIsPaused(true);
+          // 触屏点击会合成 mouseenter 且没有 mouseleave；真悬停才暂停。
+          if (lastPointerTypeRef.current !== 'touch') setIsHovered(true);
         }}
-        onMouseLeave={() => {
-          hoverPausedRef.current = false;
-          setIsPaused(false);
+        onMouseLeave={() => setIsHovered(false)}
+        onFocusCapture={() => setIsFocusWithin(true)}
+        onBlurCapture={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+            setIsFocusWithin(false);
+          }
         }}
+        onDragStart={(event) => event.preventDefault()}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerEnd}
-        onPointerCancel={handlePointerEnd}
+        onPointerCancel={handlePointerCancel}
         onClickCapture={handleClickCapture}
       >
         <div
           ref={containerRef}
-          className={`relative overflow-hidden [perspective:1400px] ${
-            compact ? 'h-[260px] sm:h-[300px] lg:h-full' : 'aspect-[21/9] min-h-[260px] sm:min-h-[340px]'
+          className={`relative w-full overflow-hidden [perspective:1400px] ${
+            compact
+              ? 'aspect-[16/11] min-h-[210px] sm:aspect-[16/9] lg:aspect-auto lg:h-full'
+              : 'aspect-[21/9] min-h-[260px] sm:min-h-[340px]'
           }`}
         >
           {previewItem && (
@@ -337,11 +455,11 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
                   src={getBannerImage(previewItem)}
                   alt={previewItem.name || '预览图'}
                   fill
-                  loading="eager"
+                  loading="lazy"
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 1200px"
                 />
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[54%] bg-gradient-to-t from-black/55 via-black/22 to-transparent" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/70 via-black/30 to-transparent sm:h-[54%] sm:from-black/55 sm:via-black/22" />
               </div>
             </div>
           )}
@@ -356,16 +474,42 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
               zIndex: isSnapAnimating ? 25 : 20,
             }}
           >
-            <Image
-              src={getBannerImage(current)}
-              alt={title}
-              fill
-              priority
-              fetchPriority="high"
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 1200px"
-            />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/85 via-black/38 to-transparent" />
+            {isHeroFirstSlide ? (
+              // 首屏用原生 img：next/image 在 `images.unoptimized: true` 下会把自定义
+              // srcSet/sizes 覆盖成 undefined（见 get-img-props 的 generateImgAttrs），
+              // 只有原生 img 才能带上 /media/variants 的 480/720/1080 三档。
+              <img
+                src={heroImageSrc}
+                srcSet={heroVariantSrcSet}
+                sizes={heroVariantSrcSet ? '(max-width: 768px) 100vw, 1200px' : undefined}
+                alt={title}
+                className="absolute inset-0 h-full w-full object-cover"
+                fetchPriority="high"
+                loading="eager"
+                decoding="async"
+                onError={(event) => {
+                  if (!heroVariantSrcSet) return;
+                  // 变体端点不可用时浏览器不会自动回退到 src，这里手动退回原图。
+                  const img = event.currentTarget;
+                  img.removeAttribute('srcset');
+                  img.removeAttribute('sizes');
+                  img.src = heroImageSrc;
+                  setHeroVariantFailed(true);
+                }}
+              />
+            ) : (
+              <Image
+                src={heroImageSrc}
+                alt={title}
+                fill
+                priority={false}
+                fetchPriority="auto"
+                loading="lazy"
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 1200px"
+              />
+            )}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[92%] bg-gradient-to-t from-black/95 via-black/70 to-transparent sm:h-[62%] sm:from-black/85 sm:via-black/40" />
 
             {!compact && (
               <div className="absolute right-6 top-6 z-20 hidden w-[280px] rounded-2xl border border-white/30 bg-black/35 p-4 text-white backdrop-blur-md lg:block">
@@ -396,7 +540,7 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
             )}
 
             <div className={compact ? 'absolute inset-x-0 bottom-0 p-4 sm:p-5 lg:p-6' : 'absolute inset-x-0 bottom-0 p-5 sm:p-8 lg:p-10'}>
-              <div className="mb-3 flex flex-wrap items-center gap-2">
+              <div className="mb-2 flex flex-wrap items-center gap-2 sm:mb-3">
                 <span className="rounded-full bg-[#fdc003] px-3 py-1 text-[11px] font-semibold tracking-normal text-[#553e00]">
                   Featured
                 </span>
@@ -406,7 +550,15 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
                   </span>
                 )}
               </div>
-              <h2 className={compact ? 'max-w-2xl text-base font-semibold tracking-tight text-white sm:text-xl lg:text-2xl' : 'max-w-3xl text-xl font-semibold tracking-tight text-white sm:text-3xl lg:text-4xl'}>{title}</h2>
+              <h2
+                className={
+                  compact
+                    ? 'line-clamp-2 max-w-2xl text-base font-semibold tracking-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.6)] sm:text-xl lg:text-2xl'
+                    : 'max-w-3xl text-xl font-semibold tracking-tight text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.6)] sm:text-3xl lg:text-4xl'
+                }
+              >
+                {title}
+              </h2>
               <p
                 className={
                   compact
@@ -441,14 +593,18 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
           </div>
         </div>
         {safeItems.length > 1 && (
-          <div className="absolute bottom-5 right-5 flex items-center gap-2 rounded-full bg-black/35 px-3 py-2 backdrop-blur">
-            {safeItems.slice(0, 6).map((item, index) => {
+          <div
+            data-no-drag="true"
+            className="absolute right-1 top-2 flex flex-wrap items-center justify-end rounded-full sm:bottom-5 sm:right-5 sm:top-auto sm:bg-black/35 sm:backdrop-blur"
+          >
+            {safeItems.slice(0, 10).map((item, index) => {
               const isActive = index === activeIndex;
               return (
                 <button
                   key={item._id}
                   type="button"
                   aria-label={`切换到第 ${index + 1} 张`}
+                  aria-current={isActive ? 'true' : undefined}
                   onClick={() => {
                     clearTransitionTimers();
                     setIsDragging(false);
@@ -456,9 +612,16 @@ export default function HomeHeroCarousel({ bannerItems, compact = false, classNa
                     setDragOffset(0);
                     setActiveIndex(index);
                   }}
-                  className={isActive ? 'h-2 w-7 rounded-full bg-white' : 'h-2 w-2 rounded-full bg-white/45'}
+                  className="flex h-10 w-10 items-center justify-center rounded-full"
                 >
-                  <span className="sr-only">切换到第 {index + 1} 张</span>
+                  <span
+                    aria-hidden="true"
+                    className={
+                      isActive
+                        ? 'block h-2 w-6 rounded-full bg-white shadow-[0_1px_4px_rgba(0,0,0,0.45)] transition-all'
+                        : 'block h-2 w-2 rounded-full bg-white/60 shadow-[0_1px_4px_rgba(0,0,0,0.45)] transition-all'
+                    }
+                  />
                 </button>
               );
             })}

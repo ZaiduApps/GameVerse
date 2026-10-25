@@ -54,7 +54,7 @@ export default function GameDetailMobileTabs({ reviewCountLabel }: { reviewCount
               onClick={() => handleSelect(tab.id)}
               aria-current={isActive ? 'true' : undefined}
               className={cn(
-                'relative shrink-0 py-2 font-bold transition-colors',
+                'relative inline-flex min-h-11 min-w-[44px] shrink-0 items-center justify-center py-2 font-bold transition-colors',
                 isActive ? 'text-primary' : 'text-[#595c5d] dark:text-muted-foreground',
               )}
             >

@@ -32,6 +32,11 @@ function getGameHref(game: { pkg?: string | null; _id?: string | null }): string
   return target ? `/app/${encodeURIComponent(target)}` : '/app';
 }
 
+function isValidDate(value?: string | null): boolean {
+  if (!normalizeText(value)) return false;
+  return !Number.isNaN(new Date(String(value)).getTime());
+}
+
 function collectRegions(input: Array<{ metadata?: { region?: string | null } }>): string[] {
   return Array.from(
     new Set(
@@ -174,31 +179,6 @@ export default async function AlbumTopicPage({
   const canonicalUrl = absoluteUrl(canonicalPath);
   const shareImage = getAlbumShareImage(album, siteShareImage);
 
-  const breadcrumbJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: '首页',
-        item: absoluteUrl('/'),
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: '专题推荐',
-        item: canonicalUrl,
-      },
-      {
-        '@type': 'ListItem',
-        position: 3,
-        name: albumTitle,
-        item: canonicalUrl,
-      },
-    ],
-  };
-
   const collectionJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
@@ -208,6 +188,8 @@ export default async function AlbumTopicPage({
     url: canonicalUrl,
     image: shareImage || undefined,
     inLanguage: 'zh-CN',
+    // 只在后台给出有效更新时间时才声明，避免输出非法日期。
+    ...(isValidDate(album.updated_at) ? { dateModified: album.updated_at } : {}),
     isPartOf: {
       '@type': 'WebSite',
       name: siteName,
@@ -245,10 +227,6 @@ export default async function AlbumTopicPage({
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
-      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}

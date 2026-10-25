@@ -29,13 +29,18 @@ function getOrCreateStorageValue(key: string, prefix: string): string {
   }
 }
 
+export function getTrackingAppVersion(): string {
+  return (
+    process.env.NEXT_PUBLIC_APP_VERSION ||
+    process.env.NEXT_PUBLIC_GIT_SHA ||
+    'web'
+  );
+}
+
 export function buildTrackingHeaders(
   extra: Record<string, string> = {},
 ): Record<string, string> {
-  const appVersion =
-    process.env.NEXT_PUBLIC_APP_VERSION ||
-    process.env.NEXT_PUBLIC_GIT_SHA ||
-    'web';
+  const appVersion = getTrackingAppVersion();
   const channelCode =
     process.env.NEXT_PUBLIC_TRACKING_CHANNEL_CODE ||
     'gameverse_web';

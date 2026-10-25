@@ -245,36 +245,3 @@ export function buildCommunityPostDiscussionJsonLd(params: {
       .filter((comment) => Boolean(comment.text && comment.datePublished)),
   };
 }
-
-export function buildCommunityPostBreadcrumbJsonLd(params: {
-  post: CommunityPost;
-  canonicalUrl: string;
-}) {
-  const { post, canonicalUrl } = params;
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: '首页',
-        item: absoluteUrl('/'),
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: '社区',
-        item: absoluteUrl('/community'),
-      },
-      {
-        '@type': 'ListItem',
-        position: 3,
-        name:
-          sanitizeSeoText(post.title || post.summary || '帖子详情') ||
-          '帖子详情',
-        item: canonicalUrl,
-      },
-    ],
-  };
-}

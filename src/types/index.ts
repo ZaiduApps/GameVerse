@@ -187,7 +187,7 @@ export interface ApiAlbum {
   description?: string;
   cover?: string;
   icon?: string;
-  style: 'Grid' | 'Box' | 'Pre' | 'List' | string; // Grid: NewRelease, Box: Popular, Pre: Prereg
+  style: 'Grid' | 'Box' | 'Pre' | 'List' | 'Hero' | 'Marquee' | string; // Grid: NewRelease, Box: Popular, Pre: Prereg, Hero: 大卡, Marquee: 横滑胶囊
   mode?: 'manual' | 'auto' | string;
   tags?: string[];
   sort?: number;
@@ -306,10 +306,19 @@ export interface ApiGameDetail {
   latest_at: string;
   release_at: string | null;
   tags: string[];
+  /** 来源渠道（GP/APKPURE/QOO/工口实验室/GITHUB），详情接口原样下发。 */
+  source_type?: string | null;
   version: string;
   file_size: number | null;
   latest_content?: string;
   seo?: GameSeoContent;
+  /**
+   * GP 媒体刷新/运营上传写入的视频源与封面，均可能为空：
+   * 有值是自托管 mp4 直链（asset:// 已被接口改写为 cdn.apks.cc）、YouTube 嵌入地址，
+   * 也可能残留 GP 抓取的失效 .bin 链接，播放前由详情页统一解析，不直接渲染。
+   */
+  video_preview?: string | null;
+  video_image?: string | null;
   /**
    * 与 ApiGame.metadata 同源：region 只是详情页过去唯一用到的字段，
    * chs/cht/en 同样在库里，漏声明会让详情页拿不到后台维护的中文名。

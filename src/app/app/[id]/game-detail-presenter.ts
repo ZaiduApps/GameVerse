@@ -1,4 +1,5 @@
 import { resolveGameName } from '@/lib/game-display-name';
+import { buildRenderedMarkdownDocument } from '@/lib/utils';
 import type { CardConfigItem, GameDetailData } from '@/types';
 
 export interface GameFactItem {
@@ -36,13 +37,68 @@ export const TAG_STYLE_PALETTES = [
   'border-tone-cyan/40 bg-tone-cyan/10 text-tone-cyan',
 ] as const;
 
+// 同一份原始描述同时喂给「游戏介绍」富文本和标题下的 hero 摘要、highlights、
+// latest_content 等纯文本字段。formatDescriptionHtml 只负责富文本那一侧；纯文本
+// 入口 cleanText 过去只剥 HTML 标签，于是从 GitHub Release 导入的 `### Features`、
+// `**加粗**`、`[#642](url)` 会以字面量留在摘要行里。下面这层只删 Markdown 标记
+// 本身，正文和换行结构原样保留，最后的空白折叠仍由 cleanText 统一收口。
+const MARKDOWN_LINE_RULES: ReadonlyArray<readonly [RegExp, string]> = [
+  // 单行的 ***、---、___ 是分隔线，APKPure 的描述正文里直接当分隔符用；纯文本里
+  // 没有意义，且必须先于行内 `**`/`*` 规则处理，否则 `***` 会被当成粗体残片留下。
+  // 整行删掉（不换成空行），只认「整行只有这些符号和空白」，正文里的 `2*3`、
+  // `a--b`、`file_name_x` 不受影响。
+  [/^[ \t]*(?:\*[ \t]*){3,}$/gm, ''],
+  [/^[ \t]*(?:-[ \t]*){3,}$/gm, ''],
+  [/^[ \t]*(?:_[ \t]*){3,}$/gm, ''],
+  // 行首标题/无序列表/有序列表：只去掉标记本身，不吞正文。
+  [/^[ \t]*#{1,6}[ \t]+/gm, ''],
+  [/^[ \t]*[-*+][ \t]+/gm, ''],
+  [/^[ \t]*\d+\.[ \t]+/gm, ''],
+];
+
+// 顺序有依赖：图片先于链接，加粗/删除线先于单星号斜体。
+// 边界条件（`2*3`、`game_name_field`）是为了不改动正常文案里的孤立星号和下划线；
+// 括号类正则允许 `)` 缺失，因为后台会把超长描述在 8000 字符处截断，最后一条链接
+// 常常没有闭合括号。
+const MARKDOWN_INLINE_RULES: ReadonlyArray<readonly [RegExp, string]> = [
+  [/!\[([^\]\n]*)\]\([^)\n]*(?:\)|$)/g, '$1'],
+  [/\[([^\]\n]+)\]\([^)\n]*(?:\)|$)/g, '$1'],
+  [/`([^`\n]+)`/g, '$1'],
+  // 删除线在发行说明里表示「已废弃/已删除」，摘要行里连内容一起去掉，
+  // 免得 hero 摘要出现「old new」这种自相矛盾的读法；完整介绍仍由富文本保留原文。
+  [/~~[^~\n]+~~/g, ''],
+  [/\*\*([^*\n]+)\*\*/g, '$1'],
+  [/(^|[^A-Za-z0-9_])__([^_\n]+)__(?![A-Za-z0-9_])/g, '$1$2'],
+  [/(^|[^A-Za-z0-9_*])\*([^*\n]+)\*(?![A-Za-z0-9_*])/g, '$1$2'],
+  [/(^|[^A-Za-z0-9_])_([^_\n]+)_(?![A-Za-z0-9_])/g, '$1$2'],
+];
+
+const HTML_ENTITY_PATTERN = /&(nbsp|amp|lt|gt|quot|#39|apos);/g;
+const HTML_ENTITY_REPLACEMENTS: Record<string, string> = {
+  nbsp: ' ',
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  '#39': "'",
+  apos: "'",
+};
+
+function stripMarkdownText(input: string): string {
+  const stripped = MARKDOWN_LINE_RULES.concat(MARKDOWN_INLINE_RULES).reduce(
+    (text, [pattern, replacement]) => text.replace(pattern, replacement),
+    input,
+  );
+  return stripped.replace(
+    HTML_ENTITY_PATTERN,
+    (match, name: string) => HTML_ENTITY_REPLACEMENTS[name] ?? match,
+  );
+}
+
 export function cleanText(input?: string | null): string {
   if (!input) return '';
-  return input
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const withoutTags = input.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '');
+  return stripMarkdownText(withoutTags).replace(/\s+/g, ' ').trim();
 }
 
 export function toPlainTextWithBreaks(input?: string | null): string {
@@ -83,9 +139,56 @@ function sanitizeRichHtml(input: string): string {
     .replace(/\s(href|src)\s*=\s*("|')\s*javascript:[\s\S]*?\2/gi, ' $1="#"');
 }
 
+// 从 GitHub Release 正文导入的描述是 HTML 与 Markdown 混排：结构是 <p>/<details>，
+// 内容是 ### / ** / 列表 / 链接。只按「有没有 HTML 标签」分流会把它整段当富文本原样输出，
+// 读者看到的是字面量 `### Features`。这里先认 Markdown，再决定用哪条渲染链。
+const MARKDOWN_DESCRIPTION_HINT =
+  /^(?:#{1,6}\s|\s*[-*+]\s|\d+\.\s|>\s|\|.*\|)|(\*\*[^*\n]+\*\*|`[^`\n]+`|\[[^\]\n]+\]\([^)\n]+\))/m;
+
+// 白名单不成立：线上描述里还会出现 <font color>、<b>、<u> 这类花色标签，
+// 漏掉任何一个都会被 Markdown 渲染器转义成可见的 `&lt;font&gt;` 文本。
+// 这里通用暂存所有剩余标签，安全性由还原后的 sanitizeRichHtml 兜底。
+const HTML_TAG_PATTERN = /<[^>]+>/g;
+
+function renderMixedMarkdownDescription(raw: string): string {
+  const inlineTags: string[] = [];
+  const normalized = raw
+    // 换行与块级结束标签先还原成真实换行，Markdown 的行结构才成立。
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(?:p|div|h[1-6]|li|tr|ul|ol|details|summary)>/gi, '\n')
+    // 块级开标签直接删掉：段落、列表、表格的骨架改由 Markdown 渲染器生成，
+    // 留着会让块级标签嵌进 Markdown 段落里。
+    .replace(
+      /<(?:p|div|ul|ol|table|thead|tbody|tr|td|th|details|summary)\b[^>]*>/gi,
+      '',
+    )
+    // 原来的 HTML 标题统一转成 Markdown 标题，输出后与正文里的 `###` 是同一套样式。
+    .replace(/<h([1-6])\b[^>]*>/gi, (_match, level: string) => `\n${'#'.repeat(Number(level))} `)
+    // 剩余标签（行内标签、花色标签）统一交给占位符托管：Markdown 渲染器会把
+    // 正文里剩下的 `<`/`>` 转义，不暂存的话 <a>/<img>/<font> 会变成可见的标签文本。
+    .replace(HTML_TAG_PATTERN, (tag) => {
+      const index = inlineTags.length;
+      inlineTags.push(tag);
+      return `\u0000${index}\u0000`;
+    });
+
+  const rendered = buildRenderedMarkdownDocument(normalized, {
+    preset: 'detail',
+    demoteLevelOneHeadings: true,
+  }).html;
+  const restored = rendered.replace(
+    /\u0000(\d+)\u0000/g,
+    (_match, index: string) => inlineTags[Number(index)] ?? '',
+  );
+  return sanitizeRichHtml(restored);
+}
+
 export function formatDescriptionHtml(input?: string | null): string {
   const raw = String(input || '').replace(/\r\n?/g, '\n').trim();
   if (!raw) return '';
+  if (MARKDOWN_DESCRIPTION_HINT.test(raw)) {
+    return renderMixedMarkdownDescription(raw);
+  }
   if (/<\/?[a-z][^>]*>/i.test(raw)) {
     return sanitizeRichHtml(raw).replace(/\n/g, '<br />');
   }

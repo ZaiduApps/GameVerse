@@ -35,22 +35,31 @@ if (mode === 'start' && !(await pathExists(prodBuildIdFile))) {
   process.exit(1);
 }
 
-let args;
 if (mode === 'dev') {
-  args = ['dev', '-p', port];
+  const runner = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+  const child = spawn(runner, ['exec', 'next', 'dev', '-p', port], {
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  });
+
+  child.on('exit', (code) => {
+    process.exit(code ?? 0);
+  });
 } else if (mode === 'start') {
-  args = ['start', '-p', port];
+  // 生产走自定义 server：需要在响应落盘前收口详情页 HTML 的 Vary（边缘缓存前提），
+  // 并补回 `next start` 自带、自定义 server 会丢掉的 HTML gzip。详见
+  // scripts/lib/next-prod-server.mjs 与 docs/EDGE_CACHE_POLICY.md。
+  const { startProductionServer } = await import('./lib/next-prod-server.mjs');
+  try {
+    await startProductionServer({ dir: cwd, port, hostname: process.env.BIND_HOST || '0.0.0.0' });
+  } catch (error) {
+    console.error('[next-runner] failed to start production server', {
+      port,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    process.exit(1);
+  }
 } else {
   console.error(`Unsupported mode: ${mode}`);
   process.exit(1);
 }
-
-const runner = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
-const child = spawn(runner, ['exec', 'next', ...args], {
-  stdio: 'inherit',
-  shell: process.platform === 'win32',
-});
-
-child.on('exit', (code) => {
-  process.exit(code ?? 0);
-});

@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { ArrowRight, BarChartBig, Clock3, Flame, Star, TrendingUp } from 'lucide-react';
 
 import { trackedApiFetch } from '@/lib/api';
+import Breadcrumbs from '@/components/layout/Breadcrumbs';
+import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
 import { resolveGameName } from '@/lib/game-display-name';
 import { absoluteUrl, buildSeoDescription } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
@@ -454,6 +456,7 @@ export default async function RankingsPage({
 
   return (
     <div className="fade-in space-y-8">
+      <Breadcrumbs items={[BREADCRUMB_ROOT, { name: '排行榜', href: '/rankings' }]} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(rankingsJsonLd) }} />
       <section className="rounded-2xl border border-border/70 bg-card p-6 shadow-sm">
         <div className="mb-4 flex items-center">

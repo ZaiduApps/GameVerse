@@ -20,6 +20,7 @@ const [
   nextConfigSource,
   layoutSource,
   globalsSource,
+  sourceLinkSource,
 ] = await Promise.all([
   readSource('../src/app/app/[id]/page.tsx'),
   readSource('../src/app/app/[id]/GameDetailView.tsx'),
@@ -36,6 +37,7 @@ const [
   readSource('../next.config.ts'),
   readSource('../src/app/layout.tsx'),
   readSource('../src/app/globals.css'),
+  readSource('../src/lib/game-source-link.ts'),
 ]);
 
 test('详情路由允许新包名按需生成并兼容页游 ObjectId', () => {
@@ -172,4 +174,51 @@ test('截图胶片条统一行高，不再按比例各给一套宽高', () => {
   assert.ok(gallerySource.includes('h-[160px] aspect-[9/16] lg:h-[240px]'));
   assert.ok(gallerySource.includes('h-[160px] aspect-[16/9] lg:h-[240px]'));
   assert.ok(!gallerySource.includes('items-end'));
+});
+
+test('GitHub 来源在详情页与下载弹窗显示官方源与仓库链接', () => {
+  assert.match(sourceLinkSource, /sourceType !== 'github'/);
+  assert.match(sourceLinkSource, /GitHub 官方源/);
+  assert.match(sourceLinkSource, /GPL-3\.0/);
+  assert.match(sourceLinkSource, /github\.com/);
+  assert.match(viewSource, /const gameSource = resolveGameSourceInfo\(game\)/);
+  assert.match(viewSource, /\{gameSource\.label\}/);
+  assert.match(viewSource, /href=\{gameSource\.repoUrl\}/);
+  assert.match(actionsSource, /sourceInfo=\{resolveGameSourceInfo\(game\)\}/);
+  assert.match(downloadDialogSource, /sourceInfo\?: GameSourceInfo \| null/);
+  assert.match(downloadDialogSource, /来源：\{sourceInfo\.label\}/);
+  assert.match(downloadDialogSource, /href=\{sourceInfo\.repoUrl\}/);
+});
+
+test('详情页把「游戏不存在」与「上游故障」分开处理', () => {
+  // 上游数据统一走降级装载：成功写快照、明确不存在→404、故障有快照→降级渲染、故障无快照→兜底壳。
+  assert.match(pageSource, /loadGameDetailWithFallback\(\{/);
+  // SEO 快照成功时也要落降级快照，否则大多数页面在上游挂掉时没有可回退的数据。
+  assert.match(pageSource, /await saveGameDetailSnapshot\(id, snapshot\)/);
+  assert.match(pageSource, /persistSnapshot: process\.env\.NEXT_PHASE !== 'phase-production-build'/);
+  assert.match(pageSource, /pageData\.kind === 'missing'\) \{\s*notFound\(\)/);
+  assert.doesNotMatch(pageSource, /if \(!initialGameData\) \{\s*notFound\(\)/);
+  // generateMetadata 与页面主体共用同一次 getPageData 结果，降级标记不会两边不一致。
+  assert.match(pageSource, /await Promise\.all\(\[getSiteConfig\(\), getPageData\(id\)\]\)/);
+  // 降级提示在首屏顶部、role=status、带快照时间。
+  assert.match(viewSource, /\{snapshotSavedAt \? <DegradedDataNotice savedAt=\{snapshotSavedAt\} \/> : null\}/);
+  assert.match(viewSource, /role="status"/);
+  assert.match(viewSource, /数据更新中/);
+});
+
+test('「无快照 + 上游故障」不再抛错：兜底壳 + 失败标记，由 server 翻成 503', () => {
+  // 抛错拿不到可控的响应形态（Next 15.0.7 下同样是 500 / 无头），所以页面只渲染壳并登记标记。
+  assert.doesNotMatch(pageSource, /throw unavailableError|GameDetailUnavailableError/);
+  assert.match(pageSource, /registerUnavailableMarker\(id\)/);
+  assert.match(pageSource, /return <GameDetailUnavailableView \/>/);
+  assert.match(pageSource, /__APKSCC_GAME_DETAIL_UNAVAILABLE__/);
+  assert.match(pageSource, /new Map<string, number>\(\)/);
+  // generateMetadata 同一分支返回 noindex 兜底 metadata，而不是抛错。
+  assert.match(pageSource, /robots: \{ index: false, follow: false \}/);
+  assert.doesNotMatch(pageSource, /title: \{ absolute: title \}[\s\S]{0,40}robots[\s\S]{0,40}index: false[\s\S]{0,200}unavailable/);
+  // 构建期上游故障按 missing 处理，避免某页抖动打断整批预生成。
+  assert.match(
+    pageSource,
+    /if \(process\.env\.NEXT_PHASE === 'phase-production-build'\) return \{ kind: 'missing' \}/,
+  );
 });

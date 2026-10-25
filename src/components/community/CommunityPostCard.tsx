@@ -464,7 +464,7 @@ export default function CommunityPostCard({
           </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" aria-label="打开帖子操作菜单">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground lg:h-8 lg:w-8" aria-label="打开帖子操作菜单">
                 <MoreHorizontal size={20} />
               </Button>
             </DropdownMenuTrigger>
@@ -706,20 +706,20 @@ export default function CommunityPostCard({
           type="button"
           variant="ghost"
           size="sm"
-          className={cn('px-2 text-muted-foreground hover:text-primary', bookmarked && 'text-primary')}
+          className={cn('h-10 px-2 text-muted-foreground hover:text-primary lg:h-8', bookmarked && 'text-primary')}
           onClick={handleToggleBookmark}
           disabled={bookmarkPending}
         >
           <Bookmark size={18} className={cn('mr-1.5', bookmarked && 'fill-current')} /> {bookmarked ? '已收藏' : '收藏'}
         </Button>
-        <Button type="button" variant="ghost" size="sm" className="px-2 text-muted-foreground hover:text-primary" onClick={handleComment}>
+        <Button type="button" variant="ghost" size="sm" className="h-10 px-2 text-muted-foreground hover:text-primary lg:h-8" onClick={handleComment}>
           <MessageSquare size={18} className="mr-1.5" /> {post.commentsCount}
         </Button>
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className={cn('relative overflow-visible px-2 text-muted-foreground hover:text-primary', liked && 'text-primary')}
+          className={cn('relative h-10 overflow-visible px-2 text-muted-foreground hover:text-primary lg:h-8', liked && 'text-primary')}
           onClick={() => void handleToggleLike()}
           disabled={likePending}
         >
@@ -744,7 +744,7 @@ export default function CommunityPostCard({
           </span>
           {likeCount}
         </Button>
-        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary px-2 ml-auto" onClick={handleShare}>
+        <Button variant="ghost" size="sm" className="ml-auto h-10 px-2 text-muted-foreground hover:text-primary lg:h-8" onClick={handleShare}>
           <Share2 size={18} className="mr-1.5" /> 分享
         </Button>
       </CardFooter>

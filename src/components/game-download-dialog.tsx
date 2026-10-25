@@ -26,6 +26,9 @@ import type { ApiDownloadResource, CardConfigItem } from '@/types';
 import Image from 'next/image';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { trackedApiFetch } from '@/lib/api';
+import { reportDownloadClick } from '@/lib/download-click-tracking';
+import { resolveDownloadChannelId, shouldGuideToApp } from '@/lib/game-download-channel';
+import type { GameSourceInfo } from '@/lib/game-source-link';
 import AppDownloadGuideDialog from '@/components/app-download-guide-dialog';
 
 interface GameDownloadDialogProps {
@@ -33,6 +36,7 @@ interface GameDownloadDialogProps {
   appId?: string;
   pkg?: string | null;
   downloadNotices?: CardConfigItem[];
+  sourceInfo?: GameSourceInfo | null;
   triggerClassName?: string;
   triggerLabel?: string;
   open?: boolean;
@@ -53,6 +57,7 @@ export default function GameDownloadDialog({
   appId,
   pkg,
   downloadNotices,
+  sourceInfo,
   triggerClassName,
   triggerLabel,
   open,
@@ -63,36 +68,8 @@ export default function GameDownloadDialog({
   const [error, setError] = useState<string | null>(null);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
 
-  const shouldGuideToApp = (resource?: ApiDownloadResource) => {
-    if (!resource) return false;
-
-    const metadataCandidates = [
-      resource.channel?.code,
-      resource.channel?.name,
-      resource.channel?.description,
-      resource.platform_range,
-      resource.platform_ranges,
-      resource.channel?.platform_range,
-      resource.channel?.platform_ranges,
-    ]
-      .flatMap((value) => (Array.isArray(value) ? value : [value]))
-      .filter(Boolean)
-      .map((value) => String(value).trim().toLowerCase());
-
-    const combinedMetadata = metadataCandidates.join(' | ');
-    const isApkPureChannel = combinedMetadata.includes('apkpure');
-    const isAndroidScoped =
-      combinedMetadata.includes('android') ||
-      combinedMetadata.includes('安卓') ||
-      combinedMetadata.includes('apk');
-
-    // Web 侧对 APKPure / Android 定向渠道统一先做本地拦截，引导使用 AC 盒子，
-    // 避免先发起 getAppDownload 请求后再发现该渠道并不适合当前 Web 端直下。
-    return isApkPureChannel || isAndroidScoped;
-  };
-
   const handleDownloadClick = async (resource: ApiDownloadResource) => {
-    const channelId = resource.channel?._id || resource.channel_id || '';
+    const channelId = resolveDownloadChannelId(resource);
     if ((!appId && !pkg) || !channelId) {
       setError('下载参数缺失，请刷新页面后重试');
       return;
@@ -104,13 +81,21 @@ export default function GameDownloadDialog({
       return;
     }
 
+    // 用户真实点击了某个可直下渠道 → 客户端声明一次点击意图（服务端按 event_id 去重）。
+    // 不阻塞跳转：上报失败静默，下载可用性优先。
+    reportDownloadClick({ appId, pkg, channelId, surface: 'detail_dialog' });
+
     setLoadingChannelId(channelId);
     setError(null);
 
     try {
       const response = await trackedApiFetch('/game/getAppDownload', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          // 来源位：让 interface 能把「弹窗直下」与「服务端直出 302」分开统计。
+          'x-ac-surface': 'detail_dialog',
+        },
         body: JSON.stringify({
           app_id: appId,
           pkg,
@@ -163,6 +148,22 @@ export default function GameDownloadDialog({
             <DialogDescription>
               请选择您偏好的下载方式，点击渠道即可开始下载。
             </DialogDescription>
+            {sourceInfo ? (
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                <span>来源：{sourceInfo.label}</span>
+                {sourceInfo.repoUrl ? (
+                  <a
+                    className="underline decoration-dotted underline-offset-2 hover:text-foreground"
+                    href={sourceInfo.repoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    GitHub 仓库
+                  </a>
+                ) : null}
+                <span>遵循 {sourceInfo.license} 许可</span>
+              </p>
+            ) : null}
           </DialogHeader>
 
           {downloadNotices && downloadNotices.length > 0 && (
@@ -193,7 +194,7 @@ export default function GameDownloadDialog({
           <div className="grid gap-3 py-4">
             {resources && resources.length > 0 ? (
               resources.map((resource) => {
-                const channelId = resource.channel?._id || resource.channel_id || '';
+                const channelId = resolveDownloadChannelId(resource);
                 const loading = loadingChannelId === channelId;
 
                 return (

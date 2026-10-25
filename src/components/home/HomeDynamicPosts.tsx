@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Eye, Heart, MessageCircle, MoreHorizontal, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, Heart, MessageCircle, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { trackedApiFetch } from '@/lib/api';
@@ -19,15 +19,27 @@ interface HomeDynamicPostsProps {
   posts: ApiDynamicPost[];
 }
 
-function formatRelativeTime(dateStr?: string): string {
+// 时间固定按 Asia/Shanghai 显示：SSR 跑在服务器时区、客户端跑在用户时区，
+// 只要用运行环境本地时间格式化就必然水合不一致，所以时区必须写死。
+const POST_TIME_FORMATTER = new Intl.DateTimeFormat('zh-CN', {
+  timeZone: 'Asia/Shanghai',
+  hourCycle: 'h23',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+/** 动态的绝对时间：`MM-DD HH:mm`（Asia/Shanghai）。 */
+function formatPostTime(dateStr?: string): string {
   if (!dateStr) return '刚刚';
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return '刚刚';
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const dayNum = String(d.getDate()).padStart(2, '0');
-  const hour = String(d.getHours()).padStart(2, '0');
-  const minute = String(d.getMinutes()).padStart(2, '0');
-  return `${month}-${dayNum} ${hour}:${minute}`;
+  const parts = POST_TIME_FORMATTER.formatToParts(d);
+  const pick = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value || '';
+  const hour = pick('hour') === '24' ? '00' : pick('hour');
+  return `${pick('month')}-${pick('day')} ${hour}:${pick('minute')}`;
 }
 
 function normalizeComparableText(value: string): string {
@@ -190,6 +202,41 @@ function formatA11ySubject(value: string): string {
   return `${chars.slice(0, 40).join('')}...`;
 }
 
+/** 自动轮转间隔（毫秒）。 */
+const AUTO_ROTATE_INTERVAL_MS = 7000;
+
+function getAuthorInitial(name?: string): string {
+  const chars = Array.from(String(name || '').trim());
+  return chars[0] || '匿';
+}
+
+/** 头像：无地址或加载失败时回退到作者名首字，避免留下空圆圈。 */
+function AuthorAvatar({ src, name }: { src?: string; name?: string }) {
+  const [failed, setFailed] = useState(false);
+  const normalized = String(src || '').trim();
+  return (
+    <div className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#eff2f5] bg-[#f2f4f7] dark:border-[#2a3442] dark:bg-[#1a2433] sm:h-9 sm:w-9">
+      {normalized && !failed ? (
+        <Image
+          src={normalized}
+          alt={name || '用户'}
+          fill
+          className="object-cover"
+          sizes="36px"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <span
+          aria-hidden="true"
+          className="text-[13px] font-semibold leading-none text-[#7c8794] dark:text-[#a9b7ca]"
+        >
+          {getAuthorInitial(name)}
+        </span>
+      )}
+    </div>
+  );
+}
+
 interface MultiCellLayout {
   aspectClass: string;
   rowSpan?: boolean;
@@ -257,6 +304,84 @@ function isWideCategory(category: string | null | undefined): boolean {
 export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
   const { token, isAuthenticated } = useAuth();
   const { toast } = useToast();
+
+  // 窗口轮转：可见 1 条（手机）/ 2 条（≥640）/ 3 条（≥1280）。
+  // 初值固定为 1，SSR 与首次渲染只输出第一页，避免水合不一致。
+  const totalPosts = posts.length;
+  const [visibleCount, setVisibleCount] = useState(1);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [announcePage, setAnnouncePage] = useState(false);
+  const [hoverPaused, setHoverPaused] = useState(false);
+  const [focusPaused, setFocusPaused] = useState(false);
+  const [docHidden, setDocHidden] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  // 模块不在视口内时不轮转：默认 true（SSR 与首帧都按「可见」处理）。
+  const [inViewport, setInViewport] = useState(true);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const smQuery = window.matchMedia('(min-width: 640px)');
+    const xlQuery = window.matchMedia('(min-width: 1280px)');
+    const update = () => setVisibleCount(xlQuery.matches ? 3 : smQuery.matches ? 2 : 1);
+    update();
+    smQuery.addEventListener('change', update);
+    xlQuery.addEventListener('change', update);
+    return () => {
+      smQuery.removeEventListener('change', update);
+      xlQuery.removeEventListener('change', update);
+    };
+  }, []);
+
+  useEffect(() => {
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReduceMotion(motionQuery.matches);
+    update();
+    motionQuery.addEventListener('change', update);
+    return () => motionQuery.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    const onVisibilityChange = () => setDocHidden(document.hidden);
+    onVisibilityChange();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, []);
+
+  // 滚出视口的轮播没人看，暂停自动翻页把注意力留给用户正在看的内容；
+  // 手动翻页不受影响（只影响自动轮转的 paused 判定）。
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) setInViewport(entry.isIntersecting);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const visiblePosts = Math.min(visibleCount, Math.max(1, totalPosts));
+  const totalPages = Math.max(1, Math.ceil(totalPosts / visiblePosts));
+  const activePage = Math.min(pageIndex, totalPages - 1);
+  // 末页不足时贴到最末尾，允许与上一页重叠，保证始终有 visiblePosts 条。
+  const windowStart = Math.max(0, Math.min(activePage * visiblePosts, totalPosts - visiblePosts));
+  const windowPosts = posts.slice(windowStart, windowStart + visiblePosts);
+  const rangeStart = windowStart + 1;
+  const rangeEnd = windowStart + visiblePosts;
+  const rotationPaused = hoverPaused || focusPaused || docHidden || reduceMotion || !inViewport;
+
+  useEffect(() => {
+    if (totalPages <= 1 || rotationPaused) return;
+    const timer = window.setInterval(() => {
+      setAnnouncePage(false);
+      setPageIndex((prev) => (Math.min(prev, totalPages - 1) + 1) % totalPages);
+    }, AUTO_ROTATE_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [totalPages, rotationPaused]);
+
+  const goToPage = (next: number) => {
+    setAnnouncePage(true);
+    setPageIndex(((next % totalPages) + totalPages) % totalPages);
+  };
 
   const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
   const [likePendingMap, setLikePendingMap] = useState<Record<string, boolean>>({});
@@ -379,8 +504,28 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
 
   return (
     <>
-    <div className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white dark:border-[#2a3442] dark:bg-[#111824]">
-      {posts.map((post, index) => {
+    <div
+      ref={containerRef}
+      className="overflow-hidden rounded-2xl border border-[#e5e7eb] bg-white dark:border-[#2a3442] dark:bg-[#111824]"
+      role="group"
+      aria-label="社区动态"
+      aria-roledescription="轮播"
+      onPointerEnter={(event) => {
+        // 触屏点击会合成 mouseenter 且往往没有 mouseleave；只有真鼠标悬停才暂停。
+        if (event.pointerType === 'mouse') setHoverPaused(true);
+      }}
+      onPointerLeave={(event) => {
+        if (event.pointerType === 'mouse') setHoverPaused(false);
+      }}
+      onFocusCapture={() => setFocusPaused(true)}
+      onBlurCapture={(event) => {
+        // 容器内焦点转移不算离开，只有焦点真正出了容器才恢复轮转。
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setFocusPaused(false);
+        }
+      }}
+    >
+      {windowPosts.map((post, index) => {
         const postId = post._id || `dynamic-${index}`;
         const images = postImagesMap[postId] || [];
         const cover = images[0] || extractFirstImage(post);
@@ -406,42 +551,24 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
           <article
             key={postId}
             className={cn(
-              'px-4 py-4 transition-colors hover:bg-[#fafbfd] dark:hover:bg-[#162132] sm:px-5 sm:py-5',
-              index !== posts.length - 1 && 'border-b border-[#eef1f4] dark:border-[#223043]',
+              'px-3 py-4 transition-colors hover:bg-[#fafbfd] dark:hover:bg-[#162132] sm:px-5 sm:py-5',
+              index !== windowPosts.length - 1 && 'border-b border-[#eef1f4] dark:border-[#223043]',
             )}
           >
-            <div className="mb-3.5 flex items-start justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full border border-[#eff2f5] dark:border-[#2a3442]">
-                  <Image
-                    src={post.author_avatar || '/favicon.ico'}
-                    alt={post.author_name || '用户'}
-                    fill
-                    className="object-cover"
-                    sizes="40px"
-                  />
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-[14px] font-semibold text-[#1f2329] dark:text-[#edf2fb]">{post.author_name || '匿名用户'}</p>
-                  <p className="mt-0.5 text-[12px] text-[#98a2b3] dark:text-[#7f8da3]">{formatRelativeTime(post.last_commented_at || post.publish_at)}</p>
-                </div>
+            <div className="mb-2.5 flex min-w-0 items-center gap-2.5">
+              <AuthorAvatar src={post.author_avatar} name={post.author_name} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[14px] font-semibold text-[#1f2329] dark:text-[#edf2fb]">{post.author_name || '匿名用户'}</p>
+                <p className="mt-0.5 text-[12px] text-[#98a2b3] dark:text-[#7f8da3]">{formatPostTime(post.last_commented_at || post.publish_at)}</p>
               </div>
-              <button
-                type="button"
-                className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[#b4bcc8] transition-colors hover:bg-[#f3f4f7] hover:text-[#8a93a0] dark:text-[#7f8da3] dark:hover:bg-[#223043] dark:hover:text-[#a9b7ca]"
-                aria-label="更多操作"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-                <span className="sr-only">更多操作</span>
-              </button>
             </div>
 
             <div className="relative">
-              {hasMeaningfulTitle ? <p className="line-clamp-2 text-[16px] font-semibold leading-[1.45] text-[#2a3038] dark:text-[#edf2fb]">{titleText}</p> : null}
+              {hasMeaningfulTitle ? <p className="line-clamp-1 text-[16px] font-semibold leading-[1.45] text-[#2a3038] dark:text-[#edf2fb] sm:line-clamp-2">{titleText}</p> : null}
               <p
                 className={cn(
-                  'text-[14px] leading-[1.62] text-[#5a6270] dark:text-[#9ca6b8] sm:text-[15px] sm:line-clamp-8',
-                  hasMeaningfulTitle ? 'mt-1 line-clamp-6' : 'line-clamp-8',
+                  'line-clamp-3 text-[14px] leading-[1.62] text-[#5a6270] dark:text-[#9ca6b8] sm:text-[15px]',
+                  hasMeaningfulTitle ? 'mt-1 sm:line-clamp-6' : 'sm:line-clamp-8',
                 )}
               >
                 {previewText}
@@ -583,7 +710,7 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
             )}
 
             {appName && appHref ? (
-              <div className="relative mt-3 mr-auto inline-flex max-w-[420px] items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#f7f9fc] dark:hover:bg-[#223043]">
+              <div className="relative mt-3 mr-auto flex max-w-[420px] items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[#f7f9fc] dark:hover:bg-[#223043]">
                 <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-md">
                   {post.app_info?.icon ? (
                     <Image
@@ -612,11 +739,11 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
               </div>
             ) : null}
 
-            <div className="mt-3 flex items-center justify-end gap-5 border-t border-[#f3f4f6] pt-2 text-[12px] font-normal text-[#98a2b3] dark:border-[#223043] dark:text-[#7f8da3]">
+            <div className="mt-3 flex items-center justify-end gap-1 border-t border-[#f3f4f6] text-[12px] font-normal text-[#98a2b3] dark:border-[#223043] dark:text-[#7f8da3]">
               <button
                 type="button"
                 className={cn(
-                  'inline-flex items-center gap-1 transition-colors hover:text-[#6b7789] dark:hover:text-[#a9b7ca] disabled:cursor-not-allowed disabled:opacity-60',
+                  'inline-flex min-h-10 min-w-10 items-center justify-center gap-1 rounded-md px-1.5 transition-colors hover:text-[#6b7789] dark:hover:text-[#a9b7ca] disabled:cursor-not-allowed disabled:opacity-60',
                   liked && 'text-[#64748b] dark:text-[#7fc1ff]',
                 )}
                 onClick={() => handleLike(postId)}
@@ -630,14 +757,14 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
               <Link
                 href={`/community/post/${postId}#comments`}
                 prefetch={false}
-                className="inline-flex items-center gap-1 transition-colors hover:text-[#6b7789] dark:hover:text-[#a9b7ca]"
+                className="inline-flex min-h-10 min-w-10 items-center justify-center gap-1 rounded-md px-1.5 transition-colors hover:text-[#6b7789] dark:hover:text-[#a9b7ca]"
                 aria-label={`查看${actionSubject}的评论`}
               >
                 <MessageCircle className="h-4 w-4" />
                 <span className="sr-only">评论</span>
                 <span>{formatCompactCount(Number(post.comment_count || 0))}</span>
               </Link>
-              <span className="inline-flex items-center gap-1" aria-label="浏览量">
+              <span className="inline-flex min-h-10 min-w-10 items-center justify-center gap-1 px-1.5" aria-label="浏览量">
                 <Eye className="h-4 w-4" />
                 <span>{formatCompactCount(viewCount)}</span>
               </span>
@@ -645,6 +772,39 @@ export default function HomeDynamicPosts({ posts }: HomeDynamicPostsProps) {
           </article>
         );
       })}
+
+      {totalPages > 1 ? (
+        <div className="flex items-center justify-between gap-2 border-t border-[#eef1f4] bg-[#fafbfd] px-2 py-1 dark:border-[#223043] dark:bg-[#0f1723]">
+          <p
+            className="pl-2 text-[12px] tabular-nums text-[#98a2b3] dark:text-[#7f8da3]"
+            aria-atomic="true"
+            aria-live={announcePage ? 'polite' : 'off'}
+          >
+            <span className="font-semibold text-[#5a6270] dark:text-[#cbd5e1]">
+              {rangeStart}–{rangeEnd}
+            </span>
+            <span> / {totalPosts}</span>
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => goToPage(activePage - 1)}
+              aria-label="上一页动态"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-[#8a93a0] transition-colors hover:bg-white hover:text-[#005e9f] dark:text-[#7f8da3] dark:hover:bg-[#223043] dark:hover:text-[#7fc1ff]"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => goToPage(activePage + 1)}
+              aria-label="下一页动态"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-[#8a93a0] transition-colors hover:bg-white hover:text-[#005e9f] dark:text-[#7f8da3] dark:hover:bg-[#223043] dark:hover:text-[#7fc1ff]"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
     {previewState && previewImages.length > 0 && previewCurrent ? (
       <div

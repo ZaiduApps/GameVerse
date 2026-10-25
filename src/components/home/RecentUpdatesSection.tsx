@@ -11,6 +11,10 @@ import type { ApiGame } from '@/types';
 const PAGE_SIZE_DESKTOP = 6;
 const PAGE_SIZE_MOBILE = 4;
 
+/** 行内排版：行与行之间只留 1px 描边，不出现卡片分隔感。 */
+const ROW_DIVIDER_CLASSES =
+  '[&>*]:border-t [&>*]:border-border/60 [&>*:first-child]:border-t-0';
+
 function formatDate(dateStr?: string): string {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -84,6 +88,10 @@ export default function RecentUpdatesSection({
     const start = mobilePage * PAGE_SIZE_MOBILE;
     return games.slice(start, start + PAGE_SIZE_MOBILE);
   }, [mobilePage, games]);
+  const initialPrefetchHrefs = useMemo(
+    () => new Set(games.slice(0, PAGE_SIZE_MOBILE).map(getGameHref)),
+    [games],
+  );
 
   const toPrevPage = () => {
     setDesktopPage((prev) => (prev - 1 + desktopTotalPages) % desktopTotalPages);
@@ -114,10 +122,10 @@ export default function RecentUpdatesSection({
       return (
         <article
           key={game._id}
-          className="group relative flex min-h-[94px] items-center gap-3 rounded-2xl bg-white px-3 py-2.5 shadow-sm transition-colors hover:shadow-md dark:bg-[#0f1723]"
+          className="group relative flex items-center gap-3 rounded-xl px-1.5 py-2.5 transition-colors hover:bg-white/70 dark:hover:bg-[#162132]"
         >
-          <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-[#dadddf] dark:bg-[#1a2433]">
-            <Image src={game.icon || fallbackImage} alt={resolveGameName(game)} fill className="object-cover" sizes="56px" />
+          <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-xl bg-[#dadddf] dark:bg-[#1a2433]">
+            <Image src={game.icon || fallbackImage} alt={resolveGameName(game)} fill className="object-cover" sizes="48px" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
@@ -150,8 +158,8 @@ export default function RecentUpdatesSection({
           </span>
           <Link
             href={getGameHref(game)}
-            prefetch={false}
-            className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+            {...(!initialPrefetchHrefs.has(getGameHref(game)) ? { prefetch: false } : {})}
+            className="absolute inset-0 z-30 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
             aria-label={`查看${resolveGameName(game)}更新详情`}
           >
             <span className="sr-only">查看{resolveGameName(game)}更新详情</span>
@@ -198,8 +206,12 @@ export default function RecentUpdatesSection({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:hidden">{renderCards(mobileVisible)}</div>
-      <div className="hidden grid-cols-1 gap-3 sm:grid lg:grid-cols-2">{renderCards(desktopVisible)}</div>
+      <div className={`grid grid-cols-1 gap-y-1 sm:hidden ${ROW_DIVIDER_CLASSES}`}>{renderCards(mobileVisible)}</div>
+      <div
+        className={`hidden grid-cols-1 gap-x-4 gap-y-1 sm:grid sm:grid-cols-2 lg:grid-cols-3 ${ROW_DIVIDER_CLASSES} sm:[&>*:nth-child(2)]:border-t-0 lg:[&>*:nth-child(3)]:border-t-0`}
+      >
+        {renderCards(desktopVisible)}
+      </div>
     </section>
   );
 }

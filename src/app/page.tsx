@@ -15,13 +15,16 @@ import {
 } from 'lucide-react';
 
 import GameAnnouncements from '@/components/game-announcements';
+import HeroScrollSection from '@/components/home/HeroScrollSection';
 import HomeDynamicPosts from '@/components/home/HomeDynamicPosts';
 import HomeHeroCarousel from '@/components/home/HomeHeroCarousel';
 import HomeNewsListReplica from '@/components/home/HomeNewsListReplica';
 import HomeQuickSearchCard from '@/components/home/HomeQuickSearchCard';
+import PreregFollowButton from '@/components/home/PreregFollowButton.client';
 import RecentUpdatesSection from '@/components/home/RecentUpdatesSection';
 import { getAlbumHref } from '@/lib/albums';
 import { getClientLandingAppData, type ClientLandingAppData } from '@/lib/client-landing';
+import { capByAuthor, getHomeLatestCommunityPosts } from '@/lib/home-community-posts';
 import { resolveGameName } from '@/lib/game-display-name';
 import type { Announcement, ApiAlbum, ApiArticle, ApiBanner, ApiDynamicPost, ApiGame, HomeData } from '@/types';
 import { trackedApiFetch } from '@/lib/api';
@@ -30,8 +33,7 @@ import { absoluteUrl, getSiteShareImageUrl } from '@/lib/seo';
 
 const FALLBACK_GAME_IMAGE = '/favicon.ico';
 const FALLBACK_AVATAR = '/favicon.ico';
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 60;
 
 function toNumber(value: string | undefined, fallback: number): number {
   const n = Number(value);
@@ -113,23 +115,57 @@ function normalizeAlbumGames(album: ApiAlbum | null | undefined): ApiGame[] {
   return album.games.filter((game): game is ApiGame => Boolean(game && game._id));
 }
 
-function takeAlbum(albums: ApiAlbum[], matcher: (album: ApiAlbum) => boolean): ApiAlbum | null {
-  const index = albums.findIndex(matcher);
-  if (index < 0) return null;
-  return albums.splice(index, 1)[0];
+type AlbumSectionKind = 'showcase' | 'recent' | 'prereg' | 'ranking' | 'tools' | 'hero' | 'marquee' | 'generic';
+
+interface AlbumSection {
+  kind: AlbumSectionKind;
+  album: ApiAlbum;
+  games: ApiGame[];
 }
 
-function matchByTitle(album: ApiAlbum, keywords: string[]): boolean {
-  const title = (album.title || '').replace(/\s+/g, '');
-  return keywords.some((keyword) => title.includes(keyword));
-}
+/**
+ * 首页专题区完全跟随接口 albums 顺序（即 admin 后台的 sort 顺序），
+ * 只按 album.style 决定用哪套渲染器，不再按标题关键词抢占槽位。
+ */
+function buildAlbumSections(albums: ApiAlbum[]): AlbumSection[] {
+  let gridSlot = 0;
+  const sections: AlbumSection[] = [];
 
-function clampText(value: string | null | undefined, maxChars: number): string {
-  const normalized = String(value || '').trim();
-  if (!normalized) return '';
-  const chars = Array.from(normalized);
-  if (chars.length <= maxChars) return normalized;
-  return `${chars.slice(0, maxChars).join('')}...`;
+  for (const album of albums) {
+    const games = normalizeAlbumGames(album);
+    if (games.length === 0) continue;
+
+    const style = String(album.style || '');
+    if (style === 'Box') {
+      sections.push({ kind: 'ranking', album, games });
+      continue;
+    }
+    if (style === 'List') {
+      sections.push({ kind: 'tools', album, games });
+      continue;
+    }
+    if (style === 'Pre') {
+      sections.push({ kind: 'prereg', album, games });
+      continue;
+    }
+    if (style === 'Grid') {
+      // 第一个 Grid 用作「重磅精选」网格，其余 Grid 用最近更新渲染器。
+      sections.push({ kind: gridSlot === 0 ? 'showcase' : 'recent', album, games });
+      gridSlot += 1;
+      continue;
+    }
+    if (style === 'Hero') {
+      sections.push({ kind: 'hero', album, games });
+      continue;
+    }
+    if (style === 'Marquee') {
+      sections.push({ kind: 'marquee', album, games });
+      continue;
+    }
+    sections.push({ kind: 'generic', album, games });
+  }
+
+  return sections;
 }
 
 function formatDeviceLabel(value: string | null | undefined): string {
@@ -165,7 +201,8 @@ async function fetchHomeDataWithRetry(
     const startedAt = Date.now();
     try {
       const res = await trackedApiFetch(requestPath, {
-        cache: 'no-store',
+        cache: 'force-cache',
+        next: { revalidate: 60 },
         signal: AbortSignal.timeout(timeoutMs),
       });
       const durationMs = Date.now() - startedAt;
@@ -227,6 +264,10 @@ async function fetchHomeDataWithRetry(
         errorName,
         errorMessage,
       });
+      // 网络层抛错后不再重试同一个 URL：Next 15.0.7 在 origin fetch reject 时不会释放该
+      // cacheKey 的 fetch 缓存锁，同 URL 的第二次 fetch 会永久等在锁上，整个渲染挂死。
+      // 5xx / 脏数据（fetch 已 resolve）仍然按上面的 continue 重试。
+      return null;
     }
   }
 
@@ -255,15 +296,21 @@ async function getHomeAndNewsData(): Promise<CombinedHomeData> {
     if (region) params.set('region', region);
     if (clientVersion) params.set('client_version', clientVersion);
 
-    const [homeData, clientLanding] = await Promise.all([
+    const [homeData, clientLanding, latestCommunityPosts] = await Promise.all([
       fetchHomeDataWithRetry(params.toString(), {
         timeoutMs: 12000,
         retries: 1,
       }),
-      getClientLandingAppData('no-store').catch(() => null),
+      getClientLandingAppData(60).catch(() => null),
+      getHomeLatestCommunityPosts(20).catch(() => [] as ApiDynamicPost[]),
     ]);
     const safeArticles = Array.isArray(homeData?.articles) ? homeData.articles : [];
-    const safeDynamicPosts = Array.isArray(homeData?.dynamic_posts) ? homeData.dynamic_posts : [];
+    // 首页动态优先用 /content/feed 的真正最新 20 条；该请求失败时回退 /home 的抽样结果。
+    const fallbackDynamicPosts = Array.isArray(homeData?.dynamic_posts) ? homeData.dynamic_posts : [];
+    const safeDynamicPosts =
+      Array.isArray(latestCommunityPosts) && latestCommunityPosts.length > 0
+        ? latestCommunityPosts
+        : fallbackDynamicPosts;
 
     return {
       homeData,
@@ -361,39 +408,30 @@ export default async function HomePage() {
   const safeNewsItems = (Array.isArray(newsData) ? newsData : []).filter(
     (item): item is ApiArticle => Boolean(item && (item._id || item.gid)),
   );
-  const safeDynamicPosts = (Array.isArray(dynamicPosts) ? dynamicPosts : [])
-    .filter(
-      (post): post is ApiDynamicPost => Boolean(post && post._id && isSeoSafeDynamicPost(post)),
-    )
-    .sort((a, b) => {
-      const timeA = Date.parse(String(a.publish_at || a.last_commented_at || ''));
-      const timeB = Date.parse(String(b.publish_at || b.last_commented_at || ''));
-      const valueA = Number.isFinite(timeA) ? timeA : -1;
-      const valueB = Number.isFinite(timeB) ? timeB : -1;
-      return valueB - valueA;
-    });
+  // 社区位只出 6 条，同作者最多 2 条（不足 6 条按原顺序回填）。
+  // 去重键必须是 author_name：线上 zaidu 与「聪明牛🐮」共用同一个 author_id。
+  const safeDynamicPosts = capByAuthor(
+    (Array.isArray(dynamicPosts) ? dynamicPosts : [])
+      .filter(
+        (post): post is ApiDynamicPost => Boolean(post && post._id && isSeoSafeDynamicPost(post)),
+      )
+      .sort((a, b) => {
+        const timeA = Date.parse(String(a.publish_at || a.last_commented_at || ''));
+        const timeB = Date.parse(String(b.publish_at || b.last_commented_at || ''));
+        const valueA = Number.isFinite(timeA) ? timeA : -1;
+        const valueB = Number.isFinite(timeB) ? timeB : -1;
+        return valueB - valueA;
+      }),
+    2,
+    6,
+    ['author_name'],
+  );
 
-  const heavyweightAlbum =
-    takeAlbum(allAlbums, (album) => matchByTitle(album, ['重磅推荐'])) ??
-    takeAlbum(allAlbums, (album) => album.style === 'Grid');
-  const rankingAlbum =
-    takeAlbum(allAlbums, (album) => matchByTitle(album, ['热门游戏', '热门排行', '排行榜'])) ??
-    takeAlbum(allAlbums, (album) => album.style === 'Box');
-  const recentAlbum =
-    takeAlbum(allAlbums, (album) => matchByTitle(album, ['最近更新', '更新'])) ??
-    takeAlbum(allAlbums, (album) => album.style === 'Grid');
-  const preregAlbum =
-    takeAlbum(allAlbums, (album) => matchByTitle(album, ['事前登录', '预约'])) ??
-    takeAlbum(allAlbums, (album) => album.style === 'Pre');
-  const toolsAlbum =
-    takeAlbum(allAlbums, (album) => matchByTitle(album, ['效率工具', '工具'])) ??
-    takeAlbum(allAlbums, (album) => album.style === 'List');
-
-  const heavyweightGames = normalizeAlbumGames(heavyweightAlbum);
-  const rankingGames = normalizeAlbumGames(rankingAlbum);
-  const recentGames = normalizeAlbumGames(recentAlbum);
-  const preregGames = normalizeAlbumGames(preregAlbum);
-  const toolGames = normalizeAlbumGames(toolsAlbum);
+  const albumSections = buildAlbumSections(allAlbums);
+  // 原版布局：热门游戏榜 / 效率工具固定在右侧 aside（榜单 → 工具），主列只渲染其余专辑。
+  const rankingSections = albumSections.filter(({ kind }) => kind === 'ranking');
+  const toolsSections = albumSections.filter(({ kind }) => kind === 'tools');
+  const mainAlbumSections = albumSections.filter(({ kind }) => kind !== 'ranking' && kind !== 'tools');
 
   const promoAnnouncement: Announcement | null =
     homeData.announcements?.popup?.[0] || homeData.announcements?.normal?.[0] || homeData.announcements?.marquee?.[0] || null;
@@ -549,174 +587,251 @@ export default async function HomePage() {
 
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-12 xl:gap-10">
         <div className="space-y-8 xl:col-span-8">
-          {heavyweightAlbum && heavyweightGames.length > 0 && (
-            <section>
-              <div className="mb-5 flex items-end justify-between">
-                <div>
-                  <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
-                    <Star className="h-5 w-5 fill-[#b71211] text-[#b71211]" />
-                    {heavyweightAlbum.title || '重磅推荐'}
-                  </h3>
-                  <p className="mt-1 text-sm font-medium text-[#595c5d] dark:text-[#9ca6b8]">编辑精选必玩佳作</p>
-                </div>
-                <Link href={getAlbumHref(heavyweightAlbum)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
-                  查看全部
-                  <span className="sr-only">{heavyweightAlbum.title || '重磅推荐'}</span>
-                </Link>
-              </div>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-3.5">
-                {heavyweightGames.map((game) => (
-                  <article
-                    key={game._id}
-                    className="group relative flex h-full w-full flex-col rounded-2xl border border-border/60 bg-white p-2 shadow-sm transition-shadow hover:shadow-md dark:bg-[#111824]"
-                  >
-                    {typeof game.star === 'number' && game.star > 0 && (
-                      <div className="absolute right-2 top-2 z-20 inline-flex items-center gap-1 rounded-full bg-black/65 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur">
-                        <Star className="h-3 w-3 fill-[#fdc003] text-[#fdc003]" />
-                        {game.star.toFixed(1)}
-                      </div>
-                    )}
-                    <div className="relative mb-2 h-32 w-full overflow-hidden rounded-xl bg-[#e6e8ea] dark:bg-[#1a2433]">
-                      <Image
-                        src={game.header_image || game.icon || FALLBACK_GAME_IMAGE}
-                        alt={resolveGameName(game)}
-                        fill
-                        className="rounded-xl object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                        sizes="(max-width: 767px) 50vw, 25vw"
-                      />
+          {mainAlbumSections.map(({ kind, album, games }) => {
+            if (kind === 'recent') {
+              return (
+                <RecentUpdatesSection
+                  key={album._id}
+                  title={album.title || '最近更新'}
+                  games={games}
+                  fallbackImage={FALLBACK_GAME_IMAGE}
+                  viewAllHref={getAlbumHref(album)}
+                />
+              );
+            }
+
+            if (kind === 'showcase') {
+              return (
+                <section key={album._id}>
+                  <div className="mb-5 flex items-end justify-between">
+                    <div>
+                      <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
+                        <Star className="h-5 w-5 fill-[#b71211] text-[#b71211]" />
+                        {album.title || '重磅推荐'}
+                      </h3>
+                      <p className="mt-1 text-sm font-medium text-[#595c5d] dark:text-[#9ca6b8]">编辑精选必玩佳作</p>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <h4 className="min-w-0 flex-1 truncate text-sm font-semibold">{resolveGameName(game)}</h4>
-                      {game.metadata?.region && (
-                        <span className="inline-flex rounded-md bg-[#eff1f2] px-1 py-0.5 text-[10px] font-bold text-[#595c5d] dark:bg-[#223043] dark:text-[#9ca6b8]">
-                          {game.metadata.region}
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 line-clamp-1 text-[11px] text-[#595c5d] dark:text-[#9ca6b8]">{game.summary || game.tags?.[0] || '精品推荐'}</p>
-                    <span className="mt-1.5 inline-flex w-full items-center justify-center rounded-full bg-[#b3d4ff] py-1 text-[11px] font-semibold text-[#004a7e] transition-colors group-hover:bg-[#005e9f] group-hover:text-white">
-                      下载
-                    </span>
-                    <Link
-                      href={getGameHref(game)}
-                      prefetch={false}
-                      className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
-                      aria-label={`查看${resolveGameName(game)}详情`}
-                    >
-                      <span className="sr-only">查看{resolveGameName(game)}详情</span>
+                    <Link href={getAlbumHref(album)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
+                      查看全部
+                      <span className="sr-only">{album.title || '重磅推荐'}</span>
                     </Link>
-                  </article>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {recentAlbum && recentGames.length > 0 && (
-            <RecentUpdatesSection
-              title={recentAlbum.title || '最近更新'}
-              games={recentGames}
-              fallbackImage={FALLBACK_GAME_IMAGE}
-              viewAllHref={getAlbumHref(recentAlbum)}
-            />
-          )}
-
-          {preregAlbum && preregGames.length > 0 && (
-            <section>
-              <div className="mb-5 flex items-end justify-between gap-3">
-                <h3 className="text-xl font-semibold tracking-tight">{preregAlbum.title || '事前登录'}</h3>
-                <Link href={getAlbumHref(preregAlbum)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
-                  查看全部
-                  <span className="sr-only">{preregAlbum.title || '事前登录'}</span>
-                </Link>
-              </div>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {preregGames.slice(0, 4).map((game, index) => (
-                  (() => {
-                    const region = String(game.metadata?.region || '').trim();
-                    const score = typeof game.star === 'number' ? game.star : Number(game.star || 0);
-                    const hasScore = Number.isFinite(score) && score > 0;
-                    const deviceLabels = Array.from(
-                      new Set((Array.isArray(game.metadata?.deviceList) ? game.metadata.deviceList : []).map((item) => formatDeviceLabel(item)).filter(Boolean)),
-                    ).slice(0, 2);
-                    const hasMetrics = hasScore || deviceLabels.length > 0;
-
-                    return (
-                  <article
-                    key={game._id}
-                    className="group relative flex h-full flex-col justify-between gap-4 rounded-2xl border border-border/60 bg-[#eff1f2] p-4 transition-colors hover:bg-[#e6e8ea] dark:bg-[#162132] dark:hover:bg-[#1c2b40] sm:h-full sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl bg-[#dadddf] dark:bg-[#223043]">
-                        <Image
-                          src={game.icon || FALLBACK_GAME_IMAGE}
-                          alt={resolveGameName(game)}
-                          fill
-                          className="object-cover"
-                          sizes="80px"
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="min-w-0 flex-1 truncate text-lg font-semibold" title={resolveGameName(game)}>{clampText(resolveGameName(game), 16)}</h4>
-                          {region && (
-                            <span className="inline-flex shrink-0 rounded-md bg-[#dadddf] px-1.5 py-0.5 text-[10px] font-bold text-[#595c5d] dark:bg-[#2a3b52] dark:text-[#9ca6b8]">
-                              {region}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-3.5">
+                    {games.map((game) => (
+                      <article
+                        key={game._id}
+                        className="group relative flex h-full w-full flex-col rounded-2xl border border-border/60 bg-white p-2 shadow-sm transition-shadow hover:shadow-md dark:bg-[#111824]"
+                      >
+                        {typeof game.star === 'number' && game.star > 0 && (
+                          <div className="absolute right-2 top-2 z-20 inline-flex items-center gap-1 rounded-full bg-black/65 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur">
+                            <Star className="h-3 w-3 fill-[#fdc003] text-[#fdc003]" />
+                            {game.star.toFixed(1)}
+                          </div>
+                        )}
+                        <div className="relative mb-2 h-32 w-full overflow-hidden rounded-xl bg-[#e6e8ea] dark:bg-[#1a2433]">
+                          <Image
+                            src={game.header_image || game.icon || FALLBACK_GAME_IMAGE}
+                            alt={resolveGameName(game)}
+                            fill
+                            className="rounded-xl object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                            sizes="(max-width: 767px) 50vw, 25vw"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="min-w-0 flex-1 truncate text-sm font-semibold">{resolveGameName(game)}</h4>
+                          {game.metadata?.region && (
+                            <span className="inline-flex rounded-md bg-[#eff1f2] px-1 py-0.5 text-[10px] font-bold text-[#595c5d] dark:bg-[#223043] dark:text-[#9ca6b8]">
+                              {game.metadata.region}
                             </span>
                           )}
                         </div>
-                        <p className="mt-1 line-clamp-1 text-sm font-medium text-[#595c5d] dark:text-[#9ca6b8]">{game.summary || '预约开启中'}</p>
-                        {hasMetrics && (
-                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-[#595c5d] dark:text-[#9ca6b8]">
-                            {hasScore && (
-                              <span className="inline-flex items-center gap-1">
-                                <Star className="h-3.5 w-3.5 fill-[#fdc003] text-[#fdc003]" />
-                                {score.toFixed(1)}
-                              </span>
-                            )}
-                            {deviceLabels.length > 0 && (
-                              <span className="inline-flex items-center gap-1">
-                                <Smartphone className="h-3.5 w-3.5 text-tone-blue" />
-                                {deviceLabels.join(' / ')}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {(game.tags || []).length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {(game.tags || []).slice(0, 3).map((tag) => (
-                            <span key={`${game._id}-${tag}`} className="rounded-md bg-[#dadddf] px-2 py-1 text-[10px] font-bold text-[#595c5d] dark:bg-[#2a3b52] dark:text-[#9ca6b8]">
-                              {tag}
-                            </span>
-                          ))}
-                          </div>
-                        )}
-                      </div>
+                        <p className="mt-1 line-clamp-1 text-[11px] text-[#595c5d] dark:text-[#9ca6b8]">{game.summary || game.tags?.[0] || '精品推荐'}</p>
+                        <span className="mt-1.5 inline-flex w-full items-center justify-center rounded-full bg-[#b3d4ff] py-1 text-[11px] font-semibold text-[#004a7e] transition-colors group-hover:bg-[#005e9f] group-hover:text-white">
+                          下载
+                        </span>
+                        <Link
+                          href={getGameHref(game)}
+                          prefetch={false}
+                          className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                          aria-label={`查看${resolveGameName(game)}详情`}
+                        >
+                          <span className="sr-only">查看{resolveGameName(game)}详情</span>
+                        </Link>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              );
+            }
+
+            if (kind === 'prereg') {
+              // 信息列表：48px 图标 + 名字/评分/简介三行 + 关注胶囊，行间只用分隔线，不用卡片。
+              return (
+                <section key={album._id}>
+                  <div className="mb-4 flex items-end justify-between gap-3">
+                    <div>
+                      <h3 className="text-xl font-semibold tracking-tight sm:text-2xl">{album.title || '事前登录'}</h3>
+                      {album.subtitle && (
+                        <p className="mt-1 text-sm text-[#595c5d] dark:text-[#9ca6b8]">{album.subtitle}</p>
+                      )}
                     </div>
-                    <span className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[#b71211] px-6 py-2 text-sm font-semibold leading-none text-white transition-opacity group-hover:opacity-90">
-                      预约
-                    </span>
-                    <Link
-                      href={getGameHref(game)}
-                      prefetch={false}
-                      className="absolute inset-0 z-30 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
-                      aria-label={`查看${resolveGameName(game)}预约详情`}
-                    >
-                      <span className="sr-only">查看{resolveGameName(game)}预约详情</span>
+                    <Link href={getAlbumHref(album)} prefetch={false} className="shrink-0 text-sm font-bold text-[#005e9f] hover:underline">
+                      查看全部
+                      <span className="sr-only">{album.title || '事前登录'}</span>
                     </Link>
-                  </article>
-                    );
-                  })()
-                ))}
-              </div>
-            </section>
-          )}
+                  </div>
+                  <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {games.slice(0, 24).map((game) => {
+                      const score = typeof game.star === 'number' ? game.star : Number(game.star || 0);
+                      const hasScore = Number.isFinite(score) && score > 0;
+                      const deviceLabel = Array.from(
+                        new Set(
+                          (Array.isArray(game.metadata?.deviceList) ? game.metadata.deviceList : [])
+                            .map((item) => formatDeviceLabel(item))
+                            .filter(Boolean),
+                        ),
+                      )
+                        .slice(0, 2)
+                        .join(' / ');
+                      const gameName = resolveGameName(game);
 
-          {allAlbums.map((album) => {
-            const extraGames = normalizeAlbumGames(album);
-            if (extraGames.length === 0) return null;
+                      return (
+                        <article
+                          key={game._id}
+                          className="group relative flex items-center gap-3 border-b border-border/60 py-2.5"
+                        >
+                          <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-xl bg-[#eff1f2] dark:bg-[#223043]">
+                            <Image
+                              src={game.icon || FALLBACK_GAME_IMAGE}
+                              alt={gameName}
+                              fill
+                              className="object-cover"
+                              sizes="48px"
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p
+                              className="truncate text-sm font-semibold transition-colors group-hover:text-[#005e9f]"
+                              title={gameName}
+                            >
+                              {gameName}
+                            </p>
+                            <p className="mt-0.5 flex items-center gap-1 truncate text-[11px] font-semibold text-[#595c5d] dark:text-[#9ca6b8]">
+                              {hasScore ? (
+                                <>
+                                  <Star className="h-3 w-3 shrink-0 fill-[#fdc003] text-[#fdc003]" />
+                                  {score.toFixed(1)}
+                                </>
+                              ) : deviceLabel ? (
+                                <>
+                                  <Smartphone className="h-3 w-3 shrink-0 text-tone-blue" />
+                                  {deviceLabel}
+                                </>
+                              ) : (
+                                <span>{game.tags?.[0] || '预约中'}</span>
+                              )}
+                            </p>
+                            <p className="mt-0.5 truncate text-[11px] text-[#8a8d8f] dark:text-[#7c8798]">
+                              {game.summary || '上线前预约，开服第一时间收到提醒'}
+                            </p>
+                          </div>
+                          <PreregFollowButton appId={game._id} gameName={gameName} />
+                          <Link
+                            href={getGameHref(game)}
+                            prefetch={false}
+                            className="absolute inset-0 z-30 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                            aria-label={`查看${gameName}预约详情`}
+                          >
+                            <span className="sr-only">查看{gameName}预约详情</span>
+                          </Link>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            }
 
+            if (kind === 'hero') {
+              // 宽屏三张 21:9 大卡横滑（客户端组件负责左右按钮与原生横滑）。
+              return (
+                <HeroScrollSection
+                  key={album._id}
+                  title={album.title || '今日推荐'}
+                  games={games}
+                  fallbackImage={FALLBACK_GAME_IMAGE}
+                  viewAllHref={getAlbumHref(album)}
+                />
+              );
+            }
+
+            if (kind === 'marquee') {
+              // 横滑小条：48px 图标 + 名字/评分两行，无卡片底板，原生横滑。
+              return (
+                <section key={album._id}>
+                  <div className="mb-3 flex items-end justify-between gap-3">
+                    <h3 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+                      <Flame className="h-4 w-4 text-tone-amber" />
+                      {album.title || '热门推荐'}
+                    </h3>
+                    <Link href={getAlbumHref(album)} prefetch={false} className="shrink-0 text-sm font-bold text-[#005e9f] hover:underline">
+                      查看全部
+                      <span className="sr-only">{album.title || '热门推荐'}</span>
+                    </Link>
+                  </div>
+                  <div className="flex gap-4 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [scrollbar-width:none] [-ms-overflow-style:none]">
+                    {games.slice(0, 12).map((game) => {
+                      const score = typeof game.star === 'number' ? game.star : Number(game.star || 0);
+                      const hasScore = Number.isFinite(score) && score > 0;
+                      const gameName = resolveGameName(game);
+                      const metaText = hasScore ? `${score.toFixed(1)}分` : '新游';
+                      const tag = String(game.tags?.[0] || '').trim();
+
+                      return (
+                        <article
+                          key={game._id}
+                          className="group relative flex w-auto flex-shrink-0 items-center gap-2.5"
+                        >
+                          <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-xl bg-[#eff1f2] dark:bg-[#223043]">
+                            <Image
+                              src={game.icon || FALLBACK_GAME_IMAGE}
+                              alt={gameName}
+                              fill
+                              className="object-cover"
+                              sizes="48px"
+                            />
+                          </div>
+                          <div className="min-w-0 max-w-[9rem]">
+                            <p
+                              className="truncate text-xs font-semibold transition-colors group-hover:text-[#005e9f]"
+                              title={gameName}
+                            >
+                              {gameName}
+                            </p>
+                            <p className="truncate text-[11px] text-[#595c5d] dark:text-[#9ca6b8]">
+                              {metaText}
+                              {tag ? ` · ${tag}` : ''}
+                            </p>
+                          </div>
+                          <Link
+                            href={getGameHref(game)}
+                            prefetch={false}
+                            className="absolute inset-0 z-30 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#005e9f]"
+                            aria-label={`查看${gameName}详情`}
+                          >
+                            <span className="sr-only">查看{gameName}详情</span>
+                          </Link>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            }
+
+            // 兜底：非 Grid/Box/Pre/List 的样式沿用通用专辑网格。
             return (
-              <section key={`extra-${album._id}`}>
+              <section key={album._id}>
                 <div className="mb-5 flex items-end justify-between">
                   <div>
                     <h3 className="text-xl font-semibold tracking-tight">{album.title || '推荐专辑'}</h3>
@@ -728,7 +843,7 @@ export default async function HomePage() {
                   </Link>
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {extraGames.slice(0, 6).map((game) => (
+                  {games.slice(0, 6).map((game) => (
                     <article
                       key={game._id}
                       className="relative rounded-2xl border border-border/60 bg-white p-3 shadow-sm transition-shadow hover:shadow-md dark:bg-[#111824]"
@@ -760,34 +875,36 @@ export default async function HomePage() {
           })}
 
           {safeDynamicPosts.length > 0 && (
-            <section className="rounded-2xl border border-border/70 bg-white p-4 shadow-sm sm:p-5">
+            <section className="rounded-2xl border border-border/70 bg-white p-3 shadow-sm sm:p-5">
               <div className="mb-4 flex items-end justify-between">
                 <div>
                   <h3 className="flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
                     <MessageCircle className="h-5 w-5 text-[#b71211]" />
                     社区动态
                   </h3>
-                  <p className="mt-1 text-sm font-medium text-[#595c5d]">来自次元住民的实时分享</p>
+                  <p className="mt-1 text-sm font-medium text-[#595c5d]">玩家最近分享的动态</p>
                 </div>
                 <Link href="/community" prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
                   去社区
                 </Link>
               </div>
-              <HomeDynamicPosts posts={safeDynamicPosts.slice(0, 8)} />
+              <HomeDynamicPosts posts={safeDynamicPosts} />
             </section>
           )}
-
         </div>
 
         <aside className="space-y-8 xl:col-span-4">
-          {rankingAlbum && rankingGames.length > 0 && (
-            <section className="rounded-2xl border border-border/70 bg-white p-5 shadow-sm dark:bg-[#111824] sm:p-6">
+          {rankingSections.map(({ album, games }) => (
+            <section
+              key={album._id}
+              className="rounded-2xl border border-border/70 bg-white p-5 shadow-sm dark:bg-[#111824] sm:p-6"
+            >
               <div className="mb-6 flex items-start justify-between gap-3">
-                <h3 className="text-xl font-semibold tracking-tight">{rankingAlbum.title || '热门游戏'}</h3>
+                <h3 className="text-xl font-semibold tracking-tight">{album.title || '热门游戏'}</h3>
                 <div className="flex flex-col items-end gap-2">
-                  <Link href={getAlbumHref(rankingAlbum)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
+                  <Link href={getAlbumHref(album)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
                     查看全部
-                    <span className="sr-only">{rankingAlbum.title || '热门游戏'}</span>
+                    <span className="sr-only">{album.title || '热门游戏'}</span>
                   </Link>
                   <div className="rounded-full bg-[#eff1f2] p-1 text-[10px] font-bold text-[#595c5d] dark:bg-[#223043] dark:text-[#9ca6b8]">
                     <span className="rounded-full bg-white px-3 py-1 dark:bg-[#111824]">总榜</span>
@@ -796,7 +913,7 @@ export default async function HomePage() {
                 </div>
               </div>
               <div className="space-y-4">
-                {rankingGames.slice(0, 8).map((game, index) => (
+                {games.slice(0, 8).map((game, index) => (
                   <article key={game._id} className="group relative flex items-center gap-3">
                     <span
                       className={`w-8 text-center text-xl font-semibold ${
@@ -840,22 +957,22 @@ export default async function HomePage() {
                 查看完整榜单
               </Link>
             </section>
-          )}
+          ))}
 
-          {toolsAlbum && toolGames.length > 0 && (
-            <section className="rounded-2xl border border-border/60 bg-[#e6e8ea] p-5 sm:p-6">
+          {toolsSections.map(({ album, games }) => (
+            <section key={album._id} className="rounded-2xl border border-border/60 bg-[#e6e8ea] p-5 sm:p-6">
               <div className="mb-5 flex items-end justify-between gap-3">
                 <h3 className="flex items-center gap-2 text-lg font-semibold">
                   <Wrench className="h-5 w-5 text-tone-blue" />
-                  {toolsAlbum.title || '效率工具'}
+                  {album.title || '效率工具'}
                 </h3>
-                <Link href={getAlbumHref(toolsAlbum)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
+                <Link href={getAlbumHref(album)} prefetch={false} className="text-sm font-bold text-[#005e9f] hover:underline">
                   查看全部
-                  <span className="sr-only">{toolsAlbum.title || '效率工具'}</span>
+                  <span className="sr-only">{album.title || '效率工具'}</span>
                 </Link>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                {toolGames.slice(0, 6).map((game) => (
+                {games.slice(0, 6).map((game) => (
                   <article
                     key={game._id}
                     className="relative rounded-2xl bg-white p-4 text-center shadow-sm transition-shadow hover:shadow-md"
@@ -882,7 +999,7 @@ export default async function HomePage() {
                 ))}
               </div>
             </section>
-          )}
+          ))}
 
           {shouldShowPromoCard ? (
           <section className="relative overflow-hidden rounded-2xl border border-border/70 bg-[#b71211] p-6 text-white">
@@ -921,8 +1038,8 @@ export default async function HomePage() {
 
       {safeNewsItems.length > 0 && (
         <HomeNewsListReplica
-          title="社区动态"
-          subtitle="发现次元世界的玩家讨论与一线反馈"
+          title="最新资讯"
+          subtitle="最新上架的资讯与公告"
           moreHref="/community"
           articles={safeNewsItems}
           fallbackImage={FALLBACK_GAME_IMAGE}

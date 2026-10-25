@@ -361,12 +361,8 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
   );
   const uniqueTopicNames = Array.from(new Set(topicNames));
 
-  // 发布时间语义：publish_at 是入库/审核通过时确定的发布时间（后端信息流也按它排序），
-  // 缺则退回文档创建时间；last_commented_at 是「最后回复时间」，只作最后兜底。
-  // 早前把它排在首位，导致有过回复的帖子把 datePublished / article:published_time
-  // 输出成最后回复时间，且与 dateModified 恰好相等。
   const rawTimestamp = normalizeRawTimestamp(
-    item.publish_at || item.created_at || item.last_commented_at,
+    item.last_commented_at || item.publish_at || item.created_at,
   );
   const updatedAt = normalizeRawTimestamp(item.updated_at);
   const authorProfileTarget = String(item.author_username || item.author_id || '').trim();
@@ -591,52 +587,11 @@ function resolveCommunityReadFetchOptions(
   };
 }
 
-export type CommunityApiResultKind =
-  | 'ok'
-  | 'notFound'
-  | 'httpError'
-  | 'timeout'
-  | 'invalidPayload'
-  | 'networkError';
-
-export interface CommunityApiResult<T> {
-  /** 后端业务数据；失败时为 null。 */
-  data: T | null;
-  /** 上游 HTTP 状态码；网络异常 / 超时拿不到响应时为 null。 */
-  status: number | null;
-  /** 失败分类：只有 notFound 才允许上层按「资源不存在」处理。 */
-  kind: CommunityApiResultKind;
-}
-
-/**
- * 取数失败（且不是「资源不存在」）时抛出，交给 error.tsx / 500。
- * 存在的意义是把「后端故障」与「资源不存在」彻底分开：后端抖动不能再被折叠成
- * notFound()，否则一次 5xx / 超时就会给爬虫一个带 noindex 的永久 404。
- */
-export class CommunityReadError extends Error {
-  readonly path: string;
-  readonly kind: CommunityApiResultKind;
-  readonly status: number | null;
-
-  constructor(path: string, result: CommunityApiResult<unknown>) {
-    super('[community-api] ' + path + ' 读取失败：kind=' + result.kind + ' status=' + String(result.status));
-    this.name = 'CommunityReadError';
-    this.path = path;
-    this.kind = result.kind;
-    this.status = result.status;
-  }
-}
-
-/**
- * 带状态的取数入口：请求 / 重试 / 日志逻辑与 getApiData 完全共用，额外把
- * 「为什么失败」返回给调用方。不要改 getApiData 的签名——仓库里其余调用方
- * 依赖它「失败即 null」的既有行为。
- */
-export async function getApiDataWithStatus<T>(
+async function getApiData<T>(
   path: string,
   fetchOptions?: CommunityReadFetchOptions,
   defaults?: Partial<CommunityReadFetchOptions>,
-): Promise<CommunityApiResult<T>> {
+): Promise<T | null> {
   const resolved = resolveCommunityReadFetchOptions(fetchOptions, defaults);
   const maxAttempts = Math.max(1, resolved.retries + 1);
 
@@ -665,12 +620,7 @@ export async function getApiDataWithStatus<T>(
           console.error(`[${resolved.logKey}] non-200 response`, logPayload);
         }
         if (attempt < maxAttempts && res.status >= 500) continue;
-        // 只有明确的 404 才是「资源不存在」，其余 4xx / 5xx 都算故障
-        return {
-          data: null,
-          status: res.status,
-          kind: res.status === 404 ? 'notFound' : 'httpError',
-        };
+        return null;
       }
 
       const json = await res.json().catch(() => null);
@@ -692,8 +642,7 @@ export async function getApiDataWithStatus<T>(
           console.error(`[${resolved.logKey}] invalid-payload`, logPayload);
         }
         if (attempt < maxAttempts) continue;
-        // HTTP 2xx 但业务码异常：上游故障，不能当「不存在」
-        return { data: null, status: res.status, kind: 'invalidPayload' };
+        return null;
       }
 
       if (attempt > 1) {
@@ -705,7 +654,7 @@ export async function getApiDataWithStatus<T>(
         });
       }
 
-      return { data: (json?.data ?? null) as T | null, status: res.status, kind: 'ok' };
+      return (json?.data ?? null) as T | null;
     } catch (error) {
       const durationMs = Date.now() - startedAt;
       const logPayload = {
@@ -721,27 +670,14 @@ export async function getApiDataWithStatus<T>(
       } else {
         console.error(`[${resolved.logKey}] request exception`, logPayload);
       }
-      if (attempt >= maxAttempts) {
-        return {
-          data: null,
-          status: null,
-          kind: isTimeoutLikeError(error) ? 'timeout' : 'networkError',
-        };
-      }
+      // 网络层抛错后不再重试同一个 URL：Next 15.0.7 在 origin fetch reject 时不会释放该
+      // cacheKey 的 fetch 缓存锁，同 URL 的第二次 fetch 会永久等在锁上，整个渲染挂死。
+      // 5xx / 脏数据（fetch 已 resolve）仍然走上面的重试。
+      return null;
     }
   }
 
-  return { data: null, status: null, kind: 'networkError' };
-}
-
-/** 兼容包装：保留「失败即 null」的既有语义，签名不变。 */
-async function getApiData<T>(
-  path: string,
-  fetchOptions?: CommunityReadFetchOptions,
-  defaults?: Partial<CommunityReadFetchOptions>,
-): Promise<T | null> {
-  const result = await getApiDataWithStatus<T>(path, fetchOptions, defaults);
-  return result.data;
+  return null;
 }
 
 interface CommunityFeedData {
@@ -959,24 +895,15 @@ export async function getCommunityPostsByGame(
   return [];
 }
 
-/**
- * 帖子详情：只有后端明确 404（或成功但无该帖）才返回 null 让调用方 notFound()，
- * 5xx / 429 / 超时 / 异常一律抛 CommunityReadError 走 error.tsx / 500，
- * 避免一次后端抖动被固化成永久 noindex 的 404。
- */
 export async function getCommunityPostById(
   id: string,
 ): Promise<CommunityPost | null> {
-  const result = await getApiDataWithStatus<ApiCommunityPost>(`/content/public/${id}`, undefined, {
+  const data = await getApiData<ApiCommunityPost>(`/content/public/${id}`, undefined, {
     logKey: 'community-post',
     warnStatuses: [404],
   });
-  if (result.kind === 'notFound') return null;
-  if (result.kind !== 'ok') {
-    throw new CommunityReadError('/content/public/' + id, result);
-  }
-  if (!result.data || !result.data._id) return null;
-  return toCommunityPost(result.data);
+  if (!data || !data._id) return null;
+  return toCommunityPost(data);
 }
 
 export async function recordCommunityPostView(params: {
@@ -1251,45 +1178,18 @@ export async function getCommunityTopics(
   };
 }
 
-async function requestCommunityTopicDetail(
-  idOrSlug: string,
-  fetchOptions?: CommunityReadFetchOptions,
-): Promise<CommunityApiResult<CommunityTopicItem>> {
-  const target = String(idOrSlug || '').trim();
-  if (!target) return { data: null, status: null, kind: 'notFound' };
-  return getApiDataWithStatus<CommunityTopicItem>(
-    `/content/topics/public/${encodeURIComponent(target)}`,
-    fetchOptions,
-    { logKey: 'community-topic-detail', next: { revalidate: COMMUNITY_TOPIC_REVALIDATE_SECONDS } },
-  );
-}
-
-/** 客户端刷新用：失败一律 null，保持既有行为不变。 */
 export async function getCommunityTopicDetail(
   idOrSlug: string,
   fetchOptions?: CommunityReadFetchOptions,
 ): Promise<CommunityTopicItem | null> {
-  const result = await requestCommunityTopicDetail(idOrSlug, fetchOptions);
-  return result.kind === 'ok' && result.data ? normalizeTopicItem(result.data) : null;
-}
-
-/**
- * 页面 / metadata 专用：只有后端明确 404（或成功但无该话题）才返回 null 让调用方
- * notFound()，其余失败（5xx / 429 / 超时 / 异常 / 业务码异常）抛错走 error.tsx / 500。
- */
-export async function getCommunityTopicDetailOrThrow(
-  idOrSlug: string,
-  fetchOptions?: CommunityReadFetchOptions,
-): Promise<CommunityTopicItem | null> {
-  const result = await requestCommunityTopicDetail(idOrSlug, fetchOptions);
-  if (result.kind === 'notFound') return null;
-  if (result.kind !== 'ok') {
-    throw new CommunityReadError(
-      '/content/topics/public/' + encodeURIComponent(String(idOrSlug || '').trim()),
-      result,
-    );
-  }
-  return result.data ? normalizeTopicItem(result.data) : null;
+  const target = String(idOrSlug || '').trim();
+  if (!target) return null;
+  const topic = await getApiData<CommunityTopicItem>(
+    `/content/topics/public/${encodeURIComponent(target)}`,
+    fetchOptions,
+    { logKey: 'community-topic-detail', next: { revalidate: COMMUNITY_TOPIC_REVALIDATE_SECONDS } },
+  );
+  return topic ? normalizeTopicItem(topic) : null;
 }
 
 export async function getCommunityTopicSuggestions(params: {

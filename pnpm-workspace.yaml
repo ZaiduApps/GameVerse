@@ -1,5 +1,7 @@
 allowBuilds:
-  '@firebase/util': set this to true or false
-  esbuild: set this to true or false
-  protobufjs: set this to true or false
-  sharp: set this to true or false
+  # postinstall: node install.js —— 下载/校验平台原生二进制，必须执行。
+  esbuild: true
+  # postinstall: node scripts/postinstall —— 生成/修补发布产物，必须执行。
+  protobufjs: true
+  # install: node install/check —— 校验 libvips 原生依赖，Next 图片优化依赖它。
+  sharp: true

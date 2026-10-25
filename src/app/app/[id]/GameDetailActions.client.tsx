@@ -14,8 +14,10 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import { reportDownloadClick } from '@/lib/download-click-tracking';
 import { buildFeedbackCommonFields, submitFeedbackTicket } from '@/lib/feedback';
 import { resolveGameName } from '@/lib/game-display-name';
+import { resolveGameSourceInfo } from '@/lib/game-source-link';
 import { getGamePrimaryActionKind, isWebGameType } from '@/lib/game-resource-type';
 import { cn } from '@/lib/utils';
 import type { ApiDownloadResource, ApiGameDetail, CardConfigItem } from '@/types';
@@ -33,7 +35,10 @@ const HEADER_SOLID_OFFSET = 120;
 const secondaryButtonClass =
   'inline-flex h-10 items-center justify-center gap-1 rounded-xl border border-[#abadae]/20 bg-[#eff1f2] px-3 text-xs font-medium text-[#2c2f30] transition-colors [@media(hover:hover)]:hover:bg-[#e6e8ea] dark:border-border/45 dark:bg-muted/60 dark:text-foreground dark:[@media(hover:hover)]:hover:bg-muted';
 
-export type GameDetailActionGame = Pick<ApiGameDetail, '_id' | 'pkg' | 'name' | 'version' | 'type' | 'file_size'>;
+export type GameDetailActionGame = Pick<
+  ApiGameDetail,
+  '_id' | 'pkg' | 'name' | 'version' | 'type' | 'file_size' | 'source_type' | 'metadata'
+>;
 
 export interface GameDetailActionsInput {
   game: GameDetailActionGame;
@@ -160,15 +165,19 @@ export default function GameDetailActions({
 
   const openPrimaryAction = useCallback(() => {
     if (primaryActionKind === 'app-guide') setAppGuideOpen(true);
-    else setDownloadOpen(true);
-  }, [primaryActionKind]);
+    else {
+      // 老板 2026-10-25 定口径：「获取游戏」按钮也算一次 download_click（surface=detail_open）。
+      reportDownloadClick({ appId: game._id, pkg: game.pkg, surface: 'detail_open' });
+      setDownloadOpen(true);
+    }
+  }, [primaryActionKind, game._id, game.pkg]);
 
   const primaryActionLabel = isWebGame ? '前往 AC 盒子游玩' : '立即高速下载';
   const primaryActionMeta = buildPrimaryActionMeta(game);
   const reminderLabel = isReminderEnabled ? '已提醒' : '上线提醒';
 
   const floatingIconClass = cn(
-    'flex h-8 w-8 items-center justify-center rounded-full transition-colors',
+    'flex h-10 w-10 items-center justify-center rounded-full transition-colors lg:h-8 lg:w-8',
     isHeaderSolid
       ? 'bg-[#eff1f2] text-[#2c2f30] dark:bg-muted/70 dark:text-foreground'
       : 'bg-black/30 text-white backdrop-blur-sm',
@@ -291,7 +300,7 @@ export default function GameDetailActions({
             aria-label={isFavorite ? '取消收藏当前游戏' : '收藏当前游戏'}
             aria-pressed={isFavorite}
             onClick={handleFavoriteToggle}
-            className="flex flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
+            className="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
           >
             <Heart className={cn('h-5 w-5', isFavorite && 'fill-current text-tone-red')} />
             <span className="text-[10px]">想玩</span>
@@ -302,7 +311,7 @@ export default function GameDetailActions({
             aria-label="前往游戏社区"
             onMouseEnter={() => router.prefetch('/community')}
             onFocus={() => router.prefetch('/community')}
-            className="flex flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
+            className="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
           >
             <MessageSquare className="h-5 w-5" />
             <span className="text-[10px]">论坛</span>
@@ -313,7 +322,7 @@ export default function GameDetailActions({
               aria-label="提交催更请求"
               disabled={isSubmittingUrge}
               onClick={() => void handleUrge()}
-              className="flex flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
+              className="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
             >
               <RefreshCw className="h-5 w-5" />
               <span className="text-[10px]">{isSubmittingUrge ? '提交中' : '催更'}</span>
@@ -325,7 +334,7 @@ export default function GameDetailActions({
               aria-label="切换上线提醒"
               aria-pressed={isReminderEnabled}
               onClick={handleReminderToggle}
-              className={cn('flex flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground', isReminderEnabled && 'text-primary')}
+              className={cn('flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground', isReminderEnabled && 'text-primary')}
             >
               <BellPlus className={cn('h-5 w-5', isReminderEnabled && 'fill-current')} />
               <span className="text-[10px]">{reminderLabel}</span>
@@ -355,6 +364,7 @@ export default function GameDetailActions({
         pkg={game.pkg}
         resources={resources}
         downloadNotices={downloadNotices}
+        sourceInfo={resolveGameSourceInfo(game)}
         triggerLabel="立即下载"
       /> : null}
       {appGuideOpen ? (

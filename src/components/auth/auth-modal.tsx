@@ -129,7 +129,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
       const json: ApiResponse<AuthData> = await res.json();
       if (json.code === 0 && json.data) {
         login(json.data);
-        toast({ title: '登录成功', description: `欢迎回来，${json.data.user.name || json.data.user.username}` });
+        toast({ title: '已登录', description: `欢迎回来，${json.data.user.name || json.data.user.username}` });
         onOpenChange(false);
         resetForm();
       } else {
@@ -234,6 +234,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         required
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -249,6 +250,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -267,6 +269,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -282,6 +285,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                           value={code}
                           onChange={(e) => setCode(e.target.value)}
                           required
+                          disabled={isLoading}
                         />
                       </div>
                       <Button
@@ -298,9 +302,9 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                 </>
               )}
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading} aria-busy={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                登录
+                {isLoading ? '登录中…' : '登录'}
               </Button>
             </form>
           </TabsContent>
@@ -318,6 +322,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                     onChange={(e) => setUsername(e.target.value)}
                     className="pl-9"
                     required
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -334,6 +339,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-9"
                     required
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -351,6 +357,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                         onChange={(e) => setCode(e.target.value)}
                         className="pl-9"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                     <Button
@@ -378,6 +385,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-9"
                     required={method === 'password'}
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -392,13 +400,14 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="pl-9"
+                    disabled={isLoading}
                   />
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading} aria-busy={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                注册
+                {isLoading ? '注册中…' : '注册'}
               </Button>
             </form>
           </TabsContent>

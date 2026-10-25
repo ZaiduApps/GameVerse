@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MessageSquare, Send, ShieldCheck, Star, ThumbsUp } from 'lucide-react';
 
 import { useAuth } from '@/context/auth-context';
@@ -75,6 +75,7 @@ function buildIdentity(game: Pick<ApiGameDetail, '_id' | 'pkg' | 'name' | 'star'
 export default function GameReviewPanel({ game, className, compact = false }: GameReviewPanelProps) {
   const { token, user, isAuthenticated } = useAuth();
   const { toast } = useToast();
+  const commentLoadFailureToastShownRef = useRef(false);
 
   const identity = useMemo(() => buildIdentity(game), [game._id, game.pkg, resolveGameName(game), game.star]);
   const canManageAdminSwitch = useMemo(() => hasAdminRole(user?.roles), [user?.roles]);
@@ -85,6 +86,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
   const [commentSort, setCommentSort] = useState<'latest' | 'hot'>('latest');
   const [comments, setComments] = useState<GameReviewCommentThread[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(true);
+  const [commentLoadFailed, setCommentLoadFailed] = useState(false);
 
   const [newComment, setNewComment] = useState('');
   const [replyTarget, setReplyTarget] = useState<{ id: string; name: string } | null>(null);
@@ -138,15 +140,29 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
 
   const effectiveEmailNotifyEnabled = adminEmailSwitchEnabled && emailNotifyEnabled;
 
+  const notifyCommentLoadFailure = () => {
+    if (commentLoadFailureToastShownRef.current) return;
+    commentLoadFailureToastShownRef.current = true;
+    toast({
+      title: '评论加载失败',
+      description: '评论加载失败，请稍后重试',
+      variant: 'destructive',
+    });
+  };
+
   useEffect(() => {
     let cancelled = false;
 
     async function loadSummary() {
       setIsLoadingSummary(true);
       try {
-        const data = await getGameReviewSummary(identity);
+        const data = await getGameReviewSummary(identity, token);
         if (!cancelled) {
           setSummary(data);
+        }
+      } catch {
+        if (!cancelled) {
+          setSummary(null);
         }
       } finally {
         if (!cancelled) {
@@ -159,18 +175,27 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
     return () => {
       cancelled = true;
     };
-  }, [identity]);
+  }, [identity, token]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadComments() {
       setIsLoadingComments(true);
+      setCommentLoadFailed(false);
       try {
         const list = await getGameReviewCommentThreads(identity, compact ? 12 : 20, 20, commentSort);
         if (!cancelled) {
           setComments(list);
           setExpandedReplies({});
+          commentLoadFailureToastShownRef.current = false;
+        }
+      } catch {
+        if (!cancelled) {
+          setComments([]);
+          setExpandedReplies({});
+          setCommentLoadFailed(true);
+          notifyCommentLoadFailure();
         }
       } finally {
         if (!cancelled) {
@@ -274,14 +299,31 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
   }, [canManageAdminSwitch, token]);
 
   const reloadSummary = async () => {
-    const data = await getGameReviewSummary(identity);
-    setSummary(data);
+    try {
+      const data = await getGameReviewSummary(identity, token);
+      setSummary(data);
+    } catch {
+      setSummary(null);
+    }
   };
 
-  const reloadComments = async () => {
-    const list = await getGameReviewCommentThreads(identity, compact ? 12 : 20, 20, commentSort);
-    setComments(list);
-    setExpandedReplies({});
+  const reloadComments = async (notifyOnFailure = true) => {
+    setCommentLoadFailed(false);
+    try {
+      const list = await getGameReviewCommentThreads(identity, compact ? 12 : 20, 20, commentSort);
+      setComments(list);
+      setExpandedReplies({});
+      commentLoadFailureToastShownRef.current = false;
+      return true;
+    } catch {
+      setComments([]);
+      setExpandedReplies({});
+      setCommentLoadFailed(true);
+      if (notifyOnFailure) {
+        notifyCommentLoadFailure();
+      }
+      return false;
+    }
   };
 
   const handleSubmitRating = async (score: number) => {
@@ -336,6 +378,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
       return;
     }
 
+    const previousComments = comments;
     const optimistic: GameReviewCommentThread = {
       id: `tmp-${Date.now()}`,
       user: {
@@ -379,17 +422,23 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
         userAvatar: user?.avatar || '/favicon.ico',
       });
       if (!result.ok) {
-        throw new Error(result.message);
+        setComments(previousComments);
+        toast({
+          title: '提交失败',
+          description: result.message,
+          variant: 'destructive',
+        });
+        return;
       }
       setNewComment('');
       setReplyTarget(null);
-      await reloadComments();
+      await reloadComments(false);
       toast({
         title: '评论成功',
         description: result.message || '评论已提交。',
       });
     } catch (error) {
-      await reloadComments();
+      setComments(previousComments);
       toast({
         title: '提交失败',
         description: error instanceof Error ? error.message : '请稍后重试。',
@@ -569,10 +618,15 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
               <p className="text-sm text-[#595c5d]">综合评分</p>
               <div className="mt-1 flex items-end gap-2">
                 <span className="text-3xl font-semibold text-[#b71211]">
-                  {isLoadingSummary ? '...' : (summary?.displayScore ?? 0).toFixed(1)}
+                  {isLoadingSummary ? '...' : summary === null ? '—' : summary.displayScore.toFixed(1)}
                 </span>
                 <span className="pb-1 text-xs text-[#757778]">
-                  / 5.0 · {isLoadingSummary ? '...' : formatCompactCount(summary?.ratingCount ?? 0)} 人评分
+                  / 5.0 ·{' '}
+                  {isLoadingSummary
+                    ? '...'
+                    : summary === null
+                      ? '—'
+                      : `${formatCompactCount(summary.ratingCount)} 人评分`}
                 </span>
               </div>
               {summary ? (
@@ -747,6 +801,8 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
           <div className="space-y-4 border-t border-[#abadae]/15 pt-4">
             {isLoadingComments ? (
               <p className="py-2 text-center text-sm text-[#757778]">评论加载中...</p>
+            ) : commentLoadFailed ? (
+              <p className="py-2 text-center text-sm text-[#b71211]">评论加载失败，请稍后重试。</p>
             ) : comments.length > 0 ? (
               comments.map((comment) => (
                 <div key={comment.id} className="space-y-2">

@@ -1,13 +1,17 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Suspense, type ReactNode } from 'react';
-import { BadgeCheck, ChevronRight, CreditCard, Download, ExternalLink, MessageSquare, Play, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
+import { BadgeCheck, ChevronRight, CreditCard, Download, ExternalLink, MessageSquare, RefreshCw, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
 
 import GameAnnouncements from '@/components/game-announcements';
+import GameDirectDownloadLinks from '@/components/game-direct-download-links.client';
 import GameFaqSection from '@/components/game-detail/GameFaqSection';
+import { buildDirectDownloadLinks } from '@/lib/game-download-channel';
 import { normalizeGameFaqItems } from '@/lib/game-faq';
 import { resolveGameName } from '@/lib/game-display-name';
 import { isWebGameType } from '@/lib/game-resource-type';
+import { resolveGameSourceInfo } from '@/lib/game-source-link';
+import { prependAliasToDescription, resolveChineseAlias } from '@/lib/seo';
 import { getPreviewImageUrl } from '@/lib/image-preview';
 import { cn } from '@/lib/utils';
 import type { ApiRecommendedGame, CardConfigItem, GamePageSnapshot } from '@/types';
@@ -15,11 +19,13 @@ import DeferredGameReviewPanel from './DeferredGameReviewPanel.client';
 import GameCommunitySection, { GameCommunitySkeleton } from './GameCommunitySection';
 import DetailSection from './GameDetailSection';
 import GameDetailActions from './GameDetailActions.client';
-import GameDetailBreadcrumb from './GameDetailBreadcrumb';
+import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import GameDetailMobileTabs from './GameDetailMobileTabs.client';
 import GameHeroArtwork from './GameHeroArtwork.client';
+import GameHeroVideo from './GameHeroVideo.client';
 import GameScreenshotGallery from './GameScreenshotGallery.client';
-import { BOX_DOWNLOAD_CARD, CERTIFICATION_CARD, GUIDE_SECTION_HINT, HERO_PV_PILL } from './game-detail-mock-copy';
+import { BOX_DOWNLOAD_CARD, CERTIFICATION_CARD, GUIDE_SECTION_HINT } from './game-detail-mock-copy';
+import { resolveHeroVideo } from './game-detail-video';
 import {
   buildHeroMetrics,
   buildHeroPurchaseNote,
@@ -52,6 +58,40 @@ interface GameDetailViewProps {
   gameData: GamePageSnapshot;
   recommendedGames: ApiRecommendedGame[];
   relatedNews: RelatedNewsItem[];
+  /** 上游故障降级时展示的快照时间；正常渲染传 null。 */
+  snapshotSavedAt?: string | null;
+}
+
+function formatSnapshotTime(input: string): string {
+  const date = new Date(input);
+  if (Number.isNaN(date.getTime())) return '最近一次成功抓取';
+  const text = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+  return `${text}（北京时间）`;
+}
+
+// 降级提示：必须首屏可见、不能被折叠，用 role="status" 让读屏也能读到。
+function DegradedDataNotice({ savedAt }: { savedAt: string }) {
+  return (
+    <div
+      role="status"
+      className="relative z-30 border-b border-tone-amber/40 bg-tone-amber/10 px-4 py-2.5"
+    >
+      <div className="mx-auto flex max-w-7xl items-start gap-2 lg:items-center lg:px-16 2xl:px-20">
+        <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 text-tone-amber lg:mt-0" aria-hidden="true" />
+        <p className="text-xs font-medium leading-relaxed text-[#7a4a00] lg:text-sm dark:text-tone-amber">
+          数据更新中：详情接口暂时不可用，当前展示 {formatSnapshotTime(savedAt)} 的缓存快照，恢复后会自动刷新。
+        </p>
+      </div>
+    </div>
+  );
 }
 // 更新日志的单条内容：把“小标题：正文”的结构拆出来加粗，和视觉稿的排版一致。
 function LatestBullet({ text }: { text: string }) {
@@ -222,7 +262,7 @@ function BoxDownloadCard() {
         <span className="text-xs font-normal text-[#757778] dark:text-muted-foreground">{BOX_DOWNLOAD_CARD.status}</span>
       </div>
       <Link
-        href="/download"
+        href="/download/app"
         className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-sm transition-colors [@media(hover:hover)]:hover:bg-primary/90"
       >
         <Download className="h-5 w-5" aria-hidden="true" />
@@ -280,10 +320,29 @@ function SimilarGamesCard({ items }: { items: ReturnType<typeof buildSimilarGame
   );
 }
 
-export default function GameDetailView({ gameData, recommendedGames, relatedNews }: GameDetailViewProps) {
+export default function GameDetailView({ gameData, recommendedGames, relatedNews, snapshotSavedAt }: GameDetailViewProps) {
   const game = gameData.app;
+  const displayName = resolveGameName(game);
+  const storedAliases = (
+    game.seo as (typeof game.seo & { aliases?: string[] | null }) | undefined
+  )?.aliases;
+  // 两代别名来源：seo.aliases（后台写入）与 metadata.chs|cht（采集到的多语言名）。
+  // 线上很多游戏前者为空、中文名只躺在后者里，副标题要一起兜底才看得见。
+  const chineseAlias = resolveChineseAlias(
+    [
+      ...(Array.isArray(storedAliases) ? storedAliases : []),
+      game.metadata?.chs,
+      game.metadata?.cht,
+    ],
+    displayName,
+  );
   const resources = Array.isArray(gameData.resources) ? gameData.resources : [];
   const isWebGame = isWebGameType(game.type);
+  // 服务端直出的下载链接：只含可直下渠道，id 与页面 URL 一致（包名优先）。
+  // 锚点由服务端渲染进 HTML，无 JS 的环境也能点到 302 入口。
+  const directDownloadLinks = isWebGame
+    ? []
+    : buildDirectDownloadLinks(resources, game.pkg || game._id);
   const tags = getGameTags(game);
   const primaryCategory = getPrimaryCategory(game, tags);
   const cardConfig = (gameData.cardConfig || {}) as Record<string, CardConfigItem[] | undefined>;
@@ -293,6 +352,8 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   const screenshots = (Array.isArray(game.detail_images) ? game.detail_images : []).filter(Boolean);
   const displayScreenshots = screenshots.length > 0 ? screenshots : [game.header_image, game.icon].filter(Boolean);
   const heroImage = game.header_image || displayScreenshots[0] || game.icon || '';
+  // 没有可播放的源就不渲染 PV 入口，避免出现点开必失败的按钮。
+  const heroVideo = resolveHeroVideo(game);
   const facts = buildGameFactItems(game, { category: primaryCategory, resourceCount: resources.length, isWebGame });
   const highlights = Array.isArray(game.seo?.highlights) ? game.seo.highlights.map(cleanText).filter(Boolean).slice(0, 8) : [];
   const latestContent = cleanText(game.latest_content);
@@ -304,12 +365,14 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
       if (!pkg || pkg === String(game.pkg || '').trim().toLowerCase() || item._id === game._id) return false;
       return list.findIndex((candidate) => String(candidate.pkg || '').trim().toLowerCase() === pkg) === index;
     })
-    .slice(0, 5);
+    .slice(0, 10);
   const detailAnnouncements = gameData.Announcements ?? gameData.announcements;
   const hasDetailAnnouncements = Array.isArray(detailAnnouncements)
     ? detailAnnouncements.length > 0
     : Boolean(detailAnnouncements && Object.values(detailAnnouncements).some((group) => Array.isArray(group) && group.length > 0));
   const showPreregReminder = isPreregGameLike(game) && !isWebGame;
+  // GitHub Release 分发的开源版单独标注来源与仓库；其它渠道不渲染这一行。
+  const gameSource = resolveGameSourceInfo(game);
 
   // 视觉稿视图模型：真实数据优先，缺失字段由 game-detail-stitch-mapper 统一回落。
   const trustBadges = buildTrustBadges(tags);
@@ -322,13 +385,34 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   const relatedPosts = buildRelatedPosts(relatedNews);
   const ratingCount = Math.max(0, Number(gameData.reviewSummary?.ratingCount || 0));
   const reviewCountLabel = ratingCount > 0 ? formatCompactCount(ratingCount) : undefined;
-  const heroDescription = cleanText(game.description || game.summary);
-  const actionGame = { _id: game._id, pkg: game.pkg, name: resolveGameName(game), version: game.version, type: game.type, file_size: game.file_size };
+  const heroDescription = prependAliasToDescription(
+    cleanText(game.description || game.summary),
+    chineseAlias,
+  );
+  const actionGame = {
+    _id: game._id,
+    pkg: game.pkg,
+    name: resolveGameName(game),
+    version: game.version,
+    type: game.type,
+    file_size: game.file_size,
+    source_type: game.source_type,
+    metadata: game.metadata,
+  };
   // 移动端三宫格只取综合评分 / 下载热度 / 适龄与平台，与稿件一致。
   const mobileMetrics = [heroMetrics[0], heroMetrics[2], heroMetrics[3]].filter(Boolean);
+  // 桌面与移动端共用同一份面包屑；JSON-LD 只由桌面那份输出一次。
+  const breadcrumbItems = [
+    { name: '首页', href: '/' },
+    { name: '游戏库', href: '/app' },
+    { name: primaryCategory, href: buildTagFilterHref(primaryCategory) },
+    { name: resolveGameName(game), href: `/app/${encodeURIComponent(game.pkg || game._id || '')}` },
+  ];
 
   return (
     <div className="game-detail-stitch relative min-h-screen overflow-x-clip bg-[#f5f6f7] text-[#2c2f30] dark:bg-[#080d14] dark:text-[#f3f6fb]">
+      {snapshotSavedAt ? <DegradedDataNotice savedAt={snapshotSavedAt} /> : null}
+
       {hasDetailAnnouncements ? (
         <div className="relative z-20 px-4 pt-20 sm:px-6 lg:px-16 lg:pt-6 2xl:px-20">
           <div className="mx-auto max-w-7xl">
@@ -338,12 +422,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
       ) : null}
 
       <div className="relative z-10 mx-auto hidden max-w-7xl px-4 sm:px-6 lg:block lg:px-16 lg:pb-5 lg:pt-6 2xl:px-20">
-        <GameDetailBreadcrumb
-          gameId={game.pkg || game._id || ''}
-          gameName={resolveGameName(game)}
-          category={primaryCategory}
-          categoryHref={buildTagFilterHref(primaryCategory)}
-        />
+        <Breadcrumbs items={breadcrumbItems} />
       </div>
 
             {/* Hero：单一响应式 DOM。移动端全宽沉浸封面 + 悬浮信息卡；PC 端限制画幅并在信息卡右侧叠放操作区。 */}
@@ -354,15 +433,23 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
             className="relative h-72 w-full overflow-hidden bg-[#e6e8ea] sm:h-80 lg:h-96 lg:rounded-3xl lg:border lg:border-[#abadae]/20 lg:shadow-sm dark:bg-[#121924]"
           >
             <GameHeroArtwork gameName={resolveGameName(game)} heroImage={heroImage} icon={game.icon} />
-            <span className="absolute bottom-16 right-4 z-10 inline-flex items-center gap-1 rounded-full border border-white/20 bg-black/60 px-2.5 py-1 text-xs text-white backdrop-blur-sm lg:hidden">
-              <Play className="h-3 w-3 fill-current" aria-hidden="true" />
-              {HERO_PV_PILL}
-            </span>
+            {heroVideo ? (
+              <GameHeroVideo
+                gameName={resolveGameName(game)}
+                source={heroVideo.source}
+                poster={heroVideo.poster}
+                className="absolute bottom-16 right-4 z-10 lg:bottom-4"
+              />
+            ) : null}
           </div>
 
           {/* 信息卡：移动端上浮压住封面 48px，PC 端退回常规栅格并与封面留出间距 */}
           <div data-stitch="info-card" className="relative -mt-12 px-4 lg:mt-6 lg:px-0">
             <div className="rounded-2xl border border-[#abadae]/20 bg-white p-4 shadow-sm lg:rounded-3xl lg:p-8 dark:border-border/45 dark:bg-card/80">
+              {/* 移动端面包屑：放在信息卡内首行；桌面那份已输出 JSON-LD，这里只画可见导航。 */}
+              <div className="mb-2 lg:hidden">
+                <Breadcrumbs items={breadcrumbItems} withJsonLd={false} />
+              </div>
               <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
                 <div className="flex items-center gap-3.5 lg:gap-6">
                   <div className="relative shrink-0">
@@ -387,6 +474,9 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                   <div className="min-w-0 space-y-2">
                     <HeroBadges badges={trustBadges} />
                     <h1 className="text-lg font-bold leading-snug tracking-tight text-[#2c2f30] sm:text-xl lg:text-2xl dark:text-foreground">{resolveGameName(game)}</h1>
+                    {chineseAlias ? (
+                      <p className="mt-1 text-sm text-muted-foreground">中文名：{chineseAlias}</p>
+                    ) : null}
                     <div className="flex items-center gap-2 text-xs font-medium text-[#595c5d] dark:text-muted-foreground">
                       <span className="inline-flex items-center gap-1 text-[#2c2f30] dark:text-foreground">
                         {game.developer || '开发者未提供'}
@@ -395,6 +485,25 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                       <span className="text-[#abadae]">•</span>
                       <span className="text-[#757778] dark:text-muted-foreground">{purchaseNote}</span>
                     </div>
+                    {gameSource ? (
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#595c5d] dark:text-muted-foreground">
+                        <span className="inline-flex items-center rounded-md bg-tone-blue/10 px-2 py-0.5 font-medium text-tone-blue">
+                          {gameSource.label}
+                        </span>
+                        {gameSource.repoUrl ? (
+                          <a
+                            className="inline-flex items-center gap-0.5 underline decoration-dotted underline-offset-2"
+                            href={gameSource.repoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            GitHub 仓库
+                            <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                          </a>
+                        ) : null}
+                        <span>遵循 {gameSource.license} 许可</span>
+                      </div>
+                    ) : null}
                     {heroDescription ? (
                       // line-clamp-2 与 lg:block 作用在同一元素上时，变体生成的 display:block 会覆盖 -webkit-box 导致截断失效，
                       // 因此外层只负责响应式显隐，内层单独负责行数截断。
@@ -413,6 +522,14 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                   showPreregReminder={showPreregReminder}
                 />
               </div>
+
+              {directDownloadLinks.length > 0 ? (
+                <GameDirectDownloadLinks
+                  links={directDownloadLinks}
+                  appId={game._id}
+                  pkg={game.pkg}
+                />
+              ) : null}
 
               {/* 指标条：移动端 3 格（隐藏「游戏分类」），PC 端 4 格 */}
               <div className="mt-4 grid grid-cols-3 gap-2 border-t border-[#abadae]/15 pt-3.5 lg:mt-8 lg:grid-cols-4 lg:gap-4 lg:pt-5">

@@ -77,7 +77,10 @@ interface CommunityPageViewProps {
 }
 
 export default function CommunityPageView({ initialData }: CommunityPageViewProps) {
-  const FEED_PAGE_SIZE = 10;
+  // 必须与服务端首屏 SSR 的 pageSize（COMMUNITY_SSR_FEED_PAGE_SIZE）保持一致，
+  // 否则「加载更多」会与上一页错位、重复或漏掉帖子。后端会过滤掉部分帖子，
+  // 所以请求 24 条时 SSR 实际输出 20–22 条，仍满足列表页 ≥20 条内链的要求。
+  const FEED_PAGE_SIZE = 24;
   const HOT_TOPICS_LIMIT = 6;
   const router = useRouter();
   const searchParams = useSearchParams();

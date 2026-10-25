@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 import CommunityPostCard from '@/components/community/CommunityPostCard';
+import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,7 @@ import {
   unfollowTopic,
 } from '@/lib/community-api';
 import type { CommunityPost } from '@/types';
+import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
 import { ArrowLeft, Hash, Loader2, Megaphone, MoreHorizontal, PenSquare, Share2, Users } from 'lucide-react';
 
 interface CommunityTopicBoardViewProps {
@@ -730,6 +732,18 @@ export default function CommunityTopicBoardView({
 
   return (
     <div className="container mx-auto px-2 py-4 sm:px-4 sm:py-6 lg:py-8">
+      <Breadcrumbs
+        className="mb-3"
+        items={[
+          BREADCRUMB_ROOT,
+          { name: '社区', href: '/community' },
+          { name: '话题', href: '/community/topics' },
+          {
+            name: topic?.name || '话题',
+            href: `/community/topic/${encodeURIComponent(String(topic?.slug || safeIdOrSlug).trim())}`,
+          },
+        ]}
+      />
       <div className="mb-4">
         <Button variant="ghost" asChild className="px-2">
           <Link
@@ -775,7 +789,7 @@ export default function CommunityTopicBoardView({
                   />
                     <div className="min-w-0">
                       <h1 className="line-clamp-2 text-xl font-semibold leading-none tracking-tight">
-                        #{topic?.name || '话题'}
+                        {topic?.name || '话题'}
                       </h1>
                     <CardDescription className="mt-1 line-clamp-3 text-foreground/70">
                       {topic?.description?.trim() || '该话题暂无简介。'}
@@ -820,7 +834,7 @@ export default function CommunityTopicBoardView({
                             type="button"
                             variant="link"
                             size="sm"
-                            className="h-auto p-0 text-xs leading-none"
+                            className="inline-flex h-auto min-h-9 items-center px-2 -mr-2 text-xs leading-none"
                             data-acbox-action="topic_open_moderators"
                             data-acbox-label={topic?.name || safeIdOrSlug}
                             onClick={() => setModeratorDialogOpen(true)}
@@ -835,7 +849,7 @@ export default function CommunityTopicBoardView({
                             type="button"
                             variant="link"
                             size="sm"
-                            className="h-auto p-0 text-xs leading-none"
+                            className="inline-flex h-auto min-h-9 items-center px-2 -mr-2 text-xs leading-none"
                             data-acbox-action="topic_open_moderators"
                             data-acbox-label={topic?.name || safeIdOrSlug}
                             onClick={() => setModeratorDialogOpen(true)}

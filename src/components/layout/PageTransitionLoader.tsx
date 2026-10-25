@@ -1,35 +1,19 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import NProgress from 'nprogress';
-
-import MagicLoader from '@/components/layout/MagicLoader';
 
 export default function PageTransitionLoader() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isNavigating, setIsNavigating] = useState(false);
-  const overlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const clearOverlayTimer = () => {
-    if (overlayTimerRef.current) {
-      clearTimeout(overlayTimerRef.current);
-      overlayTimerRef.current = null;
-    }
-  };
 
   useEffect(() => {
-    NProgress.configure({ showSpinner: false });
-    return () => {
-      clearOverlayTimer();
-    };
+    NProgress.configure({ showSpinner: false, trickleSpeed: 120, minimum: 0.12 });
   }, []);
 
   useEffect(() => {
-    clearOverlayTimer();
     NProgress.done();
-    setIsNavigating(false);
   }, [pathname, searchParams]);
 
   useEffect(() => {
@@ -51,21 +35,14 @@ export default function PageTransitionLoader() {
       if (nextUrl.pathname === currentUrl.pathname && nextUrl.search === currentUrl.search) return;
 
       NProgress.start();
-      clearOverlayTimer();
-      if (!nextUrl.pathname.startsWith('/app/')) {
-        overlayTimerRef.current = setTimeout(() => {
-          setIsNavigating(true);
-        }, 140);
-      }
     };
 
     window.addEventListener('click', handlePointerDown, true);
     return () => {
       window.removeEventListener('click', handlePointerDown, true);
-      clearOverlayTimer();
       NProgress.done();
     };
   }, []);
 
-  return isNavigating ? <MagicLoader /> : null;
+  return null;
 }

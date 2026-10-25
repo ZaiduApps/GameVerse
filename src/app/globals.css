@@ -3,6 +3,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 禁止 iOS 横屏/聚焦时自动放大字号，保证下面的移动端字号下限可控 */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 @layer base {
   :root {
     --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
@@ -406,5 +412,23 @@
   .game-detail-stitch {
     --primary: 175 84% 32%;
     --ring: 175 84% 32%;
+  }
+}
+
+/* 手机 + 平板（<1024）：字号下限 12px */
+@media (max-width: 1023.98px) {
+  [class*='text-[10px]'],
+  [class*='text-[11px]'] {
+    font-size: 0.75rem;
+    line-height: 1.35;
+  }
+}
+
+/* 仅手机：输入框 16px；用 html 前缀提高特异性压过 .text-sm，桌面保持 14px */
+@media (max-width: 639.98px) {
+  html input:not([type='checkbox']):not([type='radio']),
+  html textarea:not([readonly]),
+  html select:not([disabled]) {
+    font-size: 16px;
   }
 }

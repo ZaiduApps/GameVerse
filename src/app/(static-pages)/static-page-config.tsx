@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import Breadcrumbs from '@/components/layout/Breadcrumbs';
+import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { renderMarkdown, cn } from '@/lib/utils';
 import { buildSeoDescription } from '@/lib/seo';
@@ -103,6 +105,10 @@ export async function StaticConfigPage({ pageKey }: { pageKey: StaticPageKey }) 
 
   return (
     <section className="mx-auto max-w-4xl px-4 py-10">
+      <Breadcrumbs
+        items={[BREADCRUMB_ROOT, { name: title, href: defaults.canonical }]}
+        className="mb-5"
+      />
       <h1 className="text-3xl font-semibold">{title}</h1>
       <div
         className={cn(

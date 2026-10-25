@@ -18,5 +18,5 @@ test('自动 SEO 文案覆盖下载意图，手工字段保持优先', () => {
   assert.match(seoSource, /下载\$\{name\}安卓版 APK/);
   assert.match(seoSource, /安卓游戏下载/);
   assert.match(seoSource, /manualKeywords/);
-  assert.match(seoSource, /titleCore\.includes\(normalizedSiteName\)/);
+  assert.match(seoSource, /buildSeoTitle\(titleCore, normalizedSiteName, SEO_TITLE_MAX\)/);
 });

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { Suspense, cache } from 'react';
 
 import CommunityPageView, { type CommunityPageInitialData } from './CommunityPageView';
@@ -7,6 +8,12 @@ import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityFeed, getCommunityTopics } from '@/lib/community-api';
 
 const COMMUNITY_JSONLD_LIMIT = 12;
+// 首屏要在 SSR HTML 里带出足够多的帖子内链：20 条帖子每条至少输出一个详情链接，
+// 满足搜索引擎对列表页可发现性的最低要求；JSON-LD 仍只取前 12 条。
+// 后端会过滤掉一部分帖子（本地实测 24 条里返回 20–22 条），所以请求 24 条、
+// 保证每页 SSR 出的真实帖子数仍 ≥20。分页大小必须与前端「加载更多」一致。
+const COMMUNITY_SSR_FEED_PAGE_SIZE = 24;
+const COMMUNITY_PAGINATION_WINDOW_RADIUS = 3;
 const COMMUNITY_PAGE_DESCRIPTION = buildSeoDescription(
   '浏览 APKScc 社区最新帖子、热门话题、安卓游戏讨论、攻略分享、资源反馈、版本体验和玩家互动动态',
   [
@@ -24,9 +31,9 @@ function clamp(input: string, max: number): string {
 // 响应 flush 成 200」的软 404 缺陷，故意删掉了 src/app/community/loading.tsx，
 // 而 loading.tsx 提供的隐式边界正是本页 useSearchParams() 过去能通过预渲染的原因。
 // 边界删掉后 next build 会在预渲染阶段直接失败（missing-suspense-with-csr-bailout）。
-// 这里就地补回显式边界，既恢复可构建，又不把 loading.tsx 加回来、不复活软 404。
-// 骨架按 CommunityPageView 的三栏栅格 1:1 复刻以避免 hydration 位移；与改动前线上行为
-// 一致（feed 一直是客户端渲染），页面级 JSON-LD 仍由服务端先行输出。
+// 现在页面读取 searchParams 后按请求动态渲染，首屏 feed 会真实输出帖子链接；
+// 边界继续保留，既兜住 useSearchParams 的 CSR 回退，也不把 loading.tsx 加回来。
+// 骨架按 CommunityPageView 的三栏栅格 1:1 复刻以避免 hydration 位移。
 function CommunityPageSkeleton() {
   return (
     <div
@@ -52,14 +59,23 @@ function CommunityPageSkeleton() {
   );
 }
 
-const getCommunityPageData = cache(async (): Promise<{
+const getCommunityPageData = cache(async (feedKeyword: string, feedPage: number): Promise<{
   config: Awaited<ReturnType<typeof getPublicSiteConfig>>;
   initialData: CommunityPageInitialData;
 }> => {
+  const keyword = String(feedKeyword || '').trim();
   const [config, latestFeed, hotFeed, topics] = await Promise.all([
     getPublicSiteConfig(300),
-    getCommunityFeed('latest', { page: 1, pageSize: COMMUNITY_JSONLD_LIMIT }),
-    getCommunityFeed('hot', { page: 1, pageSize: COMMUNITY_JSONLD_LIMIT }),
+    getCommunityFeed('latest', {
+      page: feedPage,
+      pageSize: COMMUNITY_SSR_FEED_PAGE_SIZE,
+      q: keyword || undefined,
+    }),
+    getCommunityFeed('hot', {
+      page: 1,
+      pageSize: COMMUNITY_SSR_FEED_PAGE_SIZE,
+      q: keyword || undefined,
+    }),
     getCommunityTopics({ page: 1, pageSize: COMMUNITY_JSONLD_LIMIT, sort: 'hot' }),
   ]);
 
@@ -73,38 +89,143 @@ const getCommunityPageData = cache(async (): Promise<{
   };
 });
 
-export async function generateMetadata(): Promise<Metadata> {
-  const { config } = await getCommunityPageData();
+type CommunityPageSearchParams = {
+  q?: string;
+  topicName?: string;
+  page?: string;
+};
+
+/** 页面读取 searchParams 后路由按请求动态渲染，useSearchParams 才能在 SSR 阶段拿到真实值。 */
+function resolveFeedKeyword(params: CommunityPageSearchParams | undefined): string {
+  return String(params?.q || params?.topicName || '').trim();
+}
+
+/** 只做合法性归一；页面上限由 feed 的 total 决定，越界在页面组件里返回 404。 */
+function parseFeedPageParam(value: unknown): number {
+  const parsed = Number.parseInt(String(value ?? ''), 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return 1;
+  return parsed;
+}
+
+function buildCommunityPageHref(page: number, keyword: string): string {
+  const params = new URLSearchParams();
+  if (keyword) params.set('q', keyword);
+  if (page > 1) params.set('page', String(page));
+  const queryString = params.toString();
+  return queryString ? `/community?${queryString}` : '/community';
+}
+
+function getCommunityPaginationWindow(currentPage: number, totalPages: number): number[] {
+  if (totalPages <= 1) return [];
+  const windowSize = COMMUNITY_PAGINATION_WINDOW_RADIUS * 2 + 1;
+  let start = Math.max(1, currentPage - COMMUNITY_PAGINATION_WINDOW_RADIUS);
+  const end = Math.min(totalPages, start + windowSize - 1);
+  start = Math.max(1, end - windowSize + 1);
+  const pages: number[] = [];
+  for (let page = start; page <= end; page += 1) pages.push(page);
+  return pages;
+}
+
+// 分页锚点必须在 SSR HTML 里：社区帖子过去只能靠 sitemap 发现，爬虫从列表页
+// 走不到第 2 页以后的内容。用普通 <a>（不是 Link），第 N 页是一次完整请求，
+// 保证首屏帖子、canonical 和状态码都由服务端给出。
+function CommunityPagination({
+  currentPage,
+  totalPages,
+  keyword,
+}: {
+  currentPage: number;
+  totalPages: number;
+  keyword: string;
+}) {
+  const pages = getCommunityPaginationWindow(currentPage, totalPages);
+  if (pages.length <= 1) return null;
+
+  const itemClass =
+    'inline-flex h-9 min-w-9 items-center justify-center rounded-full border border-border/70 bg-card px-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary';
+  const activeClass = 'border-primary bg-primary text-white hover:text-white';
+  const disabledClass = 'cursor-not-allowed opacity-40 hover:border-border/70 hover:text-muted-foreground';
+
+  return (
+    <nav aria-label="社区帖子分页" className="mt-8 flex flex-wrap items-center justify-center gap-2">
+      {currentPage > 1 ? (
+        <a href={buildCommunityPageHref(currentPage - 1, keyword)} rel="prev" className={itemClass}>
+          上一页
+        </a>
+      ) : (
+        <span aria-disabled="true" className={`${itemClass} ${disabledClass}`}>
+          上一页
+        </span>
+      )}
+      {pages.map((pageNumber) => (
+        <a
+          key={pageNumber}
+          href={buildCommunityPageHref(pageNumber, keyword)}
+          aria-current={pageNumber === currentPage ? 'page' : undefined}
+          className={`${itemClass} ${pageNumber === currentPage ? activeClass : ''}`}
+        >
+          {pageNumber}
+        </a>
+      ))}
+      {currentPage < totalPages ? (
+        <a href={buildCommunityPageHref(currentPage + 1, keyword)} rel="next" className={itemClass}>
+          下一页
+        </a>
+      ) : (
+        <span aria-disabled="true" className={`${itemClass} ${disabledClass}`}>
+          下一页
+        </span>
+      )}
+    </nav>
+  );
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<CommunityPageSearchParams>;
+}): Promise<Metadata> {
+  const config = await getPublicSiteConfig(300);
+  const params = await searchParams;
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
-  const title = `${siteName} 社区 - 安卓游戏讨论、攻略分享与资源反馈动态`;
+  const feedKeyword = resolveFeedKeyword(params);
+  const page = parseFeedPageParam(params?.page);
+  const pageTitleSuffix = page > 1 && !feedKeyword ? `（第 ${page} 页）` : '';
+  const title = `${siteName} 社区 - 安卓游戏讨论、攻略分享与资源反馈动态${pageTitleSuffix}`;
   const description = COMMUNITY_PAGE_DESCRIPTION;
   const shareImage = String(config?.basic?.share_image || '').trim();
+  // 第 1 页归一到 /community；从第 2 页起内容不同，canonical 自引用。
+  // 关键词检索页（?q=）是用户生成的搜索结果，不收录也不给分页页做自引用：
+  // canonical 指回 /community，并整体 noindex,follow。
+  const canonicalPath = page > 1 && !feedKeyword ? `/community?page=${page}` : '/community';
 
   return {
     title: { absolute: title },
     description,
-    robots: {
-      index: true,
-      follow: true,
-      googleBot: {
-        index: true,
-        follow: true,
-        'max-image-preview': 'large',
-        'max-snippet': -1,
-        'max-video-preview': -1,
-      },
-    },
+    robots: feedKeyword
+      ? { index: false, follow: true }
+      : {
+          index: true,
+          follow: true,
+          googleBot: {
+            index: true,
+            follow: true,
+            'max-image-preview': 'large',
+            'max-snippet': -1,
+            'max-video-preview': -1,
+          },
+        },
     alternates: {
-      canonical: '/community',
+      canonical: canonicalPath,
       languages: {
-        'zh-CN': '/community',
-        'x-default': '/community',
+        'zh-CN': canonicalPath,
+        'x-default': canonicalPath,
       },
     },
     openGraph: {
       title,
       description,
-      url: absoluteUrl('/community'),
+      url: absoluteUrl(canonicalPath),
       siteName,
       type: 'website',
       locale: 'zh_CN',
@@ -119,12 +240,29 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function CommunityPage() {
-  const { config, initialData } = await getCommunityPageData();
+export default async function CommunityPage({
+  searchParams,
+}: {
+  searchParams: Promise<CommunityPageSearchParams>;
+}) {
+  const params = await searchParams;
+  const feedKeyword = resolveFeedKeyword(params);
+  const feedPage = parseFeedPageParam(params?.page);
+  const { config, initialData } = await getCommunityPageData(feedKeyword, feedPage);
 
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
   const postList = Array.isArray(initialData.latestFeed?.list) ? initialData.latestFeed.list : [];
+  const jsonLdPosts = postList.slice(0, COMMUNITY_JSONLD_LIMIT);
   const topicList = Array.isArray(initialData.topics) ? initialData.topics : [];
+  const feedTotal = Math.max(0, Number(initialData.latestFeed?.total || 0));
+  const feedPageSize = Math.max(1, Number(initialData.latestFeed?.pageSize || COMMUNITY_SSR_FEED_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(feedTotal / feedPageSize));
+  // 越界页没有帖子可显示，返回真实 404，而不是 200 + 空列表 + 自引用 canonical。
+  // 判定写在 Suspense 之外，响应尚未开始流式输出，状态码才改得掉。
+  if (feedPage > totalPages) {
+    notFound();
+  }
+  const canonicalPath = feedPage > 1 && !feedKeyword ? `/community?page=${feedPage}` : '/community';
 
   const collectionJsonLd = {
     '@context': 'https://schema.org',
@@ -132,7 +270,7 @@ export default async function CommunityPage() {
     name: `${siteName} 社区`,
     description: COMMUNITY_PAGE_DESCRIPTION,
     inLanguage: 'zh-CN',
-    url: absoluteUrl('/community'),
+    url: absoluteUrl(canonicalPath),
     isPartOf: {
       '@type': 'WebSite',
       name: siteName,
@@ -145,8 +283,8 @@ export default async function CommunityPage() {
     '@type': 'ItemList',
     name: `${siteName} 社区最新帖子`,
     itemListOrder: 'https://schema.org/ItemListOrderDescending',
-    numberOfItems: postList.length,
-    itemListElement: postList.map((post, index) => {
+    numberOfItems: jsonLdPosts.length,
+    itemListElement: jsonLdPosts.map((post, index) => {
       const postTitle = clamp(String(post.title || post.summary || '社区帖子').trim(), 80);
       const postSummary = clamp(String(post.summary || post.content || '').trim(), 180);
       const postUrl = absoluteUrl(`/community/post/${encodeURIComponent(post.id)}`);
@@ -179,6 +317,12 @@ export default async function CommunityPage() {
 
   return (
     <>
+      {feedPage > 1 ? (
+        <link rel="prev" href={absoluteUrl(buildCommunityPageHref(feedPage - 1, feedKeyword))} />
+      ) : null}
+      {feedPage < totalPages ? (
+        <link rel="next" href={absoluteUrl(buildCommunityPageHref(feedPage + 1, feedKeyword))} />
+      ) : null}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }} />
       {postList.length > 0 ? (
         <script
@@ -195,6 +339,9 @@ export default async function CommunityPage() {
       <Suspense fallback={<CommunityPageSkeleton />}>
         <CommunityPageView initialData={initialData} />
       </Suspense>
+      <div className="mx-auto w-full max-w-[1440px] px-2 pb-8 sm:px-4">
+        <CommunityPagination currentPage={feedPage} totalPages={totalPages} keyword={feedKeyword} />
+      </div>
     </>
   );
 }

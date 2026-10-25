@@ -83,7 +83,9 @@ export default function GameHeroArtwork({ gameName, heroImage, icon }: GameHeroA
             src={responsiveImage.src}
             srcSet={responsiveImage.srcSet}
             sizes={HERO_IMAGE_SIZES}
-            alt={layer.decorative ? '' : `${gameName} 封面图`}
+            // 底层是同一张封面的模糊铺底，对读者没有新增信息，所以 aria-hidden；
+            // 但 alt 不能留空：空 alt 在 SEO 审计里等同「缺 alt」，也会让图片无法被检索。
+            alt={layer.decorative ? `${gameName} 封面背景` : `${gameName} 封面图`}
             aria-hidden={layer.decorative || undefined}
             loading="eager"
             decoding="async"
@@ -96,7 +98,7 @@ export default function GameHeroArtwork({ gameName, heroImage, icon }: GameHeroA
             key={layer.id}
             ref={layer.id === refLayerId ? imageRef : undefined}
             src={currentImage}
-            alt={layer.decorative ? '' : `${gameName} 封面图`}
+            alt={layer.decorative ? `${gameName} 封面背景` : `${gameName} 封面图`}
             aria-hidden={layer.decorative || undefined}
             fill
             priority={!layer.decorative}

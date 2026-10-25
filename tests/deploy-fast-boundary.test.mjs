@@ -8,7 +8,7 @@ const packageJson = JSON.parse(
 );
 
 test('生产构建使用与现有依赖一致的 pnpm 版本', () => {
-  assert.equal(packageJson.packageManager, 'pnpm@10.33.0');
+  assert.equal(packageJson.packageManager, 'pnpm@11.7.0');
 });
 
 test('快速部署先构建独立产物再切换运行目录', () => {

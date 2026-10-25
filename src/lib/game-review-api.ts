@@ -61,16 +61,6 @@ export interface GameReviewCommentRepliesResult {
   pageSize: number;
 }
 
-interface LocalGameCommentRecord {
-  id: string;
-  parentId: string | null;
-  userName: string;
-  userAvatar: string;
-  content: string;
-  createdAt: string;
-  likeCount: number;
-}
-
 interface ApiGameReviewSummaryPayload {
   rating?: number | string | null;
   rating_value?: number | string | null;
@@ -104,13 +94,6 @@ interface ApiGameReviewCommentPayload {
   reply_page_size?: number;
 }
 
-function getIdentityKey(identity: GameReviewIdentity): string {
-  const appId = String(identity.appId || '').trim();
-  const pkg = String(identity.pkg || '').trim();
-  const gameName = String(identity.gameName || '').trim();
-  return appId || pkg || gameName || 'unknown';
-}
-
 function buildIdentityQuery(identity: GameReviewIdentity) {
   const query = new URLSearchParams();
   const appId = String(identity.appId || '').trim();
@@ -130,45 +113,45 @@ function parseMessage(payload: unknown, fallback = '请求失败') {
   return message || fallback;
 }
 
-function parseCodeSuccess<T>(payload: ApiEnvelope<T> | null): payload is ApiEnvelope<T> {
-  if (!payload || typeof payload !== 'object') return false;
-  if (Array.isArray(payload)) return true;
-  if (payload.code === 0) return true;
-  if (payload.success === true || payload.ok === true) return true;
-  if (payload.code === undefined && (payload.data !== undefined || payload.result !== undefined)) return true;
-  if (payload.code === undefined) {
-    const keys = Object.keys(payload as Record<string, unknown>);
-    if (keys.length > 0) return true;
-  }
-  return false;
+function parseCodeSuccess<T>(payload: unknown): payload is ApiEnvelope<T> {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+  const envelope = payload as {
+    code?: unknown;
+    data?: unknown;
+    result?: unknown;
+  };
+  if (envelope.code === 0) return true;
+  return envelope.code === undefined
+    && (envelope.data !== undefined || envelope.result !== undefined);
 }
 
-async function requestCandidates<T>(
-  paths: string[],
+async function request<T>(
+  path: string,
   init: TrackedFetchInit = {},
 ): Promise<{ ok: boolean; data: T | null; message: string }> {
-  let message = '请求失败';
-  for (const path of paths) {
-    try {
-      const res = await trackedApiFetch(path, init);
-      const json = (await res.json().catch(() => null)) as ApiEnvelope<T> | null;
-      if (res.ok && parseCodeSuccess(json)) {
-        const resolvedData =
-          json && typeof json === 'object' && !Array.isArray(json)
-            ? (json.data ?? json.result ?? (json as unknown as T))
-            : (json as unknown as T);
-        return {
-          ok: true,
-          data: (resolvedData ?? null) as T | null,
-          message: parseMessage(json, 'ok'),
-        };
-      }
-      message = parseMessage(json, `HTTP ${res.status}`);
-    } catch (error) {
-      message = error instanceof Error ? error.message : String(error);
+  try {
+    const res = await trackedApiFetch(path, init);
+    const json = (await res.json().catch(() => null)) as ApiEnvelope<T> | null;
+    if (res.ok && parseCodeSuccess<T>(json)) {
+      const resolvedData = json.data ?? json.result ?? (json as unknown as T);
+      return {
+        ok: true,
+        data: (resolvedData ?? null) as T | null,
+        message: parseMessage(json, 'ok'),
+      };
     }
+    return {
+      ok: false,
+      data: null,
+      message: parseMessage(json, `HTTP ${res.status}`),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      data: null,
+      message: error instanceof Error ? error.message : String(error),
+    };
   }
-  return { ok: false, data: null, message };
 }
 
 function normalizeNonNegativeCount(value: unknown): number {
@@ -237,124 +220,43 @@ function toCommentThreads(list: ApiGameReviewCommentPayload[]): GameReviewCommen
   });
 }
 
-function getLocalCommentsStorageKey(identity: GameReviewIdentity): string {
-  return `game-review:comments:${getIdentityKey(identity)}`;
-}
-
-function readLocalComments(identity: GameReviewIdentity): LocalGameCommentRecord[] {
-  if (typeof window === 'undefined') return [];
-  const key = getLocalCommentsStorageKey(identity);
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(key) || '[]');
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .map((item) => ({
-        id: String(item?.id || '').trim(),
-        parentId: item?.parentId ? String(item.parentId).trim() : null,
-        userName: String(item?.userName || '').trim() || '匿名用户',
-        userAvatar: String(item?.userAvatar || '').trim() || FALLBACK_AVATAR,
-        content: String(item?.content || '').trim(),
-        createdAt: String(item?.createdAt || '').trim() || new Date().toISOString(),
-        likeCount: normalizeNonNegativeCount(item?.likeCount),
-      }))
-      .filter((item) => Boolean(item.id) && Boolean(item.content));
-  } catch {
-    return [];
-  }
-}
-
-function writeLocalComments(identity: GameReviewIdentity, comments: LocalGameCommentRecord[]) {
-  if (typeof window === 'undefined') return;
-  const key = getLocalCommentsStorageKey(identity);
-  try {
-    window.localStorage.setItem(key, JSON.stringify(comments.slice(0, 400)));
-  } catch {}
-}
-
-function toLocalThreads(identity: GameReviewIdentity): GameReviewCommentThread[] {
-  const records = readLocalComments(identity);
-  const roots = records.filter((item) => !item.parentId);
-  return roots.map((root) => {
-    const replies = records
-      .filter((item) => item.parentId === root.id)
-      .map((reply) => ({
-        id: reply.id,
-        user: {
-          name: reply.userName,
-          avatarUrl: reply.userAvatar,
-          dataAiHint: 'user avatar',
-        },
-        timestamp: formatTimestamp(reply.createdAt),
-        text: reply.content,
-        likeCount: reply.likeCount,
-      }));
-    return {
-      id: root.id,
-      user: {
-        name: root.userName,
-        avatarUrl: root.userAvatar,
-        dataAiHint: 'user avatar',
-      },
-      timestamp: formatTimestamp(root.createdAt),
-      text: root.content,
-      likeCount: root.likeCount,
-      replies,
-      replyTotal: replies.length,
-      replyHasMore: false,
-      replyPageSize: 20,
-    };
-  });
-}
-
-function buildSummaryCandidates(identity: GameReviewIdentity): string[] {
+function buildSummaryPath(identity: GameReviewIdentity): string {
   const query = buildIdentityQuery(identity).toString();
   const appId = String(identity.appId || '').trim();
   const pkg = String(identity.pkg || '').trim();
-  const list = [
-    `/game/reviews/summary?${query}`,
-    `/game/review/summary?${query}`,
-    `/content/game-reviews/summary?${query}`,
-  ];
-  if (appId) {
-    list.push(`/game/reviews/apps/${encodeURIComponent(appId)}/summary`);
-  }
-  if (pkg) {
-    list.push(`/game/reviews/pkg/${encodeURIComponent(pkg)}/summary`);
-  }
-  return Array.from(new Set(list));
+  if (query) return `/game/reviews/summary?${query}`;
+  if (appId) return `/game/reviews/apps/${encodeURIComponent(appId)}/summary`;
+  if (pkg) return `/game/reviews/pkg/${encodeURIComponent(pkg)}/summary`;
+  return '/game/reviews/summary';
 }
 
-function buildCommentsCandidates(
+function buildCommentsPath(
   identity: GameReviewIdentity,
   query: URLSearchParams,
-): string[] {
+): string {
   const appId = String(identity.appId || '').trim();
-  const list = [
-    `/game/reviews/comments?${query.toString()}`,
-    `/game/review/comments?${query.toString()}`,
-    `/content/game-reviews/comments?${query.toString()}`,
-  ];
-  if (appId) {
-    list.push(`/game/reviews/apps/${encodeURIComponent(appId)}/comments?${query.toString()}`);
+  if (buildIdentityQuery(identity).toString()) {
+    return `/game/reviews/comments?${query.toString()}`;
   }
-  return Array.from(new Set(list));
+  if (appId) {
+    return `/game/reviews/apps/${encodeURIComponent(appId)}/comments?${query.toString()}`;
+  }
+  return `/game/reviews/comments?${query.toString()}`;
 }
 
-function buildCommentRepliesCandidates(
+function buildCommentRepliesPath(
   identity: GameReviewIdentity,
   rootCommentId: string,
   query: URLSearchParams,
-): string[] {
+): string {
   const appId = String(identity.appId || '').trim();
-  const list = [
-    `/game/reviews/comments/${rootCommentId}/replies?${query.toString()}`,
-    `/game/review/comments/${rootCommentId}/replies?${query.toString()}`,
-    `/content/game-reviews/comments/${rootCommentId}/replies?${query.toString()}`,
-  ];
-  if (appId) {
-    list.push(`/game/reviews/apps/${encodeURIComponent(appId)}/comments/${rootCommentId}/replies?${query.toString()}`);
+  if (buildIdentityQuery(identity).toString()) {
+    return `/game/reviews/comments/${rootCommentId}/replies?${query.toString()}`;
   }
-  return Array.from(new Set(list));
+  if (appId) {
+    return `/game/reviews/apps/${encodeURIComponent(appId)}/comments/${rootCommentId}/replies?${query.toString()}`;
+  }
+  return `/game/reviews/comments/${rootCommentId}/replies?${query.toString()}`;
 }
 
 function buildBreakdown(data: ApiGameReviewSummaryPayload | null): GameRatingBreakdown {
@@ -384,56 +286,26 @@ function parseSummary(data: ApiGameReviewSummaryPayload | null, identity: GameRe
   };
 }
 
-function getLocalUserRatingKey(identity: GameReviewIdentity): string {
-  return `game-review:my-rating:${getIdentityKey(identity)}`;
-}
-
-function readLocalUserRating(identity: GameReviewIdentity): number | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    return normalizeToFiveStar(window.localStorage.getItem(getLocalUserRatingKey(identity)));
-  } catch {
-    return null;
-  }
-}
-
-function writeLocalUserRating(identity: GameReviewIdentity, rating: number) {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(getLocalUserRatingKey(identity), String(rating));
-  } catch {}
-}
-
-export async function getGameReviewSummary(identity: GameReviewIdentity): Promise<GameReviewSummary> {
-  const result = await requestCandidates<ApiGameReviewSummaryPayload>(
-    buildSummaryCandidates(identity),
+export async function getGameReviewSummary(
+  identity: GameReviewIdentity,
+  token?: string | null,
+): Promise<GameReviewSummary | null> {
+  const normalizedToken = String(token || '').trim();
+  const result = await request<ApiGameReviewSummaryPayload>(
+    buildSummaryPath(identity),
     {
       method: 'GET',
       cache: 'no-store',
+      headers: {
+        ...buildTrackingHeaders(),
+        ...(normalizedToken ? { Authorization: `Bearer ${normalizedToken}` } : {}),
+      },
     },
   );
   if (result.ok) {
     return parseSummary(result.data, identity);
   }
-  const localRating = readLocalUserRating(identity);
-  const fallback = computeGameRating({
-    manualScore: localRating ?? identity.manualScore,
-    userAverage: localRating ?? identity.manualScore,
-    ratingCount: localRating ? 1 : 0,
-    ratingBreakdown: localRating
-      ? {
-          1: localRating < 1.5 ? 1 : 0,
-          2: localRating >= 1.5 && localRating < 2.5 ? 1 : 0,
-          3: localRating >= 2.5 && localRating < 3.5 ? 1 : 0,
-          4: localRating >= 3.5 && localRating < 4.5 ? 1 : 0,
-          5: localRating >= 4.5 ? 1 : 0,
-        }
-      : null,
-  });
-  return {
-    ...fallback,
-    myRating: localRating,
-  };
+  return null;
 }
 
 export async function submitGameRating(params: {
@@ -454,12 +326,7 @@ export async function submitGameRating(params: {
     rating,
   };
   const body = JSON.stringify(payload);
-  const candidates = [
-    '/game/reviews/rating',
-    '/game/review/rating',
-    '/content/game-reviews/rating',
-  ];
-  const result = await requestCandidates<ApiGameReviewSummaryPayload>(candidates, {
+  const result = await request<ApiGameReviewSummaryPayload>('/game/reviews/rating', {
     method: 'POST',
     headers: {
       ...buildTrackingHeaders(),
@@ -476,15 +343,10 @@ export async function submitGameRating(params: {
     };
   }
 
-  writeLocalUserRating(identity, rating);
-  const summary = await getGameReviewSummary(identity);
   return {
-    ok: true,
-    message: '评分已保存到本地',
-    summary: {
-      ...summary,
-      myRating: rating,
-    },
+    ok: false,
+    message: result.message || '评分失败',
+    summary: null,
   };
 }
 
@@ -500,8 +362,8 @@ export async function getGameReviewCommentThreads(
   query.set('replyPageSize', String(Math.min(100, Math.max(1, replyPageSize))));
   query.set('sort', sort);
 
-  const result = await requestCandidates<{ list?: ApiGameReviewCommentPayload[] }>(
-    buildCommentsCandidates(identity, query),
+  const result = await request<{ list?: ApiGameReviewCommentPayload[] }>(
+    buildCommentsPath(identity, query),
     {
       method: 'GET',
       cache: 'no-store',
@@ -515,7 +377,7 @@ export async function getGameReviewCommentThreads(
         : [];
     return toCommentThreads(rawList);
   }
-  return toLocalThreads(identity);
+  throw new Error(result.message || '评论加载失败');
 }
 
 export async function getGameReviewCommentReplies(
@@ -534,13 +396,13 @@ export async function getGameReviewCommentReplies(
   query.set('pageSize', String(Math.min(100, Math.max(1, Number(pageSize) || 20))));
   query.set('sort', sort);
 
-  const result = await requestCandidates<{
+  const result = await request<{
     root_comment?: ApiGameReviewCommentPayload | null;
     list?: ApiGameReviewCommentPayload[];
     total?: number;
     page?: number;
     pageSize?: number;
-  }>(buildCommentRepliesCandidates(identity, commentId, query), {
+  }>(buildCommentRepliesPath(identity, commentId, query), {
     method: 'GET',
     cache: 'no-store',
   });
@@ -560,16 +422,7 @@ export async function getGameReviewCommentReplies(
     };
   }
 
-  const localThreads = toLocalThreads(identity);
-  const thread = localThreads.find((item) => item.id === commentId);
-  const fallbackList = thread?.replies || [];
-  return {
-    rootComment: thread || null,
-    list: fallbackList,
-    total: fallbackList.length,
-    page: 1,
-    pageSize: Math.max(1, Number(pageSize || 20)),
-  };
+  throw new Error(result.message || '回复加载失败');
 }
 
 export async function submitGameReviewComment(params: {
@@ -597,34 +450,20 @@ export async function submitGameReviewComment(params: {
     email_notify: Boolean(params.emailNotify),
   };
   const body = JSON.stringify(payload);
-  const result = await requestCandidates<any>(
-    ['/game/reviews/comments', '/game/review/comments', '/content/game-reviews/comments'],
-    {
-      method: 'POST',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body,
+  const result = await request<Record<string, unknown>>('/game/reviews/comments', {
+    method: 'POST',
+    headers: {
+      ...buildTrackingHeaders(),
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
     },
-  );
+    body,
+  });
   if (result.ok) {
     return { ok: true, message: result.message || '评论成功' };
   }
 
-  const local = readLocalComments(identity);
-  local.unshift({
-    id: `local-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-    parentId: parentId || null,
-    userName: String(params.userName || '').trim() || '当前用户',
-    userAvatar: String(params.userAvatar || '').trim() || FALLBACK_AVATAR,
-    content,
-    createdAt: new Date().toISOString(),
-    likeCount: 0,
-  });
-  writeLocalComments(identity, local);
-  return { ok: true, message: '评论已保存到本地' };
+  return { ok: false, message: result.message || '评论提交失败' };
 }
 
 export async function toggleGameReviewCommentLike(params: {
@@ -636,12 +475,8 @@ export async function toggleGameReviewCommentLike(params: {
   if (!token || !commentId) {
     return { ok: false, liked: null, likeCount: null, message: '参数不完整' };
   }
-  const result = await requestCandidates<{ liked?: boolean; like_count?: number }>(
-    [
-      `/game/reviews/comments/${commentId}/like`,
-      `/game/review/comments/${commentId}/like`,
-      `/content/game-reviews/comments/${commentId}/like`,
-    ],
+  const result = await request<{ liked?: boolean; like_count?: number }>(
+    `/game/reviews/comments/${commentId}/like`,
     {
       method: 'POST',
       headers: {
@@ -678,12 +513,8 @@ export async function getGameReviewCommentLikeStatuses(params: {
   ).slice(0, 200);
   if (!token || commentIds.length === 0) return {};
 
-  const result = await requestCandidates<{ liked_ids?: string[] }>(
-    [
-      '/game/reviews/comments/like-status-batch',
-      '/game/review/comments/like-status-batch',
-      '/content/game-reviews/comments/like-status-batch',
-    ],
+  const result = await request<{ liked_ids?: string[] }>(
+    '/game/reviews/comments/like-status-batch',
     {
       method: 'POST',
       headers: {
@@ -725,20 +556,17 @@ function writeLocalBoolean(key: string, value: boolean) {
 export async function getGameReviewEmailPreference(token: string): Promise<{ enabled: boolean; source: 'remote' | 'local' }> {
   const auth = String(token || '').trim();
   if (!auth) return { enabled: readLocalBoolean(USER_EMAIL_PREF_LOCAL_KEY), source: 'local' };
-  const result = await requestCandidates<{
+  const result = await request<{
     notification_email_enabled?: boolean;
     reply_email_enabled?: boolean;
-  }>(
-    ['/users/preferences/game-reviews', '/users/preferences/notifications', '/game/reviews/preferences'],
-    {
-      method: 'GET',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${auth}`,
-      },
-      cache: 'no-store',
+  }>('/users/preferences/game-reviews', {
+    method: 'GET',
+    headers: {
+      ...buildTrackingHeaders(),
+      Authorization: `Bearer ${auth}`,
     },
-  );
+    cache: 'no-store',
+  });
   if (!result.ok) return { enabled: readLocalBoolean(USER_EMAIL_PREF_LOCAL_KEY), source: 'local' };
   const enabled = Boolean(result.data?.notification_email_enabled ?? result.data?.reply_email_enabled);
   writeLocalBoolean(USER_EMAIL_PREF_LOCAL_KEY, enabled);
@@ -748,31 +576,32 @@ export async function getGameReviewEmailPreference(token: string): Promise<{ ena
 export async function updateGameReviewEmailPreference(params: {
   token: string;
   enabled: boolean;
-}): Promise<{ ok: boolean; enabled: boolean; source: 'remote' | 'local'; message: string }> {
+}): Promise<
+  | { ok: true; enabled: boolean; source: 'remote'; message: string }
+  | { ok: false; message: string }
+> {
   const auth = String(params.token || '').trim();
   if (!auth) {
-    writeLocalBoolean(USER_EMAIL_PREF_LOCAL_KEY, Boolean(params.enabled));
-    return { ok: true, enabled: Boolean(params.enabled), source: 'local', message: '已保存到本地' };
+    return { ok: false, message: '登录状态已失效' };
   }
   const body = JSON.stringify({
     notification_email_enabled: Boolean(params.enabled),
     reply_email_enabled: Boolean(params.enabled),
   });
-  const result = await requestCandidates<any>(
-    ['/users/preferences/game-reviews', '/users/preferences/notifications', '/game/reviews/preferences'],
-    {
-      method: 'PATCH',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${auth}`,
-        'Content-Type': 'application/json',
-      },
-      body,
+  const result = await request<{
+    notification_email_enabled?: boolean;
+    reply_email_enabled?: boolean;
+  }>('/users/preferences/game-reviews', {
+    method: 'PATCH',
+    headers: {
+      ...buildTrackingHeaders(),
+      Authorization: `Bearer ${auth}`,
+      'Content-Type': 'application/json',
     },
-  );
+    body,
+  });
   if (!result.ok) {
-    writeLocalBoolean(USER_EMAIL_PREF_LOCAL_KEY, Boolean(params.enabled));
-    return { ok: true, enabled: Boolean(params.enabled), source: 'local', message: '已保存到本地' };
+    return { ok: false, message: result.message || '保存失败' };
   }
   writeLocalBoolean(USER_EMAIL_PREF_LOCAL_KEY, Boolean(params.enabled));
   return { ok: true, enabled: Boolean(params.enabled), source: 'remote', message: result.message || '保存成功' };
@@ -781,8 +610,8 @@ export async function updateGameReviewEmailPreference(params: {
 export async function getGameReviewAdminEmailSwitch(token: string): Promise<{ enabled: boolean | null; source: 'remote' | 'local' }> {
   const auth = String(token || '').trim();
   if (!auth) return { enabled: readLocalBoolean(ADMIN_EMAIL_SWITCH_LOCAL_KEY), source: 'local' };
-  const result = await requestCandidates<{ community_reply_email_enabled?: boolean; game_review_email_enabled?: boolean }>(
-    ['/admin/community/reply-email/settings', '/admin/game-reviews/settings', '/game/reviews/admin/settings'],
+  const result = await request<{ community_reply_email_enabled?: boolean; game_review_email_enabled?: boolean }>(
+    '/game/reviews/admin/settings',
     {
       method: 'GET',
       headers: {
@@ -801,30 +630,32 @@ export async function getGameReviewAdminEmailSwitch(token: string): Promise<{ en
 export async function updateGameReviewAdminEmailSwitch(params: {
   token: string;
   enabled: boolean;
-}): Promise<{ ok: boolean; enabled: boolean; source: 'remote' | 'local'; message: string }> {
+}): Promise<
+  | { ok: true; enabled: boolean; source: 'remote'; message: string }
+  | { ok: false; message: string }
+> {
   const auth = String(params.token || '').trim();
   if (!auth) {
-    return { ok: false, enabled: Boolean(params.enabled), source: 'local', message: '登录状态已失效' };
+    return { ok: false, message: '登录状态已失效' };
   }
   const body = JSON.stringify({
     community_reply_email_enabled: Boolean(params.enabled),
     game_review_email_enabled: Boolean(params.enabled),
   });
-  const result = await requestCandidates<any>(
-    ['/admin/community/reply-email/settings', '/admin/game-reviews/settings', '/game/reviews/admin/settings'],
-    {
-      method: 'PATCH',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${auth}`,
-        'Content-Type': 'application/json',
-      },
-      body,
+  const result = await request<{
+    community_reply_email_enabled?: boolean;
+    game_review_email_enabled?: boolean;
+  }>('/game/reviews/admin/settings', {
+    method: 'PATCH',
+    headers: {
+      ...buildTrackingHeaders(),
+      Authorization: `Bearer ${auth}`,
+      'Content-Type': 'application/json',
     },
-  );
+    body,
+  });
   if (!result.ok) {
-    writeLocalBoolean(ADMIN_EMAIL_SWITCH_LOCAL_KEY, Boolean(params.enabled));
-    return { ok: true, enabled: Boolean(params.enabled), source: 'local', message: '已保存到本地' };
+    return { ok: false, message: result.message || '保存失败' };
   }
   writeLocalBoolean(ADMIN_EMAIL_SWITCH_LOCAL_KEY, Boolean(params.enabled));
   return { ok: true, enabled: Boolean(params.enabled), source: 'remote', message: result.message || '保存成功' };

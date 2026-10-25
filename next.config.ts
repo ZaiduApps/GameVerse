@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
   // Separate dev and prod artifacts to avoid stale chunk manifest conflicts.
   distDir: configuredDistDir || (isDevRuntime ? '.next-dev' : '.next'),
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   eslint: {
     ignoreDuringBuilds: true,

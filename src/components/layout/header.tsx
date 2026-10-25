@@ -226,7 +226,7 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
                 variant="outline"
                 size="icon"
                 aria-label="打开搜索"
-                className="h-9 w-9 rounded-xl border border-border/20 bg-card/90 shadow-sm transition-colors hover:bg-primary/8 hover:text-foreground hover:border-primary/15"
+                className="h-11 w-11 rounded-xl border border-border/20 bg-card/90 shadow-sm transition-colors hover:bg-primary/8 hover:text-foreground hover:border-primary/15 lg:h-9 lg:w-9"
                 onClick={() => setSearchOverlayOpen(true)}
               >
                 <Search className="h-4 w-4" />
@@ -256,7 +256,13 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
             </div>
 
             <div className="md:hidden">
-              <Button variant="ghost" size="icon" aria-label="打开搜索" onClick={() => setSearchOverlayOpen(true)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="打开搜索"
+                className="h-11 w-11 lg:h-9 lg:w-9"
+                onClick={() => setSearchOverlayOpen(true)}
+              >
                 <Search className="h-5 w-5" />
               </Button>
             </div>
@@ -264,8 +270,8 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0" aria-label="打开用户菜单">
-                    <Avatar className="h-9 w-9">
+                  <Button variant="ghost" className="relative h-11 w-11 rounded-full p-0 lg:h-9 lg:w-9" aria-label="打开用户菜单">
+                    <Avatar className="h-11 w-11 lg:h-9 lg:w-9">
                       <AvatarImage src={user?.avatar} alt={user?.name || user?.username} />
                       <AvatarFallback>{(user?.name || user?.username || 'U').substring(0, 1).toUpperCase()}</AvatarFallback>
                     </Avatar>
@@ -325,12 +331,15 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
               </Button>
             )}
 
-            <ThemeToggle />
+            {/* 主题切换按钮由 ThemeToggle 内部渲染，移动端通过子选择器把热区提到 44×44，桌面维持 36×36 */}
+            <div className="[&>button]:h-11 [&>button]:w-11 lg:[&>button]:h-9 lg:[&>button]:w-9">
+              <ThemeToggle />
+            </div>
 
             <div className="md:hidden">
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="icon" className="btn-interactive">
+                  <Button variant="outline" size="icon" className="btn-interactive h-11 w-11 lg:h-9 lg:w-9">
                     <Menu className="h-6 w-6" />
                     <span className="sr-only">打开菜单</span>
                   </Button>

@@ -26,6 +26,7 @@ import {
   searchGlobal,
   type GlobalSearchResult,
 } from '@/lib/search-api';
+import { SEARCH_RECOMMEND_ALBUM_ID } from '@/lib/search-recommend-album';
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -119,7 +120,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
 
       if (recommendedGames.length === 0) {
         setIsLoading(true);
-        trackedApiFetch('/albums/album-details/6957c97f4ca3f95323fc6e44')
+        trackedApiFetch(`/albums/album-details/${encodeURIComponent(SEARCH_RECOMMEND_ALBUM_ID)}`)
           .then((res) => res.json())
           .then((data) => {
             if (data.code === 0 && data.data?.games) {
