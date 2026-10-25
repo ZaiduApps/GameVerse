@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+# 派发单 dev-director-2026-10-25T14-10-17-120Z.md P0-3：推送前跑类型检查（约 11 秒）。
+# 本仓 lint 门暂缺：Next 15 已移除内置 ESLint，仓里也没装 eslint-config-next，ESLint 迁移是独立任务。
+# --no-verify 可以绕过，拦的是「忘了跑」，不是恶意绕过。
+set -e
+cd "$(dirname "$0")/.." || exit 1
+npx tsc --noEmit

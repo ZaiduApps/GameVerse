@@ -1,4 +1,5 @@
 import { trackedApiFetch, type TrackedFetchInit } from '@/lib/api';
+import { authedFetch } from '@/lib/authed-fetch';
 import { resolveGameName } from '@/lib/game-display-name';
 import { buildTrackingHeaders } from '@/lib/tracking-headers';
 import type { CommunityPost } from '@/types';
@@ -1081,13 +1082,9 @@ export async function getCommunityPostLikeStatus(params: {
   if (!token || !postId) return null;
 
   try {
-    const res = await trackedApiFetch(`/content/${postId}/like-status`, {
+    const res = await authedFetch(`/content/${postId}/like-status`, { cache: 'no-store' }, {
+      token,
       method: 'GET',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-      },
-      cache: 'no-store',
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json?.code !== 0) return null;
@@ -1112,15 +1109,10 @@ export async function getCommunityCommentLikeStatuses(params: {
   if (!token || commentIds.length === 0) return {};
 
   try {
-    const res = await trackedApiFetch('/content/comments/like-status-batch', {
+    const res = await authedFetch('/content/comments/like-status-batch', { cache: 'no-store' }, {
+      token,
       method: 'POST',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ ids: commentIds }),
-      cache: 'no-store',
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json?.code !== 0) return {};
@@ -1242,13 +1234,9 @@ export async function quickCreateCommunityTopic(params: {
   }
 
   try {
-    const res = await trackedApiFetch('/content/topics/quick-create', {
+    const res = await authedFetch('/content/topics/quick-create', {}, {
+      token,
       method: 'POST',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         name,
         app_id: params.appId || undefined,
@@ -1296,13 +1284,9 @@ export async function createCommunityPost(
   }
 
   try {
-    const res = await trackedApiFetch('/content/posts', {
+    const res = await authedFetch('/content/posts', {}, {
+      token,
       method: 'POST',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         title: String(params.title || '').trim() || undefined,
         summary: String(params.summary || '').trim() || undefined,
@@ -1361,13 +1345,9 @@ export async function updateMyCommunityPost(
   }
 
   try {
-    const res = await trackedApiFetch(`/content/my/posts/${postId}`, {
+    const res = await authedFetch(`/content/my/posts/${postId}`, {}, {
+      token,
       method: 'PUT',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         title: String(params.title || '').trim() || undefined,
         summary: String(params.summary || '').trim() || undefined,
@@ -1441,13 +1421,9 @@ export async function getMyFollowedTopics(params: {
   });
 
   try {
-    const res = await trackedApiFetch(`/content/my/topics/follows?${query.toString()}`, {
+    const res = await authedFetch(`/content/my/topics/follows?${query.toString()}`, { cache: 'no-store' }, {
+      token,
       method: 'GET',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-      },
-      cache: 'no-store',
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json?.code !== 0) return [];
@@ -1468,13 +1444,9 @@ export async function getTopicFollowStatus(params: {
   if (!token || !topicId) return null;
 
   try {
-    const res = await trackedApiFetch(`/content/topics/${topicId}/follow-status`, {
+    const res = await authedFetch(`/content/topics/${topicId}/follow-status`, { cache: 'no-store' }, {
+      token,
       method: 'GET',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-      },
-      cache: 'no-store',
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json?.code !== 0 || !json?.data) return null;
@@ -1495,12 +1467,9 @@ export async function followTopic(params: {
   }
 
   try {
-    const res = await trackedApiFetch(`/content/topics/${topicId}/follow`, {
+    const res = await authedFetch(`/content/topics/${topicId}/follow`, {}, {
+      token,
       method: 'POST',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-      },
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json?.code !== 0) {
@@ -1531,12 +1500,9 @@ export async function unfollowTopic(params: {
   }
 
   try {
-    const res = await trackedApiFetch(`/content/topics/${topicId}/follow`, {
+    const res = await authedFetch(`/content/topics/${topicId}/follow`, {}, {
+      token,
       method: 'DELETE',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-      },
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json?.code !== 0) {
@@ -1583,13 +1549,9 @@ export async function moderatorUpdateTopic(params: {
   }
 
   try {
-    const res = await trackedApiFetch(`/content/topics/${topicId}/moderation`, {
+    const res = await authedFetch(`/content/topics/${topicId}/moderation`, {}, {
+      token,
       method: 'PATCH',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(payload),
     });
     const json = await res.json().catch(() => ({}));
@@ -1623,12 +1585,9 @@ export async function moderatorDeleteTopicPost(params: {
   }
 
   try {
-    const res = await trackedApiFetch(`/content/topics/${topicId}/moderation/posts/${postId}`, {
+    const res = await authedFetch(`/content/topics/${topicId}/moderation/posts/${postId}`, {}, {
+      token,
       method: 'DELETE',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-      },
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json?.code !== 0) {
@@ -1657,12 +1616,9 @@ export async function deleteMyCommunityPost(params: {
   }
 
   try {
-    const res = await trackedApiFetch(`/content/my/posts/${postId}`, {
+    const res = await authedFetch(`/content/my/posts/${postId}`, {}, {
+      token,
       method: 'DELETE',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-      },
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json?.code !== 0) {
@@ -1693,13 +1649,9 @@ export async function setMyCommunityPostStatus(params: {
   }
 
   try {
-    const res = await trackedApiFetch(`/content/my/posts/${postId}/status`, {
+    const res = await authedFetch(`/content/my/posts/${postId}/status`, {}, {
+      token,
       method: 'PATCH',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ status }),
     });
     const json = await res.json().catch(() => ({}));
@@ -1729,12 +1681,9 @@ export async function adminDeleteCommunityPost(params: {
   }
 
   try {
-    const res = await trackedApiFetch(`/content/admin/${postId}`, {
+    const res = await authedFetch(`/content/admin/${postId}`, {}, {
+      token,
       method: 'DELETE',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-      },
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json?.code !== 0) {
@@ -1765,13 +1714,9 @@ export async function adminSetCommunityPostStatus(params: {
   }
 
   try {
-    const res = await trackedApiFetch(`/content/admin/${postId}/status`, {
+    const res = await authedFetch(`/content/admin/${postId}/status`, {}, {
+      token,
       method: 'PATCH',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ status }),
     });
     const json = await res.json().catch(() => ({}));
@@ -1805,13 +1750,9 @@ export async function moderatorSetTopicPostStatus(params: {
   }
 
   try {
-    const res = await trackedApiFetch(`/content/topics/${topicId}/moderation/posts/${postId}/status`, {
+    const res = await authedFetch(`/content/topics/${topicId}/moderation/posts/${postId}/status`, {}, {
+      token,
       method: 'PATCH',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ status }),
     });
     const json = await res.json().catch(() => ({}));
@@ -1843,12 +1784,9 @@ export async function moderatorDeleteTopicComment(params: {
   }
 
   try {
-    const res = await trackedApiFetch(`/content/topics/${topicId}/moderation/comments/${commentId}`, {
+    const res = await authedFetch(`/content/topics/${topicId}/moderation/comments/${commentId}`, {}, {
+      token,
       method: 'DELETE',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-      },
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json?.code !== 0) {
@@ -1881,13 +1819,9 @@ export async function moderatorSetTopicCommentStatus(params: {
   }
 
   try {
-    const res = await trackedApiFetch(`/content/topics/${topicId}/moderation/comments/${commentId}/status`, {
+    const res = await authedFetch(`/content/topics/${topicId}/moderation/comments/${commentId}/status`, {}, {
+      token,
       method: 'PATCH',
-      headers: {
-        ...buildTrackingHeaders(),
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ status }),
     });
     const json = await res.json().catch(() => ({}));
