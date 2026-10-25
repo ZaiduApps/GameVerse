@@ -264,6 +264,10 @@ async function fetchHomeDataWithRetry(
         errorName,
         errorMessage,
       });
+      // 网络层抛错后不再重试同一个 URL：Next 15.0.7 在 origin fetch reject 时不会释放该
+      // cacheKey 的 fetch 缓存锁，同 URL 的第二次 fetch 会永久等在锁上，整个渲染挂死。
+      // 5xx / 脏数据（fetch 已 resolve）仍然按上面的 continue 重试。
+      return null;
     }
   }
 
