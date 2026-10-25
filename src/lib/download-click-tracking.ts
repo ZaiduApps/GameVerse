@@ -7,13 +7,13 @@ import { buildTrackingHeaders } from '@/lib/tracking-headers';
  * 口径：`download_click` = **客户端声明的用户点击意图**，必须带 `event_id`，
  * 服务端按 id 去重。服务端不再把「getAppDownload 被调用一次」记成点击。
  *
- * 只在用户真正发起某个渠道的下载时调用（弹窗里的渠道按钮 / 服务端直出直链）；
- * 「获取游戏」只是打开弹窗，由 data-acbox-action 的 WebView 埋点覆盖，不在这里重复计数。
+ * 只在用户真正发起下载动作时调用（「获取游戏」打开下载弹窗、弹窗里的渠道按钮、
+ * 服务端直出直链）；`surface` 用来区分这三种位置。
  *
  * 不阻塞跳转：失败静默，下载可用性永远优先。
  */
 
-export type DownloadClickSurface = 'detail_dialog' | 'detail_ssr';
+export type DownloadClickSurface = 'detail_open' | 'detail_dialog' | 'detail_ssr';
 
 export interface DownloadClickInput {
   appId?: string | null;

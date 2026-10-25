@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import { reportDownloadClick } from '@/lib/download-click-tracking';
 import { buildFeedbackCommonFields, submitFeedbackTicket } from '@/lib/feedback';
 import { resolveGameName } from '@/lib/game-display-name';
 import { resolveGameSourceInfo } from '@/lib/game-source-link';
@@ -164,8 +165,12 @@ export default function GameDetailActions({
 
   const openPrimaryAction = useCallback(() => {
     if (primaryActionKind === 'app-guide') setAppGuideOpen(true);
-    else setDownloadOpen(true);
-  }, [primaryActionKind]);
+    else {
+      // 老板 2026-10-25 定口径：「获取游戏」按钮也算一次 download_click（surface=detail_open）。
+      reportDownloadClick({ appId: game._id, pkg: game.pkg, surface: 'detail_open' });
+      setDownloadOpen(true);
+    }
+  }, [primaryActionKind, game._id, game.pkg]);
 
   const primaryActionLabel = isWebGame ? '前往 AC 盒子游玩' : '立即高速下载';
   const primaryActionMeta = buildPrimaryActionMeta(game);
