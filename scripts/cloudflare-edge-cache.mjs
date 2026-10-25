@@ -18,25 +18,21 @@ import { constants as fsConstants } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 
+import {
+  CACHE_RULE_BODY,
+  CACHE_RULE_DESCRIPTION,
+  CACHE_RULE_EXPRESSION,
+  CACHE_RULE_PHASE,
+  validateRuleExpression,
+} from './lib/edge-cache-policy.mjs';
+
 const API_BASE = 'https://api.cloudflare.com/client/v4';
 const DEFAULT_ZONE_ID = 'e7b3dd0389edcdc16406720de627258e';
 const DEFAULT_TOKEN_FILE = path.join(homedir(), '.config', 'apkscc', 'cloudflare.key');
-const RULE_DESCRIPTION = 'apkscc: 详情页 HTML 边缘缓存 (/app/*)';
-const RULE_EXPRESSION = '(starts_with(http.request.uri.path, "/app/"))';
-const PHASE = 'http_request_cache_settings';
-
-const RULE_BODY = {
-  action: 'set_cache_settings',
-  description: RULE_DESCRIPTION,
-  enabled: true,
-  expression: RULE_EXPRESSION,
-  action_parameters: {
-    // 详情页本身没有登录态/个性化分支；缓存资格交给规则，TTL 复用源站 s-maxage=300。
-    cache: true,
-    edge_ttl: { mode: 'respect_origin' },
-    browser_ttl: { mode: 'respect_origin' },
-  },
-};
+const RULE_DESCRIPTION = CACHE_RULE_DESCRIPTION;
+const RULE_EXPRESSION = CACHE_RULE_EXPRESSION;
+const PHASE = CACHE_RULE_PHASE;
+const RULE_BODY = CACHE_RULE_BODY;
 
 function printPanelSteps() {
   console.log(`
@@ -44,11 +40,12 @@ function printPanelSteps() {
   1. Rule name: ${RULE_DESCRIPTION}
   2. If incoming requests match… → Use expression builder，表达式原文：
        ${RULE_EXPRESSION}
-     （等价于 Custom filter expression / Edit expression 粘贴上述表达式）
+     （等价于 Custom filter expression / Edit expression 粘贴上述表达式；
+       not ... query contains "_rsc=" 用来排除 Next 的 RSC/预取请求）
   3. Cache eligibility: Eligible for cache
   4. Edge TTL: Use cache-control header if present, bypass cache if not（即 respect_origin）
   5. Browser TTL: Respect origin TTL
-  6. （保持默认）Cache key 不做自定义：查询串参与 cache key，_rsc 请求靠查询串天然分开
+  6. （保持默认）Cache key 不做自定义：查询串参与 cache key；_rsc 请求已由表达式排除
   7. Deploy → 用 scripts/assert-edge-cache.mjs 复验
 
 说明：源站已把详情页 HTML 的 Vary 收口成只剩 Accept-Encoding
@@ -149,6 +146,12 @@ async function main() {
 
   const entrypointUrl = `${API_BASE}/zones/${options.zoneId}/rulesets/phases/${PHASE}/entrypoint`;
   console.log(`[edge-cache] zone=${options.zoneId} phase=${PHASE} token=${source} mode=${options.apply ? 'apply' : 'dry-run'}`);
+
+  const expressionProblems = validateRuleExpression(RULE_EXPRESSION);
+  if (expressionProblems.length > 0) {
+    console.error(`[edge-cache] 规则表达式不合约定: ${expressionProblems.join('; ')}`);
+    return 1;
+  }
 
   const current = await callApi({ token, method: 'GET', url: entrypointUrl });
   if (isPermissionError(current)) {

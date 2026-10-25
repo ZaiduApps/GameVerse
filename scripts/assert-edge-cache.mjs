@@ -15,6 +15,8 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { diffFingerprints, extractDetailFingerprint } from './lib/edge-cache-policy.mjs';
+
 const DEFAULT_URL = 'https://apks.cc/app/com.tencent.ig';
 const DEFAULT_MAX_TTFB_MS = 80;
 
@@ -32,40 +34,6 @@ function parseArgs(argv) {
     }
   }
   return options;
-}
-
-function firstMatch(source, patterns) {
-  for (const pattern of patterns) {
-    const match = source.match(pattern);
-    if (match && match[1]) return match[1].trim();
-  }
-  return '';
-}
-
-/**
- * 从详情页 HTML 里取稳定性字段：游戏名、og:image、detail_images 首图。
- * detail_images 在 SSR 出来的 RSC payload 里既可能是普通 JSON，也可能是转义后的字符串。
- */
-export function extractDetailFingerprint(html) {
-  const source = String(html || '');
-  return {
-    title: firstMatch(source, [/<title[^>]*>([\s\S]*?)<\/title>/i]),
-    ogTitle: firstMatch(source, [
-      /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i,
-      /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i,
-    ]),
-    ogImage: firstMatch(source, [
-      /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
-      /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
-    ]),
-    firstDetailImage: firstMatch(source, [
-      /"detail_images"\s*:\s*\[\s*"([^"]+)"/,
-      /\\"detail_images\\"\s*:\s*\[\s*\\"([^"\\]+)\\"/,
-      /"detailImages"\s*:\s*\[\s*"([^"]+)"/,
-    ]),
-    // 不是每个游戏的 detail_images 都非空；JSON-LD 的 screenshot 数组是同一批首屏图的稳定落点。
-    firstScreenshot: firstMatch(source, [/"screenshot"\s*:\s*\[\s*"([^"]+)"/]),
-  };
 }
 
 async function probe(url) {
@@ -108,11 +76,6 @@ function printProbe(label, probeResult) {
   );
 }
 
-function compareFingerprints(first, second) {
-  const fields = ['title', 'ogTitle', 'ogImage', 'firstDetailImage', 'firstScreenshot'];
-  return fields.filter((field) => first[field] !== second[field]);
-}
-
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
@@ -138,7 +101,7 @@ async function main() {
   const first = probes[0];
   const last = probes[probes.length - 1];
   const hit = last.headers.cfCacheStatus.toUpperCase() === 'HIT';
-  const changed = compareFingerprints(first.fingerprint, last.fingerprint);
+  const changed = diffFingerprints(first.fingerprint, last.fingerprint);
   const fieldsPresent = Boolean(last.fingerprint.title) || Boolean(last.fingerprint.ogImage) || Boolean(last.fingerprint.firstScreenshot);
   const rscTokens = /(^|,)\s*(RSC|Next-Router-State-Tree|Next-Router-Prefetch|Next-Router-Segment-Prefetch)\s*(,|$)/i.test(
     last.headers.vary,

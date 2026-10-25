@@ -61,7 +61,7 @@
 | 字段 | 值 |
 |---|---|
 | 规则名 | `apkscc: 详情页 HTML 边缘缓存 (/app/*)` |
-| 表达式 | `(starts_with(http.request.uri.path, "/app/"))` |
+| 表达式 | `(starts_with(http.request.uri.path, "/app/") and not http.request.uri.query contains "_rsc=")` |
 | Cache eligibility | Eligible for cache（即 Cache Everything） |
 | Edge TTL | `respect_origin`（复用源站 `s-maxage=300`） |
 | Browser TTL | `respect_origin` |
@@ -70,7 +70,8 @@
 
 要点：
 
-- **查询串参与 cache key**：RSC 请求的 `?_rsc=` 天然与普通 HTML 分开缓存，不需要额外规则；
+- **查询串参与 cache key**：RSC 请求的 `?_rsc=` 与普通 HTML 天然分开缓存；
+- **表达式显式排除 `_rsc`**（见 3.2）：RSC/预取请求不接管边缘缓存；
 - 表达式用 `starts_with(..., "/app/")` 而不是 `/app/*`：不会命中 `/app` 列表页本身（列表页有自己的分页查询串，后续单独评估）；
 - 不存在的 pkg 走 `notFound()`，本机实测该 404 带 `cache-control: s-maxage=300, stale-while-revalidate=...`（沿用详情路由的 revalidate），所以边缘最多缓存 5 分钟 —— 404 是确定性结果，可以接受；
 - 详情页 HTML 不带 `Set-Cookie`、无登录态分支，`Cache Everything` 不会泄露个性化内容。
@@ -82,7 +83,7 @@ Cloudflare Dashboard → 选中 `apks.cc` → **Rules → Cache Rules → Create
 1. **Rule name**：`apkscc: 详情页 HTML 边缘缓存 (/app/*)`
 2. **If incoming requests match…**：选 *Custom filter expression*（或 *Edit expression*），粘贴原文：
    ```
-   (starts_with(http.request.uri.path, "/app/"))
+   (starts_with(http.request.uri.path, "/app/") and not http.request.uri.query contains "_rsc=")
    ```
 3. **Cache eligibility** → `Eligible for cache`
 4. **Edge TTL** → `Use cache-control header if present, bypass cache if not`
@@ -90,7 +91,16 @@ Cloudflare Dashboard → 选中 `apks.cc` → **Rules → Cache Rules → Create
 6. **Cache key**：保持默认，不勾自定义
 7. **Deploy**，然后跑第 4 节的断言
 
-### 3.2 为什么不能只靠改源站
+### 3.2 为什么排除 `_rsc` 查询串
+
+Next 的 RSC 导航与预取请求都带 `?_rsc=<hash>`。这类响应的内容是 flight 负载而不是完整 HTML，
+而 Cloudflare 不会把 `RSC` / `Next-Router-State-Tree` 等请求头纳入缓存键：一旦让规则接管它们，
+同一 URL 下「预取拿到的 flight 负载」和「完整导航要的 HTML」会共用一份缓存，存在把预取负载喂给
+完整导航的风险。产1 的边界就是「RSC 数据路由不动」，所以表达式里显式排除 `_rsc`。
+
+排除后：普通 HTML 请求命中边缘缓存；RSC 请求照旧回源（源站 ISR 已有缓存），Vary 五个值原样保留。
+
+### 3.3 为什么不能只靠改源站
 
 Cloudflare 只有在「响应符合缓存资格」时才会缓存：Free 套餐默认只缓存静态扩展名（图片/CSS/JS），HTML 一律 `DYNAMIC`，与源站 `Cache-Control` 写多长无关。源站侧能做的只有两件事：
 
