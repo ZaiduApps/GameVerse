@@ -4,7 +4,9 @@ import { Suspense, type ReactNode } from 'react';
 import { BadgeCheck, ChevronRight, CreditCard, Download, ExternalLink, MessageSquare, RefreshCw, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
 
 import GameAnnouncements from '@/components/game-announcements';
+import GameDirectDownloadLinks from '@/components/game-direct-download-links.client';
 import GameFaqSection from '@/components/game-detail/GameFaqSection';
+import { buildDirectDownloadLinks } from '@/lib/game-download-channel';
 import { normalizeGameFaqItems } from '@/lib/game-faq';
 import { resolveGameName } from '@/lib/game-display-name';
 import { isWebGameType } from '@/lib/game-resource-type';
@@ -336,6 +338,11 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   );
   const resources = Array.isArray(gameData.resources) ? gameData.resources : [];
   const isWebGame = isWebGameType(game.type);
+  // 服务端直出的下载链接：只含可直下渠道，id 与页面 URL 一致（包名优先）。
+  // 锚点由服务端渲染进 HTML，无 JS 的环境也能点到 302 入口。
+  const directDownloadLinks = isWebGame
+    ? []
+    : buildDirectDownloadLinks(resources, game.pkg || game._id);
   const tags = getGameTags(game);
   const primaryCategory = getPrimaryCategory(game, tags);
   const cardConfig = (gameData.cardConfig || {}) as Record<string, CardConfigItem[] | undefined>;
@@ -515,6 +522,14 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                   showPreregReminder={showPreregReminder}
                 />
               </div>
+
+              {directDownloadLinks.length > 0 ? (
+                <GameDirectDownloadLinks
+                  links={directDownloadLinks}
+                  appId={game._id}
+                  pkg={game.pkg}
+                />
+              ) : null}
 
               {/* 指标条：移动端 3 格（隐藏「游戏分类」），PC 端 4 格 */}
               <div className="mt-4 grid grid-cols-3 gap-2 border-t border-[#abadae]/15 pt-3.5 lg:mt-8 lg:grid-cols-4 lg:gap-4 lg:pt-5">
