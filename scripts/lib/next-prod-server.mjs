@@ -10,6 +10,9 @@
  * - `next start` 的优雅退出没了 → 这里自己接 SIGINT/SIGTERM；
  * - ISR / 静态资源 / rewrites / 404 / 500 都由 NextNodeServer 自己处理，不受影响。
  *   （自定义 server 唯一少掉的是 Vercel 式的 serverless 部署，本项目不用。）
+ *
+ * 另一个职责：详情页「上游故障 + 无快照」时把响应翻成 503。页面层抛错给不出可控的响应
+ * 形态（Next 15.0.7 下同样是 500/无头），所以页面只写一个失败标记，由这里读标记改写状态码。
  */
 import http from 'node:http';
 import zlib from 'node:zlib';
@@ -23,6 +26,44 @@ import {
 import { decideHtmlCompression, isHtmlContentType } from './http-compress.mjs';
 
 const NEVER_PATCHED_PREFIX = '/_next/';
+
+/** 页面层（RSC/服务器组件）与这里共用的失败标记：pkg → 失败时间戳。 */
+const UNAVAILABLE_REGISTRY_KEY = '__APKSCC_GAME_DETAIL_UNAVAILABLE__';
+const UNAVAILABLE_MARKER_TTL_MS = 5000;
+const UNAVAILABLE_MARKER_CLOCK_TOLERANCE_MS = 50;
+
+globalThis[UNAVAILABLE_REGISTRY_KEY] ??= new Map();
+
+const UNAVAILABLE_HTML = `<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, follow">
+<title>服务暂时不可用 | APKScc</title>
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f5f6f7;color:#2c2f30;font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif}main{max-width:32rem;padding:2rem 1.5rem;text-align:center}h1{margin:0 0 .75rem;font-size:1.125rem}p{margin:0;color:#595c5d;font-size:.875rem;line-height:1.7}</style>
+</head><body><main><h1>服务暂时不可用</h1><p>该应用的详情数据正在恢复中，请稍后刷新重试。</p></main></body></html>`;
+
+function detailPkgFromPathname(pathname) {
+  const match = /^\/app\/([^/]+)\/?$/.exec(pathname);
+  if (!match) return '';
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
+function readUnavailableMarker(pkg, requestStartedAt) {
+  if (!pkg) return null;
+  const registry = globalThis[UNAVAILABLE_REGISTRY_KEY];
+  if (!(registry instanceof Map)) return null;
+  const ts = registry.get(pkg);
+  if (typeof ts !== 'number' || !Number.isFinite(ts)) return null;
+  const now = Date.now();
+  // 标记必须是本次请求期间写下的（容忍少量时钟抖动），且只在一小段时间内有效。
+  if (ts < requestStartedAt - UNAVAILABLE_MARKER_CLOCK_TOLERANCE_MS) return null;
+  if (now - ts > UNAVAILABLE_MARKER_TTL_MS) return null;
+  return ts;
+}
 
 /**
  * 改写单次响应：详情页 HTML 收口 Vary + HTML 响应补 gzip。
@@ -43,6 +84,8 @@ export function patchResponse(req, res) {
   if (pathname.startsWith(NEVER_PATCHED_PREFIX)) return;
 
   const isDetailHtmlResponse = isGameDetailHtmlRoute(pathname) && !isRscRequest({ headers: req.headers, url });
+  const requestStartedAt = Date.now();
+  const detailPkg = isDetailHtmlResponse ? detailPkgFromPathname(pathname) : '';
 
   const originalWriteHead = res.writeHead.bind(res);
   const originalWrite = res.write.bind(res);
@@ -50,6 +93,8 @@ export function patchResponse(req, res) {
 
   let prepared = null;
   let gzipStream = null;
+  let converted = false;
+  let convertedBodySent = false;
 
   function prepare() {
     if (prepared) return prepared;
@@ -73,6 +118,21 @@ export function patchResponse(req, res) {
         const vary = appendVaryToken(res.getHeader('vary'), 'Accept-Encoding');
         if (vary !== undefined && vary !== null) res.setHeader('vary', vary);
       }
+    }
+
+    // 页面刚登记过「无快照 + 上游故障」→ 这次响应改写成 503。
+    if (isDetailHtmlResponse && readUnavailableMarker(detailPkg, requestStartedAt) !== null) {
+      converted = true;
+      res.statusCode = 503;
+      res.setHeader('content-type', 'text/html; charset=utf-8');
+      res.setHeader('cache-control', 'no-store');
+      res.setHeader('retry-after', '60');
+      res.removeHeader('content-encoding');
+      res.setHeader('content-length', Buffer.byteLength(UNAVAILABLE_HTML));
+      const vary = appendVaryToken(res.getHeader('vary'), 'Accept-Encoding');
+      if (vary !== undefined && vary !== null) res.setHeader('vary', vary);
+      else res.removeHeader('vary');
+      return prepared;
     }
 
     const shouldGzip = decideHtmlCompression({
@@ -133,11 +193,18 @@ export function patchResponse(req, res) {
       }
     }
     prepare();
+    if (converted) return originalWriteHead(503);
     return statusMessage ? originalWriteHead(statusCode, statusMessage) : originalWriteHead(statusCode);
   };
 
   res.write = function write(chunk, encoding, callback) {
     prepare();
+    // 503 兜底：丢弃 Next 原本要写的正文（含任何 gzip 流），只留我们自己那一小段 HTML。
+    if (converted) {
+      const cb = typeof encoding === 'function' ? encoding : callback;
+      if (typeof cb === 'function') process.nextTick(cb);
+      return true;
+    }
     const stream = ensureGzip();
     if (!stream) return originalWrite(chunk, encoding, callback);
     if (typeof encoding === 'function') {
@@ -148,6 +215,16 @@ export function patchResponse(req, res) {
 
   res.end = function end(chunk, encoding, callback) {
     prepare();
+    if (converted) {
+      const cb = typeof chunk === 'function' ? chunk : typeof encoding === 'function' ? encoding : callback;
+      if (typeof cb === 'function') res.once('finish', cb);
+      if (!convertedBodySent) {
+        convertedBodySent = true;
+        originalWrite(UNAVAILABLE_HTML);
+      }
+      if (!res.writableEnded) originalEnd();
+      return res;
+    }
     const stream = ensureGzip();
     if (!stream) return originalEnd(chunk, encoding, callback);
 

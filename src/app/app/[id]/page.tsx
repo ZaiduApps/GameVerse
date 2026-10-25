@@ -398,7 +398,7 @@ const getGameDetails = cache(async (id: string): Promise<{ status: number; paylo
  * - `ok`：正常数据（SEO 快照优先，缺了就回退 /game/details）；
  * - `missing`：上游明确「不存在」→ 404，不能被降级逻辑吞掉；
  * - `degraded`：上游故障但有最近成功快照 → 渲染快照 + 顶部标注；
- * - `unavailable`：上游故障且没有快照 → 抛错走 5xx，不伪装成 404。
+ * - `unavailable`：上游故障且没有快照 → 渲染兜底壳并登记失败标记，由 server 改写为 503，不伪装成 404。
  */
 type GamePageDataResult =
   | { kind: 'ok'; data: GamePageSnapshot }
@@ -431,13 +431,50 @@ const getPageData = cache(async (id: string): Promise<GamePageDataResult> => {
   if (outcome.data) {
     return { kind: 'degraded', data: outcome.data, savedAt: outcome.savedAt, reason: outcome.reason };
   }
+  // 构建期不为某一页的上游抖动打断整批预生成：当成不存在跳过，运行时再按需生成。
+  if (process.env.NEXT_PHASE === 'phase-production-build') return { kind: 'missing' };
   return { kind: 'unavailable', reason: outcome.reason };
 });
 
-function unavailableError(id: string, reason: GameDetailFailureReason) {
-  const error = new Error(`[game-detail] 详情接口不可用且无快照: pkg=${id} reason=${reason}`);
-  error.name = 'GameDetailUnavailableError';
-  return error;
+/**
+ * 「无快照 + 上游故障」的运行时兜底。
+ *
+ * 页面不抛错：抛错拿不到可控的响应形态，而「兜底壳 + 失败标记」可以让自定义 server
+ * （scripts/lib/next-prod-server.mjs）把这次响应改写成 503；标准 `next start` 下就是
+ * 一个带 noindex 的 200 「服务暂时不可用」页。
+ *
+ * 已知限制（2026-10-25 实测，与本函数无关）：上游是传输层失败（连接拒绝 / 超时）时，
+ * 根布局的 site-config 重试会卡在 Next 15.0.7 泄漏的 fetch 缓存锁上，整页依旧挂死；
+ * 只有「上游有响应但不正常」（5xx、业务码报错）才走得到壳页 / 503。
+ */
+const UNAVAILABLE_MARKER_KEY = '__APKSCC_GAME_DETAIL_UNAVAILABLE__';
+
+function registerUnavailableMarker(pkg: string) {
+  const scope = globalThis as unknown as Record<string, unknown>;
+  let registry = scope[UNAVAILABLE_MARKER_KEY];
+  if (!(registry instanceof Map)) {
+    registry = new Map<string, number>();
+    scope[UNAVAILABLE_MARKER_KEY] = registry;
+  }
+  (registry as Map<string, number>).set(pkg, Date.now());
+}
+
+function GameDetailUnavailableView() {
+  return (
+    <main
+      className="mx-auto flex min-h-[60vh] w-full max-w-xl flex-col items-center justify-center gap-3 px-6 py-16 text-center"
+    >
+      <h1 className="text-lg font-semibold text-[#2c2f30] dark:text-foreground">服务暂时不可用</h1>
+      <p className="text-sm leading-relaxed text-[#595c5d] dark:text-muted-foreground">
+        该应用的详情数据正在恢复中，请稍后刷新重试。
+      </p>
+      <p className="text-xs text-[#757778] dark:text-muted-foreground">
+        如果长时间无法打开，可以
+        <a className="mx-1 underline decoration-dotted underline-offset-2" href="/app">返回游戏库</a>
+        换个入口。
+      </p>
+    </main>
+  );
 }
 
 const getRecommendedGames = cache(async (
@@ -486,8 +523,13 @@ export async function generateMetadata({
     notFound();
   }
   if (pageData.kind === 'unavailable') {
-    // 上游故障且无快照：走 5xx，不伪装成 404。
-    throw unavailableError(id, pageData.reason);
+    // 不抛错，给兜底 metadata（5xx 由自定义 server 按失败标记改写）。
+    // 兜底 metadata 一律 noindex，避免把「服务不可用」壳页收进索引。
+    return {
+      title: { absolute: `数据更新中 | ${normalizeText(siteConfig?.basic?.site_name) || 'APKScc'}` },
+      description: '详情数据暂时不可用，请稍后重试。',
+      robots: { index: false, follow: false },
+    };
   }
 
   // 与页面主体共用同一次 getPageData（cache() 保证），降级标记与 metadata 不会两边各判一次。
@@ -595,8 +637,9 @@ export default async function GameDetailPage({
     notFound();
   }
   if (pageData.kind === 'unavailable') {
-    // 上游故障且没有可用快照：抛错让 Next 返回 5xx，绝不用 404 冒充。
-    throw unavailableError(id, pageData.reason);
+    // 不抛错：登记失败标记，交给自定义 server 把这次响应改写成 503（标准 next start 下是 200 壳页）。
+    registerUnavailableMarker(id);
+    return <GameDetailUnavailableView />;
   }
 
   const initialGameData = pageData.data;

@@ -45,6 +45,23 @@ before(async () => {
       res.end(HTML_BODY);
       return;
     }
+    if (pathname === '/app/unavailable-marked') {
+      // 模拟页面层「无快照 + 上游故障」时登记标记后正常渲染兜底壳（不抛错）。
+      globalThis.__APKSCC_GAME_DETAIL_UNAVAILABLE__.set('unavailable-marked', Date.now());
+      res.setHeader('vary', `${RSC_VARY}, Accept-Encoding`);
+      res.setHeader('content-type', 'text/html; charset=utf-8');
+      res.setHeader('content-length', Buffer.byteLength(HTML_BODY));
+      res.end(HTML_BODY);
+      return;
+    }
+    if (pathname === '/app/stale-marker') {
+      globalThis.__APKSCC_GAME_DETAIL_UNAVAILABLE__.set('stale-marker', Date.now() - 6000);
+      res.setHeader('vary', `${RSC_VARY}, Accept-Encoding`);
+      res.setHeader('content-type', 'text/html; charset=utf-8');
+      res.setHeader('content-length', Buffer.byteLength(HTML_BODY));
+      res.end(HTML_BODY);
+      return;
+    }
     if (pathname === '/app/not-modified') {
       // 模拟 Next 的 sendEtagResponse：先 setHeader 再直接 304 + end()，此时还没有 content-type。
       res.setHeader('vary', RSC_VARY);
@@ -169,4 +186,39 @@ test('非 GET/HEAD 请求不接管', async () => {
 
   assert.equal(res.headers.vary, `${RSC_VARY}, Accept-Encoding`);
   assert.equal(res.headers['content-encoding'], undefined);
+});
+
+test('页面登记「无快照 + 上游故障」标记后，server 把响应翻成 503', async () => {
+  const res = await request('/app/unavailable-marked', {
+    accept: 'text/html',
+    'accept-encoding': 'gzip',
+  });
+
+  assert.equal(res.status, 503);
+  assert.equal(res.headers['content-type'], 'text/html; charset=utf-8');
+  assert.equal(res.headers['cache-control'], 'no-store');
+  assert.equal(res.headers['retry-after'], '60');
+  assert.equal(res.headers.vary, 'Accept-Encoding');
+  assert.equal(res.headers['content-encoding'], undefined);
+  assert.equal(Number(res.headers['content-length']), Buffer.byteLength(res.body.toString('utf8')));
+  const body = res.body.toString('utf8');
+  assert.match(body, /服务暂时不可用/);
+  assert.doesNotMatch(body, /占位内容/, '不能把 Next 原本的页面正文带出来');
+});
+
+test('过期标记（>5s）不触发 503', async () => {
+  const res = await request('/app/stale-marker', { accept: 'text/html' });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.toString('utf8'), HTML_BODY);
+  assert.equal(res.headers.vary, 'Accept-Encoding');
+});
+
+test('RSC 请求即便有失败标记也不改写（数据路由不动）', async () => {
+  globalThis.__APKSCC_GAME_DETAIL_UNAVAILABLE__.set('unavailable-marked', Date.now());
+  const res = await request('/app/unavailable-marked?_rsc=abc123', { rsc: '1' });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.vary, `${RSC_VARY}, Accept-Encoding`);
+  assert.equal(res.body.toString('utf8'), HTML_BODY);
 });

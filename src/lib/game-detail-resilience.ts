@@ -112,7 +112,11 @@ export function classifyGameDetailError(error: unknown): GameDetailFailureReason
   return 'other';
 }
 
-/** 上游业务码判定：`code === 0` 且带 `app` 才算成功；message 含「不存在」才是真 404。 */
+/**
+ * 上游业务码判定：`code === 0` 且带 `app` 才算成功。
+ * 真 404 有两种写法：`code` 为 `404` / `'404'`，或 `message` 含「不存在」；
+ * 其余非 0 业务码（例如 500）都是上游故障，必须走降级而不是 notFound。
+ */
 export function classifyGameDetailPayload(payload: unknown): GameDetailPayloadClassification {
   if (!payload || typeof payload !== 'object') {
     return { kind: 'degraded', reason: 'parse', message: 'empty payload' };
@@ -121,6 +125,7 @@ export function classifyGameDetailPayload(payload: unknown): GameDetailPayloadCl
   const record = payload as { code?: unknown; message?: unknown; data?: unknown };
   const code = record.code;
   if (code !== undefined && code !== 0 && code !== '0') {
+    if (code === 404 || code === '404') return { kind: 'missing' };
     const message = String(record.message || '').trim() || 'unknown';
     if (message.includes('不存在')) return { kind: 'missing' };
     return { kind: 'degraded', reason: 'code', message: `code=${String(code)} message=${message}` };

@@ -191,13 +191,12 @@ test('GitHub 来源在详情页与下载弹窗显示官方源与仓库链接', (
 });
 
 test('详情页把「游戏不存在」与「上游故障」分开处理', () => {
-  // 上游数据统一走降级装载：成功写快照、明确不存在→404、故障有快照→降级渲染、故障无快照→5xx。
+  // 上游数据统一走降级装载：成功写快照、明确不存在→404、故障有快照→降级渲染、故障无快照→兜底壳。
   assert.match(pageSource, /loadGameDetailWithFallback\(\{/);
   // SEO 快照成功时也要落降级快照，否则大多数页面在上游挂掉时没有可回退的数据。
   assert.match(pageSource, /await saveGameDetailSnapshot\(id, snapshot\)/);
   assert.match(pageSource, /persistSnapshot: process\.env\.NEXT_PHASE !== 'phase-production-build'/);
   assert.match(pageSource, /pageData\.kind === 'missing'\) \{\s*notFound\(\)/);
-  assert.match(pageSource, /pageData\.kind === 'unavailable'[\s\S]{0,160}throw unavailableError/);
   assert.doesNotMatch(pageSource, /if \(!initialGameData\) \{\s*notFound\(\)/);
   // generateMetadata 与页面主体共用同一次 getPageData 结果，降级标记不会两边不一致。
   assert.match(pageSource, /await Promise\.all\(\[getSiteConfig\(\), getPageData\(id\)\]\)/);
@@ -205,4 +204,21 @@ test('详情页把「游戏不存在」与「上游故障」分开处理', () =>
   assert.match(viewSource, /\{snapshotSavedAt \? <DegradedDataNotice savedAt=\{snapshotSavedAt\} \/> : null\}/);
   assert.match(viewSource, /role="status"/);
   assert.match(viewSource, /数据更新中/);
+});
+
+test('「无快照 + 上游故障」不再抛错：兜底壳 + 失败标记，由 server 翻成 503', () => {
+  // 抛错拿不到可控的响应形态（Next 15.0.7 下同样是 500 / 无头），所以页面只渲染壳并登记标记。
+  assert.doesNotMatch(pageSource, /throw unavailableError|GameDetailUnavailableError/);
+  assert.match(pageSource, /registerUnavailableMarker\(id\)/);
+  assert.match(pageSource, /return <GameDetailUnavailableView \/>/);
+  assert.match(pageSource, /__APKSCC_GAME_DETAIL_UNAVAILABLE__/);
+  assert.match(pageSource, /new Map<string, number>\(\)/);
+  // generateMetadata 同一分支返回 noindex 兜底 metadata，而不是抛错。
+  assert.match(pageSource, /robots: \{ index: false, follow: false \}/);
+  assert.doesNotMatch(pageSource, /title: \{ absolute: title \}[\s\S]{0,40}robots[\s\S]{0,40}index: false[\s\S]{0,200}unavailable/);
+  // 构建期上游故障按 missing 处理，避免某页抖动打断整批预生成。
+  assert.match(
+    pageSource,
+    /if \(process\.env\.NEXT_PHASE === 'phase-production-build'\) return \{ kind: 'missing' \}/,
+  );
 });

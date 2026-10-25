@@ -52,6 +52,9 @@ test('上游业务码/数据形状的分类', () => {
   assert.deepEqual(classifyGameDetailPayload({ code: 0, data }), { kind: 'ok', data });
 
   assert.deepEqual(classifyGameDetailPayload({ code: 404, message: '应用不存在' }), { kind: 'missing' });
+  // code 为 404 / '404' 时，即便 message 不含「不存在」也算真 404。
+  assert.deepEqual(classifyGameDetailPayload({ code: 404, message: 'not found' }), { kind: 'missing' });
+  assert.deepEqual(classifyGameDetailPayload({ code: '404', message: '' }), { kind: 'missing' });
   assert.deepEqual(classifyGameDetailPayload({ code: 500, message: 'everything is broken' }), {
     kind: 'degraded',
     reason: 'code',
