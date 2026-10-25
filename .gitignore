@@ -56,3 +56,6 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log
+
+# 详情页降级快照（src/lib/game-detail-resilience.ts 运行时产出，不入库、不随发布带上）
+/.cache/

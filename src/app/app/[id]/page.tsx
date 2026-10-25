@@ -20,6 +20,12 @@ import {
   selectDedicatedGameFaqItems,
 } from '@/lib/game-faq';
 import { isWebGameType } from '@/lib/game-resource-type';
+import {
+  DETAIL_API_TIMEOUT_MS,
+  loadGameDetailWithFallback,
+  saveGameDetailSnapshot,
+  type GameDetailFailureReason,
+} from '@/lib/game-detail-resilience';
 import { gamePageCacheTag } from '@/lib/game-page-cache';
 import type { ApiRecommendedGame, CommunityPost, GameDetailData, GamePageSnapshot, SiteConfig } from '@/types';
 
@@ -363,51 +369,76 @@ const getGamePageSnapshot = cache(async (id: string): Promise<GamePageSnapshot |
   }
 });
 
-const getGameDetails = cache(async (id: string): Promise<GameDetailData | null> => {
-  try {
-    const platform = process.env.NEXT_PUBLIC_CLIENT_PLATFORM || process.env.CLIENT_PLATFORM || 'android';
-    const region = process.env.NEXT_PUBLIC_CLIENT_REGION || process.env.CLIENT_REGION || '';
-    const clientVersion = process.env.NEXT_PUBLIC_CLIENT_VERSION || process.env.CLIENT_VERSION || '';
+const getGameDetails = cache(async (id: string): Promise<{ status: number; payload?: unknown }> => {
+  const platform = process.env.NEXT_PUBLIC_CLIENT_PLATFORM || process.env.CLIENT_PLATFORM || 'android';
+  const region = process.env.NEXT_PUBLIC_CLIENT_REGION || process.env.CLIENT_REGION || '';
+  const clientVersion = process.env.NEXT_PUBLIC_CLIENT_VERSION || process.env.CLIENT_VERSION || '';
 
-    const query = new URLSearchParams();
-    query.set('param', id);
-    if (platform) query.set('platform', platform);
-    if (region) query.set('region', region);
-    if (clientVersion) query.set('client_version', clientVersion);
+  const query = new URLSearchParams();
+  query.set('param', id);
+  if (platform) query.set('platform', platform);
+  if (region) query.set('region', region);
+  if (clientVersion) query.set('client_version', clientVersion);
 
-    const res = await trackedApiFetch(`/game/details?${query.toString()}`, {
-      cache: 'force-cache',
-      next: {
-        revalidate: DETAIL_REVALIDATE_SECONDS,
-        tags: [gamePageCacheTag(id)],
-      },
-      timeoutMs: 12000,
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (json.code !== 0) {
-      const message = String(json.message || '').trim() || 'unknown';
-      const logPayload = {
-        id,
-        code: json.code,
-        message,
-      };
-      if (message.includes('不存在')) {
-        console.warn('[game-detail] expected missing game', logPayload);
-      } else {
-        console.error('[game-detail] invalid payload', logPayload);
-      }
-      return null;
-    }
-    return json.data;
-  } catch (error) {
-    console.error('[game-detail] request failed', {
-      id,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return null;
-  }
+  const res = await trackedApiFetch(`/game/details?${query.toString()}`, {
+    cache: 'force-cache',
+    next: {
+      revalidate: DETAIL_REVALIDATE_SECONDS,
+      tags: [gamePageCacheTag(id)],
+    },
+    timeoutMs: DETAIL_API_TIMEOUT_MS,
+  });
+  // 非 2xx 也返回给降级判定，由它统一打 degraded 日志（不再在这里静默吞掉）。
+  if (!res.ok) return { status: res.status };
+  return { status: res.status, payload: await res.json() };
 });
+
+/**
+ * 页面数据的判定结果：
+ * - `ok`：正常数据（SEO 快照优先，缺了就回退 /game/details）；
+ * - `missing`：上游明确「不存在」→ 404，不能被降级逻辑吞掉；
+ * - `degraded`：上游故障但有最近成功快照 → 渲染快照 + 顶部标注；
+ * - `unavailable`：上游故障且没有快照 → 抛错走 5xx，不伪装成 404。
+ */
+type GamePageDataResult =
+  | { kind: 'ok'; data: GamePageSnapshot }
+  | { kind: 'missing' }
+  | { kind: 'degraded'; data: GamePageSnapshot; savedAt: string | null; reason: GameDetailFailureReason }
+  | { kind: 'unavailable'; reason: GameDetailFailureReason };
+
+const getPageData = cache(async (id: string): Promise<GamePageDataResult> => {
+  const snapshot = await getGamePageSnapshot(id);
+  if (snapshot) {
+    // SEO 快照是 GameDetailData 的超集，同样是有用的降级快照。
+    // 只在这个端点落快照的话，绝大多数页面在 SEO 快照一直正常时根本没有快照可回退，
+    // 上游一挂就会全站 5xx，降级等于没做。
+    if (process.env.NEXT_PHASE !== 'phase-production-build') {
+      await saveGameDetailSnapshot(id, snapshot).catch(() => {});
+    }
+    return { kind: 'ok', data: snapshot };
+  }
+
+  // 单条快照缺失时回退详情接口，避免生产构建被脏数据阻断。
+  const outcome = await loadGameDetailWithFallback({
+    pkg: id,
+    load: () => getGameDetails(id),
+    // 构建期会预生成上百页，不为构建过程写快照文件。
+    persistSnapshot: process.env.NEXT_PHASE !== 'phase-production-build',
+  });
+
+  if (outcome.result === 'ok') return { kind: 'ok', data: outcome.data };
+  if (outcome.result === 'missing') return { kind: 'missing' };
+  if (outcome.data) {
+    return { kind: 'degraded', data: outcome.data, savedAt: outcome.savedAt, reason: outcome.reason };
+  }
+  return { kind: 'unavailable', reason: outcome.reason };
+});
+
+function unavailableError(id: string, reason: GameDetailFailureReason) {
+  const error = new Error(`[game-detail] 详情接口不可用且无快照: pkg=${id} reason=${reason}`);
+  error.name = 'GameDetailUnavailableError';
+  return error;
+}
 
 const getRecommendedGames = cache(async (
   currentGame: GameDetailData['app'],
@@ -440,14 +471,6 @@ const getRecommendedGames = cache(async (
   }
 });
 
-const getPageData = cache(async (id: string): Promise<GamePageSnapshot | null> => {
-  const snapshot = await getGamePageSnapshot(id);
-  if (snapshot) return snapshot;
-
-  // 单条快照缺失时回退详情接口，避免生产构建被脏数据阻断。
-  return getGameDetails(id);
-});
-
 export async function generateMetadata({
   params,
 }: {
@@ -457,12 +480,18 @@ export async function generateMetadata({
   if (!isValidGameIdentifier(id)) {
     notFound();
   }
-  const [siteConfig, gameData] = await Promise.all([getSiteConfig(), getPageData(id)]);
+  const [siteConfig, pageData] = await Promise.all([getSiteConfig(), getPageData(id)]);
 
-  if (!gameData) {
+  if (pageData.kind === 'missing') {
     notFound();
   }
+  if (pageData.kind === 'unavailable') {
+    // 上游故障且无快照：走 5xx，不伪装成 404。
+    throw unavailableError(id, pageData.reason);
+  }
 
+  // 与页面主体共用同一次 getPageData（cache() 保证），降级标记与 metadata 不会两边各判一次。
+  const gameData = pageData.data;
   const game = gameData.app;
   const isWebGame = isWebGameType(game.type);
   const canonicalPath = `/app/${encodeURIComponent(game.pkg || id)}`;
@@ -561,11 +590,17 @@ export default async function GameDetailPage({
     notFound();
   }
 
-  const initialGameData = await getPageData(id);
-  if (!initialGameData) {
+  const pageData = await getPageData(id);
+  if (pageData.kind === 'missing') {
     notFound();
   }
+  if (pageData.kind === 'unavailable') {
+    // 上游故障且没有可用快照：抛错让 Next 返回 5xx，绝不用 404 冒充。
+    throw unavailableError(id, pageData.reason);
+  }
 
+  const initialGameData = pageData.data;
+  const degradedSavedAt = pageData.kind === 'degraded' ? pageData.savedAt : null;
   const game = initialGameData.app;
   const isWebGame = isWebGameType(game.type);
   const canonicalPath = `/app/${encodeURIComponent(game.pkg || id)}`;
@@ -622,7 +657,7 @@ export default async function GameDetailPage({
           name: normalizeText(game.developer),
         }
       : undefined,
-    ...(!isWebGame && initialGameData.resources.length > 0
+    ...(!isWebGame && Array.isArray(initialGameData.resources) && initialGameData.resources.length > 0
       ? {
           offers: {
             '@type': 'Offer',
@@ -688,6 +723,7 @@ export default async function GameDetailPage({
         gameData={initialGameData}
         recommendedGames={recommendedGames}
         relatedNews={relatedNews}
+        snapshotSavedAt={degradedSavedAt}
       />
     </>
   );

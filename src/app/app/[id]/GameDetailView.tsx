@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Suspense, type ReactNode } from 'react';
-import { BadgeCheck, ChevronRight, CreditCard, Download, ExternalLink, MessageSquare, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
+import { BadgeCheck, ChevronRight, CreditCard, Download, ExternalLink, MessageSquare, RefreshCw, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
 
 import GameAnnouncements from '@/components/game-announcements';
 import GameFaqSection from '@/components/game-detail/GameFaqSection';
@@ -56,6 +56,40 @@ interface GameDetailViewProps {
   gameData: GamePageSnapshot;
   recommendedGames: ApiRecommendedGame[];
   relatedNews: RelatedNewsItem[];
+  /** 上游故障降级时展示的快照时间；正常渲染传 null。 */
+  snapshotSavedAt?: string | null;
+}
+
+function formatSnapshotTime(input: string): string {
+  const date = new Date(input);
+  if (Number.isNaN(date.getTime())) return '最近一次成功抓取';
+  const text = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+  return `${text}（北京时间）`;
+}
+
+// 降级提示：必须首屏可见、不能被折叠，用 role="status" 让读屏也能读到。
+function DegradedDataNotice({ savedAt }: { savedAt: string }) {
+  return (
+    <div
+      role="status"
+      className="relative z-30 border-b border-tone-amber/40 bg-tone-amber/10 px-4 py-2.5"
+    >
+      <div className="mx-auto flex max-w-7xl items-start gap-2 lg:items-center lg:px-16 2xl:px-20">
+        <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 text-tone-amber lg:mt-0" aria-hidden="true" />
+        <p className="text-xs font-medium leading-relaxed text-[#7a4a00] lg:text-sm dark:text-tone-amber">
+          数据更新中：详情接口暂时不可用，当前展示 {formatSnapshotTime(savedAt)} 的缓存快照，恢复后会自动刷新。
+        </p>
+      </div>
+    </div>
+  );
 }
 // 更新日志的单条内容：把“小标题：正文”的结构拆出来加粗，和视觉稿的排版一致。
 function LatestBullet({ text }: { text: string }) {
@@ -284,7 +318,7 @@ function SimilarGamesCard({ items }: { items: ReturnType<typeof buildSimilarGame
   );
 }
 
-export default function GameDetailView({ gameData, recommendedGames, relatedNews }: GameDetailViewProps) {
+export default function GameDetailView({ gameData, recommendedGames, relatedNews, snapshotSavedAt }: GameDetailViewProps) {
   const game = gameData.app;
   const displayName = resolveGameName(game);
   const storedAliases = (
@@ -370,6 +404,8 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
 
   return (
     <div className="game-detail-stitch relative min-h-screen overflow-x-clip bg-[#f5f6f7] text-[#2c2f30] dark:bg-[#080d14] dark:text-[#f3f6fb]">
+      {snapshotSavedAt ? <DegradedDataNotice savedAt={snapshotSavedAt} /> : null}
+
       {hasDetailAnnouncements ? (
         <div className="relative z-20 px-4 pt-20 sm:px-6 lg:px-16 lg:pt-6 2xl:px-20">
           <div className="mx-auto max-w-7xl">

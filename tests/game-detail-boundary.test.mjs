@@ -189,3 +189,20 @@ test('GitHub 来源在详情页与下载弹窗显示官方源与仓库链接', (
   assert.match(downloadDialogSource, /来源：\{sourceInfo\.label\}/);
   assert.match(downloadDialogSource, /href=\{sourceInfo\.repoUrl\}/);
 });
+
+test('详情页把「游戏不存在」与「上游故障」分开处理', () => {
+  // 上游数据统一走降级装载：成功写快照、明确不存在→404、故障有快照→降级渲染、故障无快照→5xx。
+  assert.match(pageSource, /loadGameDetailWithFallback\(\{/);
+  // SEO 快照成功时也要落降级快照，否则大多数页面在上游挂掉时没有可回退的数据。
+  assert.match(pageSource, /await saveGameDetailSnapshot\(id, snapshot\)/);
+  assert.match(pageSource, /persistSnapshot: process\.env\.NEXT_PHASE !== 'phase-production-build'/);
+  assert.match(pageSource, /pageData\.kind === 'missing'\) \{\s*notFound\(\)/);
+  assert.match(pageSource, /pageData\.kind === 'unavailable'[\s\S]{0,160}throw unavailableError/);
+  assert.doesNotMatch(pageSource, /if \(!initialGameData\) \{\s*notFound\(\)/);
+  // generateMetadata 与页面主体共用同一次 getPageData 结果，降级标记不会两边不一致。
+  assert.match(pageSource, /await Promise\.all\(\[getSiteConfig\(\), getPageData\(id\)\]\)/);
+  // 降级提示在首屏顶部、role=status、带快照时间。
+  assert.match(viewSource, /\{snapshotSavedAt \? <DegradedDataNotice savedAt=\{snapshotSavedAt\} \/> : null\}/);
+  assert.match(viewSource, /role="status"/);
+  assert.match(viewSource, /数据更新中/);
+});
