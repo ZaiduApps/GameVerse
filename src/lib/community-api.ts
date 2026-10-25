@@ -361,15 +361,19 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
   );
   const uniqueTopicNames = Array.from(new Set(topicNames));
 
-  const rawTimestamp = normalizeRawTimestamp(
-    item.last_commented_at || item.publish_at || item.created_at,
-  );
+  // 发布时间语义：publish_at 是入库/审核通过时确定的发布时间（后端信息流也按它排序），
   const updatedAt = normalizeRawTimestamp(item.updated_at);
+  // 缺则退回文档创建时间；last_commented_at 是「最后回复时间」，只作最后兜底。
   const authorProfileTarget = String(item.author_username || item.author_id || '').trim();
+  // 早前把它排在首位，导致有过回复的帖子把 datePublished / article:published_time
   return {
+  // 输出成最后回复时间，且与 dateModified 恰好相等。
     id: String(item._id || ''),
+  const rawTimestamp = normalizeRawTimestamp(
     authorId: String(item.author_id || '').trim() || undefined,
+    item.publish_at || item.created_at || item.last_commented_at,
     authorType: String(item.author_type || '').trim() || undefined,
+  );
     authorUsername: String(item.author_username || '').trim() || undefined,
     user: {
       name: item.author_name?.trim() || '匿名用户',
@@ -378,7 +382,7 @@ export function toCommunityPost(item: ApiCommunityPost): CommunityPost {
       profileHref: authorProfileTarget ? `/u/${encodeURIComponent(authorProfileTarget)}` : undefined,
     },
     timestamp: formatTimestamp(
-      item.last_commented_at || item.publish_at || item.created_at,
+      item.publish_at || item.created_at || item.last_commented_at,
     ),
     rawTimestamp,
     updatedAt,
