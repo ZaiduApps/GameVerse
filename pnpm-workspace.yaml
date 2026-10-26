@@ -5,3 +5,4 @@ allowBuilds:
   protobufjs: true
   # install: node install/check —— 校验 libvips 原生依赖，Next 图片优化依赖它。
   sharp: true
+  unrs-resolver: true
