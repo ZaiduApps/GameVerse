@@ -30,6 +30,7 @@ import { reportDownloadClick } from '@/lib/download-click-tracking';
 import { resolveDownloadChannelId, shouldGuideToApp } from '@/lib/game-download-channel';
 import type { GameSourceInfo } from '@/lib/game-source-link';
 import AppDownloadGuideDialog from '@/components/app-download-guide-dialog';
+import ContentReportDialog from '@/components/content-report-dialog';
 
 interface GameDownloadDialogProps {
   resources: ApiDownloadResource[];
@@ -198,42 +199,45 @@ export default function GameDownloadDialog({
                 const loading = loadingChannelId === channelId;
 
                 return (
-                  <Button
-                    key={resource._id}
-                    variant="outline"
-                    className="w-full justify-start text-left h-auto py-3 px-4 relative group"
-                    disabled={loadingChannelId !== null}
-                    data-acbox-action="game_download_channel_click"
-                    data-acbox-label={resource.channel?.name || '未知渠道'}
-                    onClick={() => handleDownloadClick(resource)}
-                  >
-                    {loading ? (
-                      <Loader2 className="w-5 h-5 mr-3 text-muted-foreground animate-spin" />
-                    ) : resource.channel?.icon ? (
-                      <div className="relative w-6 h-6 mr-3">
-                        <Image
-                          src={resource.channel.icon}
-                          alt={resource.channel.name || 'channel'}
-                          fill
-                          className="object-contain"
-                        />
-                      </div>
-                    ) : (
-                      iconMap[resource.channel?.code || ''] || (
-                        <Download className="w-5 h-5 mr-3 text-muted-foreground" />
-                      )
-                    )}
-                    <div className="flex flex-col">
-                      <span className="text-base font-medium group-hover:text-primary transition-colors">
-                        {resource.channel?.name || '未知渠道'}
-                      </span>
-                      {resource.channel?.description && (
-                        <span className="text-xs text-muted-foreground">
-                          {resource.channel.description}
-                        </span>
+                  <div key={resource._id} className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="w-full flex-1 justify-start text-left h-auto py-3 px-4 relative group"
+                      disabled={loadingChannelId !== null}
+                      data-acbox-action="game_download_channel_click"
+                      data-acbox-label={resource.channel?.name || '未知渠道'}
+                      onClick={() => handleDownloadClick(resource)}
+                    >
+                      {loading ? (
+                        <Loader2 className="w-5 h-5 mr-3 text-muted-foreground animate-spin" />
+                      ) : resource.channel?.icon ? (
+                        <div className="relative w-6 h-6 mr-3">
+                          <Image
+                            src={resource.channel.icon}
+                            alt={resource.channel.name || 'channel'}
+                            fill
+                            className="object-contain"
+                          />
+                        </div>
+                      ) : (
+                        iconMap[resource.channel?.code || ''] || (
+                          <Download className="w-5 h-5 mr-3 text-muted-foreground" />
+                        )
                       )}
-                    </div>
-                  </Button>
+                      <div className="flex flex-col">
+                        <span className="text-base font-medium group-hover:text-primary transition-colors">
+                          {resource.channel?.name || '未知渠道'}
+                        </span>
+                        {resource.channel?.description && (
+                          <span className="text-xs text-muted-foreground">
+                            {resource.channel.description}
+                          </span>
+                        )}
+                      </div>
+                    </Button>
+                    {/* 资源卡片举报：与渠道点击分开，避免嵌套按钮。 */}
+                    <ContentReportDialog targetType="resource" targetId={resource._id} iconOnly />
+                  </div>
                 );
               })
             ) : (
