@@ -335,7 +335,17 @@ export interface GameSeoContent {
 
 export interface ApiDownloadResource {
   _id: string;
+  app_id?: string;
   channel_id?: string;
+  /** 资源版本号（详情页展示与校验值同行） */
+  version?: string;
+  version_code?: number;
+  /** 资源文件 SHA-256 校验值；接口未返回或为空时页面显示「暂无校验值」 */
+  signature?: string;
+  size?: number;
+  type?: string;
+  status?: number;
+  is_latest_version?: boolean;
   platform_range?: string[] | string;
   platform_ranges?: string[] | string;
   channel: {

@@ -7,6 +7,7 @@ import GameAnnouncements from '@/components/game-announcements';
 import GameDirectDownloadLinks from '@/components/game-direct-download-links.client';
 import GameFaqSection from '@/components/game-detail/GameFaqSection';
 import { buildDirectDownloadLinks } from '@/lib/game-download-channel';
+import { buildResourceChecksumItems } from '@/lib/game-resource-signature';
 import { normalizeGameFaqItems } from '@/lib/game-faq';
 import { resolveGameName } from '@/lib/game-display-name';
 import { isWebGameType } from '@/lib/game-resource-type';
@@ -24,6 +25,7 @@ import GameDetailMobileTabs from './GameDetailMobileTabs.client';
 import GameHeroArtwork from './GameHeroArtwork.client';
 import GameHeroVideo from './GameHeroVideo.client';
 import GameScreenshotGallery from './GameScreenshotGallery.client';
+import GameResourceChecksums from './GameResourceChecksums.client';
 import { BOX_DOWNLOAD_CARD, CERTIFICATION_CARD, GUIDE_SECTION_HINT } from './game-detail-mock-copy';
 import { resolveHeroVideo } from './game-detail-video';
 import {
@@ -343,6 +345,8 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   const directDownloadLinks = isWebGame
     ? []
     : buildDirectDownloadLinks(resources, game.pkg || game._id);
+  // 资源校验值只取接口真实返回的 signature；没有就整块显示「暂无校验值」。
+  const checksumItems = buildResourceChecksumItems(resources);
   const tags = getGameTags(game);
   const primaryCategory = getPrimaryCategory(game, tags);
   const cardConfig = (gameData.cardConfig || {}) as Record<string, CardConfigItem[] | undefined>;
@@ -599,6 +603,14 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                   </div>
                 ))}
               </div>
+            </DetailSection>
+
+            <DetailSection
+              id="game-detail-checksums"
+              title="资源校验值（SHA-256）"
+              subtitle="核对下载文件是否与资源提供方一致"
+            >
+              <GameResourceChecksums items={checksumItems} />
             </DetailSection>
 
             <DetailSection
