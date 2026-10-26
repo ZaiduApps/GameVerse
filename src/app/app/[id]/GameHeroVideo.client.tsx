@@ -90,6 +90,7 @@ export default function GameHeroVideo({ source, poster, gameName, className }: G
                     playsInline
                     preload="metadata"
                     poster={poster}
+                    aria-label="游戏预告片"
                     className="h-full w-full"
                     onError={() => setFailed(true)}
                   />

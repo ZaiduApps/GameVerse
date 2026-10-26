@@ -16,6 +16,11 @@
     "react-hooks/exhaustive-deps": "warn",
     "react/no-unescaped-entities": "warn",
     "jsx-a11y/alt-text": "warn",
+    "jsx-a11y/aria-props": "warn",
+    "jsx-a11y/aria-role": "warn",
+    "jsx-a11y/role-has-required-aria-props": "warn",
+    "jsx-a11y/role-supports-aria-props": "warn",
+    "jsx-a11y/control-has-associated-label": "warn",
     "prefer-const": "warn",
     "@next/next/no-html-link-for-pages": "warn",
     "@typescript-eslint/no-empty-object-type": "warn"

@@ -151,6 +151,7 @@ export default function ContentReportDialog({
                     value={item.value}
                     checked={reason === item.value}
                     onChange={() => setReason(item.value)}
+                    aria-label={item.label}
                     className="h-3.5 w-3.5"
                   />
                   <span>{item.label}</span>
