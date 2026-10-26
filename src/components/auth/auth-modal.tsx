@@ -16,16 +16,23 @@ import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Mail, Lock, User, KeyRound } from 'lucide-react';
 import type { ApiResponse, AuthData } from '@/types';
-import { apiUrl } from '@/lib/api';
+import { trackedApiFetch } from '@/lib/api';
 import { getDeviceHeaders, getDeviceId, getDeviceName } from '@/lib/auth-device';
-import { buildTrackingHeaders } from '@/lib/tracking-headers';
+import { buildAuthFailureToast, describeAuthFailure, describeFetchException } from '@/lib/auth-errors';
+import { AUTH_REQUEST_TIMEOUT_MS } from '@/lib/auth-session';
 
 interface AuthModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-const API_BASE_URL = apiUrl('/auth');
+async function readEnvelope<T>(res: Response): Promise<ApiResponse<T> | null> {
+  try {
+    return (await res.json()) as ApiResponse<T>;
+  } catch {
+    return null;
+  }
+}
 
 export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
   const { login } = useAuth();
@@ -70,24 +77,31 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
     setIsLoading(true);
     try {
       const type = activeTab === 'login' ? 'login' : 'register';
-      const res = await fetch(`${API_BASE_URL}/send-code`, {
+      const res = await trackedApiFetch('/auth/send-code', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...buildTrackingHeaders(),
         },
         body: JSON.stringify({ email, type }),
+        timeoutMs: AUTH_REQUEST_TIMEOUT_MS,
+        logKey: 'auth.send-code',
       });
 
-      const json: ApiResponse<{ message: string }> = await res.json();
-      if (json.code === 0) {
+      const json = await readEnvelope<{ message: string }>(res);
+      if (json?.code === 0) {
         toast({ title: '验证码已发送', description: json.data?.message || '请检查邮箱' });
         setCountdown(60);
-      } else {
-        toast({ variant: 'destructive', title: '发送失败', description: json.message || '请稍后重试' });
+        return;
       }
-    } catch {
-      toast({ variant: 'destructive', title: '网络请求失败' });
+
+      // 429：服务端限流，给出可读文案；有 Retry-After 时直接用倒计时锁住按钮。
+      const failure = describeAuthFailure(res, json, '请稍后重试');
+      toast({ variant: 'destructive', ...buildAuthFailureToast('send-code', failure) });
+      if (failure.retryAfterSeconds && failure.retryAfterSeconds > 0) {
+        setCountdown(Math.min(failure.retryAfterSeconds, 600));
+      }
+    } catch (error) {
+      toast({ variant: 'destructive', title: '网络请求失败', description: describeFetchException(error).message });
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +112,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
     setIsLoading(true);
 
     try {
-      let url = `${API_BASE_URL}/login`;
+      let url = '/auth/login';
       let body: Record<string, unknown> = {
         username,
         password,
@@ -107,7 +121,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
       };
 
       if (method === 'email') {
-        url = `${API_BASE_URL}/login-by-email`;
+        url = '/auth/login-by-email';
         body = {
           email,
           code,
@@ -116,27 +130,30 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
         };
       }
 
-      const res = await fetch(url, {
+      const res = await trackedApiFetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...getDeviceHeaders(),
-          ...buildTrackingHeaders(),
         },
         body: JSON.stringify(body),
+        timeoutMs: AUTH_REQUEST_TIMEOUT_MS,
+        logKey: 'auth.login',
       });
 
-      const json: ApiResponse<AuthData> = await res.json();
-      if (json.code === 0 && json.data) {
+      const json = await readEnvelope<AuthData>(res);
+      if (json?.code === 0 && json.data) {
         login(json.data);
         toast({ title: '已登录', description: `欢迎回来，${json.data.user.name || json.data.user.username}` });
         onOpenChange(false);
         resetForm();
-      } else {
-        toast({ variant: 'destructive', title: '登录失败', description: json.message || '请检查账号信息' });
+        return;
       }
-    } catch {
-      toast({ variant: 'destructive', title: '网络请求失败' });
+
+      const failure = describeAuthFailure(res, json, '请检查账号信息');
+      toast({ variant: 'destructive', ...buildAuthFailureToast('login', failure) });
+    } catch (error) {
+      toast({ variant: 'destructive', title: '网络请求失败', description: describeFetchException(error).message });
     } finally {
       setIsLoading(false);
     }
@@ -147,34 +164,37 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
     setIsLoading(true);
 
     try {
-      let url = `${API_BASE_URL}/register`;
+      let url = '/auth/register';
       let body: Record<string, unknown> = { username, email, password, name };
 
       if (method === 'email') {
-        url = `${API_BASE_URL}/register-by-email`;
+        url = '/auth/register-by-email';
         body = { email, code, username, password, name };
       }
 
-      const res = await fetch(url, {
+      const res = await trackedApiFetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...buildTrackingHeaders(),
         },
         body: JSON.stringify(body),
+        timeoutMs: AUTH_REQUEST_TIMEOUT_MS,
+        logKey: 'auth.register',
       });
 
-      const json: ApiResponse<AuthData> = await res.json();
-      if (json.code === 0 && json.data) {
+      const json = await readEnvelope<AuthData>(res);
+      if (json?.code === 0 && json.data) {
         login(json.data);
         toast({ title: '注册成功', description: '账号已创建并自动登录' });
         onOpenChange(false);
         resetForm();
-      } else {
-        toast({ variant: 'destructive', title: '注册失败', description: json.message || '请稍后重试' });
+        return;
       }
-    } catch {
-      toast({ variant: 'destructive', title: '网络请求失败' });
+
+      const failure = describeAuthFailure(res, json, '请稍后重试');
+      toast({ variant: 'destructive', ...buildAuthFailureToast('register', failure) });
+    } catch (error) {
+      toast({ variant: 'destructive', title: '网络请求失败', description: describeFetchException(error).message });
     } finally {
       setIsLoading(false);
     }

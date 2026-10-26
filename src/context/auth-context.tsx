@@ -1,17 +1,29 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { User, ApiResponse, AuthData } from '@/types';
-import { apiUrl } from '@/lib/api';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import type { User, AuthData } from '@/types';
+import { trackedApiFetch } from '@/lib/api';
 import { getDeviceHeaders } from '@/lib/auth-device';
-import { buildTrackingHeaders } from '@/lib/tracking-headers';
+import { describeFetchException } from '@/lib/auth-errors';
+import {
+  AUTH_REQUEST_TIMEOUT_MS,
+  AUTH_STORAGE_KEYS,
+  clearStoredSession,
+  persistSession,
+  readStoredSession,
+  refreshSession,
+  subscribeStoredSession,
+} from '@/lib/auth-session';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  /** 最近一次认证请求失败的可读原因；由 AuthStatusBanner 展示，可手动关闭。 */
+  authError: string | null;
+  clearAuthError: () => void;
   login: (data: AuthData) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -19,124 +31,122 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_BASE_URL = apiUrl('/auth');
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+  // 记录已经和 /auth/me 对过账的 token，避免刷新换 token 后再多打一次 /me。
+  const verifiedTokenRef = useRef<string | null>(null);
 
-  const applyAuthData = useCallback((data: AuthData) => {
-    setToken(data.token);
-    setUser(data.user);
-    localStorage.setItem('auth_token', data.token);
-    localStorage.setItem('auth_user', JSON.stringify(data.user));
+  const clearAuthError = useCallback(() => setAuthError(null), []);
+
+  const applySession = useCallback((nextToken: string | null, nextUser: User | null) => {
+    setToken(nextToken);
+    setUser(nextUser);
   }, []);
 
-  // Restore session on mount
-  useEffect(() => {
-    const storedToken = localStorage.getItem('auth_token');
-    const storedUser = localStorage.getItem('auth_user');
+  const applyAuthData = useCallback((data: AuthData) => {
+    persistSession({ token: data.token, user: data.user });
+    verifiedTokenRef.current = data.token;
+    applySession(data.token, data.user);
+    setAuthError(null);
+  }, [applySession]);
 
-    if (storedToken && storedUser && storedUser !== 'undefined') {
+  // Restore session on mount: localStorage 里损坏的 JSON 必须清掉，不能留一颗定时炸弹。
+  useEffect(() => {
+    const stored = readStoredSession();
+    if (stored) {
+      applySession(stored.token, stored.user);
+    } else {
       try {
-        const parsedUser = JSON.parse(storedUser);
-        if (parsedUser) {
-          setToken(storedToken);
-          setUser(parsedUser);
-        }
-      } catch (error) {
-        // Clear corrupted storage data
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
+        clearStoredSession();
+      } catch {
+        // 存储不可用（隐私模式）时无需清理。
       }
     }
     setIsLoading(false);
-  }, []);
+  }, [applySession]);
+
+  // 本页内其它入口（如单飞刷新）落盘后同步内存态；别的标签页靠 storage 事件同步。
+  useEffect(() => subscribeStoredSession((session) => {
+    applySession(session?.token ?? null, session?.user ?? null);
+  }), [applySession]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onStorage = (event: StorageEvent) => {
+      if (event.key && !AUTH_STORAGE_KEYS.includes(event.key)) return;
+      const stored = readStoredSession();
+      applySession(stored?.token ?? null, stored?.user ?? null);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [applySession]);
 
   const login = useCallback((data: AuthData) => {
     applyAuthData(data);
   }, [applyAuthData]);
 
   const logout = useCallback(async () => {
+    let logoutFailure: string | null = null;
     if (token) {
       try {
-        await fetch(`${API_BASE_URL}/logout`, {
+        const res = await trackedApiFetch('/auth/logout', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             ...getDeviceHeaders(),
-            ...buildTrackingHeaders(),
-          }
+          },
+          timeoutMs: AUTH_REQUEST_TIMEOUT_MS,
+          logKey: 'auth.logout',
         });
+        if (!res.ok && res.status >= 500) {
+          logoutFailure = '已退出登录，但服务器暂时无法确认登出，稍后请检查登录设备列表。';
+        }
       } catch (error) {
-        // Continue logout even if API fails
+        // 本地登出必须完成；服务器未收到通知时把原因留给用户，而不是静默吞掉。
+        const failure = describeFetchException(error, '网络连接失败');
+        logoutFailure = `已退出登录，但服务器未收到登出通知（${failure.kind === 'timeout' ? '请求超时' : failure.message}）。`;
       }
     }
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-  }, [token]);
+    verifiedTokenRef.current = null;
+    clearStoredSession();
+    applySession(null, null);
+    setAuthError(logoutFailure);
+  }, [applySession, token]);
 
   const refreshUser = useCallback(async () => {
     if (!token) return;
 
-    try {
-      const meRes = await fetch(`${API_BASE_URL}/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          ...buildTrackingHeaders(),
-        }
-      });
-      const json: ApiResponse<User> = await meRes.json();
+    const result = await refreshSession(token);
 
-      if (json.code === 401) {
-        const refreshRes = await fetch(`${API_BASE_URL}/refresh`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            ...getDeviceHeaders(),
-            ...buildTrackingHeaders(),
-          },
-        });
-
-        const refreshJson: ApiResponse<{ token: string }> = await refreshRes.json();
-        if (refreshJson.code === 0 && refreshJson.data?.token) {
-          localStorage.setItem('auth_token', refreshJson.data.token);
-          setToken(refreshJson.data.token);
-
-          const retryRes = await fetch(`${API_BASE_URL}/me`, {
-            headers: {
-              'Authorization': `Bearer ${refreshJson.data.token}`,
-              ...buildTrackingHeaders(),
-            }
-          });
-          const retryJson: ApiResponse<User> = await retryRes.json();
-          if (retryJson.code === 0) {
-            setUser(retryJson.data);
-            localStorage.setItem('auth_user', JSON.stringify(retryJson.data));
-            return;
-          }
-        }
-
-        logout();
+    switch (result.status) {
+      case 'refreshed':
+        verifiedTokenRef.current = result.session.token;
+        applySession(result.session.token, result.session.user);
+        setAuthError(null);
         return;
-      }
-
-      if (json.code === 0) {
-        setUser(json.data);
-        localStorage.setItem('auth_user', JSON.stringify(json.data));
-      }
-    } catch (error) {
-      // Silently fail user refresh
+      case 'unauthorized':
+        // 刷新令牌也失效：清会话，提示重新登录。
+        verifiedTokenRef.current = null;
+        clearStoredSession();
+        applySession(null, null);
+        setAuthError('登录状态已失效，请重新登录。');
+        return;
+      case 'failed':
+        // 超时 / 网络 / 5xx：保留现有会话，把失败原因暴露到 UI（可重试，不静默）。
+        setAuthError(result.failure.message);
+        return;
+      default:
+        return;
     }
-  }, [token, logout]);
+  }, [applySession, token]);
 
   useEffect(() => {
-    if (!isLoading && token) {
-      refreshUser();
-    }
+    if (isLoading || !token) return;
+    if (verifiedTokenRef.current === token) return;
+    void refreshUser();
   }, [isLoading, token, refreshUser]);
 
   return (
@@ -145,6 +155,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       token,
       isAuthenticated: !!token,
       isLoading,
+      authError,
+      clearAuthError,
       login,
       logout,
       refreshUser
