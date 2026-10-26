@@ -10,6 +10,11 @@ const OBJECT_ID_PATTERN = /^[a-fA-F0-9]{24}$/;
 /** 详情页的失败回跳标记：`?download_error=1` */
 export const DOWNLOAD_ERROR_QUERY = 'download_error=1';
 
+/** 失败原因参数：区分「渠道不可用」与「资源失效」，两条文案不一样。 */
+export const DOWNLOAD_ERROR_REASON_KEY = 'download_error_reason';
+
+export type DownloadFailureReason = 'channel' | 'resource';
+
 /** 包名长度上限，与 interface 侧 DownloadInfo DTO 对齐 */
 const MAX_ID_LENGTH = 160;
 
@@ -70,9 +75,16 @@ export function resolveIssuedDownloadUrl(payload: unknown): string | null {
   return normalizeIssuedDownloadUrl(candidate);
 }
 
-/** 失败一律回详情页：用户看到的是页面，不是 JSON 错误。 */
-export function buildDownloadFailureLocation(id: string): string {
-  return `/app/${encodeURIComponent(String(id).trim())}?${DOWNLOAD_ERROR_QUERY}`;
+/**
+ * 失败一律回详情页：用户看到的是页面，不是 JSON 错误。
+ * reason 可选：老链接（只有 download_error=1）继续可用，页面按「渠道不可用」兜底。
+ */
+export function buildDownloadFailureLocation(
+  id: string,
+  reason?: DownloadFailureReason,
+): string {
+  const base = `/app/${encodeURIComponent(String(id).trim())}?${DOWNLOAD_ERROR_QUERY}`;
+  return reason ? `${base}&${DOWNLOAD_ERROR_REASON_KEY}=${reason}` : base;
 }
 
 /**
@@ -96,21 +108,22 @@ export async function decideDownloadRedirect(input: {
     return { kind: 'bad_request', message: 'invalid channel id' };
   }
 
-  const fallbackLocation = buildDownloadFailureLocation(resolvedId.value);
-
   try {
     const result = await input.requestIssuedUrl({
       [resolvedId.field]: resolvedId.value,
       channel_id: channelId,
     });
     if (!result?.ok) {
-      return { kind: 'redirect', location: fallbackLocation };
+      // 上游请求本身失败：渠道可能临时故障/限流，引导换渠道。
+      return { kind: 'redirect', location: buildDownloadFailureLocation(resolvedId.value, 'channel') };
     }
     const url = resolveIssuedDownloadUrl(result.payload);
-    return url
-      ? { kind: 'redirect', location: url }
-      : { kind: 'redirect', location: fallbackLocation };
+    if (url) {
+      return { kind: 'redirect', location: url };
+    }
+    // 请求成功但没有可用地址：资源本身失效，引导反馈与查其它版本。
+    return { kind: 'redirect', location: buildDownloadFailureLocation(resolvedId.value, 'resource') };
   } catch {
-    return { kind: 'redirect', location: fallbackLocation };
+    return { kind: 'redirect', location: buildDownloadFailureLocation(resolvedId.value, 'channel') };
   }
 }
