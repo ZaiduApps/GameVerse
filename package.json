@@ -30,6 +30,7 @@
     "test:edge-cache": "node --test tests/edge-cache-rule.test.mjs tests/html-vary.test.mjs tests/next-prod-server.test.mjs",
     "test:api-proxy-guard": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/api-proxy-guard.test.mjs",
     "test:auth": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/alias-loader.mjs --test tests/auth-errors.test.mjs tests/auth-session.test.mjs",
+    "test:client-errors": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/alias-loader.mjs --test tests/client-errors.test.mjs",
     "seo:audit": "node scripts/seo-daily-audit.mjs",
     "seo:write-game": "node scripts/seo-write-game.mjs",
     "preinstall": "node -e \"const ua=process.env.npm_config_user_agent||'';if(ua.indexOf('pnpm/')!==0){console.error('[preinstall] 本项目只允许使用 pnpm 安装依赖，请改用 pnpm install');process.exit(1)}\"",
