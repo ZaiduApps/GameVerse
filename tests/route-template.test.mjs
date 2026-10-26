@@ -18,6 +18,7 @@ test('静态路由原样返回', () => {
     '/profile',
     '/profile/api-keys',
     '/profile/center',
+    '/profile/center/downloads',
     '/profile/center/games',
     '/profile/center/posts',
     '/profile/center/reservations',

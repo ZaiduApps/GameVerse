@@ -15,6 +15,7 @@ const STATIC_ROUTES = new Set<string>([
   '/profile',
   '/profile/api-keys',
   '/profile/center',
+  '/profile/center/downloads',
   '/profile/center/games',
   '/profile/center/posts',
   '/profile/center/reservations',
