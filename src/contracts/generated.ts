@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 d321e6d4fd0af604efb66d41f17c205ef648f54b6d441e2646dd9a811a49e837
+ * @contract-sha256 63b7d5de09d41e86b62c94fccc2279adbb44fe6d4a56830041bf68dee960eb76
  */
 
 export interface paths {
@@ -168,6 +168,23 @@ export interface paths {
         put?: never;
         /** 刷新登录令牌 */
         post: operations["AuthController_refreshToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/refresh-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 用刷新令牌换取新令牌（一次性） */
+        post: operations["AuthController_refreshByToken"];
         delete?: never;
         options?: never;
         head?: never;
@@ -622,6 +639,23 @@ export interface paths {
         post?: never;
         /** 解除设备ID封禁 */
         delete: operations["UserController_removeLoginDeviceBan"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/me/downloads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取当前登录用户的下载历史 */
+        get: operations["UserController_myDownloads"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2386,6 +2420,227 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tracking/event": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 客户端业务事件上报 */
+        post: operations["TrackingController_trackClientEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracking/admin-client-error": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 后台前端错误上报（仅接收白名单字段，20 次/分钟/IP） */
+        post: operations["TrackingController_adminClientError"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracking/admin/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 埋点概览统计 */
+        get: operations["TrackingController_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracking/admin/top-apps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 游戏维度统计 Top 列表 */
+        get: operations["TrackingController_topApps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracking/admin/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 渠道下载统计 */
+        get: operations["TrackingController_channels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracking/admin/api-performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 接口性能统计 */
+        get: operations["TrackingController_apiPerformance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracking/admin/event-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 客户端业务事件选项 */
+        get: operations["TrackingController_eventOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracking/admin/community-overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 社区与反馈概览统计 */
+        get: operations["TrackingController_communityOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracking/admin/community-trends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 社区与反馈趋势统计 */
+        get: operations["TrackingController_communityTrends"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracking/admin/request-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 访问请求日志（支持搜索和分页） */
+        get: operations["TrackingController_requestLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracking/admin/event-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 客户端业务事件日志（支持搜索和分页） */
+        get: operations["TrackingController_eventLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracking/admin/recent-visitors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 最近访问者（登录用户/游客设备聚合） */
+        get: operations["TrackingController_recentVisitors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tracking/admin/rebuild-daily-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 回填埋点日聚合统计 */
+        post: operations["TrackingController_rebuildDailyStats"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin": {
         parameters: {
             query?: never;
@@ -3027,210 +3282,6 @@ export interface paths {
         get: operations["GameController_myReservationList"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tracking/event": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 客户端业务事件上报 */
-        post: operations["TrackingController_trackClientEvent"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tracking/admin/overview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 埋点概览统计 */
-        get: operations["TrackingController_overview"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tracking/admin/top-apps": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 游戏维度统计 Top 列表 */
-        get: operations["TrackingController_topApps"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tracking/admin/channels": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 渠道下载统计 */
-        get: operations["TrackingController_channels"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tracking/admin/api-performance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 接口性能统计 */
-        get: operations["TrackingController_apiPerformance"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tracking/admin/event-options": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 客户端业务事件选项 */
-        get: operations["TrackingController_eventOptions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tracking/admin/community-overview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 社区与反馈概览统计 */
-        get: operations["TrackingController_communityOverview"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tracking/admin/community-trends": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 社区与反馈趋势统计 */
-        get: operations["TrackingController_communityTrends"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tracking/admin/request-logs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 访问请求日志（支持搜索和分页） */
-        get: operations["TrackingController_requestLogs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tracking/admin/event-logs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 客户端业务事件日志（支持搜索和分页） */
-        get: operations["TrackingController_eventLogs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tracking/admin/recent-visitors": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 最近访问者（登录用户/游客设备聚合） */
-        get: operations["TrackingController_recentVisitors"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/tracking/admin/rebuild-daily-stats": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 回填埋点日聚合统计 */
-        post: operations["TrackingController_rebuildDailyStats"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4297,6 +4348,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/feedbacks/{id}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 指派反馈工单 */
+        put: operations["FeedbacksController_assign"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/feedbacks/{id}/internal-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 追加反馈内部备注（仅后台可见） */
+        post: operations["FeedbacksController_addInternalNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/feedbacks/{id}/status": {
         parameters: {
             query?: never;
@@ -4901,6 +4986,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/config/runtime/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取运行期配置变更历史（最近 50 条） */
+        get: operations["SettingController_getRuntimeConfigHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/config/runtime/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 回滚到上一版本运行期配置 */
+        post: operations["SettingController_rollbackRuntimeConfig"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/config/runtime/reset": {
         parameters: {
             query?: never;
@@ -4929,6 +5048,23 @@ export interface paths {
         put?: never;
         /** 测试邮件配置 */
         post: operations["SettingController_testSystemEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/config/admin/system/telegram/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 测试 Telegram 配置 */
+        post: operations["SettingController_testSystemTelegram"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5991,6 +6127,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource-update/admin/abi-blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 分页查询「只有 32 位产物」的包名记录 */
+        get: operations["ResourceUpdateController_abiBlocksList"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-update/admin/abi-blocks/{pkg}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** 人工标记「只有 32 位产物」记录的状态/备注 */
+        patch: operations["ResourceUpdateController_updateAbiBlock"];
+        trace?: never;
+    };
     "/resource-update/admin/unreachable-targets/{pkg}": {
         parameters: {
             query?: never;
@@ -6240,6 +6410,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource-update/admin/apkeep/accounts/{id}/reveal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 查看单个 apkeep 账号的凭证明文（审计留痕） */
+        post: operations["ApkeepAccountController_reveal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource-update/admin/apkeep/accounts/{id}": {
         parameters: {
             query?: never;
@@ -6371,6 +6558,46 @@ export interface paths {
         get: operations["LogSystemController_list"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/media-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 媒体巡检结果列表
+         * @description 按包名/媒体类型筛选，only_abnormal=true 只看异常；按最近巡检时间倒序。
+         */
+        get: operations["MediaHealthController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/media-health/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 手动刷新媒体巡检
+         * @description 指定 app_id 或 pkg 时先复用 refresh-media 重新抓取媒体，再立即复检；两者都不传则按 limit 抽样巡检。
+         */
+        post: operations["MediaHealthController_refresh"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7292,6 +7519,23 @@ export interface paths {
         patch: operations["WebGamesAdminController_updateSort"];
         trace?: never;
     };
+    "/health/deploy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 部署身份自证（gitSha / contractVersion / builtAt / bootId） */
+        get: operations["DeployHealthController_deploy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7357,6 +7601,14 @@ export interface components {
             /** @description 6 位验证码 */
             code: string;
         };
+        LogoutDto: {
+            /** @description 登录时下发的 refresh_token，传入则一并作废 */
+            refresh_token?: string;
+        };
+        RefreshTokenDto: {
+            /** @description 登录时下发的 refresh_token */
+            refresh_token: string;
+        };
         CreateUserDto: {
             /** @description 用户名 */
             username: string;
@@ -7392,6 +7644,8 @@ export interface components {
             roleIds?: string[];
             /** @description 直接权限码列表 */
             permissions?: string[];
+            /** @description 授予 super_admin 等超管角色时必须显式传 true */
+            confirm?: boolean;
         };
         UpdateProfileDto: {
             /** @description 昵称 */
@@ -7517,10 +7771,18 @@ export interface components {
             permissions?: string[];
             /** @description 新密码 */
             password?: string;
+            /** @description 授予 super_admin 等超管角色时必须显式传 true */
+            confirm?: boolean;
         };
         BlockUserDto: {
             /** @description 封禁原因 */
             reason: string;
+        };
+        AssignRolesDto: {
+            /** @description 角色 ID 列表 */
+            roleIds: string[];
+            /** @description 授予 super_admin 等超管角色时必须显式传 true */
+            confirm?: boolean;
         };
         CreateRoleDto: {
             /**
@@ -7958,14 +8220,6 @@ export interface components {
             /** @description 邮件模板 key（可选，未传则按场景默认） */
             email_template_key?: string;
         };
-        BatchDownloadChannelSettingDto: Record<string, never>;
-        UpdateDownloadChannelSettingDto: Record<string, never>;
-        UpdateGameStatusDto: Record<string, never>;
-        RefreshAppMediaDto: Record<string, never>;
-        CreateDownloadInfoDto: Record<string, never>;
-        TrackGameDetailDto: Record<string, never>;
-        InstalledUpdatesDto: Record<string, never>;
-        FollowReservationDto: Record<string, never>;
         TrackClientEventDto: {
             /**
              * @description 客户端事件名
@@ -8004,6 +8258,26 @@ export interface components {
              */
             props?: Record<string, never>;
         };
+        AdminClientErrorDto: {
+            /** @description 错误消息 */
+            message?: string;
+            /** @description 错误堆栈哈希（前端自行计算，禁止上报原始堆栈） */
+            stack_hash?: string;
+            /** @description 当前路由 */
+            route?: string;
+            /** @description 前端版本号 */
+            release?: string;
+            /** @description 出错的组件名 */
+            component?: string;
+        };
+        BatchDownloadChannelSettingDto: Record<string, never>;
+        UpdateDownloadChannelSettingDto: Record<string, never>;
+        UpdateGameStatusDto: Record<string, never>;
+        RefreshAppMediaDto: Record<string, never>;
+        CreateDownloadInfoDto: Record<string, never>;
+        TrackGameDetailDto: Record<string, never>;
+        InstalledUpdatesDto: Record<string, never>;
+        FollowReservationDto: Record<string, never>;
         UploadDto: {
             /**
              * @description 上传场景
@@ -8140,7 +8414,7 @@ export interface components {
              * @description 反馈类型
              * @enum {string}
              */
-            type: "missing" | "update" | "broken" | "suggestion";
+            type: "missing" | "update" | "broken" | "suggestion" | "content_report";
             /** @description 标题 */
             title: string;
             /** @description 详细描述 */
@@ -8224,6 +8498,14 @@ export interface components {
             /** @description 是否启用 */
             isActive?: boolean;
         };
+        AssignFeedbackDto: {
+            /** @description 指派给的管理员用户 ID，空串表示取消指派 */
+            assignee_id: string;
+        };
+        AddFeedbackInternalNoteDto: {
+            /** @description 内部备注内容（仅后台可见） */
+            content: string;
+        };
         UpdateFeedbackStatusDto: {
             /**
              * @description 处理状态：0-待处理 1-处理中 2-已完成 -1-已忽略
@@ -8268,6 +8550,15 @@ export interface components {
             admin_note?: string;
             /** @description 热度统计 */
             vote_count?: number;
+            /** @description 指派给的管理员用户 ID */
+            assignee_id?: string;
+            /**
+             * @description 工单优先级
+             * @enum {string}
+             */
+            priority?: "low" | "normal" | "high" | "urgent";
+            /** @description 工单标签 */
+            tags?: string[];
         };
         CreateFeedbackConfigDto: {
             /**
@@ -8344,6 +8635,46 @@ export interface components {
             /** @example true */
             modified: boolean;
         };
+        UpdateConfigDto: {
+            /** @description 站点标识（仅回显用，服务端忽略） */
+            key?: string;
+            /** @description 站点基本信息 */
+            basic?: Record<string, never>;
+            /** @description 头部注入配置（custom_css/head_scripts） */
+            header?: Record<string, never>;
+            /** @description SEO 配置 */
+            seo?: Record<string, never>;
+            /** @description 详情页 SEO 模板 */
+            app_seo?: Record<string, never>;
+            /** @description 底部配置（footer_scripts） */
+            footer?: Record<string, never>;
+            /** @description 友情链接 */
+            friend_links?: Record<string, never>[];
+            /** @description 快捷链接 */
+            quick_links?: Record<string, never>[];
+            /** @description 专题页配置 */
+            landing?: Record<string, never>;
+            /** @description 静态页配置 */
+            static_pages?: Record<string, never>;
+            /** @description 内容发布策略 */
+            content_publish?: Record<string, never>;
+            /** @description 站点是否启用 */
+            is_active?: boolean;
+            /** @description 是否维护模式 */
+            is_maintenance?: boolean;
+            /** @description 存储配置 */
+            storage?: Record<string, never>;
+            /** @description 邮件配置 */
+            email?: Record<string, never>;
+            /** @description Telegram 配置 */
+            telegram?: Record<string, never>;
+            /** @description 微信配置 */
+            wechat?: Record<string, never>;
+            /** @description AI 配置 */
+            ai?: Record<string, never>;
+            /** @description 运行期配置（仅此后台可写） */
+            runtime?: Record<string, never>;
+        };
         SettingKeyDto: {
             /** @example main */
             key: string;
@@ -8351,6 +8682,34 @@ export interface components {
         SettingDeletedDataDto: {
             /** @example true */
             deleted: boolean;
+        };
+        UpdateSiteConfigDto: {
+            /** @description 站点标识（仅回显用，服务端忽略） */
+            key?: string;
+            /** @description 站点基本信息 */
+            basic?: Record<string, never>;
+            /** @description 头部注入配置（custom_css/head_scripts） */
+            header?: Record<string, never>;
+            /** @description SEO 配置 */
+            seo?: Record<string, never>;
+            /** @description 详情页 SEO 模板 */
+            app_seo?: Record<string, never>;
+            /** @description 底部配置（footer_scripts） */
+            footer?: Record<string, never>;
+            /** @description 友情链接 */
+            friend_links?: Record<string, never>[];
+            /** @description 快捷链接 */
+            quick_links?: Record<string, never>[];
+            /** @description 专题页配置 */
+            landing?: Record<string, never>;
+            /** @description 静态页配置 */
+            static_pages?: Record<string, never>;
+            /** @description 内容发布策略 */
+            content_publish?: Record<string, never>;
+            /** @description 站点是否启用 */
+            is_active?: boolean;
+            /** @description 是否维护模式 */
+            is_maintenance?: boolean;
         };
         TestSystemEmailDto: Record<string, never>;
         SettingPublicSiteConfigDataDto: {
@@ -8405,7 +8764,7 @@ export interface components {
              * @example admin.content.update
              * @enum {string}
              */
-            task_key?: "system.daily-log" | "tracking.daily-rollup" | "tracking.daily-rollup-yesterday" | "admin.post-gp" | "admin.content.update" | "admin.content.update.apkpure" | "admin.update.all-gp" | "admin.update.one-gp" | "admin.get-gp" | "admin.get-qoo" | "admin.resource.audit" | "system.task-run-log-retention" | "system.media-reclaim-scan" | "admin.apkeep.account-health" | "system.admin-operation-log-retention";
+            task_key?: "system.daily-log" | "tracking.daily-rollup" | "tracking.daily-rollup-yesterday" | "admin.post-gp" | "admin.content.update" | "admin.content.update.apkpure" | "admin.content.update.github" | "admin.update.all-gp" | "admin.update.one-gp" | "admin.get-gp" | "admin.get-qoo" | "admin.resource.audit" | "system.task-run-log-retention" | "system.media-reclaim-scan" | "system.video-preview-mirror" | "system.media-health-check" | "admin.apkeep.account-health" | "system.admin-operation-log-retention";
             /** @description 任务名称 */
             name?: string;
             /** @description 任务说明 */
@@ -8682,6 +9041,17 @@ export interface components {
             /** @example 20 */
             pageSize: number;
         };
+        RefreshMediaHealthDto: {
+            /** @description 应用 ID（与 pkg 二选一） */
+            app_id?: string;
+            /** @description 包名（与 app_id 二选一） */
+            pkg?: string;
+            /**
+             * @description 未指定应用时抽样巡检的数量，默认 50，上限 200
+             * @example 50
+             */
+            limit?: number;
+        };
         RegisterResourceWorkerDto: Record<string, never>;
         ResourceWorkerHeartbeatDto: Record<string, never>;
         ClaimResourceTasksDto: Record<string, never>;
@@ -8929,6 +9299,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description 请求过于频繁 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     AuthController_login: {
@@ -8958,6 +9335,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description 登录尝试过于频繁 */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     AuthController_sendEmailCode: {
@@ -8982,6 +9366,13 @@ export interface operations {
             };
             /** @description 发送过于频繁或邮箱不存在 */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 发送过于频繁 */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9027,6 +9418,13 @@ export interface operations {
             };
             /** @description 用户名或邮箱已存在 */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 请求过于频繁 */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9139,7 +9537,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LogoutDto"];
+            };
+        };
         responses: {
             /** @description 退出成功 */
             200: {
@@ -9161,6 +9563,42 @@ export interface operations {
         responses: {
             /** @description 刷新成功 */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_refreshByToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshTokenDto"];
+            };
+        };
+        responses: {
+            /** @description 刷新成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 刷新令牌无效或已使用 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 请求过于频繁 */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10015,14 +10453,14 @@ export interface operations {
     UserController_adminApiKeyList: {
         parameters: {
             query?: {
+                /** @description 页码，默认 1 */
+                page?: number;
+                /** @description 每页数量，默认 20，最大 100（超过按 100 截断） */
+                pageSize?: number;
                 /** @description 关键词（用户ID/密钥名/前缀） */
                 keyword?: string;
                 /** @description 状态筛选 */
                 status?: "active" | "disabled" | "revoked";
-                /** @description 页码 */
-                page?: string;
-                /** @description 每页数量 */
-                pageSize?: string;
                 /** @description 密钥类型 */
                 key_type?: "content_user" | "admin_agent" | "integration" | "legacy";
                 /** @description 风险等级 */
@@ -10129,6 +10567,10 @@ export interface operations {
     UserController_adminApiKeyStats: {
         parameters: {
             query?: {
+                /** @description 页码，默认 1 */
+                page?: number;
+                /** @description 每页数量，默认 20，最大 100（超过按 100 截断） */
+                pageSize?: number;
                 /** @description 开始时间（ISO） */
                 from?: string;
                 /** @description 结束时间（ISO） */
@@ -10145,10 +10587,6 @@ export interface operations {
                 is_replay?: "true" | "false";
                 /** @description 错误码 */
                 error_code?: string;
-                /** @description 页码 */
-                page?: string;
-                /** @description 每页数量 */
-                pageSize?: string;
             };
             header?: never;
             path?: never;
@@ -10240,10 +10678,10 @@ export interface operations {
     UserController_getApiKeyUsageLogs: {
         parameters: {
             query?: {
-                /** @description 页码 */
-                page?: string;
-                /** @description 每页数量 */
-                pageSize?: string;
+                /** @description 页码，默认 1 */
+                page?: number;
+                /** @description 每页数量，默认 20，最大 100（超过按 100 截断） */
+                pageSize?: number;
             };
             header?: never;
             path: {
@@ -10949,6 +11387,64 @@ export interface operations {
             };
         };
     };
+    UserController_myDownloads: {
+        parameters: {
+            query?: {
+                /** @description 页码，默认 1 */
+                page?: number;
+                /** @description 每页数量，默认 20，最大 100 */
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 未登录或登录态失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权限访问该接口 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     UserController_findOne: {
         parameters: {
             query?: never;
@@ -11449,7 +11945,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignRolesDto"];
+            };
+        };
         responses: {
             /** @description 标准成功响应示例 */
             200: {
@@ -14618,7 +15118,7 @@ export interface operations {
                 category?: string;
                 /** @description 页码，默认 1 */
                 page?: string;
-                /** @description 每页数量，默认 20，最大 50 */
+                /** @description 每页数量，默认 20，最大 100 */
                 pageSize?: string;
             };
             header?: never;
@@ -14782,7 +15282,7 @@ export interface operations {
             query?: {
                 /** @description 页码，默认 1 */
                 page?: string;
-                /** @description 每页数量，默认 20，最大 50 */
+                /** @description 每页数量，默认 20，最大 100 */
                 pageSize?: string;
             };
             header?: never;
@@ -14838,12 +15338,12 @@ export interface operations {
     NotificationsController_adminUsers: {
         parameters: {
             query?: {
+                /** @description 页码，默认 1 */
+                page?: number;
+                /** @description 每页数量，默认 20，最大 100（超过按 100 截断） */
+                pageSize?: number;
                 /** @description 关键词（用户名/昵称/邮箱） */
                 keyword?: string;
-                /** @description 页码，默认 1 */
-                page?: string;
-                /** @description 每页数量，默认 20，最大 50 */
-                pageSize?: string;
             };
             header?: never;
             path?: never;
@@ -14898,14 +15398,14 @@ export interface operations {
     NotificationsController_adminSent: {
         parameters: {
             query?: {
+                /** @description 页码，默认 1 */
+                page?: number;
+                /** @description 每页数量，默认 20，最大 100 */
+                pageSize?: number;
                 /** @description 标题/内容/发送人关键词 */
                 keyword?: string;
                 /** @description single/all */
                 mode?: "single" | "all";
-                /** @description 页码，默认 1 */
-                page?: string;
-                /** @description 每页数量，默认 20，最大 50 */
-                pageSize?: string;
             };
             header?: never;
             path?: never;
@@ -14995,6 +15495,883 @@ export interface operations {
                 };
             };
             /** @description 无权限访问该接口 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    TrackingController_trackClientEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrackClientEventDto"];
+            };
+        };
+        responses: {
+            /** @description 上报成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 未登录或登录态失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权访问该接口 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    TrackingController_adminClientError: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminClientErrorDto"];
+            };
+        };
+        responses: {
+            /** @description 上报成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 未登录或登录态失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权访问该接口 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    TrackingController_overview: {
+        parameters: {
+            query?: {
+                /** @description 开始日期 YYYY-MM-DD */
+                date_from?: string;
+                /** @description 结束日期 YYYY-MM-DD */
+                date_to?: string;
+                /** @description 平台 web/android */
+                platform?: "web" | "android";
+                /** @description 应用 ID */
+                app_id?: string;
+                /** @description 渠道 ID */
+                channel_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 查询成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 未登录或登录态失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权访问该接口 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    TrackingController_topApps: {
+        parameters: {
+            query?: {
+                /** @description 开始日期（YYYY-MM-DD） */
+                date_from?: string;
+                /** @description 结束日期（YYYY-MM-DD） */
+                date_to?: string;
+                /** @description 平台 */
+                platform?: "web" | "android";
+                /** @description 应用 ID */
+                app_id?: string;
+                /** @description 渠道 ID */
+                channel_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 查询成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 未登录或登录态失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权访问该接口 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    TrackingController_channels: {
+        parameters: {
+            query?: {
+                /** @description 开始日期（YYYY-MM-DD） */
+                date_from?: string;
+                /** @description 结束日期（YYYY-MM-DD） */
+                date_to?: string;
+                /** @description 平台 */
+                platform?: "web" | "android";
+                /** @description 应用 ID */
+                app_id?: string;
+                /** @description 渠道 ID */
+                channel_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 查询成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 未登录或登录态失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权访问该接口 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    TrackingController_apiPerformance: {
+        parameters: {
+            query?: {
+                /** @description 开始日期（YYYY-MM-DD） */
+                date_from?: string;
+                /** @description 结束日期（YYYY-MM-DD） */
+                date_to?: string;
+                /** @description 平台 */
+                platform?: "web" | "android";
+                /** @description 应用 ID */
+                app_id?: string;
+                /** @description 渠道 ID */
+                channel_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 查询成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 未登录或登录态失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权访问该接口 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    TrackingController_eventOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 查询成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 未登录或登录态失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权访问该接口 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    TrackingController_communityOverview: {
+        parameters: {
+            query?: {
+                /** @description 开始日期（YYYY-MM-DD） */
+                date_from?: string;
+                /** @description 结束日期（YYYY-MM-DD） */
+                date_to?: string;
+                /** @description 平台 */
+                platform?: "web" | "android";
+                /** @description 应用 ID */
+                app_id?: string;
+                /** @description 渠道 ID */
+                channel_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 查询成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 未登录或登录态失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权访问该接口 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    TrackingController_communityTrends: {
+        parameters: {
+            query?: {
+                /** @description 开始日期（YYYY-MM-DD） */
+                date_from?: string;
+                /** @description 结束日期（YYYY-MM-DD） */
+                date_to?: string;
+                /** @description 平台 */
+                platform?: "web" | "android";
+                /** @description 应用 ID */
+                app_id?: string;
+                /** @description 渠道 ID */
+                channel_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 查询成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 未登录或登录态失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权访问该接口 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    TrackingController_requestLogs: {
+        parameters: {
+            query?: {
+                /** @description 排序字段，非法值回退默认。可选：created_at / duration_ms / status_code */
+                sort_by?: string;
+                /** @description 排序方向，默认 desc */
+                sort_order?: "asc" | "desc";
+                /** @description 开始日期（YYYY-MM-DD） */
+                date_from?: string;
+                /** @description 结束日期（YYYY-MM-DD） */
+                date_to?: string;
+                /** @description 平台 */
+                platform?: "web" | "android";
+                /** @description 页码 */
+                page?: number;
+                /** @description 每页数量 */
+                pageSize?: number;
+                /** @description 关键词（路径、消息等） */
+                keyword?: string;
+                /** @description 用户 ID */
+                user_id?: string;
+                /** @description 设备 ID */
+                device_id?: string;
+                /** @description IP 地址 */
+                ip?: string;
+                /** @description 请求路径 */
+                path?: string;
+                /** @description HTTP 方法 */
+                method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+                /** @description 状态码 */
+                status_code?: number;
+                /** @description 登录类型 */
+                login_type?: "all" | "login" | "guest";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 查询成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 未登录或登录态失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权访问该接口 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    TrackingController_eventLogs: {
+        parameters: {
+            query?: {
+                /** @description 排序字段，非法值回退默认。可选：created_at / duration_ms / status_code */
+                sort_by?: string;
+                /** @description 排序方向，默认 desc */
+                sort_order?: "asc" | "desc";
+                /** @description 开始日期（YYYY-MM-DD） */
+                date_from?: string;
+                /** @description 结束日期（YYYY-MM-DD） */
+                date_to?: string;
+                /** @description 平台 */
+                platform?: "web" | "android";
+                /** @description 事件名 */
+                event_name?: string;
+                /** @description 事件 ID */
+                event_id?: string;
+                /** @description 会话 ID */
+                session_id?: string;
+                /** @description 应用 ID */
+                app_id?: string;
+                /** @description 应用包名 */
+                pkg?: string;
+                /** @description 渠道 ID */
+                channel_id?: string;
+                /** @description 渠道编码 */
+                channel_code?: string;
+                /** @description 设备 ID */
+                device_id?: string;
+                /** @description 用户 ID */
+                user_id?: string;
+                /** @description IP 地址 */
+                ip?: string;
+                /** @description 事件来源（props.source） */
+                source?: string;
+                /** @description 动作（props.action） */
+                action?: string;
+                /** @description 结果（props.result） */
+                result?: string;
+                /** @description 文件缺失标记结果（props.markResult） */
+                mark_result?: string;
+                /** @description 阶段（props.stage） */
+                stage?: string;
+                /** @description 原因（props.reason） */
+                reason?: string;
+                /** @description 业务错误码（props.code） */
+                code?: string;
+                /** @description 系统错误码（props.errorCode） */
+                error_code?: string;
+                /** @description 任务 ID（props.taskId） */
+                task_id?: string;
+                /** @description 模块（props.module） */
+                module?: string;
+                /** @description Tab 标识（props.tab） */
+                tab?: string;
+                /** @description 目标类型（props.target_type） */
+                target_type?: string;
+                /** @description 目标 ID（props.target_id） */
+                target_id?: string;
+                /** @description WebView 动作码（props.elementName / data-acbox-action） */
+                element_name?: string;
+                /** @description 关键词（事件、包名、渠道、属性等） */
+                keyword?: string;
+                /** @description 页码 */
+                page?: number;
+                /** @description 每页数量 */
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 查询成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 未登录或登录态失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权访问该接口 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    TrackingController_recentVisitors: {
+        parameters: {
+            query?: {
+                /** @description 开始日期（YYYY-MM-DD） */
+                date_from?: string;
+                /** @description 结束日期（YYYY-MM-DD） */
+                date_to?: string;
+                /** @description 平台 */
+                platform?: "web" | "android";
+                /** @description 返回条数 */
+                limit?: number;
+                /** @description 关键词（用户昵称/设备等） */
+                keyword?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 查询成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 未登录或登录态失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权访问该接口 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    TrackingController_rebuildDailyStats: {
+        parameters: {
+            query?: {
+                /** @description 开始日期 YYYY-MM-DD */
+                date_from?: string;
+                /** @description 结束日期 YYYY-MM-DD */
+                date_to?: string;
+                /** @description 未传 date_from/date_to 时向前回填天数，最大 31 */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 回填完成 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 未登录或登录态失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权访问该接口 */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -16152,818 +17529,6 @@ export interface operations {
                         message: string;
                         data: unknown;
                     };
-                };
-            };
-        };
-    };
-    TrackingController_trackClientEvent: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TrackClientEventDto"];
-            };
-        };
-        responses: {
-            /** @description 上报成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-            /** @description 未登录或登录态失效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 无权访问该接口 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 服务器内部错误 */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    TrackingController_overview: {
-        parameters: {
-            query?: {
-                /** @description 开始日期 YYYY-MM-DD */
-                date_from?: string;
-                /** @description 结束日期 YYYY-MM-DD */
-                date_to?: string;
-                /** @description 平台 web/android */
-                platform?: "web" | "android";
-                /** @description 应用 ID */
-                app_id?: string;
-                /** @description 渠道 ID */
-                channel_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 查询成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-            /** @description 未登录或登录态失效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 无权访问该接口 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 服务器内部错误 */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    TrackingController_topApps: {
-        parameters: {
-            query?: {
-                /** @description 开始日期（YYYY-MM-DD） */
-                date_from?: string;
-                /** @description 结束日期（YYYY-MM-DD） */
-                date_to?: string;
-                /** @description 平台 */
-                platform?: "web" | "android";
-                /** @description 应用 ID */
-                app_id?: string;
-                /** @description 渠道 ID */
-                channel_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 查询成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-            /** @description 未登录或登录态失效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 无权访问该接口 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 服务器内部错误 */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    TrackingController_channels: {
-        parameters: {
-            query?: {
-                /** @description 开始日期（YYYY-MM-DD） */
-                date_from?: string;
-                /** @description 结束日期（YYYY-MM-DD） */
-                date_to?: string;
-                /** @description 平台 */
-                platform?: "web" | "android";
-                /** @description 应用 ID */
-                app_id?: string;
-                /** @description 渠道 ID */
-                channel_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 查询成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-            /** @description 未登录或登录态失效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 无权访问该接口 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 服务器内部错误 */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    TrackingController_apiPerformance: {
-        parameters: {
-            query?: {
-                /** @description 开始日期（YYYY-MM-DD） */
-                date_from?: string;
-                /** @description 结束日期（YYYY-MM-DD） */
-                date_to?: string;
-                /** @description 平台 */
-                platform?: "web" | "android";
-                /** @description 应用 ID */
-                app_id?: string;
-                /** @description 渠道 ID */
-                channel_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 查询成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-            /** @description 未登录或登录态失效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 无权访问该接口 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 服务器内部错误 */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    TrackingController_eventOptions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 查询成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-            /** @description 未登录或登录态失效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 无权访问该接口 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 服务器内部错误 */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    TrackingController_communityOverview: {
-        parameters: {
-            query?: {
-                /** @description 开始日期（YYYY-MM-DD） */
-                date_from?: string;
-                /** @description 结束日期（YYYY-MM-DD） */
-                date_to?: string;
-                /** @description 平台 */
-                platform?: "web" | "android";
-                /** @description 应用 ID */
-                app_id?: string;
-                /** @description 渠道 ID */
-                channel_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 查询成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-            /** @description 未登录或登录态失效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 无权访问该接口 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 服务器内部错误 */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    TrackingController_communityTrends: {
-        parameters: {
-            query?: {
-                /** @description 开始日期（YYYY-MM-DD） */
-                date_from?: string;
-                /** @description 结束日期（YYYY-MM-DD） */
-                date_to?: string;
-                /** @description 平台 */
-                platform?: "web" | "android";
-                /** @description 应用 ID */
-                app_id?: string;
-                /** @description 渠道 ID */
-                channel_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 查询成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-            /** @description 未登录或登录态失效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 无权访问该接口 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 服务器内部错误 */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    TrackingController_requestLogs: {
-        parameters: {
-            query?: {
-                /** @description 开始日期（YYYY-MM-DD） */
-                date_from?: string;
-                /** @description 结束日期（YYYY-MM-DD） */
-                date_to?: string;
-                /** @description 平台 */
-                platform?: "web" | "android";
-                /** @description 页码 */
-                page?: number;
-                /** @description 每页数量 */
-                pageSize?: number;
-                /** @description 关键词（路径、消息等） */
-                keyword?: string;
-                /** @description 用户 ID */
-                user_id?: string;
-                /** @description 设备 ID */
-                device_id?: string;
-                /** @description IP 地址 */
-                ip?: string;
-                /** @description 请求路径 */
-                path?: string;
-                /** @description HTTP 方法 */
-                method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-                /** @description 状态码 */
-                status_code?: number;
-                /** @description 登录类型 */
-                login_type?: "all" | "login" | "guest";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 查询成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-            /** @description 未登录或登录态失效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 无权访问该接口 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 服务器内部错误 */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    TrackingController_eventLogs: {
-        parameters: {
-            query?: {
-                /** @description 开始日期（YYYY-MM-DD） */
-                date_from?: string;
-                /** @description 结束日期（YYYY-MM-DD） */
-                date_to?: string;
-                /** @description 平台 */
-                platform?: "web" | "android";
-                /** @description 事件名 */
-                event_name?: string;
-                /** @description 事件 ID */
-                event_id?: string;
-                /** @description 会话 ID */
-                session_id?: string;
-                /** @description 应用 ID */
-                app_id?: string;
-                /** @description 应用包名 */
-                pkg?: string;
-                /** @description 渠道 ID */
-                channel_id?: string;
-                /** @description 渠道编码 */
-                channel_code?: string;
-                /** @description 设备 ID */
-                device_id?: string;
-                /** @description 用户 ID */
-                user_id?: string;
-                /** @description IP 地址 */
-                ip?: string;
-                /** @description 事件来源（props.source） */
-                source?: string;
-                /** @description 动作（props.action） */
-                action?: string;
-                /** @description 结果（props.result） */
-                result?: string;
-                /** @description 文件缺失标记结果（props.markResult） */
-                mark_result?: string;
-                /** @description 阶段（props.stage） */
-                stage?: string;
-                /** @description 原因（props.reason） */
-                reason?: string;
-                /** @description 业务错误码（props.code） */
-                code?: string;
-                /** @description 系统错误码（props.errorCode） */
-                error_code?: string;
-                /** @description 任务 ID（props.taskId） */
-                task_id?: string;
-                /** @description 模块（props.module） */
-                module?: string;
-                /** @description Tab 标识（props.tab） */
-                tab?: string;
-                /** @description 目标类型（props.target_type） */
-                target_type?: string;
-                /** @description 目标 ID（props.target_id） */
-                target_id?: string;
-                /** @description WebView 动作码（props.elementName / data-acbox-action） */
-                element_name?: string;
-                /** @description 关键词（事件、包名、渠道、属性等） */
-                keyword?: string;
-                /** @description 页码 */
-                page?: number;
-                /** @description 每页数量 */
-                pageSize?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 查询成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-            /** @description 未登录或登录态失效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 无权访问该接口 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 服务器内部错误 */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    TrackingController_recentVisitors: {
-        parameters: {
-            query?: {
-                /** @description 开始日期（YYYY-MM-DD） */
-                date_from?: string;
-                /** @description 结束日期（YYYY-MM-DD） */
-                date_to?: string;
-                /** @description 平台 */
-                platform?: "web" | "android";
-                /** @description 返回条数 */
-                limit?: number;
-                /** @description 关键词（用户昵称/设备等） */
-                keyword?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 查询成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-            /** @description 未登录或登录态失效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 无权访问该接口 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 服务器内部错误 */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    TrackingController_rebuildDailyStats: {
-        parameters: {
-            query?: {
-                /** @description 开始日期 YYYY-MM-DD */
-                date_from?: string;
-                /** @description 结束日期 YYYY-MM-DD */
-                date_to?: string;
-                /** @description 未传 date_from/date_to 时向前回填天数，最大 31 */
-                days?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 回填完成 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-            /** @description 未登录或登录态失效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 无权访问该接口 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description 服务器内部错误 */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
                 };
             };
         };
@@ -18571,11 +19136,17 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description 反馈类型 */
-                type?: "missing" | "update" | "broken" | "suggestion";
+                type?: "missing" | "update" | "broken" | "suggestion" | "content_report";
                 /** @description 处理状态 */
                 status?: 0 | 1 | 2 | -1;
                 /** @description 关联目标资源 ID */
                 target_id?: string;
+                /** @description 工单优先级筛选 */
+                priority?: "low" | "normal" | "high" | "urgent";
+                /** @description 指派人筛选（管理员用户 ID） */
+                assignee_id?: string;
+                /** @description 只看超 SLA 的未解决反馈（阈值见 FEEDBACK_SLA_HOURS） */
+                sla_overdue?: boolean;
                 /** @description 用户 ID */
                 user_id?: string;
                 /** @description 用户关键词（匹配用户ID/昵称/联系方式） */
@@ -18669,11 +19240,17 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description 反馈类型 */
-                type?: "missing" | "update" | "broken" | "suggestion";
+                type?: "missing" | "update" | "broken" | "suggestion" | "content_report";
                 /** @description 处理状态 */
                 status?: 0 | 1 | 2 | -1;
                 /** @description 关联目标资源 ID */
                 target_id?: string;
+                /** @description 工单优先级筛选 */
+                priority?: "low" | "normal" | "high" | "urgent";
+                /** @description 指派人筛选（管理员用户 ID） */
+                assignee_id?: string;
+                /** @description 只看超 SLA 的未解决反馈（阈值见 FEEDBACK_SLA_HOURS） */
+                sla_overdue?: boolean;
                 /** @description 用户 ID */
                 user_id?: string;
                 /** @description 用户关键词（匹配用户ID/昵称/联系方式） */
@@ -18750,11 +19327,17 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description 反馈类型 */
-                type?: "missing" | "update" | "broken" | "suggestion";
+                type?: "missing" | "update" | "broken" | "suggestion" | "content_report";
                 /** @description 处理状态 */
                 status?: 0 | 1 | 2 | -1;
                 /** @description 关联目标资源 ID */
                 target_id?: string;
+                /** @description 工单优先级筛选 */
+                priority?: "low" | "normal" | "high" | "urgent";
+                /** @description 指派人筛选（管理员用户 ID） */
+                assignee_id?: string;
+                /** @description 只看超 SLA 的未解决反馈（阈值见 FEEDBACK_SLA_HOURS） */
+                sla_overdue?: boolean;
                 /** @description 用户 ID */
                 user_id?: string;
                 /** @description 用户关键词（匹配用户ID/昵称/联系方式） */
@@ -19005,6 +19588,83 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    FeedbacksController_assign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 反馈 ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignFeedbackDto"];
+            };
+        };
+        responses: {
+            /** @description 指派成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    FeedbacksController_addInternalNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 反馈 ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddFeedbackInternalNoteDto"];
+            };
+        };
+        responses: {
+            /** @description 标准成功响应示例 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 追加成功 */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20064,7 +20724,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateConfigDto"];
+            };
+        };
         responses: {
             /** @description 更新配置成功 */
             200: {
@@ -20200,7 +20864,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSiteConfigDto"];
+            };
+        };
         responses: {
             /** @description 更新站点配置成功 */
             200: {
@@ -20394,6 +21062,60 @@ export interface operations {
             };
         };
     };
+    SettingController_getRuntimeConfigHistory: {
+        parameters: {
+            query?: {
+                limit?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    SettingController_rollbackRuntimeConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 回滚成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
     SettingController_resetRuntimeConfig: {
         parameters: {
             query?: never;
@@ -20436,6 +21158,34 @@ export interface operations {
         };
         responses: {
             /** @description 测试邮件发送成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    SettingController_testSystemTelegram: {
+        parameters: {
+            query?: {
+                key?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 测试消息发送成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -21451,7 +22201,12 @@ export interface operations {
     };
     AdminAppReleasesController_list: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 页码，默认 1 */
+                page?: number;
+                /** @description 每页数量，默认 20，最大 100（超过按 100 截断） */
+                pageSize?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -22266,6 +23021,42 @@ export interface operations {
             };
         };
     };
+    ResourceUpdateController_abiBlocksList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_updateAbiBlock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pkg: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ResourceUpdateController_clearUnreachableTarget: {
         parameters: {
             query?: never;
@@ -22581,6 +23372,25 @@ export interface operations {
             };
         };
     };
+    ApkeepAccountController_reveal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ApkeepAccountController_remove: {
         parameters: {
             query?: never;
@@ -22706,6 +23516,10 @@ export interface operations {
     LogsController_getSystemLogs: {
         parameters: {
             query?: {
+                /** @description 排序字段，非法值回退默认。可选：timestamp / source / level / context */
+                sort_by?: string;
+                /** @description 排序方向，默认 desc */
+                sort_order?: "asc" | "desc";
                 /** @description Page number */
                 page?: number;
                 /** @description Page size */
@@ -22769,6 +23583,10 @@ export interface operations {
     LogsController_getAdminOperationLogs: {
         parameters: {
             query?: {
+                /** @description 排序字段，非法值回退默认。可选：timestamp / source / level / context */
+                sort_by?: string;
+                /** @description 排序方向，默认 desc */
+                sort_order?: "asc" | "desc";
                 /** @description Page number */
                 page?: number;
                 /** @description Page size (max 200) */
@@ -22816,6 +23634,10 @@ export interface operations {
     LogSystemController_list: {
         parameters: {
             query?: {
+                /** @description 排序字段，非法值回退默认。可选：timestamp / source / level / context */
+                sort_by?: string;
+                /** @description 排序方向，默认 desc */
+                sort_order?: "asc" | "desc";
                 /** @description Page number */
                 page?: number;
                 /** @description Page size */
@@ -22872,6 +23694,127 @@ export interface operations {
                         message: string;
                         data: components["schemas"]["SystemLogListDataDto"];
                     };
+                };
+            };
+        };
+    };
+    MediaHealthController_list: {
+        parameters: {
+            query?: {
+                /** @description 页码，默认 1 */
+                page?: number;
+                /** @description 每页数量，默认 20，最大 100（超过按 100 截断） */
+                pageSize?: number;
+                /** @description 按包名筛选 */
+                pkg?: string;
+                /** @description 媒体类型筛选 */
+                media_type?: "icon" | "screenshot" | "video";
+                /** @description 只看异常（HEAD 非 2xx/3xx 或请求失败） */
+                only_abnormal?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 媒体巡检结果 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 未认证 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权限 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    MediaHealthController_refresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshMediaHealthDto"];
+            };
+        };
+        responses: {
+            /** @description 巡检已执行 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+            /** @description 未认证 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权限 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };
@@ -24221,6 +25164,23 @@ export interface operations {
                 "application/json": components["schemas"]["WebGameSortDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DeployHealthController_deploy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
