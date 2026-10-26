@@ -5,7 +5,6 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import CenterFilterBar from '../CenterFilterBar';
 import { useAuth } from '@/context/auth-context';
 import GameCard from '@/components/game-card';
@@ -13,10 +12,13 @@ import type { CommunityTopicItem } from '@/lib/community-api';
 import { extractFollowedGamesFromTopics, getMyFollowedGameTopics } from '@/lib/profile-dashboard-api';
 import CenterAuthRequired from '../CenterAuthRequired';
 import CenterPageHeader from '../CenterPageHeader';
+import CenterLoadError from '../CenterLoadError';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ProfileCenterGamesPage() {
   const PAGE_SIZE = 12;
   const { token, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -28,14 +30,28 @@ export default function ProfileCenterGamesPage() {
   const [page, setPage] = useState(() => Math.max(1, Number(searchParams.get('page') || 1)));
   const [pageSize, setPageSize] = useState(() => Math.max(1, Number(searchParams.get('pageSize') || PAGE_SIZE)));
   const [total, setTotal] = useState(0);
+  const [loadError, setLoadError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function load() {
       if (!token) return;
       setLoading(true);
       const pageFromUrl = Math.max(1, Number(searchParams.get('page') || 1));
       const pageSizeFromUrl = Math.max(1, Number(searchParams.get('pageSize') || PAGE_SIZE));
       const res = await getMyFollowedGameTopics({ token, page: pageFromUrl, pageSize: pageSizeFromUrl });
+      if (cancelled) return;
+      if (!res.ok) {
+        // 失败必须可见：不要把它渲染成「你还没有关注任何游戏」。
+        setLoadError(res.message || '关注游戏加载失败，请稍后重试');
+        setTopics([]);
+        setTotal(0);
+        setLoading(false);
+        return;
+      }
+      setLoadError('');
       setTopics(res.list || []);
       setPage(pageFromUrl);
       setPageSize(pageSizeFromUrl);
@@ -45,7 +61,10 @@ export default function ProfileCenterGamesPage() {
     if (isAuthenticated && token) {
       void load();
     }
-  }, [isAuthLoading, isAuthenticated, searchParams, token]);
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthLoading, isAuthenticated, reloadKey, searchParams, token]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -77,11 +96,22 @@ export default function ProfileCenterGamesPage() {
     if (!token || loadingMore || !canLoadMore) return;
     const next = page + 1;
     setLoadingMore(true);
-    const res = await getMyFollowedGameTopics({ token, page: next, pageSize });
-    setTopics((prev) => [...prev, ...res.list]);
-    setPage(next);
-    setTotal(Number(res.total || total));
-    setLoadingMore(false);
+    try {
+      const res = await getMyFollowedGameTopics({ token, page: next, pageSize });
+      if (!res.ok) {
+        toast({
+          title: '加载更多失败',
+          description: res.message || '关注游戏加载失败，请稍后重试',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setTopics((prev) => [...prev, ...res.list]);
+      setPage(next);
+      setTotal(Number(res.total || total));
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
   if (isAuthLoading) {
@@ -136,7 +166,17 @@ export default function ProfileCenterGamesPage() {
             <p className="text-xs text-primary">筛选已生效：关键词“{keyword.trim() || '空'}”，排序 {sort}，页码 {page}，每页 {pageSize}</p>
           ) : null}
           <p className="text-xs text-muted-foreground">已加载社区 {topics.length} / {total}（聚合后游戏 {games.length}）</p>
-          {games.length === 0 ? (
+          {loadError ? (
+            <CenterLoadError
+              message={loadError}
+              action="profile_center_games_reload"
+              actionLabel="重新加载关注游戏"
+              onRetry={() => {
+                setLoadError('');
+                setReloadKey((value) => value + 1);
+              }}
+            />
+          ) : games.length === 0 ? (
             <p className="text-sm text-muted-foreground">{topics.length === 0 ? '你还没有关注任何游戏。' : '没有符合当前筛选条件的关注游戏。'}</p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

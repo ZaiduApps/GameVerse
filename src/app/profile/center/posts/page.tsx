@@ -19,6 +19,7 @@ import { getMyDashboardPosts, type DashboardPostItem } from '@/lib/profile-dashb
 import CenterAuthRequired from '../CenterAuthRequired';
 import CenterPageHeader from '../CenterPageHeader';
 import CenterFilterBar from '../CenterFilterBar';
+import CenterLoadError from '../CenterLoadError';
 
 function statusText(reviewStatus: string, status: number) {
   const review = String(reviewStatus || '').trim();
@@ -366,23 +367,15 @@ export default function ProfileCenterPostsPage() {
             }}
           />
           {loadError && filtered.length === 0 ? (
-            <div className="rounded-lg bg-destructive/5 px-4 py-5 text-sm text-destructive">
-              <p>{loadError}</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                onClick={() => {
-                  setLoadError('');
-                  setReloadKey((value) => value + 1);
-                }}
-                data-acbox-action="profile_center_posts_reload"
-                data-acbox-label="重新加载动态"
-              >
-                重新加载
-              </Button>
-            </div>
+            <CenterLoadError
+              message={loadError}
+              action="profile_center_posts_reload"
+              actionLabel="重新加载动态"
+              onRetry={() => {
+                setLoadError('');
+                setReloadKey((value) => value + 1);
+              }}
+            />
           ) : null}
           {(hasActiveFilter || page > 1) ? (
             <p className="text-xs text-primary">筛选已生效：关键词“{keyword.trim() || '空'}”，状态 {reviewStatus === 'all' ? '全部' : reviewStatus}，排序 {sort}，页码 {page}，每页 {pageSize}</p>

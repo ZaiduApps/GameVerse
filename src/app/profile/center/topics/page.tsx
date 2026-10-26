@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import CenterAuthRequired from '../CenterAuthRequired';
 import CenterPageHeader from '../CenterPageHeader';
+import CenterLoadError from '../CenterLoadError';
 
 export default function ProfileCenterTopicsPage() {
   const PAGE_SIZE = 12;
@@ -32,14 +33,27 @@ export default function ProfileCenterTopicsPage() {
   const [page, setPage] = useState(() => Math.max(1, Number(searchParams.get('page') || 1)));
   const [pageSize, setPageSize] = useState(() => Math.max(1, Number(searchParams.get('pageSize') || PAGE_SIZE)));
   const [total, setTotal] = useState(0);
+  const [loadError, setLoadError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function load() {
       if (!token) return;
       setLoading(true);
       const pageFromUrl = Math.max(1, Number(searchParams.get('page') || 1));
       const pageSizeFromUrl = Math.max(1, Number(searchParams.get('pageSize') || PAGE_SIZE));
       const res = await getMyFollowedGameTopics({ token, page: pageFromUrl, pageSize: pageSizeFromUrl });
+      if (cancelled) return;
+      if (!res.ok) {
+        setLoadError(res.message || '关注社区加载失败，请稍后重试');
+        setList([]);
+        setTotal(0);
+        setLoading(false);
+        return;
+      }
+      setLoadError('');
       setList(res.list || []);
       setPage(pageFromUrl);
       setPageSize(pageSizeFromUrl);
@@ -49,7 +63,10 @@ export default function ProfileCenterTopicsPage() {
     if (isAuthenticated && token) {
       void load();
     }
-  }, [isAuthLoading, isAuthenticated, searchParams, token]);
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthLoading, isAuthenticated, reloadKey, searchParams, token]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -78,11 +95,22 @@ export default function ProfileCenterTopicsPage() {
     if (!token || loadingMore || !canLoadMore) return;
     const next = page + 1;
     setLoadingMore(true);
-    const res = await getMyFollowedGameTopics({ token, page: next, pageSize });
-    setList((prev) => [...prev, ...res.list]);
-    setPage(next);
-    setTotal(Number(res.total || total));
-    setLoadingMore(false);
+    try {
+      const res = await getMyFollowedGameTopics({ token, page: next, pageSize });
+      if (!res.ok) {
+        toast({
+          title: '加载更多失败',
+          description: res.message || '关注社区加载失败，请稍后重试',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setList((prev) => [...prev, ...res.list]);
+      setPage(next);
+      setTotal(Number(res.total || total));
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
   async function unfollow(topic: CommunityTopicItem) {
@@ -179,7 +207,17 @@ export default function ProfileCenterTopicsPage() {
             <p className="text-xs text-primary">筛选已生效：关键词“{keyword.trim() || '空'}”，排序 {sort}，页码 {page}，每页 {pageSize}</p>
           ) : null}
           <p className="text-xs text-muted-foreground">已加载 {list.length} / {total}</p>
-          {filtered.length === 0 ? (
+          {loadError ? (
+            <CenterLoadError
+              message={loadError}
+              action="profile_center_topics_reload"
+              actionLabel="重新加载关注社区"
+              onRetry={() => {
+                setLoadError('');
+                setReloadKey((value) => value + 1);
+              }}
+            />
+          ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground">{list.length === 0 ? '你还没有关注任何游戏社区。' : '没有符合当前筛选条件的游戏社区。'}</p>
           ) : (
             filtered.map((topic) => {

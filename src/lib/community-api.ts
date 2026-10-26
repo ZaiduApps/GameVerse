@@ -230,7 +230,7 @@ function parseApiResponseMessage(json: any, fallback: string) {
   return message || fallback;
 }
 
-function normalizeTopicItem(input: CommunityTopicItem | null | undefined): CommunityTopicItem {
+export function normalizeTopicItem(input: CommunityTopicItem | null | undefined): CommunityTopicItem {
   const item = input || ({} as CommunityTopicItem);
   return {
     ...item,

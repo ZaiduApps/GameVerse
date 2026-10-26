@@ -1,6 +1,6 @@
 import { trackedApiFetch } from '@/lib/api';
 import { resolveGameName } from '@/lib/game-display-name';
-import { getMyFollowedTopics, toCommunityPost, type ApiCommunityPost, type CommunityTopicItem } from '@/lib/community-api';
+import { normalizeTopicItem, toCommunityPost, type ApiCommunityPost, type CommunityTopicItem } from '@/lib/community-api';
 import type { CommunityPost, Game } from '@/types';
 
 export type DashboardPostItem = {
@@ -207,21 +207,64 @@ export async function getMyReservationGames(params: {
   }
 }
 
+/**
+ * 分页读取「我关注的社区」。与 community-api 的 getMyFollowedTopics 不同：
+ * 后者失败时返回空数组，个人中心会把「加载失败」误显示成「你还没有关注任何游戏」；
+ * 这里把失败原因带回去，页面才能给出可重试的错误提示。
+ */
+export async function getMyFollowedTopicsPage(params: {
+  token: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<DashboardPageResult<CommunityTopicItem>> {
+  const token = String(params.token || '').trim();
+  const page = Math.max(1, Number(params.page || 1));
+  const pageSize = Math.max(1, Number(params.pageSize || 6));
+  if (!token) return buildDashboardFailure(page, pageSize, '登录状态已失效');
+
+  const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+
+  try {
+    const res = await trackedApiFetch(`/content/my/topics/follows?${query.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    const json: ApiResponse<{ list?: CommunityTopicItem[]; total?: number }> = await res.json().catch(() => ({ code: -1 }));
+    if (!res.ok || json.code !== 0) {
+      return buildDashboardFailure(
+        page,
+        pageSize,
+        String(json.message || '关注列表加载失败，请稍后重试'),
+      );
+    }
+    const rawList = Array.isArray(json.data?.list) ? json.data?.list : [];
+    const list = rawList.map((item) => normalizeTopicItem(item));
+    return {
+      ok: true,
+      list,
+      total: Number(json.data?.total || list.length || 0),
+      page,
+      pageSize,
+    };
+  } catch {
+    return buildDashboardFailure(page, pageSize, '关注列表加载失败，请稍后重试');
+  }
+}
+
 export async function getMyFollowedGameTopics(params: {
   token: string;
   page?: number;
   pageSize?: number;
 }): Promise<DashboardPageResult<CommunityTopicItem>> {
-  const page = Math.max(1, Number(params.page || 1));
-  const pageSize = Math.max(1, Number(params.pageSize || 6));
-  const list = await getMyFollowedTopics(params);
-  const gameTopics = list.filter((topic) => Boolean(topic?.app_info?._id || topic?.app_info?.pkg));
+  const result = await getMyFollowedTopicsPage(params);
+  if (!result.ok) {
+    return { ...result, list: [], total: 0 };
+  }
+  const gameTopics = result.list.filter((topic) => Boolean(topic?.app_info?._id || topic?.app_info?.pkg));
   return {
-    ok: true,
+    ...result,
     list: gameTopics,
     total: gameTopics.length,
-    page,
-    pageSize,
   };
 }
 
