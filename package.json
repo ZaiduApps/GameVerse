@@ -24,6 +24,7 @@
     "test:game-display-name": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/game-display-name.test.mjs",
     "test:authed-fetch": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/alias-loader.mjs --test tests/authed-fetch.test.mjs",
     "test:route-template": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/route-template.test.mjs",
+    "test:screen-view": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/alias-loader.mjs --test tests/screen-view-props.test.mjs",
     "test:sitemap": "node --test tests/sitemap-static.test.mjs",
     "test:edge-cache": "node --test tests/edge-cache-rule.test.mjs tests/html-vary.test.mjs tests/next-prod-server.test.mjs",
     "seo:audit": "node scripts/seo-daily-audit.mjs",

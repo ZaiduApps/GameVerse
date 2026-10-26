@@ -1,39 +1,8 @@
 import { apiUrl } from '@/lib/api';
-import { resolveRouteTemplate } from '@/lib/route-template';
+import { buildScreenViewProps } from '@/lib/screen-view-props';
 import { buildTrackingHeaders, getTrackingAppVersion } from '@/lib/tracking-headers';
 
 const SCREEN_VIEW_EVENT = 'screen_view';
-const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign'] as const;
-
-function readUtmProps(search: string): Record<string, string> {
-  const props: Record<string, string> = {};
-  if (!search) return props;
-
-  let params: URLSearchParams;
-  try {
-    params = new URLSearchParams(search);
-  } catch {
-    return props;
-  }
-
-  for (const key of UTM_KEYS) {
-    const value = params.get(key);
-    if (value) props[key] = value;
-  }
-  return props;
-}
-
-/** 从 /app/<seg> 取包名；解码失败就退回原始段，宁可埋点难看也不抛错。 */
-function extractPkgFromPath(pathname: string): string | undefined {
-  const segments = pathname.split(/[?#]/, 1)[0].split('/').filter(Boolean);
-  const raw = segments[segments.length - 1];
-  if (!raw) return undefined;
-  try {
-    return decodeURIComponent(raw) || undefined;
-  } catch {
-    return raw;
-  }
-}
 
 /**
  * 页面浏览上报：同步返回，不阻塞渲染，任何失败都静默。
@@ -47,16 +16,11 @@ export function reportScreenView(pathname: string): void {
 
   try {
     const headers = buildTrackingHeaders();
-    const routeTemplate = resolveRouteTemplate(pathname);
-    const props: Record<string, string> = {
-      route_template: routeTemplate,
-      path: pathname,
-      referer: document.referrer || '',
-      ...readUtmProps(window.location.search),
-    };
-
-    const pkg = routeTemplate === '/app/[id]' ? extractPkgFromPath(pathname) : undefined;
-    if (pkg) props.pkg = pkg;
+    const props = buildScreenViewProps(
+      pathname,
+      window.location.search,
+      document.referrer || '',
+    );
 
     const body = {
       event_name: SCREEN_VIEW_EVENT,
