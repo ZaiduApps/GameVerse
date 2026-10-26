@@ -29,7 +29,10 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    // 已接入 .eslintrc.json（next/core-web-vitals + next/typescript）。当前基线把历史
+    // 规则全部降级为 warning，因此 build 期的 lint 步骤可跑通，但会打印存量告警；
+    // 后续按 warning 数逐步清零后再收紧为 error。
+    ignoreDuringBuilds: false,
   },
   async redirects() {
     return [
