@@ -103,3 +103,22 @@ test('未带失败原因时按渠道不可用展示', async () => {
   const html = await renderNotice({ reason: 'channel' });
   assert.match(html, /这个下载渠道暂时不可用/);
 });
+
+test('默认导出按 query 决定是否显示，并读出失败原因', async () => {
+  const renderWithQuery = (query) =>
+    renderTsx(NOTICE_VIEW, {}, {
+      modules: {
+        'next/navigation': { useSearchParams: () => new URLSearchParams(query) },
+        '@/lib/download-error-state': downloadErrorState,
+      },
+    });
+
+  const resource = await renderWithQuery('download_error=1&download_error_reason=resource');
+  assert.match(resource, /这个资源暂时失效了/);
+
+  const channel = await renderWithQuery('download_error=1');
+  assert.match(channel, /这个下载渠道暂时不可用/);
+
+  const normal = await renderWithQuery('from=push');
+  assert.equal(normal, '');
+});
