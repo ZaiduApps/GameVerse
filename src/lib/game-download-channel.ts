@@ -77,3 +77,26 @@ export function buildDirectDownloadLinks(
 
   return links;
 }
+
+/**
+ * 结构化数据（JSON-LD `InstallAction.target`）里「下载」动作的落点：
+ * 优先第一个可直接下载渠道的 302 入口（`/app/{pkg}/download/{channelId}`），
+ * 没有直下渠道时回退到详情页自身。
+ *
+ * 渠道筛选必须复用 `buildDirectDownloadLinks`——JSON-LD 声明与页面上真正渲染的
+ * 下载按钮必须同源，否则会出现「结构化数据说能直下、页面只给引导」的口径漂移。
+ */
+export function resolveInstallActionTarget(
+  resources: ApiDownloadResource[] | undefined | null,
+  gameId: string | undefined | null,
+  canonicalUrl: string,
+): string {
+  const [first] = buildDirectDownloadLinks(resources, gameId);
+  if (!first) return canonicalUrl;
+  try {
+    return new URL(first.href, canonicalUrl).href;
+  } catch {
+    // canonicalUrl 不是合法绝对 URL 时不做拼接，保持详情页自身。
+    return canonicalUrl;
+  }
+}

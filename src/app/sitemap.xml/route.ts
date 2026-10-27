@@ -4,6 +4,7 @@ import path from 'node:path';
 import { getSiteUrl } from '@/lib/seo';
 import {
   SITEMAP_REVALIDATE_SECONDS,
+  applyGameLastmodPatch,
   checkStaticFreshness,
   createSitemapBuilder,
   getServerApiBaseUrl,
@@ -75,13 +76,27 @@ export async function GET(): Promise<Response> {
       const meta = inspectStaticSitemap(staticFile.xml);
       const validation = validateStaticSitemap(meta);
       if (validation.ok) {
-        const liveGameTotal = await builder.getLiveGameTotal();
-        const freshness = checkStaticFreshness(meta, liveGameTotal);
+        // 一次轻量请求同时拿到线上游戏总数（新鲜度）与构建之后被更新过的游戏（lastmod 补丁）。
+        const updates = await builder.getRecentGameUpdates(meta.buildTime);
+        const freshness = checkStaticFreshness(meta, updates.total);
         if (freshness.ok) {
+          // 静态文件里的 lastmod 是 buildTime 那一刻的快照，后台改完 SEO 不会自己变；
+          // 用最新的 updated_at 就地覆写，避免爬虫一直看到旧日期（也不必重建整份 sitemap）。
+          if (!updates.complete && updates.games.length > 0) {
+            console.warn(
+              `${LOG_TAG} 构建后的更新超过单页窗口，本次只补前 ${updates.games.length} 条 lastmod，其余等下次重建`,
+            );
+          }
+          const patched = applyGameLastmodPatch(staticFile.xml, updates.games);
           console.log(
-            `${LOG_TAG} 直出静态文件 ${staticFile.source}：${validation.reason}；${freshness.reason}${freshness.skipped ? '（跳过）' : ''}`,
+            `${LOG_TAG} 直出静态文件 ${staticFile.source}：${validation.reason}；${freshness.reason}${freshness.skipped ? '（跳过）' : ''}；lastmod 补丁 ${patched.patched} 条`,
           );
-          return xmlResponse(staticFile.xml, `static:${staticFile.source}`);
+          return xmlResponse(
+            patched.xml,
+            patched.patched > 0
+              ? `static:${staticFile.source}+lastmod:${patched.patched}`
+              : `static:${staticFile.source}`,
+          );
         }
         console.warn(`${LOG_TAG} 静态文件已过期（${freshness.reason}），改用运行时生成`);
       } else {

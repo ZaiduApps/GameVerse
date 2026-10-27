@@ -419,11 +419,37 @@ export function createSitemapBuilder(options = {}) {
     return total > 0 ? total : null;
   }
 
+  /**
+   * 静态产物的 lastmod 补丁数据：一次轻量请求拿到线上游戏总数 + 最近更新的游戏。
+   * 接口按 `updated_at` 倒序，所以晚于 `since` 的都排在前面，遇到第一条更旧的就截止。
+   *
+   * `complete=false` 表示首页装不下整个窗口（还有更老的更新没抓到），只是提示：
+   * 能补的那部分照样补，剩余条目等下一次重建静态产物时自然刷新。
+   */
+  async function getRecentGameUpdates(sinceInput, limit = 1000) {
+    const since = parseDate(sinceInput);
+    const data = extractList(await fetchJson(`/seo/sitemap/games?page=1&pageSize=${limit}`));
+    const total = Number(data?.total || 0) || null;
+    if (!data || !since) return { total, games: [], complete: false };
+
+    const list = Array.isArray(data.list) ? data.list : [];
+    const games = [];
+    for (const item of list) {
+      const pkg = String(item?.pkg || '').trim();
+      const updatedAt = parseDate(item?.updated_at);
+      if (!pkg || !updatedAt) continue;
+      if (updatedAt.getTime() <= since.getTime()) break;
+      games.push({ pkg, lastModified: updatedAt });
+    }
+    return { total, games, complete: list.length < limit || games.length < list.length };
+  }
+
   return {
     absolute,
     buildEntries,
     buildStaticEntries,
     getLiveGameTotal,
+    getRecentGameUpdates,
     stats: { apiBaseUrl, siteUrl },
   };
 }
@@ -468,6 +494,73 @@ export function serializeSitemapXml(entries, { buildTime } = {}) {
   }
   lines.push('</urlset>');
   return `${lines.join('\n')}\n`;
+}
+
+/**
+ * 把静态产物里「构建之后又被更新过」的游戏条目的 <lastmod> 换成线上最新值。
+ *
+ * 静态文件是构建那一刻的快照：后台改了 SEO/文案/版本后，文件里的 lastmod 会一直停在
+ * buildTime 之前，等于持续告诉爬虫「这个页面没变过」。全量重建要打几十个接口（实测约 10 s），
+ * 这里只做文本级补丁——一次轻量请求拿到最近更新的游戏，就地覆写对应 `<url>` 块。
+ *
+ * 只动 `/app/` 详情页条目；补丁值来自 `updated_at`，不用「当前时间」糊弄。
+ *
+ * @param {string} xml 静态 sitemap 原文
+ * @param {Array<{pkg: string, lastModified: Date|string}>} games 需要覆写的游戏
+ * @returns {{xml: string, patched: number}}
+ */
+export function applyGameLastmodPatch(xml, games) {
+  const patch = new Map();
+  for (const game of Array.isArray(games) ? games : []) {
+    const pkg = String(game?.pkg || '').trim();
+    const lastmod = formatLastModified(game?.lastModified);
+    if (!pkg || !lastmod) continue;
+    patch.set(pkg, lastmod);
+  }
+  if (patch.size === 0) return { xml, patched: 0 };
+
+  const output = [];
+  let pendingPkg = null;
+  let patched = 0;
+
+  for (const line of String(xml || '').split('\n')) {
+    const locMatch = /^\s*<loc>(.*)<\/loc>\s*$/.exec(line);
+    if (locMatch) {
+      const pkg = gamePkgFromLoc(locMatch[1]);
+      pendingPkg = pkg && patch.has(pkg) ? pkg : null;
+      output.push(line);
+      continue;
+    }
+
+    if (pendingPkg) {
+      if (/^\s*<lastmod>/.test(line)) {
+        output.push(`<lastmod>${patch.get(pendingPkg)}</lastmod>`);
+        pendingPkg = null;
+        patched += 1;
+        continue;
+      }
+      if (/^\s*<changefreq>|^\s*<priority>|^\s*<\/url>/.test(line)) {
+        // 原条目没有 <lastmod>：按输出约定补在 <loc> 之后。
+        output.push(`<lastmod>${patch.get(pendingPkg)}</lastmod>`);
+        pendingPkg = null;
+        patched += 1;
+      }
+    }
+
+    output.push(line);
+  }
+
+  return { xml: output.join('\n'), patched };
+}
+
+function gamePkgFromLoc(loc) {
+  const match = /\/app\/([^/?#]+)$/.exec(String(loc || ''));
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
 }
 
 /** 读出静态文件的结构信息（不解析成对象，路由是原样直出）。 */

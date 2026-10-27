@@ -15,6 +15,7 @@ import {
 } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityFeed, getCommunityPostsByGame } from '@/lib/community-api';
+import { resolveInstallActionTarget } from '@/lib/game-download-channel';
 import {
   faqMarkdownToPlainText,
   selectDedicatedGameFaqItems,
@@ -676,6 +677,10 @@ export default async function GameDetailPage({
     .map((item) => normalizeText(item))
     .filter(Boolean)
     .slice(0, 5);
+  // 下载意图要有机器可读的落点：优先直下渠道的 302 入口，没有直下渠道才回退详情页自身。
+  const installActionTarget = isWebGame
+    ? canonicalUrl
+    : resolveInstallActionTarget(initialGameData.resources, game.pkg || game._id, canonicalUrl);
 
   const detailJsonLd = {
     '@context': 'https://schema.org',
@@ -711,7 +716,7 @@ export default async function GameDetailPage({
           },
           potentialAction: {
             '@type': 'InstallAction',
-            target: canonicalUrl,
+            target: installActionTarget,
             platform: ['https://schema.org/AndroidPlatform'],
           },
         }
