@@ -169,6 +169,7 @@ function loadCommunityApiUtils(trackedApiFetch = async () => { throw new Error('
       if (id === '@/lib/tracking-headers') return { buildTrackingHeaders: () => ({}) };
       if (id === '@/lib/authed-fetch') return loadAuthedFetchUtils(trackedApiFetch);
       if (id === '@/lib/game-display-name') return loadGameDisplayName();
+      if (id === '@/lib/route-identifier') return loadRouteIdentifierUtils();
       return require(id);
     },
     URL,
@@ -177,6 +178,26 @@ function loadCommunityApiUtils(trackedApiFetch = async () => { throw new Error('
     process,
   };
 
+  vm.runInNewContext(compiled, sandbox);
+  return moduleObj.exports;
+}
+
+function loadRouteIdentifierUtils() {
+  const filePath = path.join(process.cwd(), 'src/lib/route-identifier.ts');
+  const source = fs.readFileSync(filePath, 'utf8');
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2020,
+    },
+  }).outputText;
+
+  const moduleObj = { exports: {} };
+  const sandbox = {
+    module: moduleObj,
+    exports: moduleObj.exports,
+    require: (id) => require(id),
+  };
   vm.runInNewContext(compiled, sandbox);
   return moduleObj.exports;
 }
@@ -884,7 +905,7 @@ test('community post detail: 404 becomes null but upstream failure throws', asyn
     statusText: 'Not Found',
     json: async () => ({ code: 404, message: 'post not found', data: null }),
   }));
-  assert.equal(await getMissingPost('missing-post'), null);
+  assert.equal(await getMissingPost('aaaaaaaaaaaaaaaaaaaaaaaa'), null);
 
   const calls = [];
   const { getCommunityPostById: getFailingPost } = loadCommunityApiUtils(async (path) => {
@@ -897,7 +918,7 @@ test('community post detail: 404 becomes null but upstream failure throws', asyn
     };
   });
   // 5xx 不是「帖子不存在」，必须抛错走 error.tsx / 500
-  await assert.rejects(() => getFailingPost('post-1'), /读取失败/);
+  await assert.rejects(() => getFailingPost('bbbbbbbbbbbbbbbbbbbbbbbb'), /读取失败/);
   // 默认 retries=1：5xx 重试一次后才放弃
   assert.equal(calls.length, 2);
 });
