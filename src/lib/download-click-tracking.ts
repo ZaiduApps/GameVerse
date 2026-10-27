@@ -1,4 +1,4 @@
-import { apiUrl } from '@/lib/api';
+import { trackedApiFetch } from '@/lib/api';
 import { buildTrackingHeaders } from '@/lib/tracking-headers';
 
 /**
@@ -45,7 +45,7 @@ export function reportDownloadClick(input: DownloadClickInput): void {
     };
 
     // keepalive：跳转到 302 入口后请求仍然送达；失败静默，不重试、不排队。
-    void fetch(apiUrl('/tracking/event'), {
+    void trackedApiFetch('/tracking/event', {
       method: 'POST',
       keepalive: true,
       cache: 'no-store',

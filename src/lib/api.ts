@@ -20,7 +20,15 @@ const browserBaseUrl = (
 export const API_BASE_URL =
   typeof window === 'undefined' ? serverBaseUrl : browserBaseUrl;
 
+/**
+ * 业务请求的默认超时。不传 `timeoutMs` 时必须仍然有界：上游卡住时请求悬挂到浏览器
+ * 默认超时（可达数分钟），用户看到的是「转圈不动」，`auth-errors` 的超时分类也永远
+ * 走不到。个别跑得更久的调用点显式传更大的值，不要为了迁就它们抬高这个默认。
+ */
+export const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
+
 export interface TrackedFetchInit extends RequestInit {
+  /** 不传用 `DEFAULT_REQUEST_TIMEOUT_MS`；传 0 或负数表示显式不限时。 */
   timeoutMs?: number;
   logKey?: string;
 }
@@ -39,6 +47,10 @@ function createAbortError(message: string) {
     error.name = 'TimeoutError';
     return error;
   }
+}
+
+function createTimeoutError(timeoutMs: number, path: string) {
+  return createAbortError(`The operation was aborted due to timeout after ${timeoutMs}ms: ${path}`);
 }
 
 function isAbortLikeError(error: unknown) {
@@ -82,10 +94,12 @@ function withTimeoutSignal(signal: AbortSignal | null | undefined, timeoutMs?: n
     return {
       signal,
       cleanup: () => {},
+      didTimeOut: () => false,
     };
   }
 
   const controller = new AbortController();
+  let timedOut = false;
   const forwardAbort = () => {
     controller.abort(signal?.reason || createAbortError('The operation was aborted.'));
   };
@@ -97,11 +111,13 @@ function withTimeoutSignal(signal: AbortSignal | null | undefined, timeoutMs?: n
   }
 
   const timer = setTimeout(() => {
+    timedOut = true;
     controller.abort(createAbortError('The operation was aborted due to timeout'));
   }, timeoutMs);
 
   return {
     signal: controller.signal,
+    didTimeOut: () => timedOut,
     cleanup: () => {
       clearTimeout(timer);
       if (signal) {
@@ -112,7 +128,8 @@ function withTimeoutSignal(signal: AbortSignal | null | undefined, timeoutMs?: n
 }
 
 export async function trackedApiFetch(path: string, init: TrackedFetchInit = {}) {
-  const { timeoutMs, logKey, signal, ...fetchInit } = init;
+  const { timeoutMs: requestedTimeoutMs, logKey, signal, ...fetchInit } = init;
+  const timeoutMs = requestedTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
   const trackingHeaders =
     typeof window === 'undefined'
       ? {
@@ -123,7 +140,7 @@ export async function trackedApiFetch(path: string, init: TrackedFetchInit = {})
       : buildTrackingHeaders();
   const requestUrl = apiUrl(path);
   const fallbackRequestUrl = resolveFallbackRequestUrl(requestUrl);
-  const { signal: timeoutSignal, cleanup } = withTimeoutSignal(signal, timeoutMs);
+  const { signal: timeoutSignal, cleanup, didTimeOut } = withTimeoutSignal(signal, timeoutMs);
 
   try {
     return await fetch(requestUrl, {
@@ -135,11 +152,14 @@ export async function trackedApiFetch(path: string, init: TrackedFetchInit = {})
       },
     });
   } catch (error) {
+    // 运行时决定 fetch 被 abort 时抛 AbortError 还是 signal.reason（Node 18 与浏览器的
+    // 行为并不一致），这里统一归一成 TimeoutError，让 classify 不依赖运行时。
+    const failure = didTimeOut() ? createTimeoutError(timeoutMs, path) : error;
     if (
       fallbackRequestUrl &&
       fallbackRequestUrl !== requestUrl &&
-      !isAbortLikeError(error) &&
-      isConnectionRefusedError(error)
+      !isAbortLikeError(failure) &&
+      isConnectionRefusedError(failure)
     ) {
       try {
         return await fetch(fallbackRequestUrl, {
@@ -151,28 +171,31 @@ export async function trackedApiFetch(path: string, init: TrackedFetchInit = {})
           },
         });
       } catch (fallbackError) {
+        const fallbackFailure = didTimeOut() ? createTimeoutError(timeoutMs, path) : fallbackError;
         if (logKey) {
           console.error(`[${logKey}] fallback request exception`, {
             path,
             requestUrl: fallbackRequestUrl,
-            timeoutMs: timeoutMs || null,
-            aborted: isAbortLikeError(fallbackError),
-            error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+            timeoutMs,
+            timedOut: didTimeOut(),
+            aborted: isAbortLikeError(fallbackFailure),
+            error: fallbackFailure instanceof Error ? fallbackFailure.message : String(fallbackFailure),
           });
         }
-        throw fallbackError;
+        throw fallbackFailure;
       }
     }
     if (logKey) {
       console.error(`[${logKey}] request exception`, {
         path,
         requestUrl,
-        timeoutMs: timeoutMs || null,
-        aborted: isAbortLikeError(error),
-        error: error instanceof Error ? error.message : String(error),
+        timeoutMs,
+        timedOut: didTimeOut(),
+        aborted: isAbortLikeError(failure),
+        error: failure instanceof Error ? failure.message : String(failure),
       });
     }
-    throw error;
+    throw failure;
   } finally {
     cleanup();
   }
