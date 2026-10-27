@@ -1,4 +1,4 @@
-import { apiUrl } from '@/lib/api';
+import { trackedApiFetch } from '@/lib/api';
 import { buildScreenViewProps } from '@/lib/screen-view-props';
 import { buildTrackingHeaders, getTrackingAppVersion } from '@/lib/tracking-headers';
 
@@ -30,7 +30,7 @@ export function reportScreenView(pathname: string): void {
       props,
     };
 
-    void fetch(apiUrl('/tracking/event'), {
+    void trackedApiFetch('/tracking/event', {
       method: 'POST',
       keepalive: true,
       cache: 'no-store',

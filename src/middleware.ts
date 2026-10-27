@@ -23,7 +23,8 @@ async function redirectLegacyGameId(request: NextRequest) {
     const response = await fetch(`${API_BASE_URL}/game/details?param=${encodeURIComponent(match[1])}`, {
       cache: 'force-cache',
       headers: { 'x-tracking-skip': '1', 'x-client-platform': 'web' },
-      // 全仓唯一没有超时的 fetch：中间件挂住会让该路径的每个请求一起挂住。
+      // 中间件挂住会让该路径的每个请求一起挂住，因此这里用比业务默认值（15s）更短的 3s，
+      // 且不走 trackedApiFetch：Edge 里不需要浏览器打点头，失败必须回落到原路由响应。
       signal: AbortSignal.timeout(LEGACY_GAME_ID_LOOKUP_TIMEOUT_MS),
     });
     const payload = response.ok ? await response.json() : null;

@@ -1,3 +1,4 @@
+import { trackedApiFetch } from '@/lib/api';
 import { getSiteUrl } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 
@@ -18,28 +19,13 @@ function formatLocalDate(date: Date): string {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-function getServerApiBaseUrl() {
-  const appEnv = (process.env.APP_ENV || process.env.NODE_ENV || 'development').toLowerCase();
-  const base = (
-    process.env.API_BASE_URL ||
-    (appEnv === 'production'
-      ? process.env.API_BASE_URL_PROD || 'https://api.hk.apks.cc'
-      : process.env.API_BASE_URL_DEV || 'http://127.0.0.1:9527')
-  ).replace(/\/+$/, '');
-  return base;
-}
-
 async function fetchFeaturedGames(): Promise<Array<{ name: string; pkg: string }>> {
   try {
-    const res = await fetch(
-      `${getServerApiBaseUrl()}/seo/sitemap/games?page=1&pageSize=${FEATURED_GAME_COUNT}`,
+    const res = await trackedApiFetch(
+      `/seo/sitemap/games?page=1&pageSize=${FEATURED_GAME_COUNT}`,
       {
         cache: 'force-cache',
         next: { revalidate: FEATURED_FETCH_SECONDS },
-        headers: {
-          'x-tracking-skip': '1',
-          'x-client-platform': 'web',
-        },
       },
     );
     if (!res.ok) return [];

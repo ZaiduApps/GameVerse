@@ -30,6 +30,7 @@
     "test:edge-cache": "node --test tests/edge-cache-rule.test.mjs tests/html-vary.test.mjs tests/next-prod-server.test.mjs",
     "test:api-proxy-guard": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/api-proxy-guard.test.mjs",
     "test:auth": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/alias-loader.mjs --test tests/auth-errors.test.mjs tests/auth-session.test.mjs",
+    "test:api-timeout": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/src-loader.mjs --test tests/api-timeout.test.mjs",
     "test:client-errors": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/alias-loader.mjs --test tests/client-errors.test.mjs",
     "test:error-boundary": "node --test tests/error-boundary.test.mjs",
     "test:resource-signature": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/resource-signature.test.mjs",
