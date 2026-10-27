@@ -2,6 +2,7 @@ import { cache } from 'react';
 
 import type { SiteConfig, ApiResponse } from '@/types';
 import { trackedApiFetch, type TrackedFetchInit } from '@/lib/api';
+import { reportServerErrorEvent } from '@/lib/client-errors';
 
 const SITE_CONFIG_KEY = process.env.SITE_CONFIG_KEY || process.env.NEXT_PUBLIC_SITE_CONFIG_KEY || 'main';
 const SITE_CONFIG_PATH = `/config/site/public?key=${encodeURIComponent(SITE_CONFIG_KEY)}`;
@@ -9,10 +10,10 @@ const SITE_CONFIG_TIMEOUT_MS = 10000;
 const SITE_CONFIG_RETRIES = 1;
 const SITE_CONFIG_POISON_MS = 5 * 60_000;
 
-// Next 15.0.7 在 origin fetch reject 时不会释放该 cacheKey 的 fetch 缓存锁，同 URL 的
-// 第二次 fetch 会永久等在锁上（见 loadPublicSiteConfig 的 catch）。这里做进程级毒化隔离：
-// 毒化窗口内所有调用改走带一次性 query 的旁路 URL + no-store，不再碰被毒化的 cacheKey；
-// 窗口过期后自动回到正常的 force-cache 路径，无需重启。
+// 根因：Next 15.0.7 在 origin fetch reject 时不会释放该 cacheKey 的 fetch 缓存锁，同 URL 的
+// 第二次 fetch 会永久等在锁上。上游已在 15.2（vercel/next.js#74623）修掉，本仓已升到 15.5.28。
+// 这里仍保留进程级毒化隔离作为兜底：万一新版本回归，毒化窗口内所有调用改走带一次性 query 的
+// 旁路 URL + no-store，不再碰被毒化的 cacheKey；窗口过期后自动回到正常的 force-cache 路径，无需重启。
 let siteConfigKeyPoisonedUntil = 0;
 
 export interface SiteConfigFetchOptions {
@@ -41,6 +42,9 @@ function buildSiteConfigBypassPath(): string {
 
 function poisonSiteConfigCacheKey(): number {
   siteConfigKeyPoisonedUntil = Date.now() + SITE_CONFIG_POISON_MS;
+  // 毒化是稀有事件，静默日志没人看：走既有上报通道全量报一次（60s 内去重），
+  // 只带事件名与组件名，不带 URL / 配置内容；上报失败不影响渲染。
+  void reportServerErrorEvent({ message: 'cache_poisoned', component: 'site-config' });
   return SITE_CONFIG_POISON_MS;
 }
 
@@ -165,8 +169,9 @@ const loadPublicSiteConfig = cache(async (
         errorType: isTimeoutLikeError(error) ? 'timeout' : 'exception',
         error: error instanceof Error ? error.message : String(error),
       });
-      // 网络层抛错后不再重试同一个 URL：Next 15.0.7 在 origin fetch reject 时不会释放该
-      // cacheKey 的 fetch 缓存锁，同 URL 的第二次 fetch 会永久等在锁上，整个渲染挂死。
+      // 网络层抛错后不再重试同一个 URL：15.0.7 里 origin fetch reject 不会释放该 cacheKey
+      // 的 fetch 缓存锁，同 URL 的第二次 fetch 会永久等在锁上，整个渲染挂死。该缺陷已在
+      // Next 15.2 修复（本仓 15.5.28），此处的隔离是对未来回归的兜底。
       // 5xx / 脏数据（fetch 已 resolve）仍然走上面的重试。
       // 本次调用内用一次性旁路补取，避免一次瞬时故障让页面空着；旁路本身失败就直接返回 null。
       if (!bypass) {

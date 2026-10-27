@@ -122,16 +122,17 @@ export function buildClientErrorReport(
   };
 }
 
-/** 测试可注入时钟与随机源；生产走真实值。 */
+/** 测试可注入时钟与随机源；生产走真实值。`sampleRate` 仅供服务端稀有事件全量上报时覆写。 */
 export function shouldReportClientError(
   message: string,
-  options: { now?: number; random?: () => number } = {},
+  options: { now?: number; random?: () => number; sampleRate?: number } = {},
 ): boolean {
   const key = String(message || '').trim();
   if (!key) return false;
 
   const now = options.now ?? Date.now();
   const random = options.random ?? Math.random;
+  const sampleRate = options.sampleRate ?? CLIENT_ERROR_SAMPLE_RATE;
 
   // 先去重：窗口内同一条 message 不再重复上报，也不消耗采样机会。
   for (const [seenKey, seenAt] of reportedAt) {
@@ -139,7 +140,7 @@ export function shouldReportClientError(
   }
   if (reportedAt.has(key)) return false;
 
-  if (random() >= CLIENT_ERROR_SAMPLE_RATE) return false;
+  if (sampleRate < 1 && random() >= sampleRate) return false;
 
   reportedAt.set(key, now);
   return true;
@@ -175,5 +176,46 @@ export async function reportClientError(
     });
   } catch {
     // 静默：接口未上线 / 网络异常都不应影响页面。
+  }
+}
+
+export interface ServerErrorEvent {
+  message: string;
+  /** 出错的组件名，对应契约里的 `component`。 */
+  component: string;
+  /** 可选路由（服务端通常没有，留空即不带）。 */
+  route?: string;
+}
+
+/**
+ * 服务端稀有事件上报：复用前端错误通道，按契约 `AdminClientErrorDto` 只发白名单字段
+ * （`message` / `component` / `route`），带 URL 的 route 会去掉查询串，绝不带请求参数
+ * 或配置内容。这类事件稀有且需要被看见，因此不走 20% 采样（全量），只保留 60s 去重
+ * 防止同一进程里并发渲染刷爆通道。上报失败静默，绝不影响调用方。
+ */
+export async function reportServerErrorEvent(event: ServerErrorEvent): Promise<void> {
+  try {
+    const message = truncate(
+      redactSensitiveText(String(event?.message || 'unknown server error')),
+      MAX_MESSAGE_LENGTH,
+    );
+    if (!shouldReportClientError(message, { sampleRate: 1 })) return;
+
+    const payload: Record<string, string> = {
+      message,
+      component: truncate(redactSensitiveText(String(event.component || '')), 120),
+    };
+    const route = String(event.route || '').trim();
+    if (route) payload.route = sanitizeUrlForReport(route);
+
+    await trackedApiFetch(CLIENT_ERROR_REPORT_PATH, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      timeoutMs: CLIENT_ERROR_REPORT_TIMEOUT_MS,
+      logKey: 'client-error.report',
+    });
+  } catch {
+    // 静默：上报通道不可用时站点配置路径照常工作。
   }
 }
