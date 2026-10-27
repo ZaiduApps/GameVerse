@@ -150,16 +150,21 @@ test('302 路由：上游成功时 302 到 interface 返回的地址', async () 
   assert.equal(decision.location, 'https://cdn.example.com/files/demo.apk?sig=abc');
 });
 
-test('302 路由：上游 5xx / 超时 / 业务码失败都降级回详情页', async () => {
+test('302 路由：上游失败与资源失效分别降级回详情页并带上原因', async () => {
   const fallback = `/app/${PKG}?download_error=1`;
+  const channelFailure = `/app/${PKG}?download_error=1&download_error_reason=channel`;
+  const resourceFailure = `/app/${PKG}?download_error=1&download_error_reason=resource`;
+  // 不带原因的老形态保持兼容。
   assert.equal(buildDownloadFailureLocation(PKG), fallback);
+  assert.equal(buildDownloadFailureLocation(PKG, 'channel'), channelFailure);
+  assert.equal(buildDownloadFailureLocation(PKG, 'resource'), resourceFailure);
 
   const upstreamError = await decideDownloadRedirect({
     id: PKG,
     channelId: CHANNEL_OFFICIAL,
     requestIssuedUrl: async () => ({ ok: false }),
   });
-  assert.deepEqual(upstreamError, { kind: 'redirect', location: fallback });
+  assert.deepEqual(upstreamError, { kind: 'redirect', location: channelFailure });
 
   const timeout = await decideDownloadRedirect({
     id: PKG,
@@ -168,21 +173,21 @@ test('302 路由：上游 5xx / 超时 / 业务码失败都降级回详情页', 
       throw new Error('TimeoutError');
     },
   });
-  assert.deepEqual(timeout, { kind: 'redirect', location: fallback });
+  assert.deepEqual(timeout, { kind: 'redirect', location: channelFailure });
 
   const businessCode = await decideDownloadRedirect({
     id: PKG,
     channelId: CHANNEL_OFFICIAL,
     requestIssuedUrl: async () => ({ ok: true, payload: { code: 404, message: '资源不存在' } }),
   });
-  assert.deepEqual(businessCode, { kind: 'redirect', location: fallback });
+  assert.deepEqual(businessCode, { kind: 'redirect', location: resourceFailure });
 
   const emptyUrl = await decideDownloadRedirect({
     id: PKG,
     channelId: CHANNEL_OFFICIAL,
     requestIssuedUrl: async () => ({ ok: true, payload: { url: '   ' } }),
   });
-  assert.deepEqual(emptyUrl, { kind: 'redirect', location: fallback });
+  assert.deepEqual(emptyUrl, { kind: 'redirect', location: resourceFailure });
 });
 
 test('302 路由：Location 只接受 http/https，不接受开放重定向', () => {

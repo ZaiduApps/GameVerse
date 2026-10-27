@@ -1,3 +1,5 @@
+import DOMPurify, { type Config as SanitizeConfig } from 'isomorphic-dompurify';
+
 import { resolveGameName } from '@/lib/game-display-name';
 import { buildRenderedMarkdownDocument } from '@/lib/utils';
 import type { CardConfigItem, GameDetailData } from '@/types';
@@ -95,9 +97,16 @@ function stripMarkdownText(input: string): string {
   );
 }
 
+// 文本抽取路径（摘要 / facts / 纯文本）不是清洗器：输出只进 React 文本节点，但仍然
+// 要连 <script>/<style> 的内容一起去掉，否则样式表正文会原样混进 hero 摘要。
+const SCRIPT_OR_STYLE_BLOCK_PATTERN = /<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi;
+
 export function cleanText(input?: string | null): string {
   if (!input) return '';
-  const withoutTags = input.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '');
+  const withoutTags = input
+    .replace(SCRIPT_OR_STYLE_BLOCK_PATTERN, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]*>/g, '');
   return stripMarkdownText(withoutTags).replace(/\s+/g, ' ').trim();
 }
 
@@ -105,6 +114,7 @@ export function toPlainTextWithBreaks(input?: string | null): string {
   const raw = String(input || '').replace(/\r\n?/g, '\n').trim();
   if (!raw) return '';
   return raw
+    .replace(SCRIPT_OR_STYLE_BLOCK_PATTERN, '')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(?:p|div|section|article|blockquote|li|ul|ol|h[1-6])>/gi, '\n')
     .replace(/<li[^>]*>/gi, '• ')
@@ -124,19 +134,48 @@ function escapeHtml(input: string): string {
     .replace(/'/g, '&#39;');
 }
 
+// 富文本描述最终渲染进 dangerouslySetInnerHTML，且来源是后台/第三方抓取（APKPure、
+// GitHub Release），不能靠正则逐条删标签——`<img src=x onerror=...>`、大小写变形、
+// 嵌套畸形标签都能绕过。这里统一走 DOMPurify 白名单：脚本/样式/框架/表单类标签
+// 与 on* 事件属性、javascript: 协议由库内白名单直接拒绝，保留 <b>/<u>/<font>/<img>
+// 这类描述里常见的排版标签。
+const RICH_HTML_SANITIZE_CONFIG: SanitizeConfig = {
+  USE_PROFILES: { html: true },
+  FORBID_TAGS: [
+    'script',
+    'style',
+    'iframe',
+    'object',
+    'embed',
+    'link',
+    'meta',
+    'base',
+    'form',
+    'input',
+    'button',
+    'textarea',
+    'select',
+    'option',
+  ],
+  ALLOW_DATA_ATTR: false,
+  // DOMPurify 不解析 style 内容，`url(javascript:...)` 这类 CSS 会原样留下；
+  // 描述排版本来也不该依赖内联样式，直接禁止 style 属性。
+  FORBID_ATTR: ['style'],
+};
+
 function sanitizeRichHtml(input: string): string {
-  return input
-    // 归一标题层级：游戏详情页本身已经有一个 h1（游戏名），DB 描述里再带
-    // <h1> 会让页面出现多个 h1，稀释主题语义。这里降级为 h2 而不是删除，保留
-    // 作者原本的段落结构。视觉零变化——Tailwind preflight 已把 h1~h6 的
-    // font-size / font-weight 重置为 inherit，标题标签本就不带字号字重差异。
-    .replace(/<h1(\s[^>]*)?>/gi, '<h2$1>')
-    .replace(/<\/h1\s*>/gi, '</h2>')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<(script|style|iframe|object|embed)[^>]*>[\s\S]*?<\/\1>/gi, '')
-    .replace(/<\/?(?:script|style|iframe|object|embed|link|meta)[^>]*>/gi, '')
-    .replace(/\son[a-z]+\s*=\s*(".*?"|'.*?'|[^\s>]+)/gi, '')
-    .replace(/\s(href|src)\s*=\s*("|')\s*javascript:[\s\S]*?\2/gi, ' $1="#"');
+  return DOMPurify.sanitize(
+    input
+      // 归一标题层级：游戏详情页本身已经有一个 h1（游戏名），DB 描述里再带
+      // <h1> 会让页面出现多个 h1，稀释主题语义。这里降级为 h2 而不是删除，保留
+      // 作者原本的段落结构。视觉零变化——Tailwind preflight 已把 h1~h6 的
+      // font-size / font-weight 重置为 inherit，标题标签本就不带字号字重差异。
+      .replace(/<h1(\s[^>]*)?>/gi, '<h2$1>')
+      .replace(/<\/h1\s*>/gi, '</h2>')
+      // 注释先清掉，避免清洗后残留的 `<!--` 片段进入 HTML。
+      .replace(/<!--[\s\S]*?-->/g, ''),
+    RICH_HTML_SANITIZE_CONFIG,
+  );
 }
 
 // 从 GitHub Release 正文导入的描述是 HTML 与 Markdown 混排：结构是 <p>/<details>，

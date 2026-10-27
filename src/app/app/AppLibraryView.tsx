@@ -855,6 +855,7 @@ export default function GamesPage({
                     <input
                       value={searchInput}
                       onChange={(event) => setSearchInput(event.target.value)}
+                      aria-label="搜索游戏名、包名、题材或地区"
                       className="h-full flex-1 bg-transparent text-sm text-zinc-700 outline-none placeholder:text-zinc-400"
                       placeholder="搜索游戏名、包名、题材、地区，例如：Limbus、国际服、射击游戏"
                     />

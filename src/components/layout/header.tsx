@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/auth-context';
-import { apiUrl, trackedApiFetch } from '@/lib/api';
+import { trackedApiFetch } from '@/lib/api';
 
 const SearchOverlay = dynamic(() => import('@/components/layout/SearchOverlay'), { ssr: false });
 const AuthModal = dynamic(() => import('@/components/auth/auth-modal'), { ssr: false });
@@ -74,19 +74,27 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
   };
 
   useEffect(() => {
+    if (!isAuthenticated || !token) {
+      setUnreadTotal(0);
+      return;
+    }
+
     let cancelled = false;
+    let inFlight = false;
 
     async function loadUnreadSummary() {
-      if (!isAuthenticated || !token) {
-        setUnreadTotal(0);
-        return;
-      }
+      // 后台标签页不轮询：切回来时由 visibilitychange 立即补一次。
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (cancelled || inFlight) return;
+      inFlight = true;
       try {
-      const res = await trackedApiFetch('/notifications/summary', {
+        const res = await trackedApiFetch('/notifications/summary', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
           cache: 'no-store',
+          timeoutMs: 8000,
+          logKey: 'header.unread',
         });
         const json = await res.json().catch(() => ({}));
         if (cancelled) return;
@@ -97,12 +105,28 @@ export default function Header({ siteName = 'APKScc', logoUrl }: HeaderProps) {
         setUnreadTotal(Number(json?.data?.total_unread || 0));
       } catch {
         if (!cancelled) setUnreadTotal(0);
+      } finally {
+        inFlight = false;
       }
     }
 
-    loadUnreadSummary();
+    void loadUnreadSummary();
+
+    // 60s 轮询只在标签页可见时生效；路由变化由依赖里的 pathname 触发一次即时刷新。
+    const timer = window.setInterval(() => {
+      void loadUnreadSummary();
+    }, 60_000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void loadUnreadSummary();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [isAuthenticated, token, pathname]);
 

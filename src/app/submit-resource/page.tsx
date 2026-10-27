@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import * as z from 'zod';
 
-import { useState } from 'react';
+import { Suspense, useCallback, useState } from 'react';
 
 import AuthModal from '@/components/auth/auth-modal';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
@@ -12,6 +12,7 @@ import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
 import { useAuth } from '@/context/auth-context';
 import { buildFeedbackCommonFields, submitFeedbackTicket } from '@/lib/feedback';
 import { useToast } from '@/hooks/use-toast';
+import SubmitResourcePrefill, { type SubmitResourcePrefillValues } from './SubmitResourcePrefill.client';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -188,8 +189,23 @@ export default function SubmitResourcePage() {
     }
   };
 
+  const handlePrefill = useCallback((values: SubmitResourcePrefillValues) => {
+    if (values.resourceName) {
+      requestForm.setValue('resourceName', values.resourceName, { shouldDirty: false, shouldValidate: false });
+    }
+    if (values.sourceUrl) {
+      requestForm.setValue('sourceUrl', values.sourceUrl, { shouldDirty: false, shouldValidate: false });
+    }
+  }, [requestForm]);
+
   return (
     <div className="container mx-auto max-w-2xl py-8 px-4 fade-in">
+      {/* 「反馈失效」从详情页带着 resourceName/sourceUrl 跳过来时回填表单。 */}
+      <Suspense fallback={null}>
+        <SubmitResourcePrefill
+          onPrefill={handlePrefill}
+        />
+      </Suspense>
       <Breadcrumbs
         items={[BREADCRUMB_ROOT, { name: '资源投稿', href: '/submit-resource' }]}
         className="mb-6"

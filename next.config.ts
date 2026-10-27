@@ -13,6 +13,12 @@ const backendBaseUrl = (
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // 不暴露 `X-Powered-By: Next.js`，减少版本指纹（安全头由 interface 批次统一负责）。
+  poweredByHeader: false,
+  // isomorphic-dompurify 在服务端用 jsdom；jsdom 通过 fs 读取自带的
+  // default-stylesheet.css。打包进 server bundle 后 __dirname 指向 .next，
+  // 运行期就会 ENOENT。外置这两层让 Node 从 node_modules 直接加载。
+  serverExternalPackages: ['isomorphic-dompurify', 'jsdom'],
   experimental: {
     // 限制静态页面生成并发，避免构建期批量 SEO 快照挤占 Interface 容量。
     staticGenerationMaxConcurrency: 2,
@@ -23,7 +29,10 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    // 已接入 .eslintrc.json（next/core-web-vitals + next/typescript）。当前基线把历史
+    // 规则全部降级为 warning，因此 build 期的 lint 步骤可跑通，但会打印存量告警；
+    // 后续按 warning 数逐步清零后再收紧为 error。
+    ignoreDuringBuilds: false,
   },
   async redirects() {
     return [

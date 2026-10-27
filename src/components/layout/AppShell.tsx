@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { usePathname } from 'next/navigation';
 
 import Header from '@/components/layout/header';
+import AuthStatusBanner from '@/components/layout/AuthStatusBanner';
 import Footer from '@/components/layout/footer';
 import PageTransitionLoader from '@/components/layout/PageTransitionLoader';
 import ScreenViewTracker from '@/components/layout/ScreenViewTracker';
@@ -115,6 +116,7 @@ export default function AppShell({ children, siteName, logoUrl, siteConfig }: Ap
       )}
 
       <Toaster />
+      <AuthStatusBanner />
     </>
   );
 }

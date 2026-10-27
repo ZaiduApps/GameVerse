@@ -1,6 +1,6 @@
 import { trackedApiFetch } from '@/lib/api';
 import { resolveGameName } from '@/lib/game-display-name';
-import { getMyFollowedTopics, toCommunityPost, type ApiCommunityPost, type CommunityTopicItem } from '@/lib/community-api';
+import { normalizeTopicItem, toCommunityPost, type ApiCommunityPost, type CommunityTopicItem } from '@/lib/community-api';
 import type { CommunityPost, Game } from '@/types';
 
 export type DashboardPostItem = {
@@ -207,21 +207,64 @@ export async function getMyReservationGames(params: {
   }
 }
 
+/**
+ * 分页读取「我关注的社区」。与 community-api 的 getMyFollowedTopics 不同：
+ * 后者失败时返回空数组，个人中心会把「加载失败」误显示成「你还没有关注任何游戏」；
+ * 这里把失败原因带回去，页面才能给出可重试的错误提示。
+ */
+export async function getMyFollowedTopicsPage(params: {
+  token: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<DashboardPageResult<CommunityTopicItem>> {
+  const token = String(params.token || '').trim();
+  const page = Math.max(1, Number(params.page || 1));
+  const pageSize = Math.max(1, Number(params.pageSize || 6));
+  if (!token) return buildDashboardFailure(page, pageSize, '登录状态已失效');
+
+  const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+
+  try {
+    const res = await trackedApiFetch(`/content/my/topics/follows?${query.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    const json: ApiResponse<{ list?: CommunityTopicItem[]; total?: number }> = await res.json().catch(() => ({ code: -1 }));
+    if (!res.ok || json.code !== 0) {
+      return buildDashboardFailure(
+        page,
+        pageSize,
+        String(json.message || '关注列表加载失败，请稍后重试'),
+      );
+    }
+    const rawList = Array.isArray(json.data?.list) ? json.data?.list : [];
+    const list = rawList.map((item) => normalizeTopicItem(item));
+    return {
+      ok: true,
+      list,
+      total: Number(json.data?.total || list.length || 0),
+      page,
+      pageSize,
+    };
+  } catch {
+    return buildDashboardFailure(page, pageSize, '关注列表加载失败，请稍后重试');
+  }
+}
+
 export async function getMyFollowedGameTopics(params: {
   token: string;
   page?: number;
   pageSize?: number;
 }): Promise<DashboardPageResult<CommunityTopicItem>> {
-  const page = Math.max(1, Number(params.page || 1));
-  const pageSize = Math.max(1, Number(params.pageSize || 6));
-  const list = await getMyFollowedTopics(params);
-  const gameTopics = list.filter((topic) => Boolean(topic?.app_info?._id || topic?.app_info?.pkg));
+  const result = await getMyFollowedTopicsPage(params);
+  if (!result.ok) {
+    return { ...result, list: [], total: 0 };
+  }
+  const gameTopics = result.list.filter((topic) => Boolean(topic?.app_info?._id || topic?.app_info?.pkg));
   return {
-    ok: true,
+    ...result,
     list: gameTopics,
     total: gameTopics.length,
-    page,
-    pageSize,
   };
 }
 
@@ -345,5 +388,96 @@ export async function followReservationByAppId(params: {
     return { ok: true, message: '已重新预约' };
   } catch {
     return { ok: false, message: '重新预约失败，请稍后重试' };
+  }
+}
+
+export type MyDownloadItem = {
+  id: string;
+  appId: string;
+  resourceId: string;
+  channelId: string;
+  version: string;
+  createdAt?: string;
+};
+
+export type MyDownloadsResult = {
+  ok: boolean;
+  /** 接口尚未上线（404/405）时为 true：页面应显示「功能即将上线」而不是错误态。 */
+  unavailable: boolean;
+  list: MyDownloadItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  message?: string;
+};
+
+type ApiMyDownloadRow = {
+  _id?: string;
+  app_id?: string;
+  resource_id?: string;
+  channel_id?: string;
+  version?: string;
+  created_at?: string;
+};
+
+/** 下载历史行 → 视图模型；缺 app_id 的脏数据直接丢弃，不成链接。 */
+export function mapMyDownloadRow(row: ApiMyDownloadRow | null | undefined): MyDownloadItem | null {
+  const appId = String(row?.app_id || '').trim();
+  if (!appId) return null;
+  const createdAt = String(row?.created_at || '').trim();
+  return {
+    id: String(row?._id || '').trim(),
+    appId,
+    resourceId: String(row?.resource_id || '').trim(),
+    channelId: String(row?.channel_id || '').trim(),
+    version: String(row?.version || '').trim(),
+    createdAt: createdAt || undefined,
+  };
+}
+
+/**
+ * GET /users/me/downloads（interface 批 II，40a0471a）。
+ *
+ * 未上线时后端返回 404/405：这里单独标成 unavailable，页面显示「功能即将上线」，
+ * 不把它当成加载失败，也不伪造数据。
+ */
+export async function getMyDownloadHistory(params: {
+  token: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<MyDownloadsResult> {
+  const token = String(params.token || '').trim();
+  const page = Math.max(1, Number(params.page || 1));
+  const pageSize = Math.min(100, Math.max(1, Number(params.pageSize || 20)));
+  const base: MyDownloadsResult = { ok: false, unavailable: false, list: [], total: 0, page, pageSize };
+  if (!token) return { ...base, message: '登录状态已失效' };
+
+  const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+
+  try {
+    const res = await trackedApiFetch(`/users/me/downloads?${query.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    if (res.status === 404 || res.status === 405) {
+      return { ...base, unavailable: true, message: '功能即将上线' };
+    }
+    const json: ApiResponse<{ list?: ApiMyDownloadRow[]; total?: number; page?: number; pageSize?: number }> =
+      await res.json().catch(() => ({ code: -1 }));
+    if (!res.ok || json.code !== 0) {
+      return { ...base, message: String(json.message || '下载记录加载失败，请稍后重试') };
+    }
+    const rawList = Array.isArray(json.data?.list) ? json.data.list : [];
+    const list = rawList.map(mapMyDownloadRow).filter((item): item is MyDownloadItem => item !== null);
+    return {
+      ok: true,
+      unavailable: false,
+      list,
+      total: Number(json.data?.total || list.length || 0),
+      page: Number(json.data?.page || page),
+      pageSize: Number(json.data?.pageSize || pageSize),
+    };
+  } catch {
+    return { ...base, message: '下载记录加载失败，请稍后重试' };
   }
 }

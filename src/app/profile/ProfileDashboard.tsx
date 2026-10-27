@@ -438,6 +438,29 @@ export default function ProfileDashboard({ token }: { token: string }) {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
+            <CardTitle>我的下载</CardTitle>
+            <Link
+              href="/profile/center/downloads"
+              className="inline-flex items-center text-xs text-primary hover:underline"
+              data-acbox-action="profile_dashboard_downloads_more"
+              data-acbox-label="查看我的下载"
+            >
+              查看全部
+              <ChevronRight className="ml-1 h-3 w-3" />
+            </Link>
+          </div>
+          <CardDescription>按时间查看你签发过的资源与版本。</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            每次从详情页获取下载地址都会记录一条历史；接口尚未上线的环境会显示「功能即将上线」。
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-2">
             <CardTitle>我关注的游戏社区</CardTitle>
             <Link
               href="/profile/center/topics"

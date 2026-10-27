@@ -37,6 +37,7 @@ import {
   type CommunityCommentThread,
 } from '@/lib/community-api';
 import AppDownloadGuideDialog from '@/components/app-download-guide-dialog';
+import ContentReportDialog from '@/components/content-report-dialog';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -1452,6 +1453,7 @@ export default function CommunityPostDetailView({
                       >
                         回复
                       </Button>
+                      <ContentReportDialog targetType="comment" targetId={comment.id} iconOnly />
                       {canModerateTopic ? (
                         <>
                           <Button
@@ -1552,6 +1554,7 @@ export default function CommunityPostDetailView({
                                 >
                                   回复
                                 </Button>
+                                <ContentReportDialog targetType="comment" targetId={reply.id} iconOnly />
                                 {canModerateTopic ? (
                                   <>
                                     <Button
@@ -2117,6 +2120,8 @@ export default function CommunityPostDetailView({
                 <Bookmark size={17} className={`mr-1.5 ${bookmarked ? 'fill-primary text-primary' : ''}`} />
                 收藏
               </Button>
+              {/* 内容举报：复用反馈工单（type=content_report），未登录先引导登录。 */}
+              <ContentReportDialog targetType="post" targetId={post.id} className="h-8 px-2" />
               <Button
                 variant="ghost"
                 size="sm"

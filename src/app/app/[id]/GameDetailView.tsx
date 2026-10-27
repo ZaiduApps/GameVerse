@@ -7,6 +7,7 @@ import GameAnnouncements from '@/components/game-announcements';
 import GameDirectDownloadLinks from '@/components/game-direct-download-links.client';
 import GameFaqSection from '@/components/game-detail/GameFaqSection';
 import { buildDirectDownloadLinks } from '@/lib/game-download-channel';
+import { buildResourceChecksumItems } from '@/lib/game-resource-signature';
 import { normalizeGameFaqItems } from '@/lib/game-faq';
 import { resolveGameName } from '@/lib/game-display-name';
 import { isWebGameType } from '@/lib/game-resource-type';
@@ -24,6 +25,8 @@ import GameDetailMobileTabs from './GameDetailMobileTabs.client';
 import GameHeroArtwork from './GameHeroArtwork.client';
 import GameHeroVideo from './GameHeroVideo.client';
 import GameScreenshotGallery from './GameScreenshotGallery.client';
+import GameResourceChecksums from './GameResourceChecksums.client';
+import DownloadErrorNotice from './DownloadErrorNotice.client';
 import { BOX_DOWNLOAD_CARD, CERTIFICATION_CARD, GUIDE_SECTION_HINT } from './game-detail-mock-copy';
 import { resolveHeroVideo } from './game-detail-video';
 import {
@@ -343,6 +346,8 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   const directDownloadLinks = isWebGame
     ? []
     : buildDirectDownloadLinks(resources, game.pkg || game._id);
+  // 资源校验值只取接口真实返回的 signature；没有就整块显示「暂无校验值」。
+  const checksumItems = buildResourceChecksumItems(resources);
   const tags = getGameTags(game);
   const primaryCategory = getPrimaryCategory(game, tags);
   const cardConfig = (gameData.cardConfig || {}) as Record<string, CardConfigItem[] | undefined>;
@@ -412,6 +417,14 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   return (
     <div className="game-detail-stitch relative min-h-screen overflow-x-clip bg-[#f5f6f7] text-[#2c2f30] dark:bg-[#080d14] dark:text-[#f3f6fb]">
       {snapshotSavedAt ? <DegradedDataNotice savedAt={snapshotSavedAt} /> : null}
+
+      {/* 下载失败回跳（?download_error=1）的提示：客户端读参数，不改变详情页的 ISR 行为。 */}
+      <Suspense fallback={null}>
+        <DownloadErrorNotice
+          gameName={resolveGameName(game)}
+          pageUrl={`/app/${encodeURIComponent(game.pkg || game._id || '')}`}
+        />
+      </Suspense>
 
       {hasDetailAnnouncements ? (
         <div className="relative z-20 px-4 pt-20 sm:px-6 lg:px-16 lg:pt-6 2xl:px-20">
@@ -523,13 +536,16 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                 />
               </div>
 
-              {directDownloadLinks.length > 0 ? (
-                <GameDirectDownloadLinks
-                  links={directDownloadLinks}
-                  appId={game._id}
-                  pkg={game.pkg}
-                />
-              ) : null}
+              {/* 下载失败提示的「换渠道重试」锚点落在这里；即使没有可直下渠道也保留容器。 */}
+              <div id="game-detail-channels" className="scroll-mt-24">
+                {directDownloadLinks.length > 0 ? (
+                  <GameDirectDownloadLinks
+                    links={directDownloadLinks}
+                    appId={game._id}
+                    pkg={game.pkg}
+                  />
+                ) : null}
+              </div>
 
               {/* 指标条：移动端 3 格（隐藏「游戏分类」），PC 端 4 格 */}
               <div className="mt-4 grid grid-cols-3 gap-2 border-t border-[#abadae]/15 pt-3.5 lg:mt-8 lg:grid-cols-4 lg:gap-4 lg:pt-5">
@@ -574,7 +590,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
               <GameScreenshotGallery gameName={resolveGameName(game)} screenshots={displayScreenshots} />
             </DetailSection>
 
-            <DetailSection title="版本与技术参数规格">
+            <DetailSection id="game-detail-specs" title="版本与技术参数规格">
               <div className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-4">
                 {specTiles.map((tile) => (
                   <div key={tile.label} className="min-w-0 rounded-xl border border-[#abadae]/15 bg-[#eff1f2]/70 p-2.5 lg:p-3.5">
@@ -599,6 +615,14 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                   </div>
                 ))}
               </div>
+            </DetailSection>
+
+            <DetailSection
+              id="game-detail-checksums"
+              title="资源校验值（SHA-256）"
+              subtitle="核对下载文件是否与资源提供方一致"
+            >
+              <GameResourceChecksums items={checksumItems} />
             </DetailSection>
 
             <DetailSection
