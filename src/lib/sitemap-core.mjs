@@ -189,7 +189,9 @@ export function createSitemapBuilder(options = {}) {
   // URL 拼接与 src/lib/seo.ts 的 absoluteUrl 同口径（路由侧会显式传入 getSiteUrl() 的结果）。
   const absolute = (path) => (path.startsWith('/') ? `${siteUrl}${path}` : `${siteUrl}/${path}`);
 
-  async function fetchJsonOnce(path) {
+  // forceFresh=true 时无视 revalidate 走 no-store：lastmod 补丁查询必须看到最新写入，
+  // 否则首次请求把「写入前」的响应缓存 30 分钟，补丁在缓存纪元内恒为 0。
+  async function fetchJsonOnce(path, forceFresh = false) {
     try {
       const init = {
         headers: {
@@ -197,7 +199,7 @@ export function createSitemapBuilder(options = {}) {
           'x-client-platform': 'web',
         },
       };
-      if (revalidate !== undefined) {
+      if (revalidate !== undefined && !forceFresh) {
         init.cache = 'force-cache';
         init.next = { revalidate };
       } else {
@@ -212,10 +214,10 @@ export function createSitemapBuilder(options = {}) {
     }
   }
 
-  async function fetchJson(path) {
-    let json = await fetchJsonOnce(path);
+  async function fetchJson(path, forceFresh = false) {
+    let json = await fetchJsonOnce(path, forceFresh);
     for (let attempt = 0; attempt < retryCount && !json; attempt += 1) {
-      json = await fetchJsonOnce(path);
+      json = await fetchJsonOnce(path, forceFresh);
     }
     return json;
   }
@@ -428,7 +430,8 @@ export function createSitemapBuilder(options = {}) {
    */
   async function getRecentGameUpdates(sinceInput, limit = 1000) {
     const since = parseDate(sinceInput);
-    const data = extractList(await fetchJson(`/seo/sitemap/games?page=1&pageSize=${limit}`));
+    // 补丁查询单独 no-store：它只拿「构建之后写入了什么」，缓存反而会让补丁恒滞后。
+    const data = extractList(await fetchJson(`/seo/sitemap/games?page=1&pageSize=${limit}`, true));
     const total = Number(data?.total || 0) || null;
     if (!data || !since) return { total, games: [], complete: false };
 

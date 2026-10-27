@@ -271,6 +271,38 @@ test('静态直出链路：后台改 SEO 后重新生成，目标 URL 的 lastmo
   assert.match(served.xml, /com\.tencent\.ig<\/loc>\n<lastmod>2026-10-23T02:00:00\.000Z/);
 });
 
+test('getRecentGameUpdates: 补丁查询绕过 Next 数据缓存，写入后立刻可见（regression）', async () => {
+  // 生产缺陷复现：route 以 revalidate=1800 调 createSitemapBuilder，首次请求把「写入前」的
+  // API 响应钉进 Next fetch 缓存；补丁查询若也走 force-cache，缓存纪元内恒返回旧快照。
+  // stub 用 init.cache 模拟 Next 缓存语义：force-cache 只见到首次快照，no-store 见到实时数据。
+  const beforeWrite = [{ pkg: 'com.old.one', updated_at: '2026-10-24T08:46:24.007Z' }];
+  const afterWrite = [
+    { pkg: 'com.fresh.one', updated_at: '2026-10-27T16:28:22.606Z' },
+    { pkg: 'com.old.one', updated_at: '2026-10-24T08:46:24.007Z' },
+  ];
+  let hasWriteHappened = false;
+  const fetchImpl = (url, init = {}) => new Response(
+    JSON.stringify({
+      code: 0,
+      data: { page: 1, pageSize: 1000, total: 5152, list: init.cache === 'no-store' && hasWriteHappened ? afterWrite : beforeWrite },
+    }),
+    { status: 200, headers: { 'content-type': 'application/json' } },
+  );
+  const builder = createSitemapBuilder({
+    apiBaseUrl: 'https://api.test',
+    siteUrl: 'https://apks.cc',
+    fetchImpl,
+    revalidate: 1800,
+  });
+
+  const first = await builder.getRecentGameUpdates('2026-10-25T00:00:00.000Z');
+  assert.deepEqual(first.games.map((game) => game.pkg), []); // 写入前：补丁 0 条
+
+  hasWriteHappened = true; // 后台写入 updated_at=2026-10-27T16:28:22.606Z
+  const second = await builder.getRecentGameUpdates('2026-10-25T00:00:00.000Z');
+  assert.deepEqual(second.games.map((game) => game.pkg), ['com.fresh.one']); // 不再命中旧缓存
+});
+
 test('getServerApiBaseUrl / getSiteUrlFromEnv: 与运行时 env 口径一致', () => {
   assert.equal(getServerApiBaseUrl({ API_BASE_URL: 'http://127.0.0.1:9527/' }), 'http://127.0.0.1:9527');
   assert.equal(getServerApiBaseUrl({ APP_ENV: 'production' }), 'https://api.hk.apks.cc');
