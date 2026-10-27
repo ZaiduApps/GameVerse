@@ -1,6 +1,7 @@
 import { trackedApiFetch, type TrackedFetchInit } from '@/lib/api';
 import { authedFetch } from '@/lib/authed-fetch';
 import { resolveGameName } from '@/lib/game-display-name';
+import { decodeRouteSegment, isCommunityPostId, isCommunityTopicIdentifier } from '@/lib/route-identifier';
 import { buildTrackingHeaders } from '@/lib/tracking-headers';
 import type { CommunityPost } from '@/types';
 
@@ -1092,13 +1093,17 @@ export async function getCommunityPostsByGame(
 export async function getCommunityPostById(
   id: string,
 ): Promise<CommunityPost | null> {
-  const result = await getApiDataWithStatus<ApiCommunityPost>(`/content/public/${id}`, undefined, {
+  // 形状不对的 id 不发上游请求：随机参数只会打一次必然 404 的请求并在 fetch 缓存里造条目。
+  const postId = decodeRouteSegment(id) ?? '';
+  if (!isCommunityPostId(postId)) return null;
+  const path = `/content/public/${encodeURIComponent(postId)}`;
+  const result = await getApiDataWithStatus<ApiCommunityPost>(path, undefined, {
     logKey: 'community-post',
     warnStatuses: [404],
   });
   if (result.kind === 'notFound') return null;
   if (result.kind !== 'ok') {
-    throw new CommunityReadError('/content/public/' + id, result);
+    throw new CommunityReadError(path, result);
   }
   if (!result.data || !result.data._id) return null;
   return toCommunityPost(result.data);
@@ -1371,8 +1376,11 @@ async function requestCommunityTopicDetail(
   idOrSlug: string,
   fetchOptions?: CommunityReadFetchOptions,
 ): Promise<CommunityApiResult<CommunityTopicItem>> {
-  const target = String(idOrSlug || '').trim();
-  if (!target) return { data: null, status: null, kind: 'notFound' };
+  const target = decodeRouteSegment(String(idOrSlug || '')) ?? '';
+  // 形状不对的话题段按「不存在」处理，不发上游请求。
+  if (!target || !isCommunityTopicIdentifier(target)) {
+    return { data: null, status: null, kind: 'notFound' };
+  }
   return getApiDataWithStatus<CommunityTopicItem>(
     `/content/topics/public/${encodeURIComponent(target)}`,
     fetchOptions,

@@ -2,6 +2,7 @@ import { cache } from 'react';
 
 import { trackedApiFetch } from '@/lib/api';
 import { resolveGameName } from '@/lib/game-display-name';
+import { decodeRouteSegment, isAlbumIdentifier } from '@/lib/route-identifier';
 import { getSiteShareImageUrl, normalizeSeoAssetUrl, resolveGameSeoImage, sanitizeSeoText } from '@/lib/seo';
 import type { ApiAlbum, ApiGame, ApiResponse } from '@/types';
 
@@ -44,11 +45,13 @@ function normalizeAlbumData(album: ApiAlbum): ApiAlbum {
 // 交给页面走 error.tsx / 500，避免后端抖动被固化成永久 noindex 的 404。
 const loadAlbumDetail = cache(async (albumId: string, revalidate: number): Promise<ApiAlbum | null> => {
   const safeAlbumId = normalizeText(albumId);
-  if (!safeAlbumId) return null;
+  // 形状不对的段按「专辑不存在」处理，不发上游请求（也避免随机参数在 fetch 缓存里造条目）。
+  const normalizedId = decodeRouteSegment(safeAlbumId);
+  if (!safeAlbumId || !normalizedId || !isAlbumIdentifier(normalizedId)) return null;
 
   let res: Response;
   try {
-    res = await trackedApiFetch(`/albums/album-details/${encodeURIComponent(safeAlbumId)}`, {
+    res = await trackedApiFetch(`/albums/album-details/${encodeURIComponent(normalizedId)}`, {
       cache: 'force-cache',
       next: { revalidate },
       timeoutMs: ALBUM_TIMEOUT_MS,

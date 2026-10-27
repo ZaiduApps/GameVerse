@@ -10,6 +10,7 @@ import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import CommunityFeedPostCard from '@/components/community/CommunityFeedPostCard';
 import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
 import { sanitizePublicProfileSignature } from '@/lib/public-profile-safety';
+import { decodeRouteSegment, isPublicProfileIdentifier } from '@/lib/route-identifier';
 import { absoluteUrl, clampSeoDescription, normalizeSeoAssetUrl, sanitizeSeoText } from '@/lib/seo';
 import {
   getPublicProfile,
@@ -86,7 +87,12 @@ export async function generateMetadata({
   params: Promise<{ idOrUsername: string }>;
 }): Promise<Metadata> {
   const { idOrUsername } = await params;
-  const data = await getPublicProfile(idOrUsername);
+  // 形状不对的用户段直接 404，不发上游请求、也不在 fetch 缓存里造条目。
+  const profileKey = decodeRouteSegment(idOrUsername) ?? '';
+  if (!isPublicProfileIdentifier(profileKey)) {
+    notFound();
+  }
+  const data = await getPublicProfile(profileKey);
   if (!data) {
     return {
       title: '用户不存在',
@@ -96,7 +102,7 @@ export async function generateMetadata({
 
   const name = data.user.name || data.user.username || '社区用户';
   const description = buildPublicProfileDescription(data);
-  const canonicalTarget = data.user.username || idOrUsername;
+  const canonicalTarget = data.user.username || profileKey;
   const canonicalPath = `/u/${encodeURIComponent(canonicalTarget)}`;
   const avatarUrl = normalizeSeoAssetUrl(data.user.avatar);
   // 邮箱型用户名（PII）与低活跃度未认证主页保持可访问，但不让搜索引擎收录。
@@ -141,9 +147,13 @@ export default async function PublicUserPage({
   params: Promise<{ idOrUsername: string }>;
 }) {
   const { idOrUsername } = await params;
+  const profileKey = decodeRouteSegment(idOrUsername) ?? '';
+  if (!isPublicProfileIdentifier(profileKey)) {
+    notFound();
+  }
   // 用 OrThrow 变体：只有后端明确 404 才是「用户不存在」，
   // 5xx / 429 / 超时 / 异常抛错走 error.tsx / 500，不再折叠成永久 noindex 的 404。
-  const data = await getPublicProfileOrThrow(idOrUsername);
+  const data = await getPublicProfileOrThrow(profileKey);
   // getPublicProfileOrThrow 只在后端明确 404 时返回 null，5xx / 超时等故障已抛错
   // （走 error.tsx / 500），因此这里的 null 可以安全地当作「用户不存在」。
   if (!data) notFound();
@@ -151,7 +161,7 @@ export default async function PublicUserPage({
   const user = data.user;
   const displayName = user.name || user.username || '社区用户';
   const location = [user.country, user.province, user.city].filter(Boolean).join(' / ');
-  const canonicalTarget = user.username || idOrUsername;
+  const canonicalTarget = user.username || profileKey;
   const canonicalPath = `/u/${encodeURIComponent(canonicalTarget)}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
   const avatarUrl = normalizeSeoAssetUrl(user.avatar);

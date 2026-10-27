@@ -13,6 +13,7 @@ import {
 } from '@/lib/albums';
 import { absoluteUrl } from '@/lib/seo';
 import { resolveGameName } from '@/lib/game-display-name';
+import { decodeRouteSegment, isAlbumIdentifier } from '@/lib/route-identifier';
 import { getPublicSiteConfig } from '@/lib/site-config';
 
 export const revalidate = 300;
@@ -35,6 +36,13 @@ function getGameHref(game: { pkg?: string | null; _id?: string | null }): string
 function isValidDate(value?: string | null): boolean {
   if (!normalizeText(value)) return false;
   return !Number.isNaN(new Date(String(value)).getTime());
+}
+
+/** 专辑按 Mongo ObjectId 取数；形状不对的段直接 404，连站点配置都不取。 */
+function resolveAlbumId(id: string): string {
+  const albumId = decodeRouteSegment(id) ?? '';
+  if (!isAlbumIdentifier(albumId)) notFound();
+  return albumId;
 }
 
 function collectRegions(input: Array<{ metadata?: { region?: string | null } }>): string[] {
@@ -69,7 +77,9 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const [config, album] = await Promise.all([getPublicSiteConfig(300), getAlbumDetail(id, revalidate)]);
+  // 形状不对的专辑段直接 404，不发上游请求、也不在 fetch 缓存里造条目。
+  const albumId = resolveAlbumId(id);
+  const [config, album] = await Promise.all([getPublicSiteConfig(300), getAlbumDetail(albumId, revalidate)]);
 
   // getAlbumDetail 只在后端明确 404 时返回 null，5xx / 超时等故障已抛错
   // （走 error.tsx / 500），因此这里的 null 可以安全地当作「专辑不存在」。
@@ -157,7 +167,8 @@ export default async function AlbumTopicPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [config, album] = await Promise.all([getPublicSiteConfig(300), getAlbumDetail(id, revalidate)]);
+  const albumId = resolveAlbumId(id);
+  const [config, album] = await Promise.all([getPublicSiteConfig(300), getAlbumDetail(albumId, revalidate)]);
 
   // getAlbumDetail 只在后端明确 404 时返回 null，5xx / 超时等故障已抛错
   // （走 error.tsx / 500），因此这里的 null 可以安全地当作「专辑不存在」。

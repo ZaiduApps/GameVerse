@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { cache } from 'react';
 
 import CommunityTopicBoardView from './CommunityTopicBoardView';
+import { decodeRouteSegment, isCommunityTopicIdentifier } from '@/lib/route-identifier';
 import { absoluteUrl, buildSeoDescription, getSiteUrl, sanitizeSeoText } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityFeed, getCommunityTopicDetailOrThrow, type CommunityFeedResult } from '@/lib/community-api';
@@ -21,7 +22,11 @@ const EMPTY_FEED: CommunityFeedResult = {
 };
 
 const getTopicPageData = cache(async (idOrSlug: string) => {
-  const safeIdOrSlug = decodeURIComponent(String(idOrSlug || '').trim());
+  // 形状不对（含非法 percent 转义）的话题段直接 404，连站点配置都不取。
+  const safeIdOrSlug = decodeRouteSegment(idOrSlug) ?? '';
+  if (!isCommunityTopicIdentifier(safeIdOrSlug)) {
+    notFound();
+  }
   const configPromise = getPublicSiteConfig(300);
   // 用 OrThrow 变体：只有后端明确 404 才是「话题不存在」，
   // 5xx / 超时 / 异常会抛错走 error.tsx / 500，不再折叠成永久 noindex 的 404。

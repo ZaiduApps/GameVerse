@@ -1,5 +1,6 @@
 import { trackedApiFetch } from '@/lib/api';
 import { toCommunityPost, type ApiCommunityPost } from '@/lib/community-api';
+import { decodeRouteSegment, isPublicProfileIdentifier } from '@/lib/route-identifier';
 import type { CommunityPost } from '@/types';
 
 const PUBLIC_PROFILE_REVALIDATE_SECONDS = 180;
@@ -122,7 +123,9 @@ async function requestPublicProfile(lookupKey: string): Promise<PublicProfileDat
 
 export async function getPublicProfile(idOrUsername: string): Promise<PublicProfileData | null> {
   const id = String(idOrUsername || '').trim();
-  if (!id) return null;
+  const normalized = decodeRouteSegment(id);
+  // 形状不对的段按「用户不存在」处理，不发上游请求（也避免随机参数在 fetch 缓存里造条目）。
+  if (!normalized || !isPublicProfileIdentifier(normalized)) return null;
 
   // 解码值优先；若用户名本身含字面量 % 序列导致解码后查不到，再用原值兜一次。
   const candidates = Array.from(new Set([decodeIfPercentEncoded(id), id]));
@@ -142,7 +145,9 @@ export async function getPublicProfileOrThrow(
   idOrUsername: string,
 ): Promise<PublicProfileData | null> {
   const id = String(idOrUsername || '').trim();
-  if (!id) return null;
+  const normalized = decodeRouteSegment(id);
+  // 形状不对的段按「用户不存在」处理，不发上游请求。
+  if (!normalized || !isPublicProfileIdentifier(normalized)) return null;
 
   const candidates = Array.from(new Set([decodeIfPercentEncoded(id), id]));
   for (const candidate of candidates) {

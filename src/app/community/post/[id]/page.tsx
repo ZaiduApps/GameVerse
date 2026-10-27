@@ -18,11 +18,19 @@ import {
   getCommunityPostShareImage,
 } from '@/lib/community-seo';
 import { absoluteUrl, sanitizeSeoText } from '@/lib/seo';
+import { decodeRouteSegment, isCommunityPostId } from '@/lib/route-identifier';
 import { getPublicSiteConfig } from '@/lib/site-config';
 
 const getPostById = cache(async (id: string): Promise<CommunityPost | null> => {
   return getCommunityPostById(id);
 });
+
+/** 形状不对的 id 直接 404，连站点配置都不取。 */
+function resolvePostId(id: string): string {
+  const postId = decodeRouteSegment(id) ?? '';
+  if (!isCommunityPostId(postId)) notFound();
+  return postId;
+}
 
 export async function generateMetadata({
   params,
@@ -30,7 +38,8 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const [config, post] = await Promise.all([getPublicSiteConfig(300), getPostById(id)]);
+  const postId = resolvePostId(id);
+  const [config, post] = await Promise.all([getPublicSiteConfig(300), getPostById(postId)]);
 
   // getCommunityPostById 只在后端明确 404 时返回 null，5xx / 超时等故障已抛错
   // （走 error.tsx / 500），因此这里的 null 可以安全地当作「帖子不存在」。
@@ -39,7 +48,7 @@ export async function generateMetadata({
   }
 
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
-  const canonicalPath = `/community/post/${encodeURIComponent(id)}`;
+  const canonicalPath = `/community/post/${encodeURIComponent(postId)}`;
   const title = buildCommunityPostSeoTitle(post, siteName);
   const description = buildCommunityPostSeoDescription(post);
   const image = getCommunityPostShareImage(post, String(config?.basic?.share_image || '').trim());
@@ -101,8 +110,9 @@ export default async function CommunityPostPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const postId = resolvePostId(id);
 
-  const [config, post] = await Promise.all([getPublicSiteConfig(300), getPostById(id)]);
+  const [config, post] = await Promise.all([getPublicSiteConfig(300), getPostById(postId)]);
 
   // getCommunityPostById 只在后端明确 404 时返回 null，5xx / 超时等故障已抛错
   // （走 error.tsx / 500），因此这里的 null 可以安全地当作「帖子不存在」。
@@ -113,7 +123,7 @@ export default async function CommunityPostPage({
   const apiComments = await getCommunityCommentThreads(post.id, 30);
 
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
-  const canonicalPath = `/community/post/${encodeURIComponent(id)}`;
+  const canonicalPath = `/community/post/${encodeURIComponent(postId)}`;
   const canonicalUrl = absoluteUrl(canonicalPath);
   const communityPost = post as CommunityPost;
   const discussionJsonLd = buildCommunityPostDiscussionJsonLd({
