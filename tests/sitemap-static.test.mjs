@@ -12,6 +12,7 @@ import assert from 'node:assert/strict';
 
 import {
   STATIC_COUNT_DEVIATION_LIMIT,
+  applyGameLastmodPatch,
   checkStaticFreshness,
   createSitemapBuilder,
   getServerApiBaseUrl,
@@ -150,6 +151,124 @@ test('createSitemapBuilder: 游戏目录为空时 apiReachable=false，调用方
   assert.equal(apiReachable, false);
   assert.equal(complete, false);
   assert.equal(entries.length, 5); // 仅静态入口
+});
+
+const STATIC_FIXTURE = serializeSitemapXml([
+  { url: 'https://apks.cc/', changeFrequency: 'hourly', priority: 1 },
+  {
+    url: 'https://apks.cc/app/com.droiddeck.launcher',
+    lastModified: new Date('2026-10-24T08:46:24.007Z'),
+    changeFrequency: 'daily',
+    priority: 0.8,
+  },
+  {
+    url: 'https://apks.cc/app/com.tencent.ig',
+    lastModified: new Date('2026-10-23T02:00:00.000Z'),
+    changeFrequency: 'daily',
+    priority: 0.8,
+  },
+  {
+    url: 'https://apks.cc/community/post/post1',
+    lastModified: new Date('2026-10-22T00:00:00.000Z'),
+    changeFrequency: 'daily',
+    priority: 0.6,
+  },
+], { buildTime: '2026-10-25T00:00:00.000Z' });
+
+test('applyGameLastmodPatch: 只覆写被更新过的游戏条目，其余原样保留', () => {
+  const { xml, patched } = applyGameLastmodPatch(STATIC_FIXTURE, [
+    { pkg: 'com.droiddeck.launcher', lastModified: new Date('2026-10-27T09:30:00.000Z') },
+  ]);
+
+  assert.equal(patched, 1);
+  assert.ok(xml.includes('<loc>https://apks.cc/app/com.droiddeck.launcher</loc>\n<lastmod>2026-10-27T09:30:00.000Z</lastmod>'));
+  // 其它条目（同页其它游戏、社区帖子、首页）一处都不能动
+  assert.ok(xml.includes('<lastmod>2026-10-23T02:00:00.000Z</lastmod>'));
+  assert.ok(xml.includes('<lastmod>2026-10-22T00:00:00.000Z</lastmod>'));
+  assert.equal(xml.match(/<lastmod>/g).length, 3);
+  // 产物仍然自洽（注释头条数不变、结构完整）
+  assert.equal(validateStaticSitemap(inspectStaticSitemap(xml)).ok, true);
+});
+
+test('applyGameLastmodPatch: 没有 lastmod 的条目补一条，未知包名与空补丁集不改文件', () => {
+  const withoutLastmod = serializeSitemapXml([
+    { url: 'https://apks.cc/app/com.fresh.game', changeFrequency: 'daily', priority: 0.8 },
+  ], { buildTime: '2026-10-25T00:00:00.000Z' });
+
+  const inserted = applyGameLastmodPatch(withoutLastmod, [
+    { pkg: 'com.fresh.game', lastModified: '2026-10-27T09:00:00.000Z' },
+  ]);
+  assert.equal(inserted.patched, 1);
+  assert.ok(inserted.xml.includes('<loc>https://apks.cc/app/com.fresh.game</loc>\n<lastmod>2026-10-27T09:00:00.000Z</lastmod>'));
+  assert.ok(inserted.xml.includes('<changefreq>daily</changefreq>'));
+
+  assert.deepEqual(applyGameLastmodPatch(STATIC_FIXTURE, []), { xml: STATIC_FIXTURE, patched: 0 });
+  // 包里没有的 URL / 非 /app/ 条目都不能被误伤
+  assert.equal(applyGameLastmodPatch(STATIC_FIXTURE, [{ pkg: 'com.unknown.app', lastModified: new Date() }]).patched, 0);
+});
+
+test('getRecentGameUpdates: 只取 buildTime 之后的更新，窗口装不下时 complete=false', async () => {
+  const fetchImpl = (rows) => async () => new Response(
+    JSON.stringify({ code: 0, data: { page: 1, pageSize: 1000, total: 5152, list: rows } }),
+    { status: 200, headers: { 'content-type': 'application/json' } },
+  );
+  const builder = (impl) => createSitemapBuilder({ apiBaseUrl: 'https://api.test', siteUrl: 'https://apks.cc', fetchImpl: impl });
+
+  const partial = await builder(fetchImpl([
+    { pkg: 'com.new.one', updated_at: '2026-10-27T09:00:00.000Z' },
+    { pkg: 'com.old.one', updated_at: '2026-10-24T08:46:24.007Z' },
+  ])).getRecentGameUpdates('2026-10-25T00:00:00.000Z');
+  assert.equal(partial.total, 5152);
+  assert.equal(partial.complete, true); // 已经越过 buildTime 边界
+  assert.deepEqual(partial.games.map((game) => game.pkg), ['com.new.one']);
+
+  const truncated = await builder(fetchImpl([
+    { pkg: 'com.a', updated_at: '2026-10-27T09:00:00.000Z' },
+    { pkg: 'com.b', updated_at: '2026-10-27T08:00:00.000Z' },
+  ])).getRecentGameUpdates('2026-10-25T00:00:00.000Z', 2);
+  assert.equal(truncated.complete, false); // 整页都在窗口内，可能还有更老的没抓到
+  assert.equal(truncated.games.length, 2);
+
+  const offline = await builder(async () => new Response('{}', { status: 500 }))
+    .getRecentGameUpdates('2026-10-25T00:00:00.000Z');
+  assert.deepEqual(offline, { total: null, games: [], complete: false });
+});
+
+test('静态直出链路：后台改 SEO 后重新生成，目标 URL 的 lastmod 从旧值变为新值', async () => {
+  // 1) 静态产物是构建那一刻的快照：DroidDeck 的 lastmod 还停在旧值
+  const buildTime = '2026-10-25T00:00:00.000Z';
+  assert.match(STATIC_FIXTURE, /<loc>https:\/\/apks\.cc\/app\/com\.droiddeck\.launcher<\/loc>\n<lastmod>2026-10-24T08:46:24\.007Z<\/lastmod>/);
+
+  // 2) 后台改 SEO → interface 侧 updateGame 写入新的 updated_at
+  const updatedAt = '2026-10-27T13:05:00.000Z';
+  const builder = createSitemapBuilder({
+    apiBaseUrl: 'https://api.test',
+    siteUrl: 'https://apks.cc',
+    fetchImpl: async () => new Response(JSON.stringify({
+      code: 0,
+      data: {
+        page: 1,
+        pageSize: 1000,
+        total: 2, // 与夹具里的两条 /app/ 条目一致，条数新鲜度校验照常通过
+        list: [
+          { pkg: 'com.droiddeck.launcher', updated_at: updatedAt },
+          { pkg: 'com.tencent.ig', updated_at: '2026-10-23T02:00:00.000Z' },
+        ],
+      },
+    }), { status: 200, headers: { 'content-type': 'application/json' } }),
+  });
+
+  // 3) 运行时直出：新鲜度校验照旧，lastmod 用线上 updated_at 补丁覆写
+  const meta = inspectStaticSitemap(STATIC_FIXTURE);
+  const updates = await builder.getRecentGameUpdates(meta.buildTime);
+  assert.equal(checkStaticFreshness(meta, updates.total).ok, true);
+  const served = applyGameLastmodPatch(STATIC_FIXTURE, updates.games);
+
+  assert.equal(served.patched, 1);
+  assert.match(served.xml, new RegExp(`<loc>https://apks\\.cc/app/com\\.droiddeck\\.launcher</loc>\\n<lastmod>${updatedAt.replace(/\./g, '\\.')}</lastmod>`));
+  assert.doesNotMatch(served.xml, /com\.droiddeck\.launcher<\/loc>\n<lastmod>2026-10-24T08:46:24\.007Z/);
+  // 本次没改的游戏保持原值（lastmod 不能靠「当前时间」糊弄）
+  assert.match(served.xml, /com\.tencent\.ig<\/loc>\n<lastmod>2026-10-23T02:00:00\.000Z/);
 });
 
 test('getServerApiBaseUrl / getSiteUrlFromEnv: 与运行时 env 口径一致', () => {

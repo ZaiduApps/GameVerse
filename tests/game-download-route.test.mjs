@@ -5,6 +5,7 @@ import test from 'node:test';
 import {
   buildDirectDownloadLinks,
   resolveDownloadChannelId,
+  resolveInstallActionTarget,
   shouldGuideToApp,
 } from '../src/lib/game-download-channel.ts';
 import {
@@ -77,6 +78,32 @@ test('直链去重、无渠道 id 或空游戏 id 时不出链接', () => {
   assert.equal(duplicated.length, 1);
   assert.deepEqual(buildDirectDownloadLinks([resource()], ''), []);
   assert.deepEqual(buildDirectDownloadLinks(undefined, PKG), []);
+});
+
+test('JSON-LD InstallAction.target 指向直下入口，无直下渠道时回退 canonical', async () => {
+  const canonical = `https://apks.cc/app/${PKG}`;
+
+  // 有直下渠道：落点是 302 入口，不是详情页自身
+  const withDirect = resolveInstallActionTarget(
+    [resource({ channelId: CHANNEL_OFFICIAL, code: 'official' })],
+    PKG,
+    canonical,
+  );
+  assert.equal(withDirect, `https://apks.cc/app/${PKG}/download/${CHANNEL_OFFICIAL}`);
+  assert.ok(withDirect.includes('/download/'));
+
+  // 只有引导型渠道（APKPure）或没有资源时：回退详情页自身
+  assert.equal(
+    resolveInstallActionTarget([resource({ channelId: CHANNEL_APKPURE, code: 'apkpure' })], PKG, canonical),
+    canonical,
+  );
+  assert.equal(resolveInstallActionTarget(undefined, PKG, canonical), canonical);
+  assert.equal(resolveInstallActionTarget([], PKG, canonical), canonical);
+
+  // 详情页接线：JSON-LD 用同一个函数取落点，不自己再拼一套渠道筛选
+  const pageSource = await readSource('../src/app/app/[id]/page.tsx');
+  assert.match(pageSource, /resolveInstallActionTarget\(initialGameData\.resources, game\.pkg \|\| game\._id, canonicalUrl\)/);
+  assert.match(pageSource, /target: installActionTarget/);
 });
 
 test('渠道判定与弹窗共用同一份实现（APKPure / Android 定向都引导去 App）', () => {
