@@ -9,6 +9,8 @@ const API_BASE_URL = (
     : process.env.API_BASE_URL_DEV || 'http://127.0.0.1:9527')
 ).replace(/\/+$/, '');
 
+const LEGACY_GAME_ID_LOOKUP_TIMEOUT_MS = 3000;
+
 /** 24 位 ObjectId 形式的游戏详情地址 308 到规范包名地址（既有行为，保留）。 */
 async function redirectLegacyGameId(request: NextRequest) {
   const match = request.nextUrl.pathname.match(/^\/app\/([a-f\d]{24})\/?$/i);
@@ -21,6 +23,8 @@ async function redirectLegacyGameId(request: NextRequest) {
     const response = await fetch(`${API_BASE_URL}/game/details?param=${encodeURIComponent(match[1])}`, {
       cache: 'force-cache',
       headers: { 'x-tracking-skip': '1', 'x-client-platform': 'web' },
+      // 全仓唯一没有超时的 fetch：中间件挂住会让该路径的每个请求一起挂住。
+      signal: AbortSignal.timeout(LEGACY_GAME_ID_LOOKUP_TIMEOUT_MS),
     });
     const payload = response.ok ? await response.json() : null;
     const pkg = String(payload?.data?.app?.pkg || '').trim();
