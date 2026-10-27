@@ -37,6 +37,7 @@
     "test:download-error": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/alias-loader.mjs --test tests/download-error-notice.test.mjs",
     "test:content-report": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/alias-loader.mjs --test tests/content-report.test.mjs",
     "test:site-config": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/react-cache-stub-loader.mjs --import ./tests/helpers/alias-loader.mjs --test tests/site-config-cache-poison.test.mjs",
+    "test:community-feed": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/alias-loader.mjs --test tests/community-feed-status.test.mjs",
     "test:a11y": "node --test tests/a11y-guard.test.mjs",
     "seo:audit": "node scripts/seo-daily-audit.mjs",
     "seo:write-game": "node scripts/seo-write-game.mjs",

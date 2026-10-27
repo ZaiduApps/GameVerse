@@ -5,7 +5,7 @@ import { Suspense, cache } from 'react';
 import CommunityPageView, { type CommunityPageInitialData } from './CommunityPageView';
 import { absoluteUrl, buildSeoDescription } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
-import { getCommunityFeed, getCommunityTopics } from '@/lib/community-api';
+import { getCommunityFeedOrThrow, getCommunityTopics, type CommunityFeedResult } from '@/lib/community-api';
 
 const COMMUNITY_JSONLD_LIMIT = 12;
 // 首屏要在 SSR HTML 里带出足够多的帖子内链：20 条帖子每条至少输出一个详情链接，
@@ -59,19 +59,30 @@ function CommunityPageSkeleton() {
   );
 }
 
+const EMPTY_FEED: CommunityFeedResult = {
+  list: [],
+  total: 0,
+  page: 1,
+  pageSize: COMMUNITY_SSR_FEED_PAGE_SIZE,
+  hasMore: false,
+};
+
 const getCommunityPageData = cache(async (feedKeyword: string, feedPage: number): Promise<{
   config: Awaited<ReturnType<typeof getPublicSiteConfig>>;
   initialData: CommunityPageInitialData;
 }> => {
   const keyword = String(feedKeyword || '').trim();
+  // 列表流用 OrThrow 变体：只有上游明确 404 才是「列表不存在」，5xx / 超时 / 网络异常
+  // 会抛给 error.tsx / 500，不再折叠成 total: 0 的空列表——那会连带把已收录的分页 URL
+  // 判成越界并打成永久 404。
   const [config, latestFeed, hotFeed, topics] = await Promise.all([
     getPublicSiteConfig(300),
-    getCommunityFeed('latest', {
+    getCommunityFeedOrThrow('latest', {
       page: feedPage,
       pageSize: COMMUNITY_SSR_FEED_PAGE_SIZE,
       q: keyword || undefined,
     }),
-    getCommunityFeed('hot', {
+    getCommunityFeedOrThrow('hot', {
       page: 1,
       pageSize: COMMUNITY_SSR_FEED_PAGE_SIZE,
       q: keyword || undefined,
@@ -79,11 +90,17 @@ const getCommunityPageData = cache(async (feedKeyword: string, feedPage: number)
     getCommunityTopics({ page: 1, pageSize: COMMUNITY_JSONLD_LIMIT, sort: 'hot' }),
   ]);
 
+  // 最新流明确 404：维持 404 语义（不是故障，也不渲染空列表）。
+  if (!latestFeed) {
+    notFound();
+  }
+
   return {
     config,
     initialData: {
       latestFeed,
-      hotFeed,
+      // 热门流 404 不影响主列表，退化成空侧栏即可。
+      hotFeed: hotFeed ?? EMPTY_FEED,
       topics: topics.list || [],
     },
   };

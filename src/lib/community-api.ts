@@ -849,7 +849,7 @@ export interface CommunityFeedResult {
   hasMore: boolean;
 }
 
-export async function getCommunityFeed(
+function buildCommunityFeedRequest(
   sort: 'latest' | 'hot',
   options?: {
     page?: number;
@@ -857,8 +857,7 @@ export async function getCommunityFeed(
     q?: string;
     topicId?: string;
   },
-  fetchOptions?: CommunityReadFetchOptions,
-): Promise<CommunityFeedResult> {
+): { path: string; page: number; pageSize: number } {
   const page = Math.max(1, Number(options?.page || 1));
   const pageSize = Math.min(50, Math.max(1, Number(options?.pageSize || 20)));
   const query = new URLSearchParams({
@@ -871,11 +870,14 @@ export async function getCommunityFeed(
   const keyword = String(options?.q || '').trim();
   if (topicId) query.set('topic_id', topicId);
   if (keyword) query.set('q', keyword);
-  const data = await getApiData<CommunityFeedData>(
-    `/content/feed?${query.toString()}`,
-    fetchOptions,
-    { logKey: 'community-feed', next: { revalidate: COMMUNITY_FEED_REVALIDATE_SECONDS } },
-  );
+  return { path: `/content/feed?${query.toString()}`, page, pageSize };
+}
+
+function mapCommunityFeedPayload(
+  data: CommunityFeedData | null,
+  page: number,
+  pageSize: number,
+): CommunityFeedResult {
   const pagination = data?.pagination || {};
   const rawList = Array.isArray(data?.list) ? data.list : [];
   const list = rawList.map(toCommunityPost).filter((item) => Boolean(item.id));
@@ -933,6 +935,53 @@ export async function getCommunityFeed(
         : pageSize,
     hasMore: typeof hasMoreByFlag === 'boolean' ? hasMoreByFlag : hasMoreByTotal,
   };
+}
+
+export async function getCommunityFeed(
+  sort: 'latest' | 'hot',
+  options?: {
+    page?: number;
+    pageSize?: number;
+    q?: string;
+    topicId?: string;
+  },
+  fetchOptions?: CommunityReadFetchOptions,
+): Promise<CommunityFeedResult> {
+  const request = buildCommunityFeedRequest(sort, options);
+  const data = await getApiData<CommunityFeedData>(
+    request.path,
+    fetchOptions,
+    { logKey: 'community-feed', next: { revalidate: COMMUNITY_FEED_REVALIDATE_SECONDS } },
+  );
+  return mapCommunityFeedPayload(data, request.page, request.pageSize);
+}
+
+/**
+ * 页面专用（/community 列表）：上游明确 404 返回 null 让调用方 notFound()，
+ * 其余失败（超时 / 5xx / 网络 / 脏数据）抛 CommunityReadError 走 error.tsx / 500。
+ * 后端故障不能被折叠成 total: 0 的空列表——那会让 `feedPage > totalPages` 把
+ * 已收录的分页 URL 打成永久 404。客户端刷新路径继续用 getCommunityFeed。
+ */
+export async function getCommunityFeedOrThrow(
+  sort: 'latest' | 'hot',
+  options?: {
+    page?: number;
+    pageSize?: number;
+    q?: string;
+    topicId?: string;
+  },
+  fetchOptions?: CommunityReadFetchOptions,
+): Promise<CommunityFeedResult | null> {
+  const request = buildCommunityFeedRequest(sort, options);
+  const result = await getApiDataWithStatus<CommunityFeedData>(request.path, fetchOptions, {
+    logKey: 'community-feed',
+    next: { revalidate: COMMUNITY_FEED_REVALIDATE_SECONDS },
+  });
+  if (result.kind === 'notFound') return null;
+  if (result.kind !== 'ok') {
+    throw new CommunityReadError(request.path, result);
+  }
+  return mapCommunityFeedPayload(result.data, request.page, request.pageSize);
 }
 
 interface GetCommunityPostsByGameOptions {
