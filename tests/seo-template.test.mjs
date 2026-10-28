@@ -6,6 +6,7 @@ import {
   buildGameDetailSeo,
   normalizeSeoTemplateVersion,
   renderSeoTemplate,
+  stripSeoVersionMentions,
 } from '../src/lib/seo.ts';
 
 const TITLE_TEMPLATE = '{name} v{version} Download (Latest) for Android | {site_name}';
@@ -79,7 +80,72 @@ test('构建号不进入 title / description', () => {
   );
   assert.doesNotMatch(seo.title, /160402020/);
   assert.doesNotMatch(seo.description, /160402020/);
-  assert.ok(seo.title.endsWith(' | APKScc'), `缺少站点后缀：${seo.title}`);
+  assert.ok(seo.title.endsWith('-APKScc'), `缺少站点后缀：${seo.title}`);
+});
+
+test('无人工标题时使用中文资源站默认标题并移除点分版本号', () => {
+  const seo = buildGameDetailSeo(
+    {
+      name: '堡垒之夜',
+      pkg: 'com.epicgames.fortnite',
+      version: '42.40.0',
+    },
+    'APKScc',
+  );
+
+  assert.equal(seo.title, '堡垒之夜下载_堡垒之夜安卓版APK下载-APKScc');
+  assert.doesNotMatch(seo.title, /42\.40\.0|\bv\b/i);
+  assert.doesNotMatch(seo.description, /42\.40\.0|\bv\b/i);
+});
+
+test('旧模板仍被采用，但默认标题会移除版本号', () => {
+  const seo = buildGameDetailSeo(
+    {
+      name: '堡垒之夜',
+      pkg: 'com.epicgames.fortnite',
+      version: '42.40.0',
+      titleTemplate: '{name} v{version} Download (Latest) for Android',
+      descriptionTemplate: 'Download {name} APK {version} for Android.',
+    },
+    'APKScc',
+  );
+
+  assert.equal(seo.title, '堡垒之夜 Download (Latest) for Android-APKScc');
+  assert.doesNotMatch(seo.title, /42\.40\.0|\bv\b/i);
+  assert.doesNotMatch(seo.description, /42\.40\.0|\bv\b/i);
+});
+
+test('网页游戏使用在线游玩默认标题', () => {
+  const seo = buildGameDetailSeo(
+    {
+      name: '放置小游戏',
+      type: 'web',
+      version: '9.9.9',
+    },
+    'APKScc',
+  );
+  assert.equal(
+    seo.title,
+    '放置小游戏在线玩_放置小游戏网页版游戏入口-APKScc',
+  );
+});
+
+test('人工标题保持原样，不经过默认标题规范化', () => {
+  const seo = buildGameDetailSeo(
+    {
+      name: '堡垒之夜',
+      manualTitle: '堡垒之夜 42.40.0 国际服下载',
+    },
+    'APKScc',
+  );
+  assert.equal(seo.title, '堡垒之夜 42.40.0 国际服下载 | APKScc');
+});
+
+test('版本号清理不会误删普通文本', () => {
+  assert.equal(
+    stripSeoVersionMentions('堡垒之夜 v42.40.0 下载 2026 热门游戏'),
+    '堡垒之夜 下载 2026 热门游戏',
+  );
 });
 
 test('超长标题截断后仍保留站点后缀', () => {
@@ -95,8 +161,8 @@ test('超长标题截断后仍保留站点后缀', () => {
     'APKScc',
   );
   assert.ok(seo.title.length <= SEO_TITLE_MAX, `标题 ${seo.title.length} 字符：${seo.title}`);
-  assert.ok(seo.title.endsWith(' | APKScc'), `缺少站点后缀：${seo.title}`);
-  assert.match(seo.title, /\.\.\. \| APKScc$/);
+  assert.ok(seo.title.endsWith('-APKScc'), `缺少站点后缀：${seo.title}`);
+  assert.match(seo.title, /\.\.\.-APKScc$/);
   assert.doesNotMatch(seo.title, /[（(]\s*[）)]/);
 });
 
@@ -110,7 +176,7 @@ test('模板不含站点名时自动补后缀，且总长受控', () => {
     },
     'APKScc',
   );
-  assert.ok(seo.title.endsWith(' | APKScc'));
+  assert.ok(seo.title.endsWith('-APKScc'));
   assert.ok(seo.title.length <= SEO_TITLE_MAX);
 });
 

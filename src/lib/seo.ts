@@ -27,6 +27,7 @@ export type GameDetailSeoInput = {
 
 const SEO_MARKUP_NOISE_PATTERN =
   /!\[[^\]]*\]\(|\[[^\]]+\]\(|\b(?:https?|acbox|uu-mobile):\/\/|<[^>]+>|[`*_~]/i;
+const SEO_UNDERSCORE_SENTINEL = '\uE000';
 
 export function hasSeoMarkupNoise(input?: string | null): boolean {
   return SEO_MARKUP_NOISE_PATTERN.test(String(input || '').trim());
@@ -68,6 +69,13 @@ export function sanitizeSeoText(input?: string | null): string {
     .replace(/([《「『（【〈“‘])\s+/g, '$1')
     .replace(/\s+([》」』）】〉”’、，。！？；：])/g, '$1')
     .trim();
+}
+
+/** SEO 标题允许用下划线分隔搜索词，不能当作 Markdown 强调符清掉。 */
+function sanitizeSeoTemplateText(input?: string | null): string {
+  return sanitizeSeoText(
+    String(input || '').replaceAll('_', SEO_UNDERSCORE_SENTINEL),
+  ).replaceAll(SEO_UNDERSCORE_SENTINEL, '_');
 }
 
 export function clampSeoDescription(input?: string | null, max = 155): string {
@@ -138,7 +146,7 @@ export function renderSeoTemplate(
   out = out
     .replace(EMPTY_BRACKET_PATTERN, ' ')
     .replace(/\bv\s*v+(?=[\d.])/gi, 'v');
-  return sanitizeSeoText(out);
+  return sanitizeSeoTemplateText(out);
 }
 
 const SEO_TEMPLATE_PLACEHOLDERS = [
@@ -223,6 +231,52 @@ export function prependAliasToDescription(
   return `中文名「${aliasText}」。${text}`;
 }
 
+const SEO_VERSION_MENTION_PATTERN =
+  /\b(?:v(?:ersion)?\s*)?(?:\d+(?:\.\d+){1,3}(?:[-_+][0-9A-Za-z.]+)?|\d{6,})\b/gi;
+
+/** 默认 SEO 文案不携带易过期版本号；人工标题和描述不经过此函数。 */
+export function stripSeoVersionMentions(input?: string | null): string {
+  return sanitizeSeoTemplateText(input)
+    .replace(SEO_VERSION_MENTION_PATTERN, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([，。,:;；])/g, '$1')
+    .replace(/[\s_-]*[|｜][\s_-]*$/g, '')
+    .trim();
+}
+
+/** 未配置人工标题时，统一输出中文资源站标题并保留稳定的站点后缀。 */
+function buildDefaultResourceSeoTitle(
+  coreInput: string,
+  siteName: string,
+  maxLength: number,
+): string {
+  const site = sanitizeSeoText(siteName) || 'APKScc';
+  const core = stripSeoVersionMentions(coreInput);
+  if (!core) return site;
+
+  const suffix = `-${site}`;
+  const escapedSite = site.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const trailingSuffix = core.match(
+    new RegExp(`\\s*[|｜\\-–—·_]\\s*${escapedSite}\\s*$`, 'i'),
+  );
+  if (trailingSuffix?.index !== undefined) {
+    const body = core.slice(0, trailingSuffix.index).trim();
+    if (!body) return site;
+    return `${clampSeoResourceText(body, Math.max(1, maxLength - suffix.length))}${suffix}`;
+  }
+
+  if (core.toLowerCase().includes(site.toLowerCase())) {
+    return clampSeoResourceText(core, maxLength);
+  }
+  return `${clampSeoResourceText(core, Math.max(1, maxLength - suffix.length))}${suffix}`;
+}
+
+function clampSeoResourceText(input: string, maxLength: number): string {
+  const text = sanitizeSeoTemplateText(input);
+  if (!text || text.length <= maxLength) return text;
+  return `${text.slice(0, Math.max(1, maxLength - 3)).trim()}...`;
+}
+
 /** 详情页使用稳定下载意图文案，版本、日期、大小等易过期字段不进入主描述。优先级：人工 SEO > 站点模板 > 内置模板。 */
 export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc') {
   const name = sanitizeSeoText(input.name) || sanitizeSeoText(input.pkg) || '安卓游戏';
@@ -236,11 +290,11 @@ export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc
   const regionPhrase = region ? `，提供${region}相关下载信息` : '';
   const aliases = normalizeSeoAliases(input.aliases);
   const chineseAlias = resolveChineseAlias(aliases, name);
-  const version = normalizeSeoTemplateVersion(input.version);
   const templateVars = {
     name,
     pkg,
-    version,
+    // 默认标题和描述主动忽略版本；人工标题/描述仍原样保留。
+    version: '',
     alias: chineseAlias,
     region,
     summary: sanitizeSeoText(input.summary),
@@ -250,17 +304,23 @@ export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc
   };
   const titleCore = manualTitle || renderSeoTemplate(input.titleTemplate, templateVars) || (
     isWebGame
-      ? `${name} 网页游戏${region ? ` ${region}` : ''} - 在线游玩`
-      : `${name} APK下载${region ? ` - ${region}下载` : ''}`
+      ? `${name}在线玩_${name}网页版游戏入口`
+      : `${name}下载_${name}安卓版APK下载`
   );
-  // 标题先截主体再挂站点后缀，保证整条 ≤ SEO_TITLE_MAX 且后缀不被截掉；
-  // 构建号版本已在模板变量里归一化成空串，不会出现 v160402020。
-  const title = buildSeoTitle(titleCore, normalizedSiteName, SEO_TITLE_MAX);
-  const baseDescription = manualDescription || renderSeoTemplate(input.descriptionTemplate, templateVars) || (
-    isWebGame
+  const title = manualTitle
+    ? buildSeoTitle(manualTitle, normalizedSiteName, SEO_TITLE_MAX)
+    : buildDefaultResourceSeoTitle(
+        titleCore,
+        normalizedSiteName,
+        SEO_TITLE_MAX,
+      );
+  const autoDescription =
+    renderSeoTemplate(input.descriptionTemplate, templateVars) ||
+    (isWebGame
       ? `获取${name}网页游戏入口，查看游戏介绍、玩法特色和社区资讯${regionPhrase}。通过${normalizedSiteName}快速找到${name}并开始游玩。`
-      : `下载${name}安卓版 APK，获取安全可靠的游戏下载入口${regionPhrase}。在${normalizedSiteName}查看游戏介绍、玩法特色和可用资源，快速安装并开始游玩。`
-  );
+      : `提供${name}安卓版APK下载，包含游戏介绍、玩法特色、版本更新与安装说明，可在${normalizedSiteName}获取稳定下载入口。`);
+  const baseDescription =
+    manualDescription || stripSeoVersionMentions(autoDescription);
   // 中文别名必须出现在 meta description 里（别名是用户实际搜索词）；已包含则不重复前置，最后统一截到 155。
   const description = prependAliasToDescription(baseDescription, chineseAlias);
   const keywordCandidates = [
