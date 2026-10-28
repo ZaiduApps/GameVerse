@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 import CommunityFeedPostCard from '@/components/community/CommunityFeedPostCard';
 import CommunityInfoPanel from '@/components/community/CommunityInfoPanel';
+import OptimisticPostCard from '@/components/community/OptimisticPostCard';
 import CommunitySidebar from '@/components/community/CommunitySidebar';
 import CreatePostForm from '@/components/community/CreatePostForm';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +41,19 @@ import {
   type CommunityFeedTab,
   type CommunityReturnSnapshot,
 } from '@/lib/community-return';
+import {
+  normalizeCommunityConfig,
+  type CommunityRuntimeConfig,
+} from '@/lib/community-config';
+import {
+  deletePublishJob,
+  listPublishJobs,
+  processPublishQueue,
+  requestEditPublishJob,
+  startPublishQueueTicker,
+  subscribePublishQueue,
+  type CommunityPublishJob,
+} from '@/lib/community-publish-queue';
 import type { CommunityPost } from '@/types';
 import { Loader2, X } from 'lucide-react';
 
@@ -73,10 +87,25 @@ export interface CommunityPageInitialData {
 }
 
 interface CommunityPageViewProps {
+  communityConfig?: Partial<CommunityRuntimeConfig>;
   initialData?: CommunityPageInitialData;
 }
 
-export default function CommunityPageView({ initialData }: CommunityPageViewProps) {
+function upsertPublishJob(
+  list: CommunityPublishJob[],
+  job: CommunityPublishJob,
+): CommunityPublishJob[] {
+  const index = list.findIndex((item) => item.id === job.id);
+  if (index < 0) return [...list, job];
+  const next = [...list];
+  next[index] = job;
+  return next;
+}
+
+export default function CommunityPageView({
+  communityConfig,
+  initialData,
+}: CommunityPageViewProps) {
   // 必须与服务端首屏 SSR 的 pageSize（COMMUNITY_SSR_FEED_PAGE_SIZE）保持一致，
   // 否则「加载更多」会与上一页错位、重复或漏掉帖子。后端会过滤掉部分帖子，
   // 所以请求 24 条时 SSR 实际输出 20–22 条，仍满足列表页 ≥20 条内链的要求。
@@ -122,6 +151,11 @@ export default function CommunityPageView({ initialData }: CommunityPageViewProp
   const [moderationIsRecommended, setModerationIsRecommended] = useState(false);
   const [moderationSaving, setModerationSaving] = useState(false);
   const [moderationPostId, setModerationPostId] = useState('');
+  const [publishJobs, setPublishJobs] = useState<CommunityPublishJob[]>([]);
+  const communityRuntime = useMemo(
+    () => normalizeCommunityConfig(communityConfig),
+    [communityConfig],
+  );
 
   const requestIdRef = useRef(0);
   const shouldSkipInitialFeedRequestRef = useRef(hasInitialFeedData);
@@ -883,6 +917,57 @@ export default function CommunityPageView({ initialData }: CommunityPageViewProp
     void loadMyFollowedTopics();
   }, [loadCommunityFeeds, loadMyFollowedTopics, loadTopics, selectedTopicId]);
 
+  useEffect(() => {
+    if (!isAuthenticated || !token || !user?._id) {
+      setPublishJobs([]);
+      return;
+    }
+    const userId = String(user._id);
+    startPublishQueueTicker(() => ({ userId, token }));
+    void listPublishJobs(userId).then((jobs) =>
+      setPublishJobs(jobs.filter((job) => job.status !== 'done')),
+    );
+    return subscribePublishQueue((event) => {
+      if (event.type === 'job_updated') {
+        setPublishJobs((prev) => upsertPublishJob(prev, event.job));
+        return;
+      }
+      if (event.type === 'job_failed') {
+        setPublishJobs((prev) => upsertPublishJob(prev, event.job));
+        return;
+      }
+      if (event.type === 'job_done') {
+        setPublishJobs((prev) => prev.filter((job) => job.id !== event.job.id));
+        const published = event.job.result?.reviewStatus === 'published';
+        toast({
+          title: published ? '发布成功' : '已提交审核',
+          description: published ? '帖子已公开。' : '审核通过后会向所有人展示。',
+        });
+        if (published) {
+          void loadCommunityFeeds(false, selectedTopicId || undefined, {
+            latestPage: 1,
+            hotPage: 1,
+          });
+        }
+        return;
+      }
+      if (event.type === 'auth_required') {
+        toast({
+          title: '登录已过期',
+          description: '请重新登录后继续发布。',
+          variant: 'destructive',
+        });
+      }
+    });
+  }, [
+    isAuthenticated,
+    token,
+    user?._id,
+    toast,
+    loadCommunityFeeds,
+    selectedTopicId,
+  ]);
+
   const handleSelectTopic = useCallback(
     (topic: CommunityTopicItem | null) => {
       if (!topic) {
@@ -1000,12 +1085,49 @@ export default function CommunityPageView({ initialData }: CommunityPageViewProp
         </div>
 
         <div className="min-w-0">
-          <CreatePostForm
-            onPosted={handlePosted}
-            selectedTopic={selectedTopic}
-            shouldAutoFocus={composeFocusPending}
-            onAutoFocusHandled={() => setComposeFocusPending(false)}
-          />
+          {communityRuntime.post_enabled ? (
+            <CreatePostForm
+              communityConfig={communityRuntime}
+              onPosted={handlePosted}
+              selectedTopic={selectedTopic}
+              shouldAutoFocus={composeFocusPending}
+              onAutoFocusHandled={() => setComposeFocusPending(false)}
+            />
+          ) : (
+            <div className="rounded-lg border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              社区发帖暂时关闭，恢复后会在这里显示发布入口。
+            </div>
+          )}
+
+          {publishJobs.length > 0 ? (
+            <div className="mt-3 space-y-3">
+              {publishJobs.map((job) => (
+                <OptimisticPostCard
+                  key={job.id}
+                  avatar={user?.avatar}
+                  job={job}
+                  userName={user?.name || user?.username}
+                  onRetry={(target) => {
+                    if (user?._id && token) {
+                      void processPublishQueue(String(user._id), token);
+                    }
+                  }}
+                  onEdit={(target) => {
+                    setPublishJobs((prev) =>
+                      prev.filter((item) => item.id !== target.id),
+                    );
+                    requestEditPublishJob(target);
+                  }}
+                  onDelete={(target) => {
+                    setPublishJobs((prev) =>
+                      prev.filter((item) => item.id !== target.id),
+                    );
+                    void deletePublishJob(target.id);
+                  }}
+                />
+              ))}
+            </div>
+          ) : null}
 
           {selectedTopic && (
             <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
@@ -1172,6 +1294,7 @@ export default function CommunityPageView({ initialData }: CommunityPageViewProp
         <div className="hidden xl:block">
           <CommunityInfoPanel
             posts={selectedTopicId ? latestPosts : hotPosts}
+            rules={communityRuntime.rules}
             topics={hotTopics}
             searchValue={feedKeyword}
           />

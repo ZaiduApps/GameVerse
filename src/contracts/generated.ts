@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 63b7d5de09d41e86b62c94fccc2279adbb44fe6d4a56830041bf68dee960eb76
+ * @contract-sha256 9893646e78f2beae0cd080bd0b08b7b205c7314f9351cf01807f7b054f2bcab9
  */
 
 export interface paths {
@@ -185,6 +185,23 @@ export interface paths {
         put?: never;
         /** 用刷新令牌换取新令牌（一次性） */
         post: operations["AuthController_refreshByToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/service-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 服务账号用 API Key 换取短时令牌 */
+        post: operations["AuthController_serviceToken"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7609,6 +7626,10 @@ export interface components {
             /** @description 登录时下发的 refresh_token */
             refresh_token: string;
         };
+        ServiceTokenDto: {
+            /** @description 动作编号（可空），落到操作日志的 action_id */
+            action_id?: string;
+        };
         CreateUserDto: {
             /** @description 用户名 */
             username: string;
@@ -8747,6 +8768,19 @@ export interface components {
             static_pages: {
                 [key: string]: unknown;
             };
+            /**
+             * @example {
+             *       "post_enabled": false,
+             *       "auto_publish": false,
+             *       "max_images": 9,
+             *       "max_image_bytes": 10485760,
+             *       "max_content_chars": 50000,
+             *       "rules": []
+             *     }
+             */
+            community: {
+                [key: string]: unknown;
+            };
             /** @example true */
             is_active: boolean;
             /** @example false */
@@ -9599,6 +9633,51 @@ export interface operations {
             };
             /** @description 请求过于频繁 */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_serviceToken: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-api-key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceTokenDto"];
+            };
+        };
+        responses: {
+            /** @description 换令牌成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description API Key 无效、被吊销或已过期 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Key 属性或账号角色不符合服务账号要求 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 服务账号功能未启用 */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19245,16 +19324,6 @@ export interface operations {
                 status?: 0 | 1 | 2 | -1;
                 /** @description 关联目标资源 ID */
                 target_id?: string;
-                /** @description 工单优先级筛选 */
-                priority?: "low" | "normal" | "high" | "urgent";
-                /** @description 指派人筛选（管理员用户 ID） */
-                assignee_id?: string;
-                /** @description 只看超 SLA 的未解决反馈（阈值见 FEEDBACK_SLA_HOURS） */
-                sla_overdue?: boolean;
-                /** @description 用户 ID */
-                user_id?: string;
-                /** @description 用户关键词（匹配用户ID/昵称/联系方式） */
-                user_keyword?: string;
                 /** @description 搜索关键词（标题、描述） */
                 search?: string;
                 /** @description 页码 */

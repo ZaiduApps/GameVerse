@@ -432,3 +432,76 @@ html {
     font-size: 16px;
   }
 }
+
+
+/* ===== 社区富文本编辑器（MDXEditor）：对齐现有 shadcn/Tailwind token ===== */
+.community-editor {
+  --basePageBg: hsl(var(--background));
+  --baseBg: hsl(var(--background));
+  --baseBgSubtle: hsl(var(--muted));
+  --baseBgHover: hsl(var(--accent));
+  --baseBgActive: hsl(var(--accent));
+  --baseLine: hsl(var(--border));
+  --baseBorder: hsl(var(--border));
+  --baseBorderHover: hsl(var(--primary) / 0.45);
+  --baseText: hsl(var(--foreground));
+  --baseTextContrast: hsl(var(--foreground));
+  --baseSolid: hsl(var(--muted-foreground));
+  --baseSolidHover: hsl(var(--foreground));
+  --accentSolid: hsl(var(--primary));
+  --accentSolidHover: hsl(var(--primary));
+  --accentText: hsl(var(--primary));
+  --accentTextContrast: hsl(var(--primary-foreground));
+  --accentBg: hsl(var(--primary) / 0.08);
+  --accentBgHover: hsl(var(--primary) / 0.14);
+  --accentBgActive: hsl(var(--primary) / 0.18);
+  --accentBgSubtle: hsl(var(--primary) / 0.05);
+  --accentBorder: hsl(var(--primary) / 0.35);
+  --accentBorderHover: hsl(var(--primary) / 0.55);
+  --accentLine: hsl(var(--primary) / 0.25);
+}
+
+.community-editor .mdxeditor {
+  background: transparent;
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+}
+
+.community-editor .mdxeditor-toolbar {
+  flex-wrap: wrap;
+  gap: 2px;
+  border: 1px solid hsl(var(--border));
+  border-bottom: 0;
+  border-radius: 0.5rem 0.5rem 0 0;
+  background: hsl(var(--muted) / 0.35);
+  padding: 4px 6px;
+}
+
+.community-editor .mdxeditor-root-contenteditable {
+  min-height: 150px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0 0 0.5rem 0.5rem;
+  padding: 10px 12px;
+  background: hsl(var(--background));
+}
+
+.community-editor .mdxeditor-root-contenteditable:focus-within {
+  border-color: hsl(var(--primary) / 0.5);
+}
+
+.community-editor .mdxeditor-root-contenteditable p {
+  margin: 0.35em 0;
+  line-height: 1.7;
+}
+
+.community-editor .mdxeditor-root-contenteditable img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+}
+
+@media (max-width: 639.98px) {
+  .community-editor .mdxeditor-toolbar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+}

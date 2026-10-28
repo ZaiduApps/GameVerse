@@ -12,11 +12,25 @@ import type { CommunityPost } from '@/types';
 
 interface CommunityInfoPanelProps {
   posts?: CommunityPost[];
+  rules?: string[];
   searchValue?: string;
   topics?: CommunityTopicItem[];
 }
 
-export default function CommunityInfoPanel({ posts, searchValue = '', topics = [] }: CommunityInfoPanelProps) {
+const DEFAULT_COMMUNITY_RULES = [
+  '1. 文明发言，尊重不同游戏体验。',
+  '2. 反馈问题时补充机型、版本和复现步骤。',
+  '3. 分享外链时说明来源和用途。',
+];
+
+export default function CommunityInfoPanel({
+  posts,
+  rules,
+  searchValue = '',
+  topics = [],
+}: CommunityInfoPanelProps) {
+  const displayRules =
+    Array.isArray(rules) && rules.length > 0 ? rules : DEFAULT_COMMUNITY_RULES;
   const [keyword, setKeyword] = useState(searchValue);
   const source = posts || [];
   const hotPosts: CommunityPost[] = [...source]
@@ -127,9 +141,11 @@ export default function CommunityInfoPanel({ posts, searchValue = '', topics = [
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 px-4 pb-4 text-xs text-muted-foreground">
-        <p>1. 文明发言，尊重不同游戏体验。</p>
-        <p>2. 反馈问题时补充机型、版本和复现步骤。</p>
-        <p>3. 分享外链时说明来源和用途。</p>
+        {displayRules.map((rule, index) => (
+          <p key={`${index}-${rule}`} className="whitespace-pre-wrap break-words">
+            {rule}
+          </p>
+        ))}
       </CardContent>
     </Card>
   );

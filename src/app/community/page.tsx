@@ -354,7 +354,10 @@ export default async function CommunityPage({
         />
       ) : null}
       <Suspense fallback={<CommunityPageSkeleton />}>
-        <CommunityPageView initialData={initialData} />
+        <CommunityPageView
+          communityConfig={config?.community}
+          initialData={initialData}
+        />
       </Suspense>
       <div className="mx-auto w-full max-w-[1440px] px-2 pb-8 sm:px-4">
         <CommunityPagination currentPage={feedPage} totalPages={totalPages} keyword={feedKeyword} />

@@ -518,6 +518,14 @@ export interface SiteConfig {
     privacy_policy?: StaticPageConfig;
     terms?: StaticPageConfig;
   };
+  community?: {
+    post_enabled?: boolean;
+    auto_publish?: boolean;
+    max_images?: number;
+    max_image_bytes?: number;
+    max_content_chars?: number;
+    rules?: string[];
+  };
   is_active?: boolean;
   is_maintenance?: boolean;
 }
