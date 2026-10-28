@@ -11,6 +11,14 @@
  *   - urlCount 必须等于文件里 <loc> 的条数；不一致即视为产物损坏，运行时回落实时生成。
  */
 
+import {
+  SEARCH_INDEXABLE_MAX_SITEMAP_ENTRIES,
+  SEARCH_INDEXABLE_QUERIES,
+  SEARCH_PAGE_TIER,
+  buildSearchQueryPath,
+  resolveSearchPageTier,
+} from './search-indexable.mjs';
+
 export const SITEMAP_PAGE_SIZE = 500;
 export const SITEMAP_MAX_PAGES = 200;
 export const NEWS_SITEMAP_MAX_PAGES = 80;
@@ -356,6 +364,33 @@ export function createSitemapBuilder(options = {}) {
   }
 
   /**
+   * `/search?q=` 只放「白名单 ∩ 这一刻真的可收录」的词：逐个打一次搜索接口拿真实结果量，
+   * 结果变薄（games<3 或 total<5）就跳过，绝不把 noindex 页塞进 sitemap。
+   * 这一节失败只跳过，不算进 complete —— 搜索页是加成，不能因为它把整份快照卡住。
+   */
+  async function fetchSearchEntries() {
+    const queries = SEARCH_INDEXABLE_QUERIES.slice(0, SEARCH_INDEXABLE_MAX_SITEMAP_ENTRIES);
+    const payloads = await Promise.all(
+      queries.map((query) => fetchJson(`/search/global?q=${encodeURIComponent(query)}&limitPerType=1`)),
+    );
+    const entries = [];
+    queries.forEach((query, index) => {
+      const data = payloads[index]?.data;
+      if (!data) return;
+      if (resolveSearchPageTier(query, data?.games?.total, data?.total) !== SEARCH_PAGE_TIER.INDEXABLE) return;
+      entries.push({
+        url: absolute(buildSearchQueryPath(query)),
+        changeFrequency: 'weekly',
+        priority: 0.4,
+      });
+    });
+    if (entries.length < queries.length) {
+      logger.log(`[sitemap] /search?q= 收录 ${entries.length}/${queries.length}：其余结果不够厚或接口失败`);
+    }
+    return entries;
+  }
+
+  /**
    * 全量构建。任何单节接口失败都不会抛异常（与历史运行时行为一致）；
    * games 一节为空时视为 API 不可用，调用方据此决定是否落盘/降级。
    */
@@ -375,11 +410,12 @@ export function createSitemapBuilder(options = {}) {
         })
       : games.entries;
 
-    const [posts, albums, topics, users] = await Promise.all([
+    const [posts, albums, topics, users, search] = await Promise.all([
       fetchCommunityPostsFromFeed(),
       fetchHomeAlbumEntries(),
       fetchTopics(),
       fetchUsers(),
+      fetchSearchEntries(),
     ]);
 
     const entries = [
@@ -389,6 +425,7 @@ export function createSitemapBuilder(options = {}) {
       ...topics.entries,
       ...users.entries,
       ...posts.entries,
+      ...search,
     ];
 
     return {
@@ -406,6 +443,7 @@ export function createSitemapBuilder(options = {}) {
         albums: albums.entries.length,
         topics: topics.entries.length,
         users: users.entries.length,
+        search: search.length,
       },
     };
   }

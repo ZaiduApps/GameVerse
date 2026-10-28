@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
+import { cache } from 'react';
 import { FileText, Gamepad2, Hash, MessageSquare, Search as SearchIcon } from 'lucide-react';
 
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
 import { searchGlobal, type GlobalSearchResult, type GlobalSearchSection } from '@/lib/search-api';
+import { SEARCH_PAGE_TIER, buildSearchQueryPath, findWhitelistedSearchQuery, resolveSearchPageTier } from '@/lib/search-indexable.mjs';
 import { absoluteUrl } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import type { SearchResult } from '@/types';
@@ -33,10 +35,6 @@ function normalizeKeyword(input: string | undefined): string {
     .slice(0, SEARCH_MAX_LENGTH);
 }
 
-function buildSearchHref(keyword: string): string {
-  return keyword ? `/search?q=${encodeURIComponent(keyword)}` : '/search';
-}
-
 function getResultHref(item: SearchResult): string {
   if (item.href) return item.href;
   if (item.type === 'game') {
@@ -49,6 +47,39 @@ function getResultHref(item: SearchResult): string {
 
 function getSection(result: GlobalSearchResult | null, key: (typeof RESULT_GROUPS)[number]['key']): GlobalSearchSection {
   return result?.[key] ?? { list: [], total: 0 };
+}
+
+/**
+ * 同一个请求里 generateMetadata 与页面本体都要结果量（决定收录分级），
+ * 用 React cache 去重，别让一次搜索渲染打两次后端。
+ */
+const loadSearchResult = cache(async (keyword: string): Promise<GlobalSearchResult | null> => {
+  try {
+    return await searchGlobal({ q: keyword, limitPerType: SEARCH_LIMIT_PER_TYPE });
+  } catch {
+    // 搜索是自助入口，上游抖动时退化成本页空态 + 明确提示，不把整页打成 500。
+    return null;
+  }
+});
+
+/**
+ * 收录分级（规则见 src/lib/search-indexable.mjs）：
+ *  - 白名单词且结果够厚 → index,follow + canonical 自指；
+ *  - 单实体 → noindex,follow + canonical 指向详情页，把信号让给详情页；
+ *  - 其余 → noindex,follow + canonical 自指。
+ */
+function resolveSearchPageMetadata(keyword: string, result: GlobalSearchResult | null) {
+  const tier = resolveSearchPageTier(keyword, result?.games.total ?? 0, result?.total ?? 0);
+  const singleEntity = tier === SEARCH_PAGE_TIER.SINGLE_ENTITY ? result?.games.list[0] : undefined;
+  // 可收录页统一指向白名单里的规范写法，大小写/空白变体不各自成一个 URL。
+  const whitelisted = tier === SEARCH_PAGE_TIER.INDEXABLE ? findWhitelistedSearchQuery(keyword) : null;
+  return {
+    tier,
+    indexable: tier === SEARCH_PAGE_TIER.INDEXABLE,
+    canonicalPath: singleEntity
+      ? getResultHref(singleEntity)
+      : buildSearchQueryPath(whitelisted || keyword),
+  };
 }
 
 export async function generateMetadata({
@@ -64,17 +95,19 @@ export async function generateMetadata({
   const description = keyword
     ? `在 ${siteName} 站内搜索「${keyword}」，查看相关的安卓游戏、资讯、帖子与话题。`
     : `在 ${siteName} 站内搜索安卓游戏、资讯、帖子与话题。`;
+  const result = keyword.length >= SEARCH_MIN_LENGTH ? await loadSearchResult(keyword) : null;
+  const { indexable, canonicalPath } = resolveSearchPageMetadata(keyword, result);
 
   return {
     title: { absolute: title },
     description,
-    // 搜索结果页不收录（避免无价值页面进索引），但保留 follow 让爬虫顺着结果继续发现内容。
+    // 白名单 + 结果够厚才放 index；其余一律 noindex，但保留 follow 让爬虫顺着结果继续发现内容。
     robots: {
-      index: false,
+      index: indexable,
       follow: true,
     },
     alternates: {
-      canonical: absoluteUrl(buildSearchHref(keyword)),
+      canonical: absoluteUrl(canonicalPath),
     },
   };
 }
@@ -88,16 +121,8 @@ export default async function SearchPage({
   const keyword = normalizeKeyword(params?.q);
   const shouldQuery = keyword.length >= SEARCH_MIN_LENGTH;
 
-  let result: GlobalSearchResult | null = null;
-  let failed = false;
-  if (shouldQuery) {
-    try {
-      result = await searchGlobal({ q: keyword, limitPerType: SEARCH_LIMIT_PER_TYPE });
-    } catch {
-      // 搜索是自助入口，上游抖动时退化成本页空态 + 明确提示，不把整页打成 500。
-      failed = true;
-    }
-  }
+  const result = shouldQuery ? await loadSearchResult(keyword) : null;
+  const failed = shouldQuery && result === null;
 
   const totalCount = RESULT_GROUPS.reduce((sum, group) => sum + getSection(result, group.key).total, 0);
 
@@ -108,7 +133,9 @@ export default async function SearchPage({
       <section className="rounded-2xl border border-border/70 bg-card p-6 shadow-sm">
         <div className="mb-4 flex items-center">
           <SearchIcon className="mr-3 h-6 w-6 text-tone-blue" />
-          <h1 className="text-xl font-semibold text-foreground">站内搜索</h1>
+          <h1 className="text-xl font-semibold text-foreground">
+            {keyword ? `搜索「${keyword}」` : '站内搜索'}
+          </h1>
         </div>
         <form action="/search" method="get" className="flex flex-col gap-3 sm:flex-row">
           <label htmlFor="search-page-keyword" className="sr-only">

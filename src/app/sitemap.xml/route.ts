@@ -108,7 +108,7 @@ export async function GET(): Promise<Response> {
     try {
       const { entries, stats, apiReachable } = await builder.buildEntries();
       console.warn(
-        `${LOG_TAG} 运行时生成 ${entries.length} 条（games=${stats.games} posts=${stats.posts} topics=${stats.topics} albums=${stats.albums} users=${stats.users}${apiReachable ? '' : '，API 不可达'}`,
+        `${LOG_TAG} 运行时生成 ${entries.length} 条（games=${stats.games} posts=${stats.posts} topics=${stats.topics} albums=${stats.albums} users=${stats.users} search=${stats.search}${apiReachable ? '' : '，API 不可达'}`,
       );
       return xmlResponse(serializeSitemapXml(entries), 'runtime');
     } catch (error) {
