@@ -42,6 +42,10 @@ test('截断显示保留首尾且短值原样返回', () => {
   assert.equal(shortenResourceSignature(''), '');
 });
 
+test('只认 64 位 sha256，32 位 md5 视为无校验值', () => {
+  assert.equal(normalizeResourceSignature('a'.repeat(32)), '');
+});
+
 test('每个有校验值的渠道生成一条记录，无值的渠道不占位', () => {
   const items = buildResourceChecksumItems([
     resource({ _id: 'r1', channelName: '本地 CDN', signature: SHA256, version: '1.2.3' }),
@@ -49,13 +53,10 @@ test('每个有校验值的渠道生成一条记录，无值的渠道不占位',
     resource({ _id: 'r3', channelName: '备用渠道', signature: SHA256.slice(0, 32) }),
   ]);
 
-  assert.equal(items.length, 2);
+  assert.equal(items.length, 1);
   assert.deepEqual(
     items.map((item) => [item.resourceId, item.channelName, item.version, item.signature]),
-    [
-      ['r1', '本地 CDN', '1.2.3', SHA256],
-      ['r3', '备用渠道', '', SHA256.slice(0, 32)],
-    ],
+    [['r1', '本地 CDN', '1.2.3', SHA256]],
   );
   assert.equal(items[0].signatureShort, `${SHA256.slice(0, 12)}…${SHA256.slice(-8)}`);
 });
