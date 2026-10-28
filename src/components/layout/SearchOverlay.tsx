@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import {
   Search,
   X,
+  ArrowRight,
   History,
   Flame,
   Star,
@@ -403,6 +404,21 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                   </div>
                 )}
               </div>
+
+              {keywordLength > 0 ? (
+                <div className="mt-3 flex justify-center px-2 pb-2">
+                  <Link
+                    href={`/search?q=${encodeURIComponent(searchTerm.trim())}`}
+                    data-acbox-action="global_search_view_all"
+                    data-acbox-label="查看全部结果"
+                    onClick={() => setIsOpen(false)}
+                    className="inline-flex items-center text-sm font-medium text-primary hover:underline"
+                  >
+                    查看全部结果
+                    <ArrowRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="animate-in fade-in-50 space-y-6">
