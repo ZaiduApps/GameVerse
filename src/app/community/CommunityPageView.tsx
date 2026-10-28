@@ -48,8 +48,8 @@ import {
 import {
   deletePublishJob,
   listPublishJobs,
-  processPublishQueue,
   requestEditPublishJob,
+  retryPublishJob,
   startPublishQueueTicker,
   subscribePublishQueue,
   type CommunityPublishJob,
@@ -1108,8 +1108,8 @@ export default function CommunityPageView({
                   job={job}
                   userName={user?.name || user?.username}
                   onRetry={(target) => {
-                    if (user?._id && token) {
-                      void processPublishQueue(String(user._id), token);
+                    if (token) {
+                      void retryPublishJob(target, token);
                     }
                   }}
                   onEdit={(target) => {

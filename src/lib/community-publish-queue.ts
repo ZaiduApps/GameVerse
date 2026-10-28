@@ -274,6 +274,24 @@ export async function processPublishQueue(userId: string, token: string) {
   }
 }
 
+/** 手动重试失败任务：先重置状态再入队，否则会被 processPublishQueue 的失败过滤跳过。 */
+export async function retryPublishJob(
+  job: CommunityPublishJob,
+  token: string,
+) {
+  const next: CommunityPublishJob = {
+    ...job,
+    status: 'pending',
+    attempts: 0,
+    lastError: '',
+    updatedAt: Date.now(),
+  };
+  delete next.nextAttemptAt;
+  await savePublishJob(next);
+  emit({ type: 'job_updated', job: next });
+  await processPublishQueue(job.userId, token);
+}
+
 /**
  * 页面内常驻调度：登录后立即跑一次，之后每 15 秒检查一次，
  * 页面重新可见时也立即检查（刷新/切回标签页即可续传）。
