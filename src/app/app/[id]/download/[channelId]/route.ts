@@ -2,6 +2,10 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { apiUrl } from '@/lib/api';
 import {
+  describeDownloadErrorPage,
+  renderDownloadErrorPage,
+} from '@/lib/download-error-page';
+import {
   decideDownloadRedirect,
   type DownloadIssueResult,
 } from '@/lib/game-download-redirect';
@@ -23,6 +27,12 @@ export const runtime = 'nodejs';
 const DOWNLOAD_API_TIMEOUT_MS = 5000;
 const VISITOR_UA_MAX_LENGTH = 256;
 const NO_STORE = { 'cache-control': 'no-store' } as const;
+/**
+ * 下载中转端点不进索引（待决策 #74）：它 302 到网盘/CDN，目标文件死了就是
+ * 一条死链，被收录只会给 Bing 的 Crawl Errors 添数。`follow` 保留，
+ * 让已经抓到的页面还能顺着回到游戏页。
+ */
+const NO_INDEX = { 'x-robots-tag': 'noindex, follow' } as const;
 
 export async function GET(
   request: NextRequest,
@@ -39,15 +49,40 @@ export async function GET(
     requestIssuedUrl: (body) => requestIssuedDownloadUrl(body, request, requestId),
   });
 
-  if (decision.kind === 'bad_request') {
-    // 纯文本、不抛栈：参数错误的正确回法是 400，而不是把异常页面给用户。
-    return new NextResponse(decision.message, { status: 400, headers: NO_STORE });
+  if (decision.kind === 'error_page') {
+    // 显式错误页，不是裸 400/404 纯文本：说明原因 + 给出口 + noindex。
+    const copy = describeDownloadErrorPage(decision.failure);
+    console.error('[download-redirect] explicit error page', {
+      request_id: requestId,
+      status: copy.status,
+      failure: decision.failure,
+      app_id: String(params?.id || '').slice(0, 160),
+      channel_id: String(params?.channelId || '').slice(0, 64),
+    });
+    return new NextResponse(
+      renderDownloadErrorPage({
+        status: copy.status,
+        title: copy.title,
+        message: copy.message,
+        // 游戏不存在时不给「返回游戏页」：那里只会二次 404。
+        appId: decision.failure === 'app_missing' ? undefined : params?.id,
+        requestId,
+      }),
+      {
+        status: copy.status,
+        headers: {
+          ...NO_STORE,
+          ...NO_INDEX,
+          'content-type': 'text/html; charset=utf-8',
+        },
+      },
+    );
   }
 
   // 302 绝不能被 CDN / 浏览器缓存，否则计数与换渠道都失真。
   return new NextResponse(null, {
     status: 302,
-    headers: { ...NO_STORE, location: decision.location },
+    headers: { ...NO_STORE, ...NO_INDEX, location: decision.location },
   });
 }
 

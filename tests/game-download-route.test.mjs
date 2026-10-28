@@ -10,12 +10,18 @@ import {
 } from '../src/lib/game-download-channel.ts';
 import {
   buildDownloadFailureLocation,
+  classifyDownloadIssueFailure,
   decideDownloadRedirect,
   isDownloadChannelId,
   normalizeIssuedDownloadUrl,
   resolveDownloadRedirectId,
   resolveIssuedDownloadUrl,
 } from '../src/lib/game-download-redirect.ts';
+import {
+  describeDownloadErrorPage,
+  renderDownloadErrorPage,
+  resolveDownloadErrorAppPath,
+} from '../src/lib/download-error-page.ts';
 
 const readSource = (relativePath) => readFile(new URL(relativePath, import.meta.url), 'utf8');
 
@@ -131,14 +137,14 @@ test('302 路由：参数校验把非法 id / channelId 判成 400', async () =>
     channelId: CHANNEL_OFFICIAL,
     requestIssuedUrl: neverCalled,
   });
-  assert.deepEqual(badId, { kind: 'bad_request', message: 'invalid app id' });
+  assert.deepEqual(badId, { kind: 'error_page', status: 400, failure: 'invalid' });
 
   const badChannel = await decideDownloadRedirect({
     id: PKG,
     channelId: 'channel-1',
     requestIssuedUrl: neverCalled,
   });
-  assert.deepEqual(badChannel, { kind: 'bad_request', message: 'invalid channel id' });
+  assert.deepEqual(badChannel, { kind: 'error_page', status: 400, failure: 'invalid' });
 });
 
 test('302 路由：24 位 id 当 app_id 传，包名当 pkg 传', async () => {
@@ -215,6 +221,62 @@ test('302 路由：上游失败与资源失效分别降级回详情页并带上�
     requestIssuedUrl: async () => ({ ok: true, payload: { url: '   ' } }),
   });
   assert.deepEqual(emptyUrl, { kind: 'redirect', location: resourceFailure });
+});
+
+test('302 路由：失败按 interface body 的 code/message 分类（待决策 #74）', async () => {
+  // interface 的下载接口失败也回 2xx，原因只在 body 里
+  assert.equal(classifyDownloadIssueFailure({ ok: true, payload: { code: 404, message: '应用不存在' } }), 'app_missing');
+  assert.equal(classifyDownloadIssueFailure({ ok: true, payload: { code: 404, message: '渠道不存在' } }), 'channel');
+  assert.equal(classifyDownloadIssueFailure({ ok: true, payload: { code: 404, message: '资源不存在' } }), 'resource');
+  assert.equal(classifyDownloadIssueFailure({ ok: true, payload: { code: 400, message: '页游不支持 APK 下载资源' } }), 'resource');
+  assert.equal(classifyDownloadIssueFailure({ ok: true, payload: { code: 500, message: 'download url is empty' } }), 'upstream');
+  assert.equal(classifyDownloadIssueFailure({ ok: false }), 'upstream');
+  assert.equal(classifyDownloadIssueFailure(null), 'upstream');
+
+  const missingApp = await decideDownloadRedirect({
+    id: PKG,
+    channelId: CHANNEL_OFFICIAL,
+    requestIssuedUrl: async () => ({ ok: true, payload: { code: 404, message: '应用不存在' } }),
+  });
+  // 游戏不存在时回详情页只会二次 404 → 直接停在原地给 404 错误页
+  assert.deepEqual(missingApp, { kind: 'error_page', status: 404, failure: 'app_missing' });
+
+  const missingResource = await decideDownloadRedirect({
+    id: PKG,
+    channelId: CHANNEL_OFFICIAL,
+    requestIssuedUrl: async () => ({ ok: true, payload: { code: 404, message: '资源不存在' } }),
+  });
+  assert.deepEqual(missingResource, {
+    kind: 'redirect',
+    location: `/app/${PKG}?download_error=1&download_error_reason=resource`,
+  });
+});
+
+test('错误页：noindex、转义、不拿脏 id 拼跳转', () => {
+  const copy = describeDownloadErrorPage('app_missing');
+  assert.equal(copy.status, 404);
+  const html = renderDownloadErrorPage({ ...copy, requestId: 'dl-1' });
+
+  assert.match(html, /<meta name="robots" content="noindex, follow">/);
+  assert.match(html, /请求号：dl-1/);
+  // 404 页不给「返回游戏页」按钮：那里只会二次 404
+  assert.doesNotMatch(html, /返回游戏页/);
+
+  const invalid = renderDownloadErrorPage({
+    ...describeDownloadErrorPage('invalid'),
+    appId: '<script>alert(1)</script>',
+  });
+  assert.match(invalid, /回到首页/);
+  assert.doesNotMatch(invalid, /<script>alert\(1\)<\/script>/);
+  assert.doesNotMatch(invalid, /返回游戏页/);
+
+  assert.equal(resolveDownloadErrorAppPath(PKG), `/app/${PKG}`);
+  assert.equal(resolveDownloadErrorAppPath('a/b'), null);
+  assert.equal(resolveDownloadErrorAppPath('https://evil.example.com'), null);
+  assert.equal(resolveDownloadErrorAppPath('  '), null);
+
+  const withApp = renderDownloadErrorPage({ ...describeDownloadErrorPage('invalid'), appId: PKG });
+  assert.match(withApp, new RegExp(`href="/app/${PKG}"`));
 });
 
 test('302 路由：Location 只接受 http/https，不接受开放重定向', () => {
