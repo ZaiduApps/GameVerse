@@ -64,6 +64,12 @@ function getResultTypeLabel(type: SearchResult['type']) {
   return '话题';
 }
 
+/** 接口返回的是原始浮点（如 4.3212676），列表里统一显示 1 位小数。 */
+function formatRating(rating: number) {
+  const value = Number(rating);
+  return Number.isFinite(value) ? value.toFixed(1) : '';
+}
+
 function renderResultIcon(type: SearchResult['type']) {
   if (type === 'game') return <Gamepad2 className="h-4 w-4 text-primary" />;
   if (type === 'article') return <FileText className="h-4 w-4 text-orange-500" />;
@@ -333,59 +339,72 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                   </div>
                 ) : visibleResultCount > 0 ? (
                   <>
-                    {filteredResults.map((item) => (
-                      <Link
-                        href={
-                          item.href ||
-                          (item.type === 'game'
-                            ? `/app/${item.pkg || item.id}`
-                            : item.type === 'topic'
-                              ? `/community/topic/${item.id}`
-                              : `/community/post/${item.id}`)
-                        }
-                        key={`${item.type}-${item.id}`}
-                        data-acbox-action="global_search_result_click"
-                        data-acbox-label={`${getResultTypeLabel(item.type)}：${item.title}`}
-                        onClick={() => {
-                          setIsOpen(false);
-                          updateSearchHistory(searchTerm);
-                        }}
-                        className="block"
-                      >
-                        <div className="flex items-center rounded-lg p-3 hover:bg-muted">
-                          <Image
-                            src={item.imageUrl || '/favicon.ico'}
-                            alt={item.title}
-                            width={48}
-                            height={48}
-                            className="mr-4 h-12 w-12 rounded-md object-cover"
-                          />
-                          <div className="min-w-0 flex-grow">
-                            <div className="flex items-center gap-2">
-                              {renderResultIcon(item.type)}
-                              <p className="truncate font-semibold">{item.title}</p>
+                    {filteredResults.map((item) => {
+                      const typeLabel = getResultTypeLabel(item.type);
+                      // 分类只在能和类型标签区分开、且摘要行没占用它时才单独显示，
+                      // 否则「帖子 / 游戏」这类行会把同一个词打印两遍。
+                      const metaCategory =
+                        item.subtitle && item.category && item.category !== typeLabel ? item.category : '';
+                      return (
+                        <Link
+                          href={
+                            item.href ||
+                            (item.type === 'game'
+                              ? `/app/${item.pkg || item.id}`
+                              : item.type === 'topic'
+                                ? `/community/topic/${item.id}`
+                                : `/community/post/${item.id}`)
+                          }
+                          key={`${item.type}-${item.id}`}
+                          data-acbox-action="global_search_result_click"
+                          data-acbox-label={`${typeLabel}：${item.title}`}
+                          onClick={() => {
+                            setIsOpen(false);
+                            updateSearchHistory(searchTerm);
+                          }}
+                          className="block"
+                        >
+                          <div className="flex items-center gap-3 rounded-lg p-3 hover:bg-muted">
+                            <Image
+                              src={item.imageUrl || '/favicon.ico'}
+                              alt={item.title}
+                              width={48}
+                              height={48}
+                              className="h-12 w-12 shrink-0 rounded-md object-cover"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="shrink-0">{renderResultIcon(item.type)}</span>
+                                <p className="truncate font-semibold">{item.title}</p>
+                              </div>
+                              <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
+                                {item.subtitle || item.category}
+                              </p>
+                              {/* 版本/大小等补充信息放在摘要下面单独一行：移动端不会把标题挤成省略号。
+                                  /search/global 目前不返回这些字段，故暂不渲染对应项。 */}
+                              <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
+                                {metaCategory ? <span>{metaCategory}</span> : null}
+                                {item.type === 'game' && item.region ? (
+                                  <Badge variant="outline" className="px-1.5 py-0 text-[11px] font-normal">
+                                    {item.region}
+                                  </Badge>
+                                ) : null}
+                                {item.type === 'game' && item.rating ? (
+                                  <span className="inline-flex items-center gap-0.5">
+                                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" aria-hidden="true" />
+                                    <span className="sr-only">评分 </span>
+                                    <span className="tabular-nums">{formatRating(item.rating)}</span>
+                                  </span>
+                                ) : null}
+                                <Badge variant="outline" className="px-1.5 py-0 text-[11px] font-normal">
+                                  {typeLabel}
+                                </Badge>
+                              </div>
                             </div>
-                            <p className="mt-0.5 truncate text-sm text-muted-foreground">
-                              {item.subtitle || item.category}
-                            </p>
                           </div>
-                          {item.type === 'game' && item.region ? (
-                            <Badge variant="outline" className="mx-2 min-w-[3rem] justify-center whitespace-nowrap text-xs text-center">
-                              {item.region}
-                            </Badge>
-                          ) : null}
-                          {item.type === 'game' && item.rating ? (
-                            <div className="flex items-center text-sm">
-                              <Star className="mr-1 h-4 w-4 fill-yellow-400 text-yellow-400" />
-                              {item.rating}
-                            </div>
-                          ) : null}
-                          <Badge variant="outline" className="ml-2 text-xs">
-                            {getResultTypeLabel(item.type)}
-                          </Badge>
-                        </div>
-                      </Link>
-                    ))}
+                        </Link>
+                      );
+                    })}
                   </>
                 ) : (
                   <div className="py-8 text-center">

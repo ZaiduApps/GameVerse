@@ -132,6 +132,8 @@ test('createSitemapBuilder: 构建期与运行时产出同形条目（分页 + �
     albums: 1,
     topics: 1,
     users: 1,
+    // /search?q= 白名单这一节：本用例的 fetch 对 /search/global 一律 404，全部跳过，故为 0。
+    search: 0,
   });
   const urls = entries.map((entry) => entry.url);
   assert.ok(urls.includes('https://apks.cc/app/com.a'));

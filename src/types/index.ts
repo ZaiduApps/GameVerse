@@ -128,6 +128,10 @@ export interface SearchResult {
     region?: string;
     href?: string;
     subtitle?: string;
+    /** 游戏版本号（如 4.6.0）。/search/global 暂未返回，接入后由结果行条件渲染。 */
+    version?: string;
+    /** 安装包大小文案（如 24.5 MB）。/search/global 暂未返回，接入后由结果行条件渲染。 */
+    size?: string;
 }
 
 // API Types

@@ -43,7 +43,7 @@ export default function GameDetailMobileTabs({ reviewCountLabel }: { reviewCount
   }, []);
 
   return (
-    <div className="sticky top-14 z-30 border-b border-[#abadae]/20 bg-[#f5f6f7]/95 px-4 pt-2 pb-1 backdrop-blur-md dark:border-border/45 dark:bg-[#080d14]/95 lg:hidden">
+    <div className="sticky top-14 z-30 border-b border-border/40 bg-muted/95 px-4 pt-2 pb-1 backdrop-blur-md dark:bg-background/95 lg:hidden">
       <nav className="flex items-center gap-6 overflow-x-auto text-sm [&::-webkit-scrollbar]:hidden [scrollbar-width:none] [-ms-overflow-style:none]">
         {MOBILE_TABS.map((tab) => {
           const isActive = tab.id === activeId;
@@ -55,12 +55,12 @@ export default function GameDetailMobileTabs({ reviewCountLabel }: { reviewCount
               aria-current={isActive ? 'true' : undefined}
               className={cn(
                 'relative inline-flex min-h-11 min-w-[44px] shrink-0 items-center justify-center py-2 font-bold transition-colors',
-                isActive ? 'text-primary' : 'text-[#595c5d] dark:text-muted-foreground',
+                isActive ? 'text-primary' : 'text-muted-foreground',
               )}
             >
               {tab.label}
               {tab.id === 'game-detail-section-reviews' && reviewCountLabel ? (
-                <span className="ml-1 text-xs font-normal text-[#757778] dark:text-muted-foreground">{reviewCountLabel}</span>
+                <span className="ml-1 text-xs font-normal text-muted-foreground">{reviewCountLabel}</span>
               ) : null}
               {isActive ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-primary" aria-hidden="true" /> : null}
             </button>

@@ -89,7 +89,7 @@ function DegradedDataNotice({ savedAt }: { savedAt: string }) {
     >
       <div className="mx-auto flex max-w-7xl items-start gap-2 lg:items-center lg:px-16 2xl:px-20">
         <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 text-tone-amber lg:mt-0" aria-hidden="true" />
-        <p className="text-xs font-medium leading-relaxed text-[#7a4a00] lg:text-sm dark:text-tone-amber">
+        <p className="text-xs font-medium leading-relaxed text-tone-amber lg:text-sm">
           数据更新中：详情接口暂时不可用，当前展示 {formatSnapshotTime(savedAt)} 的缓存快照，恢复后会自动刷新。
         </p>
       </div>
@@ -111,9 +111,9 @@ function LatestBullet({ text }: { text: string }) {
 function InstallationGuide({ installSteps, riskNotes }: { installSteps: string[]; riskNotes: string[] }) {
   return (
     <div className="mb-3 grid gap-2.5 lg:mb-4 lg:grid-cols-2 lg:gap-4">
-      <div className="rounded-xl border border-[#abadae]/15 bg-[#eff1f2]/60 p-3 lg:p-4">
-        <h3 className="text-xs font-bold text-[#2c2f30] lg:text-sm dark:text-foreground">安装说明</h3>
-        <ol className="mt-2 space-y-1.5 text-xs leading-relaxed text-[#595c5d] lg:text-sm dark:text-muted-foreground">
+      <div className="rounded-xl border border-border/60 bg-muted/60 p-3 lg:p-4">
+        <h3 className="text-xs font-bold text-foreground lg:text-sm">安装说明</h3>
+        <ol className="mt-2 space-y-1.5 text-xs leading-relaxed text-muted-foreground lg:text-sm">
           {installSteps.map((item, index) => (
             <li key={item} className="flex gap-2">
               <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-white">
@@ -124,9 +124,9 @@ function InstallationGuide({ installSteps, riskNotes }: { installSteps: string[]
           ))}
         </ol>
       </div>
-      <div className="rounded-xl border border-[#abadae]/15 bg-[#eff1f2]/60 p-3 lg:p-4">
-        <h3 className="text-xs font-bold text-[#2c2f30] lg:text-sm dark:text-foreground">下载与使用风险提示</h3>
-        <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-[#595c5d] lg:text-sm dark:text-muted-foreground">
+      <div className="rounded-xl border border-border/60 bg-muted/60 p-3 lg:p-4">
+        <h3 className="text-xs font-bold text-foreground lg:text-sm">下载与使用风险提示</h3>
+        <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-muted-foreground lg:text-sm">
           {riskNotes.map((item) => (
             <li key={item} className="flex gap-2">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-tone-red" aria-hidden="true" />
@@ -178,10 +178,10 @@ function RelatedNewsSection({ items }: { items: RelatedPostView[] }) {
           <Link
             key={item.key}
             href={item.href}
-            className="flex items-start justify-between gap-3 rounded-xl border border-[#abadae]/15 p-3 transition-colors [@media(hover:hover)]:hover:border-primary/40 [@media(hover:hover)]:hover:bg-primary/[0.04] lg:p-4"
+            className="flex items-start justify-between gap-3 rounded-xl border border-border/60 p-3 transition-colors [@media(hover:hover)]:hover:border-primary/40 [@media(hover:hover)]:hover:bg-primary/[0.04] lg:p-4"
           >
-            <span className="line-clamp-2 text-xs font-semibold leading-snug text-[#2c2f30] lg:text-sm dark:text-foreground">{item.title}</span>
-            <span className="shrink-0 text-[10px] text-[#757778] lg:text-xs dark:text-muted-foreground">{item.date}</span>
+            <span className="line-clamp-2 text-xs font-semibold leading-snug text-foreground lg:text-sm">{item.title}</span>
+            <span className="shrink-0 text-[10px] text-muted-foreground lg:text-xs">{item.date}</span>
           </Link>
         ))}
       </div>
@@ -202,13 +202,13 @@ function ResourceLinksCard({ items }: { items: ReturnType<typeof buildResourceLi
                 <Icon className="h-4 w-4 lg:h-[18px] lg:w-[18px]" />
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-xs font-bold text-[#2c2f30] dark:text-foreground">{item.title}</span>
-                <span className="block truncate text-[11px] text-[#757778] dark:text-muted-foreground">{item.description}</span>
+                <span className="block truncate text-xs font-bold text-foreground">{item.title}</span>
+                <span className="block truncate text-[11px] text-muted-foreground">{item.description}</span>
               </span>
             </>
           );
           const rowClass =
-            'flex items-center justify-between gap-3 rounded-xl border border-[#abadae]/15 p-2.5 transition-colors lg:p-3';
+            'flex items-center justify-between gap-3 rounded-xl border border-border/60 p-2.5 transition-colors lg:p-3';
           if (!item.href) {
             return (
               <div key={item.key} className={rowClass}>
@@ -225,7 +225,7 @@ function ResourceLinksCard({ items }: { items: ReturnType<typeof buildResourceLi
               className={cn(rowClass, '[@media(hover:hover)]:hover:border-primary/40 [@media(hover:hover)]:hover:bg-primary/[0.04]')}
             >
               <span className="flex min-w-0 items-center gap-3">{body}</span>
-              <ExternalLink className="h-4 w-4 shrink-0 text-[#abadae]" aria-hidden="true" />
+              <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
             </a>
           );
         })}
@@ -236,14 +236,14 @@ function ResourceLinksCard({ items }: { items: ReturnType<typeof buildResourceLi
 
 function CertificationCard() {
   return (
-    <section className="rounded-2xl border border-tone-green/25 bg-gradient-to-br from-tone-green/[0.07] to-white p-4 shadow-sm lg:p-5 dark:to-card">
+    <section className="rounded-2xl border border-tone-green/25 bg-gradient-to-br from-tone-green/[0.07] to-card p-4 shadow-sm lg:p-5">
       <div className="flex items-start gap-3.5">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-tone-green text-white">
           <ShieldCheck className="h-6 w-6" />
         </span>
         <div className="min-w-0">
-          <p className="flex items-center gap-1 text-sm font-bold text-[#2c2f30] dark:text-foreground">{CERTIFICATION_CARD.title}</p>
-          <p className="mt-1 text-xs leading-relaxed text-[#595c5d] dark:text-muted-foreground">{CERTIFICATION_CARD.description}</p>
+          <p className="flex items-center gap-1 text-sm font-bold text-foreground">{CERTIFICATION_CARD.title}</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{CERTIFICATION_CARD.description}</p>
         </div>
       </div>
       <div className="mt-4 grid grid-cols-3 gap-2 border-t border-tone-green/20 pt-3 text-center text-[11px] font-medium text-tone-green">
@@ -259,10 +259,10 @@ function CertificationCard() {
 
 function BoxDownloadCard() {
   return (
-    <section className="rounded-2xl border border-[#abadae]/20 bg-white p-4 shadow-sm lg:p-6 dark:border-border/45 dark:bg-card/80">
-      <div className="mb-3 flex items-center justify-between gap-3 text-sm font-bold text-[#2c2f30] dark:text-foreground">
+    <section className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm lg:p-6">
+      <div className="mb-3 flex items-center justify-between gap-3 text-sm font-bold text-foreground">
         <span>{BOX_DOWNLOAD_CARD.title}</span>
-        <span className="text-xs font-normal text-[#757778] dark:text-muted-foreground">{BOX_DOWNLOAD_CARD.status}</span>
+        <span className="text-xs font-normal text-muted-foreground">{BOX_DOWNLOAD_CARD.status}</span>
       </div>
       <Link
         href="/download/app"
@@ -271,7 +271,7 @@ function BoxDownloadCard() {
         <Download className="h-5 w-5" aria-hidden="true" />
         立即下载 AC 盒子 App
       </Link>
-      <p className="mt-3 text-xs leading-relaxed text-[#757778] dark:text-muted-foreground">{BOX_DOWNLOAD_CARD.helper}</p>
+      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{BOX_DOWNLOAD_CARD.helper}</p>
     </section>
   );
 }
@@ -282,7 +282,7 @@ function SimilarGamesCard({ items }: { items: ReturnType<typeof buildSimilarGame
     <DetailSection
       title="相似推荐"
       action={
-        <Link href="/app" className="text-xs text-[#757778] transition-colors [@media(hover:hover)]:hover:text-primary dark:text-muted-foreground">
+        <Link href="/app" className="text-xs text-muted-foreground transition-colors [@media(hover:hover)]:hover:text-primary">
           查看更多
         </Link>
       }
@@ -291,14 +291,14 @@ function SimilarGamesCard({ items }: { items: ReturnType<typeof buildSimilarGame
         {items.map((item) => {
           const body = (
             <>
-              <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-[#abadae]/15 bg-[#eff1f2]">
+              <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-muted">
                 {item.icon ? (
                   <Image src={getPreviewImageUrl(item.icon, 112)} alt={item.name + ' 图标'} fill sizes="48px" className="object-cover" />
                 ) : null}
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-xs font-bold text-[#2c2f30] dark:text-foreground">{item.name}</span>
-                <span className="mt-0.5 block truncate text-[11px] text-[#757778] dark:text-muted-foreground">{item.meta}</span>
+                <span className="block truncate text-xs font-bold text-foreground">{item.name}</span>
+                <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{item.meta}</span>
               </span>
             </>
           );
@@ -312,7 +312,7 @@ function SimilarGamesCard({ items }: { items: ReturnType<typeof buildSimilarGame
           return (
             <Link key={item.key} href={item.href} className="group flex items-center justify-between gap-3">
               <span className="flex min-w-0 items-center gap-3">{body}</span>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#eff1f2] text-[#595c5d] transition-colors [@media(hover:hover)]:group-hover:bg-primary [@media(hover:hover)]:group-hover:text-white dark:bg-muted/60 dark:text-muted-foreground">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors [@media(hover:hover)]:group-hover:bg-primary [@media(hover:hover)]:group-hover:text-white">
                 <Download className="h-4 w-4" aria-hidden="true" />
               </span>
             </Link>
@@ -415,7 +415,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   ];
 
   return (
-    <div className="game-detail-stitch relative min-h-screen overflow-x-clip bg-[#f5f6f7] text-[#2c2f30] dark:bg-[#080d14] dark:text-[#f3f6fb]">
+    <div className="game-detail-stitch relative min-h-screen overflow-x-clip bg-muted text-foreground dark:bg-background">
       {snapshotSavedAt ? <DegradedDataNotice savedAt={snapshotSavedAt} /> : null}
 
       {/* 下载失败回跳（?download_error=1）的提示：客户端读参数，不改变详情页的 ISR 行为。 */}
@@ -443,7 +443,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
         <div className="lg:mx-auto lg:max-w-7xl lg:px-16 2xl:px-20">
           <div
             data-stitch="banner"
-            className="relative h-72 w-full overflow-hidden bg-[#e6e8ea] sm:h-80 lg:h-96 lg:rounded-3xl lg:border lg:border-[#abadae]/20 lg:shadow-sm dark:bg-[#121924]"
+            className="relative h-72 w-full overflow-hidden bg-muted sm:h-80 lg:h-96 lg:rounded-3xl lg:border lg:border-border/60 lg:shadow-sm"
           >
             <GameHeroArtwork gameName={resolveGameName(game)} heroImage={heroImage} icon={game.icon} />
             {heroVideo ? (
@@ -458,7 +458,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
 
           {/* 信息卡：移动端上浮压住封面 48px，PC 端退回常规栅格并与封面留出间距 */}
           <div data-stitch="info-card" className="relative -mt-12 px-4 lg:mt-6 lg:px-0">
-            <div className="rounded-2xl border border-[#abadae]/20 bg-white p-4 shadow-sm lg:rounded-3xl lg:p-8 dark:border-border/45 dark:bg-card/80">
+            <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm lg:rounded-3xl lg:p-8">
               {/* 移动端面包屑：放在信息卡内首行；桌面那份已输出 JSON-LD，这里只画可见导航。 */}
               <div className="mb-2 lg:hidden">
                 <Breadcrumbs items={breadcrumbItems} withJsonLd={false} />
@@ -466,7 +466,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
               <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
                 <div className="flex items-center gap-3.5 lg:gap-6">
                   <div className="relative shrink-0">
-                    <div className="relative h-20 w-20 overflow-hidden rounded-2xl border border-[#abadae]/20 bg-[#eff1f2] shadow-sm lg:h-24 lg:w-24">
+                    <div className="relative h-20 w-20 overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-sm lg:h-24 lg:w-24">
                       {game.icon ? (
                         <Image
                           src={getPreviewImageUrl(game.icon, 320)}
@@ -478,7 +478,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                       ) : null}
                     </div>
                     <span
-                      className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-tone-green text-white dark:border-card"
+                      className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-tone-green text-white"
                       title="已通过官方安全校验"
                     >
                       <BadgeCheck className="h-3 w-3" />
@@ -486,20 +486,20 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                   </div>
                   <div className="min-w-0 space-y-2">
                     <HeroBadges badges={trustBadges} />
-                    <h1 className="text-lg font-bold leading-snug tracking-tight text-[#2c2f30] sm:text-xl lg:text-2xl dark:text-foreground">{resolveGameName(game)}</h1>
+                    <h1 className="text-lg font-bold leading-snug tracking-tight text-foreground sm:text-xl lg:text-2xl">{resolveGameName(game)}</h1>
                     {chineseAlias ? (
                       <p className="mt-1 text-sm text-muted-foreground">中文名：{chineseAlias}</p>
                     ) : null}
-                    <div className="flex items-center gap-2 text-xs font-medium text-[#595c5d] dark:text-muted-foreground">
-                      <span className="inline-flex items-center gap-1 text-[#2c2f30] dark:text-foreground">
+                    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                      <span className="inline-flex items-center gap-1 text-foreground">
                         {game.developer || '开发者未提供'}
                         <BadgeCheck className="h-3.5 w-3.5 text-tone-blue" aria-hidden="true" />
                       </span>
-                      <span className="text-[#abadae]">•</span>
-                      <span className="text-[#757778] dark:text-muted-foreground">{purchaseNote}</span>
+                      <span className="text-muted-foreground/60">•</span>
+                      <span className="text-muted-foreground">{purchaseNote}</span>
                     </div>
                     {gameSource ? (
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#595c5d] dark:text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                         <span className="inline-flex items-center rounded-md bg-tone-blue/10 px-2 py-0.5 font-medium text-tone-blue">
                           {gameSource.label}
                         </span>
@@ -521,7 +521,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                       // line-clamp-2 与 lg:block 作用在同一元素上时，变体生成的 display:block 会覆盖 -webkit-box 导致截断失效，
                       // 因此外层只负责响应式显隐，内层单独负责行数截断。
                       <div className="hidden lg:block">
-                        <p className="line-clamp-2 max-w-2xl text-xs leading-relaxed text-[#595c5d] lg:text-sm dark:text-muted-foreground">
+                        <p className="line-clamp-2 max-w-2xl text-xs leading-relaxed text-muted-foreground lg:text-sm">
                           {heroDescription}
                         </p>
                       </div>
@@ -548,26 +548,26 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
               </div>
 
               {/* 指标条：移动端 3 格（隐藏「游戏分类」），PC 端 4 格 */}
-              <div className="mt-4 grid grid-cols-3 gap-2 border-t border-[#abadae]/15 pt-3.5 lg:mt-8 lg:grid-cols-4 lg:gap-4 lg:pt-5">
+              <div className="mt-4 grid grid-cols-3 gap-2 border-t border-border/40 pt-3.5 lg:mt-8 lg:grid-cols-4 lg:gap-4 lg:pt-5">
                 {heroMetrics.map((metric, index) => (
                   <div
                     key={metric.label}
                     className={cn(
                       'flex flex-col items-center justify-center px-1 lg:px-3',
-                      index > 0 && 'border-l border-[#abadae]/15',
+                      index > 0 && 'border-l border-border/40',
                       index === 1 && 'hidden lg:flex',
                     )}
                   >
-                    <span className="hidden text-[10px] font-medium tracking-wider text-[#757778] lg:block dark:text-muted-foreground">{metric.label}</span>
+                    <span className="hidden text-[10px] font-medium tracking-wider text-muted-foreground lg:block">{metric.label}</span>
                     <span
                       className={cn(
-                        'text-sm font-bold text-[#2c2f30] lg:mt-0.5 lg:font-semibold dark:text-foreground',
-                        index === 0 && 'text-tone-amber lg:text-[#2c2f30] lg:dark:text-foreground',
+                        'text-sm font-bold text-foreground lg:mt-0.5 lg:font-semibold',
+                        index === 0 && 'text-tone-amber lg:text-foreground',
                       )}
                     >
                       {metric.value}
                     </span>
-                    <span className="mt-0.5 text-[11px] text-[#757778] lg:text-[10px] dark:text-muted-foreground">{metric.hint}</span>
+                    <span className="mt-0.5 text-[11px] text-muted-foreground lg:text-[10px]">{metric.hint}</span>
                   </div>
                 ))}
               </div>
@@ -593,11 +593,11 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
             <DetailSection id="game-detail-specs" title="版本与技术参数规格">
               <div className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-4">
                 {specTiles.map((tile) => (
-                  <div key={tile.label} className="min-w-0 rounded-xl border border-[#abadae]/15 bg-[#eff1f2]/70 p-2.5 lg:p-3.5">
-                    <div className="text-[11px] text-[#757778] lg:text-xs dark:text-muted-foreground">{tile.label}</div>
+                  <div key={tile.label} className="min-w-0 rounded-xl border border-border/60 bg-muted/70 p-2.5 lg:p-3.5">
+                    <div className="text-[11px] text-muted-foreground lg:text-xs">{tile.label}</div>
                     <div
                       className={cn(
-                        'mt-0.5 flex items-center gap-1.5 text-xs text-[#2c2f30] lg:text-sm dark:text-foreground',
+                        'mt-0.5 flex items-center gap-1.5 text-xs text-foreground lg:text-sm',
                         tile.mono ? 'font-mono text-[11px] font-bold lg:text-xs' : 'font-semibold',
                       )}
                     >
@@ -627,7 +627,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
 
             <DetailSection
               title="最新更新 (What's New)"
-              action={<span className="text-[11px] text-[#757778] lg:text-xs dark:text-muted-foreground">{latestUpdate.versionLabel}</span>}
+              action={<span className="text-[11px] text-muted-foreground lg:text-xs">{latestUpdate.versionLabel}</span>}
             >
               <div className="rounded-xl border border-primary/20 bg-primary/[0.06] p-3 lg:p-4">
                 <div className="flex items-center gap-2 text-xs font-bold text-primary lg:text-sm">
@@ -635,7 +635,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                   <span>{latestUpdate.headline}</span>
                 </div>
                 {latestUpdate.bullets.length > 0 ? (
-                  <ul className="mt-2 list-disc space-y-1.5 pl-5 text-xs leading-relaxed text-[#595c5d] lg:mt-3 lg:text-sm dark:text-muted-foreground">
+                  <ul className="mt-2 list-disc space-y-1.5 pl-5 text-xs leading-relaxed text-muted-foreground lg:mt-3 lg:text-sm">
                     {latestUpdate.bullets.map((bullet, index) => (
                       <li key={index}>
                         <LatestBullet text={bullet} />
@@ -670,7 +670,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
               <div
                 id="game-description-content"
                 className={cn(
-                  'relative text-xs leading-relaxed text-[#595c5d] lg:text-sm dark:text-muted-foreground [&_p]:mb-3 [&_p:last-child]:mb-0',
+                  'relative text-xs leading-relaxed text-muted-foreground lg:text-sm [&_p]:mb-3 [&_p:last-child]:mb-0',
                   hasLongDescription && 'max-h-72 overflow-hidden transition-[max-height] duration-500 peer-checked:max-h-[9999px]',
                 )}
                 dangerouslySetInnerHTML={{ __html: fullDescriptionHtml }}
@@ -678,7 +678,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
               {hasLongDescription ? (
                 <label
                   htmlFor="game-description-toggle"
-                  className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1 border-t border-[#abadae]/15 pt-3 text-xs font-semibold text-primary peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary peer-checked:[&_.description-closed]:hidden peer-checked:[&_.description-open]:inline lg:mt-4 lg:w-fit lg:justify-start lg:rounded-lg lg:border-0 lg:bg-primary/[0.08] lg:px-3 lg:py-1.5 lg:pt-1.5 [@media(hover:hover)]:lg:hover:bg-primary/[0.12]"
+                  className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1 border-t border-border/40 pt-3 text-xs font-semibold text-primary peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary peer-checked:[&_.description-closed]:hidden peer-checked:[&_.description-open]:inline lg:mt-4 lg:w-fit lg:justify-start lg:rounded-lg lg:border-0 lg:bg-primary/[0.08] lg:px-3 lg:py-1.5 lg:pt-1.5 [@media(hover:hover)]:lg:hover:bg-primary/[0.12]"
                 >
                   <span className="description-closed">展开完整介绍</span>
                   <span className="description-open hidden">收起介绍</span>
@@ -687,9 +687,9 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
               ) : null}
 
               {highlights.length > 0 ? (
-                <div className="mt-4 border-t border-[#abadae]/15 pt-3 lg:mt-5 lg:pt-4">
-                  <p className="mb-2 text-xs font-bold text-[#2c2f30] lg:text-sm dark:text-foreground">游戏特色</p>
-                  <ul className="grid gap-1.5 text-xs leading-6 text-[#595c5d] sm:grid-cols-2 lg:text-sm dark:text-muted-foreground">
+                <div className="mt-4 border-t border-border/40 pt-3 lg:mt-5 lg:pt-4">
+                  <p className="mb-2 text-xs font-bold text-foreground lg:text-sm">游戏特色</p>
+                  <ul className="grid gap-1.5 text-xs leading-6 text-muted-foreground sm:grid-cols-2 lg:text-sm">
                     {highlights.map((highlight, index) => (
                       <li key={index} className="list-inside list-disc">
                         {highlight}
@@ -732,7 +732,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
             <BoxDownloadCard />
             <SimilarGamesCard items={similarGames} />
             <div id="game-detail-section-reviews">
-              <Suspense fallback={<div className="min-h-[31rem] animate-pulse rounded-2xl bg-white/70 dark:bg-card/70" />}>
+              <Suspense fallback={<div className="min-h-[31rem] animate-pulse rounded-2xl bg-card/70" />}>
                 <DeferredGameReviewPanel
                   game={{ _id: game._id, pkg: game.pkg, name: resolveGameName(game), star: game.star }}
                   summary={gameData.reviewSummary}

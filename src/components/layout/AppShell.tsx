@@ -34,6 +34,7 @@ export default function AppShell({ children, siteName, logoUrl, siteConfig }: Ap
   const isStandaloneDownloadPage = pathname === '/download/app' || pathname.startsWith('/download/app/');
   const isGameDetailPage = pathname.startsWith('/app/');
   const isCommunityTopicsPage = pathname === '/community/topics';
+  const isHomePage = pathname === '/';
   const shellHiddenHeading = pathname === '/community' ? `${siteName || 'APKScc'} 玩家互动社区` : '';
   const communityBreadcrumbJsonLd = shellHiddenHeading
     ? toJsonLd({
@@ -90,7 +91,11 @@ export default function AppShell({ children, siteName, logoUrl, siteConfig }: Ap
             className={
               isCommunityTopicsPage
                 ? 'min-h-screen flex-grow overflow-x-hidden px-0 py-0'
-                : 'container mx-auto min-h-[calc(100vh-4rem)] flex-grow px-4 py-8'
+                : isHomePage
+                  // 首页首屏就是 banner：移动端（< lg）顶部留白收到 0，交给 .home-page 自己的 space-y-8（32px）；
+                  // lg 及以上与改动前完全一致（32px），其它页面走下面的默认值。
+                  ? 'container mx-auto min-h-[calc(100vh-4rem)] flex-grow px-4 pb-8 pt-0 lg:pt-8'
+                  : 'container mx-auto min-h-[calc(100vh-4rem)] flex-grow px-4 py-8'
             }
           >
             {communityBreadcrumbJsonLd ? (

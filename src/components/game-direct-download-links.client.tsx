@@ -41,7 +41,8 @@ export default function GameDirectDownloadLinks({ links, appId, pkg }: GameDirec
           }
         >
           <Download className="h-3.5 w-3.5" aria-hidden="true" />
-          <span>{link.channelName} 下载</span>
+          {/* 渠道名本身常常已经带「下载」（如「官网下载」），再拼一次会出现「官网下载 下载」。 */}
+          <span>{/下载$/.test(link.channelName.trim()) ? link.channelName.trim() : `${link.channelName} 下载`}</span>
         </a>
       ))}
     </div>
