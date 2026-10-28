@@ -6,7 +6,8 @@ import type { ApiDownloadResource } from '@/types';
  * 后端的字段名是 `signature`（不是 sha256/checksum），GET /game/details 的
  * resources 项会带上它；缺失或不是合法哈希时一律按「无校验值」处理，绝不猜值。
  */
-const HEX_HASH_PATTERN = /^[0-9a-f]{8,128}$/i;
+// 只认 64 位 sha256；32 位是同一字段里的历史 md5（123 盘导入脏数据），算法不同，展示就是错的。
+const HEX_HASH_PATTERN = /^[0-9a-f]{64}$/i;
 
 export interface ResourceChecksumItem {
   resourceId: string;
