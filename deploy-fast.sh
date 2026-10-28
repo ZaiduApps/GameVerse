@@ -73,7 +73,8 @@ if [ "${port_ready}" != "true" ]; then
 fi
 
 echo "[deploy-fast] verify app health"
-if ! curl -sS -m 8 http://127.0.0.1:3002/ >/dev/null; then
+# -f 必带：不带时 500/502/404 也是退出码 0，进程在听就报健康，rollback 永不触发（2026-10-28 审计）。
+if ! curl -fsS -m 8 http://127.0.0.1:3002/ >/dev/null; then
   echo "[deploy-fast] health check failed"
   rollback
   exit 1
