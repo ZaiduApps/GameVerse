@@ -37,7 +37,7 @@ export default function GameResourceChecksums({ items }: GameResourceChecksumsPr
 
   if (items.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-[#abadae]/30 p-3 text-xs leading-6 text-[#757778] lg:p-4 lg:text-sm dark:border-border/45 dark:text-muted-foreground">
+      <div className="rounded-xl border border-dashed border-[#abadae]/30 p-3 text-xs leading-6 text-muted-foreground lg:p-4 lg:text-sm dark:border-border/45">
         暂无校验值
         <span className="mt-1 block text-[11px] lg:text-xs">
           资源提供方尚未给出 SHA-256 校验值，下载完成后可在本地自行计算核对。
@@ -61,7 +61,7 @@ export default function GameResourceChecksums({ items }: GameResourceChecksumsPr
                   <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-tone-green" aria-hidden="true" />
                   {item.channelName}
                   {item.version ? (
-                    <span className="font-normal text-[#757778] dark:text-muted-foreground">v{item.version}</span>
+                    <span className="font-normal text-muted-foreground">v{item.version}</span>
                   ) : null}
                 </p>
                 <p
@@ -98,7 +98,7 @@ export default function GameResourceChecksums({ items }: GameResourceChecksumsPr
           );
         })}
       </ul>
-      <p className="text-[11px] leading-5 text-[#757778] lg:text-xs dark:text-muted-foreground">
+      <p className="text-[11px] leading-5 text-muted-foreground lg:text-xs">
         校验值来自资源提供方。下载完成后可在本地执行 sha256sum（Windows 用 certutil -hashfile）并与上方完整值比对。
       </p>
     </div>

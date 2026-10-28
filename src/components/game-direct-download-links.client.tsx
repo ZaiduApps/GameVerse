@@ -24,7 +24,7 @@ export default function GameDirectDownloadLinks({ links, appId, pkg }: GameDirec
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">
-      <span className="text-xs text-[#757778] dark:text-muted-foreground">直接下载：</span>
+      <span className="text-xs text-muted-foreground">直接下载：</span>
       {links.map((link) => (
         <a
           key={link.channelId}

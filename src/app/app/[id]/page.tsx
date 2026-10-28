@@ -469,7 +469,7 @@ function GameDetailUnavailableView() {
       <p className="text-sm leading-relaxed text-[#595c5d] dark:text-muted-foreground">
         该应用的详情数据正在恢复中，请稍后刷新重试。
       </p>
-      <p className="text-xs text-[#757778] dark:text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         如果长时间无法打开，可以
         <a className="mx-1 underline decoration-dotted underline-offset-2" href="/app">返回游戏库</a>
         换个入口。

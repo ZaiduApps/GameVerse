@@ -106,7 +106,7 @@ function CommunityPostRow({ post, gameName }: { post: CommunityFeedItem; gameNam
   return (
     <article className="group flex items-start gap-3 rounded-xl border border-[#abadae]/15 bg-[#f7f8f9]/70 p-3 transition-colors lg:gap-4 lg:p-4 dark:border-border/40 dark:bg-card/50 [@media(hover:hover)]:hover:bg-[#eff1f2]/80 dark:[@media(hover:hover)]:hover:bg-muted/60">
       <div className="min-w-0 flex-1 lg:space-y-2">
-        <div className="flex items-center gap-1.5 text-[10px] text-[#757778] lg:gap-2.5 lg:text-xs dark:text-muted-foreground">
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground lg:gap-2.5 lg:text-xs">
           {post.tag ? (
             <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary lg:order-last">
               {post.tag}
@@ -141,7 +141,7 @@ function CommunityPostRow({ post, gameName }: { post: CommunityFeedItem; gameNam
           <p className="line-clamp-2 text-xs leading-relaxed text-[#595c5d] dark:text-muted-foreground">{post.excerpt}</p>
         </div>
 
-        <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-[#757778] lg:mt-0 lg:gap-4 lg:pt-1 lg:text-xs dark:text-muted-foreground">
+        <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-muted-foreground lg:mt-0 lg:gap-4 lg:pt-1 lg:text-xs">
           <div className="flex items-center gap-3 lg:gap-4">
             <span className="inline-flex items-center gap-1">
               <Eye className="h-3.5 w-3.5" aria-hidden="true" />

@@ -210,7 +210,7 @@ export default function GameDetailActions({
         <div className="flex items-center gap-2">
           {isWebGame ? null : (
             <button type="button" onClick={() => void handleUrge()} disabled={isSubmittingUrge} className={cn(secondaryButtonClass, 'flex-1')}>
-              <RefreshCw className="h-4 w-4 text-[#757778]" />
+              <RefreshCw className="h-4 w-4 text-muted-foreground" />
               {isSubmittingUrge ? '提交中…' : '催更新'}
             </button>
           )}

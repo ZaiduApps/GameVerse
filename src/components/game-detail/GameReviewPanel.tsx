@@ -620,7 +620,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
                 <span className="text-3xl font-semibold text-[#b71211]">
                   {isLoadingSummary ? '...' : summary === null ? '—' : summary.displayScore.toFixed(1)}
                 </span>
-                <span className="pb-1 text-xs text-[#757778]">
+                <span className="pb-1 text-xs text-muted-foreground">
                   / 5.0 ·{' '}
                   {isLoadingSummary
                     ? '...'
@@ -630,7 +630,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
                 </span>
               </div>
               {summary ? (
-                <p className="mt-1 text-xs text-[#757778]">
+                <p className="mt-1 text-xs text-muted-foreground">
                   贝叶斯分 {summary.bayesianScore.toFixed(1)} · 置信分 {summary.confidenceScore.toFixed(1)}
                 </p>
               ) : null}
@@ -770,7 +770,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
                 onChange={(event) => setNewComment(event.target.value)}
               />
               {replyTarget ? (
-                <div className="text-xs text-[#757778]">
+                <div className="text-xs text-muted-foreground">
                   正在回复 @{replyTarget.name}
                   <Button
                     type="button"
@@ -800,7 +800,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
 
           <div className="space-y-4 border-t border-[#abadae]/15 pt-4">
             {isLoadingComments ? (
-              <p className="py-2 text-center text-sm text-[#757778]">评论加载中...</p>
+              <p className="py-2 text-center text-sm text-muted-foreground">评论加载中...</p>
             ) : commentLoadFailed ? (
               <p className="py-2 text-center text-sm text-[#b71211]">评论加载失败，请稍后重试。</p>
             ) : comments.length > 0 ? (
@@ -819,7 +819,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
                     <div className="min-w-0 flex-1 rounded-xl bg-[#f7f8f9] p-3">
                       <div className="mb-1 flex items-center justify-between gap-3">
                         <span className="truncate text-sm font-semibold text-[#2c2f30]">{comment.user.name}</span>
-                        <span className="shrink-0 text-[11px] text-[#757778]">{comment.timestamp}</span>
+                        <span className="shrink-0 text-[11px] text-muted-foreground">{comment.timestamp}</span>
                       </div>
                       <p className="whitespace-pre-line text-sm leading-6 text-[#2c2f30]">{comment.text}</p>
                       <div className="mt-2 flex items-center gap-2">
@@ -868,7 +868,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
                           <div className="min-w-0 flex-1 rounded-lg bg-[#f4f6f7] p-2.5">
                             <div className="mb-1 flex items-center justify-between gap-2">
                               <span className="truncate text-xs font-semibold text-[#2c2f30]">{reply.user.name}</span>
-                              <span className="shrink-0 text-[11px] text-[#757778]">{reply.timestamp}</span>
+                              <span className="shrink-0 text-[11px] text-muted-foreground">{reply.timestamp}</span>
                             </div>
                             <p className="whitespace-pre-line text-xs leading-5 text-[#2c2f30]">{reply.text}</p>
                             <div className="mt-1.5 flex items-center gap-1">
@@ -940,7 +940,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
                 </div>
               ))
             ) : (
-              <p className="py-2 text-center text-sm text-[#757778]">暂无评论，欢迎抢沙发。</p>
+              <p className="py-2 text-center text-sm text-muted-foreground">暂无评论，欢迎抢沙发。</p>
             )}
           </div>
         </section>
