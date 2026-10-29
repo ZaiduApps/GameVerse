@@ -12,11 +12,6 @@ export interface MockResourceLink {
   icon: 'message' | 'card' | 'rocket';
 }
 
-export interface MockSimilarGame {
-  name: string;
-  meta: string;
-}
-
 // Hero 徽章行（稿件原文：官方正版 / 编辑精选 / 全新第4赛季）。真实标签不足 3 个时用于补位。
 export const HERO_TRUST_BADGES = ['官方正版', '编辑精选', '全新第4赛季'] as const;
 
@@ -70,13 +65,6 @@ export const BOX_DOWNLOAD_CARD = {
   status: '稳定节点已激活',
   helper: '无法安装？推荐下载 AC 盒子 | 安装器助手 | Google 环境全搞定！',
 } as const;
-
-// 没有真实推荐数据时的兜底相似游戏（无跳转链接，仅撑住侧栏版式）。
-export const SIMILAR_GAMES_FALLBACK: MockSimilarGame[] = [
-  { name: 'Toram Online (托兰异世录)', meta: 'MMORPG · 10M+' },
-  { name: '刀剑神域：关键行动 (SAO)', meta: '3D ARPG · 5M+' },
-  { name: 'Epic Seven (第七史诗)', meta: '回合制 RPG · 8M+' },
-];
 
 // 移动端吸顶分类 Tab（稿件：详情 / 评价 / 攻略指南 / 社区动态）。
 export const MOBILE_TABS = [

@@ -18,6 +18,11 @@ import {
   buildSearchQueryPath,
   resolveSearchPageTier,
 } from './search-indexable.mjs';
+// 分类落地页的 slug 映射与收录阈值只在 category-pages.mjs 里定义一份：
+// 页面（够不够格、要不要 404）和 sitemap（收不收录）必须同口径，否则会出现
+// 「页面 404 但 sitemap 还在推」或「页面能开但永远进不了 sitemap」。
+// 用 .mjs 而不是 .ts：本文件被裸 node 的构建脚本直接导入，只有 .mjs 两边都能用。
+import { CATEGORY_PAGES, CATEGORY_PAGE_NAMES, isCategoryQualified } from './category-pages.mjs';
 
 export const SITEMAP_PAGE_SIZE = 500;
 export const SITEMAP_MAX_PAGES = 200;
@@ -408,6 +413,37 @@ export function createSitemapBuilder(options = {}) {
   }
 
   /**
+   * 分类落地页：一次请求拿到映射表里全部分类的「已发布 / 有资源」计数。
+   *
+   * 后端只给原始计数，阈值判定走 category-pages.ts 的同一份常量——页面 404 的口径
+   * 与 sitemap 收录的口径必须一致。这一节失败只跳过，不算进 complete：分类页是加成，
+   * 不能因为一个接口抖动让整份 sitemap 放弃落盘。
+   */
+  async function fetchCategoryEntries() {
+    const json = await fetchJson(
+      `/seo/category-pages?names=${encodeURIComponent(CATEGORY_PAGE_NAMES.join(','))}`,
+    );
+    if (!json || (json.code !== 0 && json.code !== undefined)) {
+      logger.warn('[sitemap] 分类计数接口不可用，本次不收录分类页');
+      return [];
+    }
+    const rows = Array.isArray(json.data?.list) ? json.data.list : [];
+    const slugByName = new Map(CATEGORY_PAGES.map((item) => [item.name, item.slug]));
+    const entries = [];
+    for (const row of rows) {
+      const slug = slugByName.get(String(row?.name || '').trim());
+      if (!slug) continue;
+      if (!isCategoryQualified({ published: row?.published, withResources: row?.with_resources })) continue;
+      entries.push({
+        url: absolute(`/category/${slug}`),
+        changeFrequency: 'weekly',
+        priority: 0.7,
+      });
+    }
+    return entries;
+  }
+
+  /**
    * 全量构建。任何单节接口失败都不会抛异常（与历史运行时行为一致）；
    * games 一节为空时视为 API 不可用，调用方据此决定是否落盘/降级。
    */
@@ -427,17 +463,20 @@ export function createSitemapBuilder(options = {}) {
         })
       : games.entries;
 
-    const [posts, albums, topics, search] = await Promise.all([
+    const [posts, albums, topics, search, categoryPages] = await Promise.all([
       fetchCommunityPostsFromFeed(),
       fetchHomeAlbumEntries(),
       fetchTopics(),
       fetchSearchEntries(),
+      fetchCategoryEntries(),
     ]);
+    logger.log(`[sitemap] category pages: ${categoryPages.length}`);
 
     // 用户主页（/u/<name>）整节不收录：薄页 + 用户生成内容，收录只会稀释站点质量信号。
     // `/seo/sitemap/users` 接口保留给其它调用方，sitemap 不再抓取。
     const entries = [
       ...buildStaticEntries(),
+      ...categoryPages,
       ...albums.entries,
       ...gameEntries,
       ...topics.entries,
@@ -454,6 +493,7 @@ export function createSitemapBuilder(options = {}) {
         games.complete && posts.complete && albums.complete && topics.complete && indexable.complete,
       stats: {
         staticPaths: FALLBACK_STATIC_PATHS.length,
+        categoryPages: categoryPages.length,
         games: gameEntries.length,
         gamesSkippedUnpublished: games.unpublishedSkipped,
         gamesSkippedByIndexable: games.entries.length - gameEntries.length,

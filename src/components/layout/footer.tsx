@@ -1,6 +1,7 @@
 
 import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
+import { CATEGORY_PAGES, buildCategoryPath, categoryDisplayName } from '@/lib/category-pages';
 import type { SiteConfig } from '@/types';
 import Script from 'next/script';
 
@@ -64,7 +65,7 @@ export default function Footer({ config }: FooterProps) {
               <p className="text-sm">{footer.footer_text}</p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-8">
               {quick_links.map((group, groupIndex) => (
                 <div key={group.group_name}>
                   <p className="font-semibold text-foreground mb-3">{group.group_name}</p>
@@ -82,6 +83,19 @@ export default function Footer({ config }: FooterProps) {
                   </ul>
                 </div>
               ))}
+              {/* 热门分类：取映射表前 10 个，给分类落地页一条全站可见的入口。 */}
+              <div>
+                <p className="font-semibold text-foreground mb-3">热门分类</p>
+                <ul className="space-y-2">
+                  {CATEGORY_PAGES.slice(0, 10).map((item) => (
+                    <li key={item.slug}>
+                      <Link href={buildCategoryPath(item.slug)} className="text-sm hover:text-primary transition-colors">
+                        {categoryDisplayName(item.name)}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
 

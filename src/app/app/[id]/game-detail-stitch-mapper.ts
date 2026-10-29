@@ -14,7 +14,6 @@ import {
   RATING_FALLBACK_COUNT,
   RATING_FALLBACK_SCORE,
   SIGNATURE_VERIFY_TILE,
-  SIMILAR_GAMES_FALLBACK,
   TECH_SPEC_FILLERS,
   WHATS_NEW_FALLBACK,
   type MockResourceLink,
@@ -208,19 +207,11 @@ export function buildResourceLinks(items: CardConfigItem[]): ResourceLinkView[] 
   }));
 }
 
-// 相似推荐：真实推荐优先，为空时用稿件三款游戏（无跳转，仅撑版式）。
+// 相似推荐：只用真实数据。为空时返回空数组让区块整体不渲染——
+// 过去用稿件三款游戏撑版式，渲染出的是 3 个 href="" 的死链卡片（既不能点，又被爬虫当作链接）。
 export function buildSimilarGames(items: ApiRecommendedGame[]): SimilarGameView[] {
   // 详情页内链密度：用后端已返回的推荐列表，最多渲染 10 个 /app/{pkg} 链接。
   const real = items.slice(0, 10);
-  if (real.length === 0) {
-    return SIMILAR_GAMES_FALLBACK.map((item, index) => ({
-      key: `mock-similar-${index}`,
-      name: item.name,
-      meta: item.meta,
-      icon: '',
-      href: '',
-    }));
-  }
   return real.map((item) => ({
     key: `${item._id}-${item.pkg}`,
     name: item.name,

@@ -288,9 +288,9 @@ function SimilarGamesCard({ items }: { items: ReturnType<typeof buildSimilarGame
       }
     >
       <div className="space-y-3 lg:space-y-4">
-        {items.map((item) => {
-          const body = (
-            <>
+        {items.map((item) => (
+          <Link key={item.key} href={item.href} className="group flex items-center justify-between gap-3">
+            <span className="flex min-w-0 items-center gap-3">
               <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-muted">
                 {item.icon ? (
                   <Image src={getPreviewImageUrl(item.icon, 112)} alt={item.name + ' 图标'} fill sizes="48px" className="object-cover" />
@@ -300,24 +300,12 @@ function SimilarGamesCard({ items }: { items: ReturnType<typeof buildSimilarGame
                 <span className="block truncate text-xs font-bold text-foreground">{item.name}</span>
                 <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{item.meta}</span>
               </span>
-            </>
-          );
-          if (!item.href) {
-            return (
-              <div key={item.key} className="flex items-center gap-3">
-                {body}
-              </div>
-            );
-          }
-          return (
-            <Link key={item.key} href={item.href} className="group flex items-center justify-between gap-3">
-              <span className="flex min-w-0 items-center gap-3">{body}</span>
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors [@media(hover:hover)]:group-hover:bg-primary [@media(hover:hover)]:group-hover:text-white">
-                <Download className="h-4 w-4" aria-hidden="true" />
-              </span>
-            </Link>
-          );
-        })}
+            </span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors [@media(hover:hover)]:group-hover:bg-primary [@media(hover:hover)]:group-hover:text-white">
+              <Download className="h-4 w-4" aria-hidden="true" />
+            </span>
+          </Link>
+        ))}
       </div>
     </DetailSection>
   );

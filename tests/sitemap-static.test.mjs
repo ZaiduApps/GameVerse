@@ -126,6 +126,8 @@ test('createSitemapBuilder: 构建期与运行时产出同形条目（分页 + �
   assert.equal(complete, true);
   assert.deepEqual(stats, {
     staticPaths: 5,
+    // 本用例的 fetch 对 /seo/category-pages 一律 404，分类页整节跳过，故为 0。
+    categoryPages: 0,
     games: 1,
     // 未发布（预约 0 / 下线 2 / 非 0-2 的脏值）一律剔除；本夹具的 com.gone 是 status=9。
     gamesSkippedUnpublished: 1,
@@ -405,4 +407,94 @@ test('getServerApiBaseUrl / getSiteUrlFromEnv: 与运行时 env 口径一致', (
   assert.equal(getServerApiBaseUrl({ APP_ENV: 'development' }), 'http://127.0.0.1:9527');
   assert.equal(getSiteUrlFromEnv({ SITE_URL: 'https://apks.cc/' }), 'https://apks.cc');
   assert.equal(getSiteUrlFromEnv({}), 'https://apks.cc');
+});
+
+test('createSitemapBuilder: 分类页只收达到阈值的分类，且全部名字只请求一次', async () => {
+  const calls = [];
+  const fetchImpl = async (url) => {
+    calls.push(String(url));
+    const parsed = new URL(url);
+    const json = (payload) => new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+    if (parsed.pathname.endsWith('/seo/category-pages')) {
+      return json({
+        code: 0,
+        data: {
+          list: [
+            { name: '角色扮演', published: 1400, with_resources: 1341 },
+            // 恰好等于阈值（12 / 8）也要收录，边界不能写成「大于」
+            { name: 'MOBA', published: 12, with_resources: 8 },
+            { name: '纸牌', published: 11, with_resources: 83 },
+            { name: '音乐', published: 99, with_resources: 7 },
+            // 映射表里没有的名字不生成 /category/ 条目
+            { name: '不存在的分类', published: 999, with_resources: 999 },
+          ],
+          cached: false,
+        },
+      });
+    }
+    if (parsed.pathname.endsWith('/seo/sitemap/games')) {
+      return json({ code: 0, data: { page: 1, pageSize: 500, total: 1, list: [{ pkg: 'com.a', status: 1 }] } });
+    }
+    return json({ code: 0, data: { page: 1, pageSize: 500, total: 0, list: [] } });
+  };
+
+  const builder = createSitemapBuilder({ apiBaseUrl: 'https://api.test', siteUrl: 'https://apks.cc', fetchImpl });
+  const { entries, stats } = await builder.buildEntries();
+  const urls = entries.map((entry) => entry.url);
+
+  assert.ok(urls.includes('https://apks.cc/category/rpg'));
+  assert.ok(urls.includes('https://apks.cc/category/moba'));
+  assert.equal(urls.some((url) => url.includes('/category/card')), false); // 已发布 11 < 12
+  assert.equal(urls.some((url) => url.includes('/category/music')), false); // 有资源 7 < 8
+  assert.equal(stats.categoryPages, 2);
+
+  const rpg = entries.find((entry) => entry.url === 'https://apks.cc/category/rpg');
+  assert.equal(rpg.changeFrequency, 'weekly');
+  assert.equal(rpg.priority, 0.7);
+
+  // 23 个分类名一次请求拿全，不许 N 次
+  const categoryCalls = calls.filter((call) => call.includes('/seo/category-pages'));
+  assert.equal(categoryCalls.length, 1);
+  const names = new URL(categoryCalls[0]).searchParams.get('names').split(',');
+  assert.equal(names.length, 23);
+  assert.ok(names.includes('角色扮演'));
+  assert.ok(names.includes('MOBA'));
+});
+
+test('createSitemapBuilder: 分类计数接口报错只跳过分类页，整份 sitemap 照常生成', async () => {
+  const warnings = [];
+  const fetchImpl = async (url) => {
+    const parsed = new URL(url);
+    const json = (payload) => new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+    if (parsed.pathname.endsWith('/seo/category-pages')) return json({ code: 502, message: 'upstream failed' });
+    if (parsed.pathname.endsWith('/seo/sitemap/games')) {
+      return json({ code: 0, data: { page: 1, pageSize: 500, total: 1, list: [{ pkg: 'com.a', status: 1 }] } });
+    }
+    if (parsed.pathname.endsWith('/seo/audit/games')) {
+      return json({ code: 0, data: { page: 1, pageSize: 200, total: 1, list: [{ pkg: 'com.a', quality: { indexable: true } }] } });
+    }
+    return json({ code: 0, data: { page: 1, pageSize: 500, total: 0, list: [] } });
+  };
+
+  const builder = createSitemapBuilder({
+    apiBaseUrl: 'https://api.test',
+    siteUrl: 'https://apks.cc',
+    fetchImpl,
+    logger: { log: () => {}, warn: (...args) => warnings.push(args.join(' ')) },
+  });
+  const { entries, complete, stats } = await builder.buildEntries();
+  const urls = entries.map((entry) => entry.url);
+
+  assert.equal(stats.categoryPages, 0);
+  assert.equal(urls.some((url) => url.includes('/category/')), false);
+  // 分类页是加成，不能因为它把整份 sitemap 判成残缺（否则静态快照永远写不出来）
+  assert.equal(complete, true);
+  assert.ok(urls.includes('https://apks.cc/app/com.a'));
+  assert.ok(warnings.some((line) => line.includes('[sitemap] 分类计数接口不可用')));
 });

@@ -35,7 +35,10 @@ const SEO_SNAPSHOT_VERSION = '2';
 const MAX_SERVER_RECOMMENDED_GAMES = 10;
 const MIN_DETAIL_RELATED_NEWS = 3;
 const MAX_DETAIL_RELATED_NEWS = 5;
-const RECOMMENDED_GAMES_TIMEOUT_MS = 2500;
+// 后端 /game/recommendedApp 自带 ≤2500ms 的库侧预算，超预算时先走同分类/热门兜底再返回，
+// 所以前端这 5s 等的只是「网络 + 后端兜底」，不是后端算不完的推荐。
+// 2.5s 时详情页在网络稍慢的链路上一路空推荐，相似推荐区块整块消失；5s 只等网络。
+const RECOMMENDED_GAMES_TIMEOUT_MS = 5000;
 const STATIC_PARAMS_DEFAULT_LIMIT = 100;
 const STATIC_PARAMS_HARD_LIMIT = 500;
 const configuredStaticParamsLimit = Number.parseInt(

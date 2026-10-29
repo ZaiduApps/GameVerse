@@ -6,6 +6,7 @@ import { ArrowRight, BarChartBig, Clock3, Flame, Star, TrendingUp } from 'lucide
 import { trackedApiFetch } from '@/lib/api';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
+import { CATEGORY_PAGES, buildCategoryPath, categoryDisplayName } from '@/lib/category-pages';
 import { resolveGameName } from '@/lib/game-display-name';
 import { absoluteUrl, buildSeoDescription } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
@@ -721,6 +722,28 @@ export default async function RankingsPage({
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <p>榜单页适合做第一轮筛选，真正下载前仍建议进入详情页查看版本、截图、社区讨论和安装提示。</p>
             <p>如果你偏爱某一题材，可以优先关注榜单中的类型标签，再延伸浏览同类推荐和相关资讯内容。</p>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>按分类浏览</CardTitle>
+            <p className="text-sm text-muted-foreground">换个角度挑游戏：按题材进入分类页，查看该分类下的完整列表。</p>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {CATEGORY_PAGES.slice(0, 12).map((item) => (
+                <Link
+                  key={item.slug}
+                  href={buildCategoryPath(item.slug)}
+                  className="inline-flex min-h-9 items-center rounded-full border border-border/70 bg-card px-3 text-sm text-muted-foreground transition-colors [@media(hover:hover)]:hover:border-primary/40 [@media(hover:hover)]:hover:text-primary"
+                >
+                  {categoryDisplayName(item.name)}
+                </Link>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </section>
