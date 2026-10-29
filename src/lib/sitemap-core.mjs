@@ -185,11 +185,6 @@ function toTopicEntry(item, absolute) {
 }
 
 /**
- * 用户主页（/u/<name>）一律不进 sitemap：这类页面是薄页 + 用户生成内容，
- * 收录只会稀释站点质量信号。`/seo/sitemap/users` 接口保留给其它调用方，sitemap 不再抓取。
- */
-
-/**
  * 建一个 sitemap 数据源。
  * @param {{
  *   apiBaseUrl?: string,
@@ -439,6 +434,8 @@ export function createSitemapBuilder(options = {}) {
       fetchSearchEntries(),
     ]);
 
+    // 用户主页（/u/<name>）整节不收录：薄页 + 用户生成内容，收录只会稀释站点质量信号。
+    // `/seo/sitemap/users` 接口保留给其它调用方，sitemap 不再抓取。
     const entries = [
       ...buildStaticEntries(),
       ...albums.entries,
