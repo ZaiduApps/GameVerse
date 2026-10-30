@@ -1,8 +1,8 @@
 import type { ApiDownloadResource } from '@/types';
 
 /**
- * 下载渠道判定的唯一来源：客户端下载弹窗与服务端直出共用这一份，
- * 避免「弹窗拦截了 APKPure，直链却把它渲染出来」这类两处口径漂移。
+ * 下载渠道判定的唯一来源：客户端下载弹窗与结构化数据共用这一份，
+ * 避免「弹窗拦截了 APKPure，JSON-LD 却把它声明成直下入口」这类两处口径漂移。
  */
 
 export interface DownloadChannelLink {
@@ -48,7 +48,8 @@ export function shouldGuideToApp(resource?: ApiDownloadResource | null): boolean
 }
 
 /**
- * 详情页服务端直出的下载链接：只包含「可直接下载」的渠道。
+ * 可直下渠道的 302 入口清单：只服务于结构化数据（JSON-LD `InstallAction.target`），
+ * 详情页不再把这些链接渲染成可见按钮。
  *
  * `gameId` 用与页面 URL 一致的标识（包名优先），同一个渠道只出一份链接。
  */
@@ -83,8 +84,8 @@ export function buildDirectDownloadLinks(
  * 优先第一个可直接下载渠道的 302 入口（`/app/{pkg}/download/{channelId}`），
  * 没有直下渠道时回退到详情页自身。
  *
- * 渠道筛选必须复用 `buildDirectDownloadLinks`——JSON-LD 声明与页面上真正渲染的
- * 下载按钮必须同源，否则会出现「结构化数据说能直下、页面只给引导」的口径漂移。
+ * 渠道筛选必须复用 `buildDirectDownloadLinks`——结构化数据的声明与下载弹窗的
+ * 渠道口径必须同源，否则会出现「JSON-LD 说能直下、弹窗只给引导」的漂移。
  */
 export function resolveInstallActionTarget(
   resources: ApiDownloadResource[] | undefined | null,

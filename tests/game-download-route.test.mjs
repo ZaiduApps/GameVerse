@@ -292,11 +292,10 @@ test('302 路由：Location 只接受 http/https，不接受开放重定向', ()
 });
 
 test('route handler 与详情页接线符合派发单约束（源码级）', async () => {
-  const [routeSource, viewSource, dialogSource, linksSource] = await Promise.all([
+  const [routeSource, viewSource, dialogSource] = await Promise.all([
     readSource('../src/app/app/[id]/download/[channelId]/route.ts'),
     readSource('../src/app/app/[id]/GameDetailView.tsx'),
     readSource('../src/components/game-download-dialog.tsx'),
-    readSource('../src/components/game-direct-download-links.client.tsx'),
   ]);
 
   // 302 链路：force-dynamic + no-store + 带着来源位与访客 UA 去调现有 POST 接口
@@ -309,13 +308,9 @@ test('route handler 与详情页接线符合派发单约束（源码级）', asy
   assert.match(routeSource, /apiUrl\('\/game\/getAppDownload'\)/);
   assert.doesNotMatch(routeSource, /NextResponse\.redirect/);
 
-  // 直链由服务端渲染，不能塞进 ssr:false 的动态组件
-  assert.match(viewSource, /<GameDirectDownloadLinks/);
-  assert.match(viewSource, /buildDirectDownloadLinks\(resources, game\.pkg \|\| game\._id\)/);
-  assert.doesNotMatch(viewSource, /GameDirectDownloadLinks[\s\S]{0,200}ssr: false/);
-  assert.match(linksSource, /rel="nofollow"/);
-  assert.match(linksSource, /href=\{link\.href\}/);
-  assert.match(linksSource, /下载/);
+  // 详情页不再渲染直链渠道块：302 入口只保留在 JSON-LD 的 InstallAction 声明里
+  assert.doesNotMatch(viewSource, /game-detail-channels/);
+  assert.doesNotMatch(viewSource, /GameDirectDownloadLinks/);
 
   // 客户端打点：渠道按钮上报 download_click，服务端不再代记
   assert.match(dialogSource, /reportDownloadClick\(\{ appId, pkg, channelId, surface: 'detail_dialog' \}\)/);

@@ -32,7 +32,7 @@ interface DownloadErrorNoticeViewProps {
 
 /**
  * 下载失败提示的纯展示组件：文案按「渠道不可用 / 资源失效」分叉，
- * 固定给三条出口（换渠道、反馈失效、查看其他版本）。测试直接渲染这个导出。
+ * 固定给两条出口（反馈失效、查看其他版本）。测试直接渲染这个导出。
  */
 export function DownloadErrorNoticeView({
   reason,

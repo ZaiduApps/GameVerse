@@ -4,9 +4,7 @@ import { Suspense, type ReactNode } from 'react';
 import { BadgeCheck, ChevronRight, CreditCard, Download, ExternalLink, MessageSquare, RefreshCw, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
 
 import GameAnnouncements from '@/components/game-announcements';
-import GameDirectDownloadLinks from '@/components/game-direct-download-links.client';
 import GameFaqSection from '@/components/game-detail/GameFaqSection';
-import { buildDirectDownloadLinks } from '@/lib/game-download-channel';
 import { buildResourceChecksumItems } from '@/lib/game-resource-signature';
 import { normalizeGameFaqItems } from '@/lib/game-faq';
 import { resolveGameName } from '@/lib/game-display-name';
@@ -329,11 +327,6 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   );
   const resources = Array.isArray(gameData.resources) ? gameData.resources : [];
   const isWebGame = isWebGameType(game.type);
-  // 服务端直出的下载链接：只含可直下渠道，id 与页面 URL 一致（包名优先）。
-  // 锚点由服务端渲染进 HTML，无 JS 的环境也能点到 302 入口。
-  const directDownloadLinks = isWebGame
-    ? []
-    : buildDirectDownloadLinks(resources, game.pkg || game._id);
   // 资源校验值只取接口真实返回的 signature；没有就整块显示「暂无校验值」。
   const checksumItems = buildResourceChecksumItems(resources);
   const tags = getGameTags(game);
@@ -522,17 +515,6 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                   downloadNotices={downloadNotices}
                   showPreregReminder={showPreregReminder}
                 />
-              </div>
-
-              {/* 下载失败提示的「换渠道重试」锚点落在这里；即使没有可直下渠道也保留容器。 */}
-              <div id="game-detail-channels" className="scroll-mt-24">
-                {directDownloadLinks.length > 0 ? (
-                  <GameDirectDownloadLinks
-                    links={directDownloadLinks}
-                    appId={game._id}
-                    pkg={game.pkg}
-                  />
-                ) : null}
               </div>
 
               {/* 指标条：移动端 3 格（隐藏「游戏分类」），PC 端 4 格 */}
