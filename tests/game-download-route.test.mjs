@@ -118,6 +118,33 @@ test('302 路由：上游成功时 302 到 interface 返回的地址', async () 
   assert.equal(decision.location, 'https://cdn.example.com/files/demo.apk?sig=abc');
 });
 
+/**
+ * 直链下载（#107）的两条分支。
+ *
+ * 开关判定在 interface 的 resolveDownloadUrl 里（勾选且已上传成功才下发 R2
+ * 直链，否则下发原有 123 地址），GameVerse 只负责把 interface 给的地址原样
+ * 302 出去——所以这里锁的是「不重写、不拼接」：直链像普通地址一样被跟随，
+ * 关闭时仍是原来的 123 分享地址。
+ */
+test('302 路由：直链开关开启时跟随 R2 直链，关闭时跟随 123 分享地址', async () => {
+  const directLink = 'https://cdn.apkscc.com/apk/com.demo.game/com.demo.game_1.0.0.apk';
+  const shareUrl = 'https://www.123684.com/s/4H3LVv-riSP';
+
+  const on = await decideDownloadRedirect({
+    id: PKG,
+    channelId: CHANNEL_OFFICIAL,
+    requestIssuedUrl: async () => ({ ok: true, payload: { url: directLink } }),
+  });
+  assert.deepEqual(on, { kind: 'redirect', location: directLink });
+
+  const off = await decideDownloadRedirect({
+    id: PKG,
+    channelId: CHANNEL_OFFICIAL,
+    requestIssuedUrl: async () => ({ ok: true, payload: { url: shareUrl } }),
+  });
+  assert.deepEqual(off, { kind: 'redirect', location: shareUrl });
+});
+
 test('302 路由：上游失败与资源失效分别降级回详情页并带上原因', async () => {
   const fallback = `/app/${PKG}?download_error=1`;
   const channelFailure = `/app/${PKG}?download_error=1&download_error_reason=channel`;
