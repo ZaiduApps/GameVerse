@@ -16,6 +16,7 @@
     "contract:sync": "node scripts/sync-api-contract.mjs",
     "test:markdown": "node --test tests/markdown-render.test.cjs",
     "test:home-feed": "node --test tests/home-post-author-cap.test.mjs",
+    "test:home-hero-carousel": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/home-hero-carousel.test.mjs",
     "test:breadcrumbs": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/breadcrumbs.test.mjs",
     "test:seo-runner": "node --test tests/seo-write-game.test.mjs tests/seo-indexnow-boundary.test.mjs tests/deploy-fast-boundary.test.mjs",
     "test:game-detail": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/game-detail-boundary.test.mjs tests/image-preview.test.mjs tests/seo-template.test.mjs tests/game-detail-resilience.test.mjs tests/game-download-route.test.mjs tests/game-detail-similar-games.test.mjs",
