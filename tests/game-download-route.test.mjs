@@ -3,9 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
-  buildDirectDownloadLinks,
   resolveDownloadChannelId,
-  resolveInstallActionTarget,
   shouldGuideToApp,
 } from '../src/lib/game-download-channel.ts';
 import {
@@ -28,7 +26,6 @@ const readSource = (relativePath) => readFile(new URL(relativePath, import.meta.
 const PKG = 'com.demo.game';
 const APP_ID = '67f000000000000000000222';
 const CHANNEL_OFFICIAL = '67f000000000000000000333';
-const CHANNEL_APKPURE = '67f000000000000000000444';
 
 function resource(overrides = {}) {
   return {
@@ -44,72 +41,10 @@ function resource(overrides = {}) {
   };
 }
 
-test('直链只包含可直接下载的渠道，href 指向 302 入口', () => {
-  const links = buildDirectDownloadLinks(
-    [
-      resource({ channelId: CHANNEL_OFFICIAL, name: '官方渠道', code: 'official' }),
-      resource({
-        channelId: CHANNEL_APKPURE,
-        name: 'APKPure',
-        code: 'apkpure',
-        channel: { description: 'APKPure 第三方' },
-      }),
-      resource({
-        channelId: '67f000000000000000000555',
-        name: '安卓专区',
-        code: 'third_party',
-        channel: { platform_range: ['android'] },
-      }),
-    ],
-    PKG,
-  );
-
-  assert.equal(links.length, 1);
-  assert.equal(links[0].channelId, CHANNEL_OFFICIAL);
-  assert.equal(links[0].channelName, '官方渠道');
-  assert.equal(links[0].href, `/app/${PKG}/download/${CHANNEL_OFFICIAL}`);
-  assert.ok(links[0].href.includes('/download/'));
-});
-
-test('直链去重、无渠道 id 或空游戏 id 时不出链接', () => {
-  const duplicated = buildDirectDownloadLinks(
-    [
-      resource({ channelId: CHANNEL_OFFICIAL }),
-      resource({ channelId: CHANNEL_OFFICIAL, name: '官方渠道（重复）' }),
-      resource({ channelId: '', name: '无 id' }),
-    ],
-    PKG,
-  );
-
-  assert.equal(duplicated.length, 1);
-  assert.deepEqual(buildDirectDownloadLinks([resource()], ''), []);
-  assert.deepEqual(buildDirectDownloadLinks(undefined, PKG), []);
-});
-
-test('JSON-LD InstallAction.target 指向直下入口，无直下渠道时回退 canonical', async () => {
-  const canonical = `https://apks.cc/app/${PKG}`;
-
-  // 有直下渠道：落点是 302 入口，不是详情页自身
-  const withDirect = resolveInstallActionTarget(
-    [resource({ channelId: CHANNEL_OFFICIAL, code: 'official' })],
-    PKG,
-    canonical,
-  );
-  assert.equal(withDirect, `https://apks.cc/app/${PKG}/download/${CHANNEL_OFFICIAL}`);
-  assert.ok(withDirect.includes('/download/'));
-
-  // 只有引导型渠道（APKPure）或没有资源时：回退详情页自身
-  assert.equal(
-    resolveInstallActionTarget([resource({ channelId: CHANNEL_APKPURE, code: 'apkpure' })], PKG, canonical),
-    canonical,
-  );
-  assert.equal(resolveInstallActionTarget(undefined, PKG, canonical), canonical);
-  assert.equal(resolveInstallActionTarget([], PKG, canonical), canonical);
-
-  // 详情页接线：JSON-LD 用同一个函数取落点，不自己再拼一套渠道筛选
+test('JSON-LD InstallAction.target 恒等于页面 canonical URL', async () => {
   const pageSource = await readSource('../src/app/app/[id]/page.tsx');
-  assert.match(pageSource, /resolveInstallActionTarget\(initialGameData\.resources, game\.pkg \|\| game\._id, canonicalUrl\)/);
-  assert.match(pageSource, /target: installActionTarget/);
+  assert.match(pageSource, /target: canonicalUrl/);
+  assert.doesNotMatch(pageSource, /installActionTarget/);
 });
 
 test('渠道判定与弹窗共用同一份实现（APKPure / Android 定向都引导去 App）', () => {
@@ -308,7 +243,7 @@ test('route handler 与详情页接线符合派发单约束（源码级）', asy
   assert.match(routeSource, /apiUrl\('\/game\/getAppDownload'\)/);
   assert.doesNotMatch(routeSource, /NextResponse\.redirect/);
 
-  // 详情页不再渲染直链渠道块：302 入口只保留在 JSON-LD 的 InstallAction 声明里
+  // 详情页不再渲染直链渠道块：302 入口既不在页面上露出，也不在 JSON-LD 里声明
   assert.doesNotMatch(viewSource, /game-detail-channels/);
   assert.doesNotMatch(viewSource, /GameDirectDownloadLinks/);
 
