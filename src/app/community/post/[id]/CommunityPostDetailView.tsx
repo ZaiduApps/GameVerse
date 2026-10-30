@@ -1811,7 +1811,7 @@ export default function CommunityPostDetailView({
         <aside className="hidden xl:block">
           <div className="sticky top-24 max-h-[calc(100vh-7rem)] space-y-4 overflow-y-auto overscroll-contain pr-1">
             {relatedApp ? (
-              <Card className="overflow-hidden border border-white/20 shadow-xl">
+              <Card className="relative overflow-hidden border border-white/20 shadow-xl">
                 {relatedApp.icon && (
                   <div className="absolute inset-0">
                     <Image
