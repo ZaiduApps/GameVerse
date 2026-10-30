@@ -449,10 +449,13 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                   <div className="relative shrink-0">
                     <div className="relative h-20 w-20 overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-sm lg:h-24 lg:w-24">
                       {game.icon ? (
+                        // 信息卡图标移动端 -mt-12 紧贴封面、桌面端也在首屏，是第 2 个 LCP 候选，放行 eager。
                         <Image
                           src={getPreviewImageUrl(game.icon, 320)}
                           alt={resolveGameName(game) + ' 图标'}
                           fill
+                          priority
+                          fetchPriority="high"
                           sizes="(min-width: 1024px) 96px, 80px"
                           className="object-cover"
                         />
