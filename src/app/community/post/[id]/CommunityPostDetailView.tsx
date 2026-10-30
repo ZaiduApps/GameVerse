@@ -1809,7 +1809,7 @@ export default function CommunityPostDetailView({
 
       <div className="xl:grid xl:grid-cols-[320px_minmax(0,1fr)_360px] xl:gap-6">
         <aside className="hidden xl:block">
-          <div className="sticky top-24 space-y-4">
+          <div className="sticky top-24 max-h-[calc(100vh-7rem)] space-y-4 overflow-y-auto overscroll-contain pr-1">
             {relatedApp ? (
               <Card className="overflow-hidden border border-white/20 shadow-xl">
                 {relatedApp.icon && (
@@ -1872,7 +1872,7 @@ export default function CommunityPostDetailView({
                 <CardHeader className="px-4 pb-2 pt-4">
                   <div className="text-sm font-semibold">文章目录</div>
                 </CardHeader>
-                <CardContent className="max-h-[calc(100vh-18rem)] space-y-1 overflow-y-auto px-2 pb-3">
+                <CardContent className="space-y-1 px-2 pb-3">
                   {tocItems.map((item) => (
                     <button
                       key={item.id}
@@ -1888,7 +1888,7 @@ export default function CommunityPostDetailView({
                       style={{ paddingLeft: `${12 + Math.max(0, item.level - tocBaseLevel) * 16}px` }}
                       onClick={() => handleTocJump(item.id)}
                     >
-                      <span className="line-clamp-2">{item.text}</span>
+                      <span className="break-words">{item.text}</span>
                     </button>
                   ))}
                 </CardContent>
