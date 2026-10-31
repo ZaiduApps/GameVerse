@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 d699d255f0af6c7d5e22da66b3ca9ad4b949806d6e6aa29323a8e3b924441b89
+ * @contract-sha256 d78ef576af475a0009c623bd80c50dd092411e520662d2edfb842f4225455403
  */
 
 export interface paths {
@@ -3401,6 +3401,23 @@ export interface paths {
         get: operations["MediaAssetController_stats"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-assets/backfill-apk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 回填桶内 apk/ 前缀直链对象进媒体库（幂等，可重复执行） */
+        post: operations["MediaAssetController_backfillApk"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7047,6 +7064,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/resource-worker/v1/tasks/{taskId}/direct-link/upload-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 申请直链上传的限时预签名 PUT URL */
+        post: operations["ResourceWorkerGatewayController_directLinkUploadUrl"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/resource-worker/v1/tasks/{taskId}/heartbeat": {
         parameters: {
             query?: never;
@@ -9458,6 +9492,7 @@ export interface components {
         ResourceWorkerHeartbeatDto: Record<string, never>;
         ClaimResourceTasksDto: Record<string, never>;
         LeaseApkeepAccountDto: Record<string, never>;
+        DirectLinkUploadUrlDto: Record<string, never>;
         HeartbeatResourceTaskDto: Record<string, never>;
         ResourceTaskEventDto: Record<string, never>;
         CompleteResourceTaskDto: Record<string, never>;
@@ -18083,6 +18118,10 @@ export interface operations {
                 cursor?: string;
                 /** @description 每页数量，1-200，默认 30 */
                 limit?: number;
+                /** @description 按来源场景过滤（登记表 source_scene 精确匹配），空值不过滤 */
+                scene?: string;
+                /** @description 按资产状态过滤（登记表 status 精确匹配），空值不过滤 */
+                status?: string;
             };
             header?: never;
             path?: never;
@@ -18111,6 +18150,23 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MediaAssetController_backfillApk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -24801,6 +24857,32 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["LeaseApkeepAccountDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerGatewayController_directLinkUploadUrl: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
+            };
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectLinkUploadUrlDto"];
             };
         };
         responses: {
