@@ -126,12 +126,17 @@ test('createSitemapBuilder: 构建期与运行时产出同形条目（分页 + �
   assert.equal(complete, true);
   assert.deepEqual(stats, {
     staticPaths: 5,
+    // 本用例的 fetch 对 /seo/category-pages 一律 404，分类页整节跳过，故为 0。
+    categoryPages: 0,
     games: 1,
+    // 未发布（预约 0 / 下线 2 / 非 0-2 的脏值）一律剔除；本夹具的 com.gone 是 status=9。
+    gamesSkippedUnpublished: 1,
     gamesSkippedByIndexable: 0,
     posts: 1,
     albums: 1,
     topics: 1,
-    users: 1,
+    // /search?q= 白名单这一节：本用例的 fetch 对 /search/global 一律 404，全部跳过，故为 0。
+    search: 0,
   });
   const urls = entries.map((entry) => entry.url);
   assert.ok(urls.includes('https://apks.cc/app/com.a'));
@@ -140,8 +145,101 @@ test('createSitemapBuilder: 构建期与运行时产出同形条目（分页 + �
   assert.ok(urls.includes('https://apks.cc/community/post/post1'));
   assert.ok(urls.includes('https://apks.cc/albums/album1'));
   assert.ok(urls.includes('https://apks.cc/community/topic/topic-slug'));
-  assert.ok(urls.includes('https://apks.cc/u/alice'));
+  // 即使用户接口有数据，/u/ 也不进 sitemap（薄页 + UGC）
+  assert.equal(calls.some((call) => call.includes('/seo/sitemap/users')), false);
+  assert.equal(urls.some((url) => url.includes('/u/')), false);
   assert.ok(calls.some((call) => call.includes('/seo/sitemap/games?page=1')));
+});
+
+test('createSitemapBuilder: 未发布游戏剔除、已发布保留，页面条目数不受影响', async () => {
+  const listed = [
+    { pkg: 'com.published.one', status: 1, updated_at: '2026-10-01T00:00:00.000Z' },
+    // status=0 是「预约」，详情页 200 软 404
+    { pkg: 'com.reserved.one', status: 0, updated_at: '2026-10-01T00:00:00.000Z' },
+    // status=2 是「下线」
+    { pkg: 'com.offline.one', status: 2, updated_at: '2026-10-01T00:00:00.000Z' },
+    // 缺 status 的历史行按未发布处理，不猜成已发布
+    { pkg: 'com.no-status.one', updated_at: '2026-10-01T00:00:00.000Z' },
+    { pkg: 'com.published.two', status: 1, is_deleted: 1 },
+  ];
+  const fetchImpl = async (url) => {
+    const parsed = new URL(url);
+    const payload = (list) => new Response(JSON.stringify({ code: 0, data: { page: 1, pageSize: 500, total: list.length, list } }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+    if (parsed.pathname.endsWith('/seo/sitemap/games')) return payload(listed);
+    if (parsed.pathname.endsWith('/seo/audit/games')) {
+      return payload(listed.map((item) => ({ pkg: item.pkg, quality: { indexable: true } })));
+    }
+    if (parsed.pathname.endsWith('/content/feed')) return payload([]);
+    if (parsed.pathname.endsWith('/albums/home')) return payload([]);
+    if (parsed.pathname.endsWith('/content/topics/public')) return payload([]);
+    return new Response('not found', { status: 404 });
+  };
+
+  const builder = createSitemapBuilder({ apiBaseUrl: 'https://api.test', siteUrl: 'https://apks.cc', fetchImpl });
+  const { entries, stats } = await builder.buildEntries();
+  const urls = entries.map((entry) => entry.url);
+
+  assert.ok(urls.includes('https://apks.cc/app/com.published.one'));
+  assert.ok(!urls.includes('https://apks.cc/app/com.reserved.one'));
+  assert.ok(!urls.includes('https://apks.cc/app/com.offline.one'));
+  assert.ok(!urls.includes('https://apks.cc/app/com.no-status.one'));
+  // 已删除的行既不算已发布，也不重复计入「未发布剔除」
+  assert.ok(!urls.includes('https://apks.cc/app/com.published.two'));
+  assert.equal(stats.games, 1);
+  assert.equal(stats.gamesSkippedUnpublished, 3);
+  // 其它段落条数与历史一致（本夹具下只有 5 条静态入口）
+  assert.equal(entries.length, 6);
+});
+
+test('createSitemapBuilder: 审计接口按 pageSize=200、并发≤2 分页，抓到的高质量 id 数量不变', async () => {
+  // 1000 条游戏 → 5 页审计数据；并发探针记录峰值同时请求数。
+  const games = Array.from({ length: 1000 }, (_, index) => ({
+    pkg: `com.example.game${index}`,
+    status: 1,
+    updated_at: '2026-10-01T00:00:00.000Z',
+  }));
+  let inFlight = 0;
+  let peak = 0;
+  const auditRequests = [];
+  const fetchImpl = async (url) => {
+    const parsed = new URL(url);
+    const payload = (list, page, pageSize, total) => new Response(
+      JSON.stringify({ code: 0, data: { page, pageSize, total, list } }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+    if (parsed.pathname.endsWith('/seo/sitemap/games')) {
+      const page = Number(parsed.searchParams.get('page') || 1);
+      const pageSize = Number(parsed.searchParams.get('pageSize') || 500);
+      return payload(games.slice((page - 1) * pageSize, page * pageSize), page, pageSize, games.length);
+    }
+    if (parsed.pathname.endsWith('/seo/audit/games')) {
+      const page = Number(parsed.searchParams.get('page') || 1);
+      const pageSize = Number(parsed.searchParams.get('pageSize') || 0);
+      auditRequests.push({ page, pageSize });
+      inFlight += 1;
+      peak = Math.max(peak, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      inFlight -= 1;
+      const list = games.slice((page - 1) * pageSize, page * pageSize).map((item) => ({
+        pkg: item.pkg,
+        quality: { indexable: true },
+      }));
+      return payload(list, page, pageSize, games.length);
+    }
+    return payload([], 1, 500, 0);
+  };
+
+  const builder = createSitemapBuilder({ apiBaseUrl: 'https://api.test', siteUrl: 'https://apks.cc', fetchImpl });
+  const { entries } = await builder.buildEntries();
+
+  assert.ok(auditRequests.length >= 5);
+  assert.ok(auditRequests.every((request) => request.pageSize === 200));
+  assert.ok(peak <= 2, `审计接口并发峰值 ${peak} 超过 2`);
+  // 页大小变小不影响总量：1000 个高质量包全部拿到，sitemap 里仍是 1000 条游戏
+  assert.equal(entries.filter((entry) => entry.url.includes('/app/')).length, games.length);
 });
 
 test('createSitemapBuilder: 游戏目录为空时 apiReachable=false，调用方据此不覆盖旧产物', async () => {
@@ -271,10 +369,132 @@ test('静态直出链路：后台改 SEO 后重新生成，目标 URL 的 lastmo
   assert.match(served.xml, /com\.tencent\.ig<\/loc>\n<lastmod>2026-10-23T02:00:00\.000Z/);
 });
 
+test('getRecentGameUpdates: 补丁查询绕过 Next 数据缓存，写入后立刻可见（regression）', async () => {
+  // 生产缺陷复现：route 以 revalidate=1800 调 createSitemapBuilder，首次请求把「写入前」的
+  // API 响应钉进 Next fetch 缓存；补丁查询若也走 force-cache，缓存纪元内恒返回旧快照。
+  // stub 用 init.cache 模拟 Next 缓存语义：force-cache 只见到首次快照，no-store 见到实时数据。
+  const beforeWrite = [{ pkg: 'com.old.one', updated_at: '2026-10-24T08:46:24.007Z' }];
+  const afterWrite = [
+    { pkg: 'com.fresh.one', updated_at: '2026-10-27T16:28:22.606Z' },
+    { pkg: 'com.old.one', updated_at: '2026-10-24T08:46:24.007Z' },
+  ];
+  let hasWriteHappened = false;
+  const fetchImpl = (url, init = {}) => new Response(
+    JSON.stringify({
+      code: 0,
+      data: { page: 1, pageSize: 1000, total: 5152, list: init.cache === 'no-store' && hasWriteHappened ? afterWrite : beforeWrite },
+    }),
+    { status: 200, headers: { 'content-type': 'application/json' } },
+  );
+  const builder = createSitemapBuilder({
+    apiBaseUrl: 'https://api.test',
+    siteUrl: 'https://apks.cc',
+    fetchImpl,
+    revalidate: 1800,
+  });
+
+  const first = await builder.getRecentGameUpdates('2026-10-25T00:00:00.000Z');
+  assert.deepEqual(first.games.map((game) => game.pkg), []); // 写入前：补丁 0 条
+
+  hasWriteHappened = true; // 后台写入 updated_at=2026-10-27T16:28:22.606Z
+  const second = await builder.getRecentGameUpdates('2026-10-25T00:00:00.000Z');
+  assert.deepEqual(second.games.map((game) => game.pkg), ['com.fresh.one']); // 不再命中旧缓存
+});
+
 test('getServerApiBaseUrl / getSiteUrlFromEnv: 与运行时 env 口径一致', () => {
   assert.equal(getServerApiBaseUrl({ API_BASE_URL: 'http://127.0.0.1:9527/' }), 'http://127.0.0.1:9527');
   assert.equal(getServerApiBaseUrl({ APP_ENV: 'production' }), 'https://api.hk.apks.cc');
   assert.equal(getServerApiBaseUrl({ APP_ENV: 'development' }), 'http://127.0.0.1:9527');
   assert.equal(getSiteUrlFromEnv({ SITE_URL: 'https://apks.cc/' }), 'https://apks.cc');
   assert.equal(getSiteUrlFromEnv({}), 'https://apks.cc');
+});
+
+test('createSitemapBuilder: 分类页只收达到阈值的分类，且全部名字只请求一次', async () => {
+  const calls = [];
+  const fetchImpl = async (url) => {
+    calls.push(String(url));
+    const parsed = new URL(url);
+    const json = (payload) => new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+    if (parsed.pathname.endsWith('/seo/category-pages')) {
+      return json({
+        code: 0,
+        data: {
+          list: [
+            { name: '角色扮演', published: 1400, with_resources: 1341 },
+            // 恰好等于阈值（12 / 8）也要收录，边界不能写成「大于」
+            { name: 'MOBA', published: 12, with_resources: 8 },
+            { name: '纸牌', published: 11, with_resources: 83 },
+            { name: '音乐', published: 99, with_resources: 7 },
+            // 映射表里没有的名字不生成 /category/ 条目
+            { name: '不存在的分类', published: 999, with_resources: 999 },
+          ],
+          cached: false,
+        },
+      });
+    }
+    if (parsed.pathname.endsWith('/seo/sitemap/games')) {
+      return json({ code: 0, data: { page: 1, pageSize: 500, total: 1, list: [{ pkg: 'com.a', status: 1 }] } });
+    }
+    return json({ code: 0, data: { page: 1, pageSize: 500, total: 0, list: [] } });
+  };
+
+  const builder = createSitemapBuilder({ apiBaseUrl: 'https://api.test', siteUrl: 'https://apks.cc', fetchImpl });
+  const { entries, stats } = await builder.buildEntries();
+  const urls = entries.map((entry) => entry.url);
+
+  assert.ok(urls.includes('https://apks.cc/category/rpg'));
+  assert.ok(urls.includes('https://apks.cc/category/moba'));
+  assert.equal(urls.some((url) => url.includes('/category/card')), false); // 已发布 11 < 12
+  assert.equal(urls.some((url) => url.includes('/category/music')), false); // 有资源 7 < 8
+  assert.equal(stats.categoryPages, 2);
+
+  const rpg = entries.find((entry) => entry.url === 'https://apks.cc/category/rpg');
+  assert.equal(rpg.changeFrequency, 'weekly');
+  assert.equal(rpg.priority, 0.7);
+
+  // 23 个分类名一次请求拿全，不许 N 次
+  const categoryCalls = calls.filter((call) => call.includes('/seo/category-pages'));
+  assert.equal(categoryCalls.length, 1);
+  const names = new URL(categoryCalls[0]).searchParams.get('names').split(',');
+  assert.equal(names.length, 23);
+  assert.ok(names.includes('角色扮演'));
+  assert.ok(names.includes('MOBA'));
+});
+
+test('createSitemapBuilder: 分类计数接口报错只跳过分类页，整份 sitemap 照常生成', async () => {
+  const warnings = [];
+  const fetchImpl = async (url) => {
+    const parsed = new URL(url);
+    const json = (payload) => new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+    if (parsed.pathname.endsWith('/seo/category-pages')) return json({ code: 502, message: 'upstream failed' });
+    if (parsed.pathname.endsWith('/seo/sitemap/games')) {
+      return json({ code: 0, data: { page: 1, pageSize: 500, total: 1, list: [{ pkg: 'com.a', status: 1 }] } });
+    }
+    if (parsed.pathname.endsWith('/seo/audit/games')) {
+      return json({ code: 0, data: { page: 1, pageSize: 200, total: 1, list: [{ pkg: 'com.a', quality: { indexable: true } }] } });
+    }
+    return json({ code: 0, data: { page: 1, pageSize: 500, total: 0, list: [] } });
+  };
+
+  const builder = createSitemapBuilder({
+    apiBaseUrl: 'https://api.test',
+    siteUrl: 'https://apks.cc',
+    fetchImpl,
+    logger: { log: () => {}, warn: (...args) => warnings.push(args.join(' ')) },
+  });
+  const { entries, complete, stats } = await builder.buildEntries();
+  const urls = entries.map((entry) => entry.url);
+
+  assert.equal(stats.categoryPages, 0);
+  assert.equal(urls.some((url) => url.includes('/category/')), false);
+  // 分类页是加成，不能因为它把整份 sitemap 判成残缺（否则静态快照永远写不出来）
+  assert.equal(complete, true);
+  assert.ok(urls.includes('https://apks.cc/app/com.a'));
+  assert.ok(warnings.some((line) => line.includes('[sitemap] 分类计数接口不可用')));
 });

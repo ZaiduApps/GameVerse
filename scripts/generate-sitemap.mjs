@@ -98,8 +98,8 @@ async function generate() {
   await fs.writeFile(PUBLIC_SITEMAP, xml, 'utf8');
 
   log(
-    `已写出 public/sitemap.xml（urlCount=${entries.length}；games=${stats.games}（质量审计过滤 ${stats.gamesSkippedByIndexable}） ` +
-      `posts=${stats.posts} topics=${stats.topics} albums=${stats.albums} users=${stats.users}；${Date.now() - startedAt} ms）`,
+    `已写出 public/sitemap.xml（urlCount=${entries.length}；games=${stats.games}（未发布剔除 ${stats.gamesSkippedUnpublished}、质量审计过滤 ${stats.gamesSkippedByIndexable}） ` +
+      `posts=${stats.posts} topics=${stats.topics} albums=${stats.albums} search=${stats.search}；${Date.now() - startedAt} ms）`,
   );
   // 机器可读自报，验收时与 `grep -c "<loc>"` 对比。
   log(`urlCount=${entries.length} buildTime=${buildTime}`);

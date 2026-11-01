@@ -1,5 +1,6 @@
 import DOMPurify, { type Config as SanitizeConfig } from 'isomorphic-dompurify';
 
+import { buildCategoryPath, resolveCategoryByName } from '@/lib/category-pages';
 import { resolveGameName } from '@/lib/game-display-name';
 import { buildRenderedMarkdownDocument } from '@/lib/utils';
 import type { CardConfigItem, GameDetailData } from '@/types';
@@ -281,16 +282,24 @@ export function getGameTags(game: GameDetailData['app']): string[] {
 }
 
 export function getPrimaryCategory(game: GameDetailData['app'], tags: string[]): string {
-  const preferredTag = tags.find((tag) => {
+  const usableTag = (tag: string) => {
     const value = String(tag || '').trim();
     return Boolean(value) && !value.startsWith('#') && !/创收最高|热门免费|人气推荐/i.test(value);
-  });
+  };
+  // 有真实分类落地页的标签优先：面包屑与主分类都指向能打开的 /category/<slug>，
+  // 而不是一个只有筛选结果的 /app?category=。没有的话再按原逻辑取第一个可用标签。
+  const landingTag = tags.find((tag) => usableTag(tag) && resolveCategoryByName(tag));
+  if (landingTag) return String(landingTag).trim();
+  const preferredTag = tags.find(usableTag);
   return preferredTag || String(game.type || '').trim() || '安卓游戏';
 }
 
 export function buildTagFilterHref(tag: string): string {
   const safeTag = String(tag || '').trim();
   if (!safeTag) return '/app';
+  // 映射表里的标签走分类落地页（可以索引的高质量页），其余保持游戏库筛选链接。
+  const category = resolveCategoryByName(safeTag);
+  if (category) return buildCategoryPath(category.slug);
   const params = new URLSearchParams();
   params.set('category', safeTag);
   return `/app?${params.toString()}`;

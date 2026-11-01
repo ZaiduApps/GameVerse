@@ -6,12 +6,10 @@ import {
 /**
  * 下载失败回跳（`/app/{id}?download_error=1&download_error_reason=...`）的页面侧口径。
  *
- * 纯函数 + 常量，方便单测覆盖「渠道不可用 / 资源失效」两条文案与三条出口；
+ * 纯函数 + 常量，方便单测覆盖「渠道不可用 / 资源失效」两条文案与两条出口；
  * 组件只负责渲染，不自己拼 URL。
  */
 
-/** 详情页信息卡里的渠道区（直接下载链接所在位置）。 */
-export const DOWNLOAD_CHANNELS_ANCHOR = 'game-detail-channels';
 /** 版本与技术参数规格区块。 */
 export const DOWNLOAD_VERSIONS_ANCHOR = 'game-detail-specs';
 
@@ -54,7 +52,6 @@ export function buildDownloadErrorActions(params: {
   const reportHref = query.toString() ? `/submit-resource?${query.toString()}` : '/submit-resource';
 
   return [
-    { key: 'retry', label: '换渠道重试', href: `#${DOWNLOAD_CHANNELS_ANCHOR}`, target: 'in-page' },
     { key: 'report', label: '反馈失效', href: reportHref, target: 'internal' },
     { key: 'versions', label: '查看其他版本', href: `#${DOWNLOAD_VERSIONS_ANCHOR}`, target: 'in-page' },
   ];

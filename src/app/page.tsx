@@ -145,7 +145,8 @@ function buildAlbumSections(albums: ApiAlbum[]): AlbumSection[] {
       continue;
     }
     if (style === 'Pre') {
-      sections.push({ kind: 'prereg', album, games });
+      // 预约专题只剩真正没有下载入口的游戏；不足 3 款说明还没成势，整块不渲染。
+      if (games.length >= 3) sections.push({ kind: 'prereg', album, games });
       continue;
     }
     if (style === 'Grid') {

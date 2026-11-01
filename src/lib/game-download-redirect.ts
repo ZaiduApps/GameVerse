@@ -30,9 +30,24 @@ export interface DownloadIssueResult {
   payload?: unknown;
 }
 
+/**
+ * 失败分类（待决策 #74）。判定只做一件事：把「用户还能不能在这个页面里继续」分清。
+ *
+ * - `invalid`：请求本身不合法（id/渠道格式错），页面留在这里说明原因；
+ * - `app_missing`：游戏已经不在目录里，回游戏页只会二次 404，直接给错误页；
+ * - `resource` / `channel` / `upstream`：游戏还在，只是这份资源暂时拿不到，
+ *   回详情页并带上 `download_error`，用户能换渠道或看别的版本。
+ */
+export type DownloadFailureKind =
+  | 'invalid'
+  | 'app_missing'
+  | 'resource'
+  | 'channel'
+  | 'upstream';
+
 export type DownloadRedirectDecision =
   | { kind: 'redirect'; location: string }
-  | { kind: 'bad_request'; message: string };
+  | { kind: 'error_page'; status: 400 | 404; failure: DownloadFailureKind };
 
 /**
  * 24 位 ObjectId 当 app_id 传，否则当包名传（与详情页 URL 的两种形态一致）。
@@ -88,10 +103,44 @@ export function buildDownloadFailureLocation(
 }
 
 /**
+ * 从 interface 的失败响应里读出失败类型。
+ *
+ * interface 的下载接口对失败也回 2xx，真实原因只在 body 的 `code` / `message` 里
+ * （`{code:404,message:"应用不存在"}` / `{code:404,message:"资源不存在"}` …），
+ * 所以这里必须按 body 判定，不能只看 HTTP 状态。没拿到响应（超时、5xx、网络断）
+ * 一律算上游故障：渠道可能只是临时抖动。
+ */
+export function classifyDownloadIssueFailure(
+  result: DownloadIssueResult | null | undefined,
+): DownloadFailureKind {
+  if (!result?.ok) return 'upstream';
+  const record = (result.payload ?? {}) as { code?: unknown; message?: unknown };
+  const code = Number(record.code);
+  const message = String(record.message ?? '');
+  if (code === 404) {
+    if (message.includes('应用不存在')) return 'app_missing';
+    if (message.includes('渠道')) return 'channel';
+    return 'resource';
+  }
+  if (Number.isFinite(code) && code >= 500) return 'upstream';
+  // 400（页游、参数）与「有响应但没地址」都按资源不可用：游戏还在，
+  // 回详情页换渠道比给用户一个 400 页面有用。
+  return 'resource';
+}
+
+/** 失败类型 → 回详情页时用的原因参数（老链接只认 channel/resource 两种）。 */
+export function toFailureReason(kind: DownloadFailureKind): DownloadFailureReason {
+  return kind === 'channel' || kind === 'upstream' ? 'channel' : 'resource';
+}
+
+/**
  * 判定一次 `/app/[id]/download/[channelId]` 请求的最终去向。
  *
  * 入参里的 `requestIssuedUrl` 由调用方注入（真实实现是 fetch interface），
  * 抛出任何异常都按「上游失败」降级——下载入口不能因为统计或上游抖动变成错误页。
+ *
+ * 只有两种情况停在原地给错误页（待决策 #74）：请求本身不合法、游戏已经不存在。
+ * 其余失败仍回详情页，因为那里用户还能换渠道、看别的版本或反馈。
  */
 export async function decideDownloadRedirect(input: {
   id: unknown;
@@ -100,12 +149,12 @@ export async function decideDownloadRedirect(input: {
 }): Promise<DownloadRedirectDecision> {
   const resolvedId = resolveDownloadRedirectId(input.id);
   if (!resolvedId) {
-    return { kind: 'bad_request', message: 'invalid app id' };
+    return { kind: 'error_page', status: 400, failure: 'invalid' };
   }
 
   const channelId = String(input.channelId ?? '').trim();
   if (!isDownloadChannelId(channelId)) {
-    return { kind: 'bad_request', message: 'invalid channel id' };
+    return { kind: 'error_page', status: 400, failure: 'invalid' };
   }
 
   try {
@@ -113,16 +162,21 @@ export async function decideDownloadRedirect(input: {
       [resolvedId.field]: resolvedId.value,
       channel_id: channelId,
     });
-    if (!result?.ok) {
-      // 上游请求本身失败：渠道可能临时故障/限流，引导换渠道。
-      return { kind: 'redirect', location: buildDownloadFailureLocation(resolvedId.value, 'channel') };
+    if (result?.ok) {
+      const url = resolveIssuedDownloadUrl(result.payload);
+      if (url) {
+        return { kind: 'redirect', location: url };
+      }
     }
-    const url = resolveIssuedDownloadUrl(result.payload);
-    if (url) {
-      return { kind: 'redirect', location: url };
+    const failure = classifyDownloadIssueFailure(result);
+    if (failure === 'app_missing') {
+      // 回详情页只会二次 404：直接把「游戏不在目录里」讲清楚。
+      return { kind: 'error_page', status: 404, failure };
     }
-    // 请求成功但没有可用地址：资源本身失效，引导反馈与查其它版本。
-    return { kind: 'redirect', location: buildDownloadFailureLocation(resolvedId.value, 'resource') };
+    return {
+      kind: 'redirect',
+      location: buildDownloadFailureLocation(resolvedId.value, toFailureReason(failure)),
+    };
   } catch {
     return { kind: 'redirect', location: buildDownloadFailureLocation(resolvedId.value, 'channel') };
   }

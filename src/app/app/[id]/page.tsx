@@ -15,7 +15,6 @@ import {
 } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityFeed, getCommunityPostsByGame } from '@/lib/community-api';
-import { resolveInstallActionTarget } from '@/lib/game-download-channel';
 import {
   faqMarkdownToPlainText,
   selectDedicatedGameFaqItems,
@@ -35,7 +34,10 @@ const SEO_SNAPSHOT_VERSION = '2';
 const MAX_SERVER_RECOMMENDED_GAMES = 10;
 const MIN_DETAIL_RELATED_NEWS = 3;
 const MAX_DETAIL_RELATED_NEWS = 5;
-const RECOMMENDED_GAMES_TIMEOUT_MS = 2500;
+// 后端 /game/recommendedApp 自带 ≤2500ms 的库侧预算，超预算时先走同分类/热门兜底再返回，
+// 所以前端这 5s 等的只是「网络 + 后端兜底」，不是后端算不完的推荐。
+// 2.5s 时详情页在网络稍慢的链路上一路空推荐，相似推荐区块整块消失；5s 只等网络。
+const RECOMMENDED_GAMES_TIMEOUT_MS = 5000;
 const STATIC_PARAMS_DEFAULT_LIMIT = 100;
 const STATIC_PARAMS_HARD_LIMIT = 500;
 const configuredStaticParamsLimit = Number.parseInt(
@@ -469,7 +471,7 @@ function GameDetailUnavailableView() {
       <p className="text-sm leading-relaxed text-[#595c5d] dark:text-muted-foreground">
         该应用的详情数据正在恢复中，请稍后刷新重试。
       </p>
-      <p className="text-xs text-[#757778] dark:text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         如果长时间无法打开，可以
         <a className="mx-1 underline decoration-dotted underline-offset-2" href="/app">返回游戏库</a>
         换个入口。
@@ -677,10 +679,6 @@ export default async function GameDetailPage({
     .map((item) => normalizeText(item))
     .filter(Boolean)
     .slice(0, 5);
-  // 下载意图要有机器可读的落点：优先直下渠道的 302 入口，没有直下渠道才回退详情页自身。
-  const installActionTarget = isWebGame
-    ? canonicalUrl
-    : resolveInstallActionTarget(initialGameData.resources, game.pkg || game._id, canonicalUrl);
 
   const detailJsonLd = {
     '@context': 'https://schema.org',
@@ -716,7 +714,7 @@ export default async function GameDetailPage({
           },
           potentialAction: {
             '@type': 'InstallAction',
-            target: installActionTarget,
+            target: canonicalUrl,
             platform: ['https://schema.org/AndroidPlatform'],
           },
         }

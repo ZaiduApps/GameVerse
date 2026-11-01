@@ -97,6 +97,18 @@ test('首屏样式确定且非首屏截图不声明高优先级', () => {
   assert.match(heroArtworkSource, /handleImageError\(currentImage\)/);
 });
 
+test('信息卡游戏图标随首屏放行 eager，相似推荐图标保持默认懒加载', () => {
+  // 信息卡图标（80/96px）移动端 -mt-12 紧贴封面、桌面端也在首屏，是第 2 个 LCP 候选；
+  // 相似推荐的 48px 图标在折叠线以下，保持 next/image 默认 lazy。
+  const anchor = viewSource.indexOf('getPreviewImageUrl(game.icon, 320)');
+  assert.ok(anchor > -1);
+  const iconBlock = viewSource.slice(anchor, anchor + 400);
+  assert.match(iconBlock, /\bpriority\b/);
+  assert.match(iconBlock, /fetchPriority="high"/);
+  assert.doesNotMatch(iconBlock, /loading="lazy"/);
+  assert.equal((viewSource.match(/fetchPriority="high"/g) || []).length, 1);
+});
+
 test('中文正文使用系统字体栈且不加载站点级中文 WebFont', () => {
   assert.doesNotMatch(layoutSource, /noto-sans-sc\.css|\/fonts\/NotoSansSC-/);
   assert.doesNotMatch(globalsSource, /["']NotoSansSC["']/);

@@ -3,26 +3,29 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
-  buildDirectDownloadLinks,
   resolveDownloadChannelId,
-  resolveInstallActionTarget,
   shouldGuideToApp,
 } from '../src/lib/game-download-channel.ts';
 import {
   buildDownloadFailureLocation,
+  classifyDownloadIssueFailure,
   decideDownloadRedirect,
   isDownloadChannelId,
   normalizeIssuedDownloadUrl,
   resolveDownloadRedirectId,
   resolveIssuedDownloadUrl,
 } from '../src/lib/game-download-redirect.ts';
+import {
+  describeDownloadErrorPage,
+  renderDownloadErrorPage,
+  resolveDownloadErrorAppPath,
+} from '../src/lib/download-error-page.ts';
 
 const readSource = (relativePath) => readFile(new URL(relativePath, import.meta.url), 'utf8');
 
 const PKG = 'com.demo.game';
 const APP_ID = '67f000000000000000000222';
 const CHANNEL_OFFICIAL = '67f000000000000000000333';
-const CHANNEL_APKPURE = '67f000000000000000000444';
 
 function resource(overrides = {}) {
   return {
@@ -38,72 +41,10 @@ function resource(overrides = {}) {
   };
 }
 
-test('直链只包含可直接下载的渠道，href 指向 302 入口', () => {
-  const links = buildDirectDownloadLinks(
-    [
-      resource({ channelId: CHANNEL_OFFICIAL, name: '官方渠道', code: 'official' }),
-      resource({
-        channelId: CHANNEL_APKPURE,
-        name: 'APKPure',
-        code: 'apkpure',
-        channel: { description: 'APKPure 第三方' },
-      }),
-      resource({
-        channelId: '67f000000000000000000555',
-        name: '安卓专区',
-        code: 'third_party',
-        channel: { platform_range: ['android'] },
-      }),
-    ],
-    PKG,
-  );
-
-  assert.equal(links.length, 1);
-  assert.equal(links[0].channelId, CHANNEL_OFFICIAL);
-  assert.equal(links[0].channelName, '官方渠道');
-  assert.equal(links[0].href, `/app/${PKG}/download/${CHANNEL_OFFICIAL}`);
-  assert.ok(links[0].href.includes('/download/'));
-});
-
-test('直链去重、无渠道 id 或空游戏 id 时不出链接', () => {
-  const duplicated = buildDirectDownloadLinks(
-    [
-      resource({ channelId: CHANNEL_OFFICIAL }),
-      resource({ channelId: CHANNEL_OFFICIAL, name: '官方渠道（重复）' }),
-      resource({ channelId: '', name: '无 id' }),
-    ],
-    PKG,
-  );
-
-  assert.equal(duplicated.length, 1);
-  assert.deepEqual(buildDirectDownloadLinks([resource()], ''), []);
-  assert.deepEqual(buildDirectDownloadLinks(undefined, PKG), []);
-});
-
-test('JSON-LD InstallAction.target 指向直下入口，无直下渠道时回退 canonical', async () => {
-  const canonical = `https://apks.cc/app/${PKG}`;
-
-  // 有直下渠道：落点是 302 入口，不是详情页自身
-  const withDirect = resolveInstallActionTarget(
-    [resource({ channelId: CHANNEL_OFFICIAL, code: 'official' })],
-    PKG,
-    canonical,
-  );
-  assert.equal(withDirect, `https://apks.cc/app/${PKG}/download/${CHANNEL_OFFICIAL}`);
-  assert.ok(withDirect.includes('/download/'));
-
-  // 只有引导型渠道（APKPure）或没有资源时：回退详情页自身
-  assert.equal(
-    resolveInstallActionTarget([resource({ channelId: CHANNEL_APKPURE, code: 'apkpure' })], PKG, canonical),
-    canonical,
-  );
-  assert.equal(resolveInstallActionTarget(undefined, PKG, canonical), canonical);
-  assert.equal(resolveInstallActionTarget([], PKG, canonical), canonical);
-
-  // 详情页接线：JSON-LD 用同一个函数取落点，不自己再拼一套渠道筛选
+test('JSON-LD InstallAction.target 恒等于页面 canonical URL', async () => {
   const pageSource = await readSource('../src/app/app/[id]/page.tsx');
-  assert.match(pageSource, /resolveInstallActionTarget\(initialGameData\.resources, game\.pkg \|\| game\._id, canonicalUrl\)/);
-  assert.match(pageSource, /target: installActionTarget/);
+  assert.match(pageSource, /target: canonicalUrl/);
+  assert.doesNotMatch(pageSource, /installActionTarget/);
 });
 
 test('渠道判定与弹窗共用同一份实现（APKPure / Android 定向都引导去 App）', () => {
@@ -131,14 +72,14 @@ test('302 路由：参数校验把非法 id / channelId 判成 400', async () =>
     channelId: CHANNEL_OFFICIAL,
     requestIssuedUrl: neverCalled,
   });
-  assert.deepEqual(badId, { kind: 'bad_request', message: 'invalid app id' });
+  assert.deepEqual(badId, { kind: 'error_page', status: 400, failure: 'invalid' });
 
   const badChannel = await decideDownloadRedirect({
     id: PKG,
     channelId: 'channel-1',
     requestIssuedUrl: neverCalled,
   });
-  assert.deepEqual(badChannel, { kind: 'bad_request', message: 'invalid channel id' });
+  assert.deepEqual(badChannel, { kind: 'error_page', status: 400, failure: 'invalid' });
 });
 
 test('302 路由：24 位 id 当 app_id 传，包名当 pkg 传', async () => {
@@ -175,6 +116,33 @@ test('302 路由：上游成功时 302 到 interface 返回的地址', async () 
 
   assert.equal(decision.kind, 'redirect');
   assert.equal(decision.location, 'https://cdn.example.com/files/demo.apk?sig=abc');
+});
+
+/**
+ * 直链下载（#107）的两条分支。
+ *
+ * 开关判定在 interface 的 resolveDownloadUrl 里（勾选且已上传成功才下发 R2
+ * 直链，否则下发原有 123 地址），GameVerse 只负责把 interface 给的地址原样
+ * 302 出去——所以这里锁的是「不重写、不拼接」：直链像普通地址一样被跟随，
+ * 关闭时仍是原来的 123 分享地址。
+ */
+test('302 路由：直链开关开启时跟随 R2 直链，关闭时跟随 123 分享地址', async () => {
+  const directLink = 'https://cdn.apkscc.com/apk/com.demo.game/com.demo.game_1.0.0.apk';
+  const shareUrl = 'https://www.123684.com/s/4H3LVv-riSP';
+
+  const on = await decideDownloadRedirect({
+    id: PKG,
+    channelId: CHANNEL_OFFICIAL,
+    requestIssuedUrl: async () => ({ ok: true, payload: { url: directLink } }),
+  });
+  assert.deepEqual(on, { kind: 'redirect', location: directLink });
+
+  const off = await decideDownloadRedirect({
+    id: PKG,
+    channelId: CHANNEL_OFFICIAL,
+    requestIssuedUrl: async () => ({ ok: true, payload: { url: shareUrl } }),
+  });
+  assert.deepEqual(off, { kind: 'redirect', location: shareUrl });
 });
 
 test('302 路由：上游失败与资源失效分别降级回详情页并带上原因', async () => {
@@ -217,6 +185,62 @@ test('302 路由：上游失败与资源失效分别降级回详情页并带上�
   assert.deepEqual(emptyUrl, { kind: 'redirect', location: resourceFailure });
 });
 
+test('302 路由：失败按 interface body 的 code/message 分类（待决策 #74）', async () => {
+  // interface 的下载接口失败也回 2xx，原因只在 body 里
+  assert.equal(classifyDownloadIssueFailure({ ok: true, payload: { code: 404, message: '应用不存在' } }), 'app_missing');
+  assert.equal(classifyDownloadIssueFailure({ ok: true, payload: { code: 404, message: '渠道不存在' } }), 'channel');
+  assert.equal(classifyDownloadIssueFailure({ ok: true, payload: { code: 404, message: '资源不存在' } }), 'resource');
+  assert.equal(classifyDownloadIssueFailure({ ok: true, payload: { code: 400, message: '页游不支持 APK 下载资源' } }), 'resource');
+  assert.equal(classifyDownloadIssueFailure({ ok: true, payload: { code: 500, message: 'download url is empty' } }), 'upstream');
+  assert.equal(classifyDownloadIssueFailure({ ok: false }), 'upstream');
+  assert.equal(classifyDownloadIssueFailure(null), 'upstream');
+
+  const missingApp = await decideDownloadRedirect({
+    id: PKG,
+    channelId: CHANNEL_OFFICIAL,
+    requestIssuedUrl: async () => ({ ok: true, payload: { code: 404, message: '应用不存在' } }),
+  });
+  // 游戏不存在时回详情页只会二次 404 → 直接停在原地给 404 错误页
+  assert.deepEqual(missingApp, { kind: 'error_page', status: 404, failure: 'app_missing' });
+
+  const missingResource = await decideDownloadRedirect({
+    id: PKG,
+    channelId: CHANNEL_OFFICIAL,
+    requestIssuedUrl: async () => ({ ok: true, payload: { code: 404, message: '资源不存在' } }),
+  });
+  assert.deepEqual(missingResource, {
+    kind: 'redirect',
+    location: `/app/${PKG}?download_error=1&download_error_reason=resource`,
+  });
+});
+
+test('错误页：noindex、转义、不拿脏 id 拼跳转', () => {
+  const copy = describeDownloadErrorPage('app_missing');
+  assert.equal(copy.status, 404);
+  const html = renderDownloadErrorPage({ ...copy, requestId: 'dl-1' });
+
+  assert.match(html, /<meta name="robots" content="noindex, follow">/);
+  assert.match(html, /请求号：dl-1/);
+  // 404 页不给「返回游戏页」按钮：那里只会二次 404
+  assert.doesNotMatch(html, /返回游戏页/);
+
+  const invalid = renderDownloadErrorPage({
+    ...describeDownloadErrorPage('invalid'),
+    appId: '<script>alert(1)</script>',
+  });
+  assert.match(invalid, /回到首页/);
+  assert.doesNotMatch(invalid, /<script>alert\(1\)<\/script>/);
+  assert.doesNotMatch(invalid, /返回游戏页/);
+
+  assert.equal(resolveDownloadErrorAppPath(PKG), `/app/${PKG}`);
+  assert.equal(resolveDownloadErrorAppPath('a/b'), null);
+  assert.equal(resolveDownloadErrorAppPath('https://evil.example.com'), null);
+  assert.equal(resolveDownloadErrorAppPath('  '), null);
+
+  const withApp = renderDownloadErrorPage({ ...describeDownloadErrorPage('invalid'), appId: PKG });
+  assert.match(withApp, new RegExp(`href="/app/${PKG}"`));
+});
+
 test('302 路由：Location 只接受 http/https，不接受开放重定向', () => {
   assert.equal(normalizeIssuedDownloadUrl('https://cdn.example.com/a.apk'), 'https://cdn.example.com/a.apk');
   assert.equal(normalizeIssuedDownloadUrl('http://cdn.example.com/a.apk'), 'http://cdn.example.com/a.apk');
@@ -230,11 +254,10 @@ test('302 路由：Location 只接受 http/https，不接受开放重定向', ()
 });
 
 test('route handler 与详情页接线符合派发单约束（源码级）', async () => {
-  const [routeSource, viewSource, dialogSource, linksSource] = await Promise.all([
+  const [routeSource, viewSource, dialogSource] = await Promise.all([
     readSource('../src/app/app/[id]/download/[channelId]/route.ts'),
     readSource('../src/app/app/[id]/GameDetailView.tsx'),
     readSource('../src/components/game-download-dialog.tsx'),
-    readSource('../src/components/game-direct-download-links.client.tsx'),
   ]);
 
   // 302 链路：force-dynamic + no-store + 带着来源位与访客 UA 去调现有 POST 接口
@@ -247,13 +270,9 @@ test('route handler 与详情页接线符合派发单约束（源码级）', asy
   assert.match(routeSource, /apiUrl\('\/game\/getAppDownload'\)/);
   assert.doesNotMatch(routeSource, /NextResponse\.redirect/);
 
-  // 直链由服务端渲染，不能塞进 ssr:false 的动态组件
-  assert.match(viewSource, /<GameDirectDownloadLinks/);
-  assert.match(viewSource, /buildDirectDownloadLinks\(resources, game\.pkg \|\| game\._id\)/);
-  assert.doesNotMatch(viewSource, /GameDirectDownloadLinks[\s\S]{0,200}ssr: false/);
-  assert.match(linksSource, /rel="nofollow"/);
-  assert.match(linksSource, /href=\{link\.href\}/);
-  assert.match(linksSource, /下载/);
+  // 详情页不再渲染直链渠道块：302 入口既不在页面上露出，也不在 JSON-LD 里声明
+  assert.doesNotMatch(viewSource, /game-detail-channels/);
+  assert.doesNotMatch(viewSource, /GameDirectDownloadLinks/);
 
   // 客户端打点：渠道按钮上报 download_click，服务端不再代记
   assert.match(dialogSource, /reportDownloadClick\(\{ appId, pkg, channelId, surface: 'detail_dialog' \}\)/);

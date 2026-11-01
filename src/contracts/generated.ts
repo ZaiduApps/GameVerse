@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 9893646e78f2beae0cd080bd0b08b7b205c7314f9351cf01807f7b054f2bcab9
+ * @contract-sha256 c1c4f283b9e040ab321e38877b3dac0478b881b248de6824cc9c733b1853af96
  */
 
 export interface paths {
@@ -3203,6 +3203,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/game/category": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 按分类分页获取已发布且有资源的应用（公开） */
+        get: operations["GameController_categoryPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/game/q": {
         parameters: {
             query?: never;
@@ -3384,6 +3401,23 @@ export interface paths {
         get: operations["MediaAssetController_stats"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-assets/backfill-apk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 回填桶内 apk/ 前缀直链对象进媒体库（幂等，可分批执行） */
+        post: operations["MediaAssetController_backfillApk"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5227,6 +5261,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/app-resources/direct-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 分页查询最新版本资源的直链开关与地址 */
+        get: operations["AppResourcesAdminController_listDirectLinks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/app-resources/direct-link/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 批量设置资源直链开关（单次最多 200 个，幂等） */
+        post: operations["AppResourcesAdminController_batchDirectLinks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/articles/admin/list": {
         parameters: {
             query?: never;
@@ -5330,58 +5398,7 @@ export interface paths {
         patch: operations["ArticleController_setRecommend"];
         trace?: never;
     };
-    "/client/webview-acceleration": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get client WebView acceleration policy */
-        get: operations["WebviewAccelerationController_getClientPolicy"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/webview-acceleration/admin/list": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List WebView acceleration policies */
-        get: operations["WebviewAccelerationController_list"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/webview-acceleration/admin/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get one WebView acceleration policy */
-        get: operations["WebviewAccelerationController_detail"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/webview-acceleration/create": {
+    "/articles/admin/repost/run": {
         parameters: {
             query?: never;
             header?: never;
@@ -5390,32 +5407,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create WebView acceleration policy */
-        post: operations["WebviewAccelerationController_create"];
+        /** 抓取外站攻略并生成转载文章（同步执行，单批上限 50 篇） */
+        post: operations["RepostController_run"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/webview-acceleration/update/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** Update WebView acceleration policy */
-        put: operations["WebviewAccelerationController_update"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/webview-acceleration/admin/status/{id}": {
+    "/articles/admin/repost/{articleId}/offline": {
         parameters: {
             query?: never;
             header?: never;
@@ -5424,15 +5424,33 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post?: never;
+        /** 一键下线转载文章（status 置 0 并记录下线时间） */
+        post: operations["RepostController_offline"];
         delete?: never;
         options?: never;
         head?: never;
-        /** Update WebView acceleration policy status */
-        patch: operations["WebviewAccelerationController_setStatus"];
+        patch?: never;
         trace?: never;
     };
-    "/webview-acceleration/delete/{id}": {
+    "/ai-assistant/admin/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取 AI 助手配置 */
+        get: operations["AiAssistantController_getConfig"];
+        put?: never;
+        /** 更新 AI 助手配置 */
+        post: operations["AiAssistantController_updateConfig"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai-assistant/admin/models/probe": {
         parameters: {
             query?: never;
             header?: never;
@@ -5441,23 +5459,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post?: never;
-        /** Delete WebView acceleration policy */
-        delete: operations["WebviewAccelerationController_remove"];
+        /** 探测上游模型列表（后端代理，api_key 不外泄） */
+        post: operations["AiAssistantController_probeModels"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/client/version/check": {
+    "/ai-assistant/admin/health": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** 客户端版本检查（安卓） */
-        get: operations["ClientVersionController_check"];
+        /** AI 助手运行时健康（模型熔断 / 并发 / 日预算） */
+        get: operations["AiAssistantController_getHealth"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5466,15 +5484,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/client/landing/app": {
+    "/ai-assistant/admin/tools": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** 下载落地页聚合信息（Web /download/app） */
-        get: operations["ClientVersionController_landingApp"];
+        /** 获取 AI 运营工具列表 */
+        get: operations["AiAssistantController_getTools"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5483,41 +5501,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/client-version/admin/list": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 后台版本规则列表 */
-        get: operations["ClientVersionController_adminList"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/client-version/admin/logs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 后台版本规则审计日志 */
-        get: operations["ClientVersionController_adminLogs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/client-version/admin/create": {
+    "/ai-assistant/admin/chat/stream": {
         parameters: {
             query?: never;
             header?: never;
@@ -5526,178 +5510,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 创建版本规则 */
-        post: operations["ClientVersionController_create"];
+        /** AI 对话流式输出（SSE） */
+        post: operations["AiAssistantController_chatStream"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/client-version/admin/update/{id}": {
+    "/ai-assistant/admin/jobs": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        /** 更新版本规则 */
-        put: operations["ClientVersionController_update"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/client-version/admin/status/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** 更新规则状态 */
-        patch: operations["ClientVersionController_setStatus"];
-        trace?: never;
-    };
-    "/client-version/admin/delete/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** 删除版本规则 */
-        delete: operations["ClientVersionController_remove"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/app-releases": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 版本发布列表 */
-        get: operations["AdminAppReleasesController_list"];
-        put?: never;
-        /** 创建版本草稿 */
-        post: operations["AdminAppReleasesController_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/app-releases/upload-apk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 上传 APK 并创建版本草稿 */
-        post: operations["AdminAppReleasesController_upload"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/app-releases/web-distribution": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 获取 Web 下载分发配置 */
-        get: operations["AdminAppReleasesController_distribution"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** 更新 Web 下载分发配置 */
-        patch: operations["AdminAppReleasesController_updateDistribution"];
-        trace?: never;
-    };
-    "/admin/app-releases/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** 编辑版本草稿 */
-        patch: operations["AdminAppReleasesController_update"];
-        trace?: never;
-    };
-    "/admin/app-releases/{id}/publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 发布版本 */
-        post: operations["AdminAppReleasesController_publish"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/app-releases/{id}/archive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 归档版本 */
-        post: operations["AdminAppReleasesController_archive"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/app/releases/distribution": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 获取客户端公开分发信息 */
-        get: operations["PublicAppReleasesController_distribution"];
+        /** 获取 AI 助手任务列表 */
+        get: operations["AiAssistantController_getJobs"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5706,15 +5535,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/app/releases/history": {
+    "/ai-assistant/admin/jobs/{jobId}/steps": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** 获取最近发布的 Android 客户端版本日志 */
-        get: operations["PublicAppReleasesController_history"];
+        /** 获取 AI 助手任务步骤 */
+        get: operations["AiAssistantController_getJobSteps"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5723,15 +5552,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/app/releases/android/download": {
+    "/ai-assistant/admin/jobs/{jobId}/graph": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** 跳转到最新 Android APK */
-        get: operations["PublicAppReleasesController_download"];
+        /** 获取 AI 助手任务步骤图 */
+        get: operations["AiAssistantController_getJobGraph"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5740,41 +5569,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/task-scheduler/admin/executors": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List available task executors */
-        get: operations["TaskSchedulerController_listExecutors"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/task-scheduler/admin/tasks": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List scheduled tasks */
-        get: operations["TaskSchedulerController_listTasks"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/task-scheduler/admin/tasks/upsert": {
+    "/ai-assistant/admin/jobs/{jobId}/retry": {
         parameters: {
             query?: never;
             header?: never;
@@ -5783,15 +5578,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create or update task */
-        post: operations["TaskSchedulerController_upsertTask"];
+        /** 重试 AI 助手任务 */
+        post: operations["AiAssistantController_retryJob"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/task-scheduler/admin/tasks/{id}/toggle": {
+    "/ai-assistant/admin/jobs/{jobId}/cancel": {
         parameters: {
             query?: never;
             header?: never;
@@ -5800,15 +5595,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Enable or disable task */
-        post: operations["TaskSchedulerController_toggleTask"];
+        /** 取消 AI 助手任务 */
+        post: operations["AiAssistantController_cancelJob"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/task-scheduler/admin/tasks/{id}/run": {
+    "/ai-assistant/admin/jobs/{jobId}/resume": {
         parameters: {
             query?: never;
             header?: never;
@@ -5817,15 +5612,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Run task now */
-        post: operations["TaskSchedulerController_runTask"];
+        /** 恢复 AI 助手任务（断点续跑） */
+        post: operations["AiAssistantController_resumeJob"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/task-scheduler/admin/tasks/{id}/run-manual": {
+    "/ai-assistant/admin/jobs/{jobId}/rollback": {
         parameters: {
             query?: never;
             header?: never;
@@ -5834,15 +5629,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Run task manually (execute now without queue) */
-        post: operations["TaskSchedulerController_runTaskManual"];
+        /** 记录 AI 助手任务回滚动作 */
+        post: operations["AiAssistantController_rollbackJob"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/task-scheduler/admin/tasks/{id}/stop": {
+    "/ai-assistant/admin/ops/albums/random-preview": {
         parameters: {
             query?: never;
             header?: never;
@@ -5851,49 +5646,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Stop task scheduling and pending jobs */
-        post: operations["TaskSchedulerController_stopTask"];
+        /** 随机选取专辑游戏（预览） */
+        post: operations["AiAssistantController_previewRandomPick"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/task-scheduler/admin/runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List task run history */
-        get: operations["TaskSchedulerController_listRuns"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/task-scheduler/admin/runs/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get task run detail */
-        get: operations["TaskSchedulerController_getRunDetail"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/task-scheduler/admin/tasks/{id}/policy": {
+    "/ai-assistant/admin/ops/albums/random-apply": {
         parameters: {
             query?: never;
             header?: never;
@@ -5902,23 +5663,57 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 更新任务重试/熔断/冷却策略 */
-        post: operations["TaskSchedulerController_updateTaskPolicy"];
+        /** 随机选取并写入专辑游戏 */
+        post: operations["AiAssistantController_applyRandomPick"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/task-scheduler/admin/health": {
+    "/mcp": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** 获取任务执行器健康与拥塞状态 */
-        get: operations["TaskSchedulerController_getSchedulerHealth"];
+        get?: never;
+        put?: never;
+        /** MCP JSON-RPC endpoint (public, read-only tools) */
+        post: operations["McpController_rpc"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mcp/admin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** MCP JSON-RPC endpoint for admin writable tools (X-API-Key only) */
+        post: operations["McpController_adminRpc"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/mcp/admin/audits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** MCP 工具调用审计流水（只读） */
+        get: operations["McpController_listAudits"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6530,6 +6325,603 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/client/webview-acceleration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get client WebView acceleration policy */
+        get: operations["WebviewAccelerationController_getClientPolicy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webview-acceleration/admin/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List WebView acceleration policies */
+        get: operations["WebviewAccelerationController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webview-acceleration/admin/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one WebView acceleration policy */
+        get: operations["WebviewAccelerationController_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webview-acceleration/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create WebView acceleration policy */
+        post: operations["WebviewAccelerationController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webview-acceleration/update/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update WebView acceleration policy */
+        put: operations["WebviewAccelerationController_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webview-acceleration/admin/status/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update WebView acceleration policy status */
+        patch: operations["WebviewAccelerationController_setStatus"];
+        trace?: never;
+    };
+    "/webview-acceleration/delete/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete WebView acceleration policy */
+        delete: operations["WebviewAccelerationController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/client/version/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 客户端版本检查（安卓） */
+        get: operations["ClientVersionController_check"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/client/landing/app": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 下载落地页聚合信息（Web /download/app） */
+        get: operations["ClientVersionController_landingApp"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/client-version/admin/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 后台版本规则列表 */
+        get: operations["ClientVersionController_adminList"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/client-version/admin/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 后台版本规则审计日志 */
+        get: operations["ClientVersionController_adminLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/client-version/admin/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 创建版本规则 */
+        post: operations["ClientVersionController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/client-version/admin/update/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** 更新版本规则 */
+        put: operations["ClientVersionController_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/client-version/admin/status/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** 更新规则状态 */
+        patch: operations["ClientVersionController_setStatus"];
+        trace?: never;
+    };
+    "/client-version/admin/delete/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 删除版本规则 */
+        delete: operations["ClientVersionController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/app-releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 版本发布列表 */
+        get: operations["AdminAppReleasesController_list"];
+        put?: never;
+        /** 创建版本草稿 */
+        post: operations["AdminAppReleasesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/app-releases/upload-apk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 上传 APK 并创建版本草稿 */
+        post: operations["AdminAppReleasesController_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/app-releases/web-distribution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取 Web 下载分发配置 */
+        get: operations["AdminAppReleasesController_distribution"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** 更新 Web 下载分发配置 */
+        patch: operations["AdminAppReleasesController_updateDistribution"];
+        trace?: never;
+    };
+    "/admin/app-releases/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** 编辑版本草稿 */
+        patch: operations["AdminAppReleasesController_update"];
+        trace?: never;
+    };
+    "/admin/app-releases/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 发布版本 */
+        post: operations["AdminAppReleasesController_publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/app-releases/{id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 归档版本 */
+        post: operations["AdminAppReleasesController_archive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/releases/distribution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取客户端公开分发信息 */
+        get: operations["PublicAppReleasesController_distribution"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/releases/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取最近发布的 Android 客户端版本日志 */
+        get: operations["PublicAppReleasesController_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/app/releases/android/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 跳转到最新 Android APK */
+        get: operations["PublicAppReleasesController_download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/task-scheduler/admin/executors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List available task executors */
+        get: operations["TaskSchedulerController_listExecutors"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/task-scheduler/admin/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List scheduled tasks */
+        get: operations["TaskSchedulerController_listTasks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/task-scheduler/admin/tasks/upsert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create or update task */
+        post: operations["TaskSchedulerController_upsertTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/task-scheduler/admin/tasks/{id}/toggle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enable or disable task */
+        post: operations["TaskSchedulerController_toggleTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/task-scheduler/admin/tasks/{id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run task now */
+        post: operations["TaskSchedulerController_runTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/task-scheduler/admin/tasks/{id}/run-manual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run task manually (execute now without queue) */
+        post: operations["TaskSchedulerController_runTaskManual"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/task-scheduler/admin/tasks/{id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stop task scheduling and pending jobs */
+        post: operations["TaskSchedulerController_stopTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/task-scheduler/admin/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List task run history */
+        get: operations["TaskSchedulerController_listRuns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/task-scheduler/admin/runs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get task run detail */
+        get: operations["TaskSchedulerController_getRunDetail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/task-scheduler/admin/tasks/{id}/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 更新任务重试/熔断/冷却策略 */
+        post: operations["TaskSchedulerController_updateTaskPolicy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/task-scheduler/admin/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取任务执行器健康与拥塞状态 */
+        get: operations["TaskSchedulerController_getSchedulerHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/logs/admin/list": {
         parameters: {
             query?: never;
@@ -6700,6 +7092,23 @@ export interface paths {
         put?: never;
         /** 在实际尝试 apkeep 来源时领取账号 */
         post: operations["ResourceWorkerGatewayController_leaseApkeepAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/resource-worker/v1/tasks/{taskId}/direct-link/upload-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 申请直链上传的限时预签名 PUT URL */
+        post: operations["ResourceWorkerGatewayController_directLinkUploadUrl"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7082,49 +7491,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/mcp": {
+    "/ai-assistant/admin/flows": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
-        /** MCP JSON-RPC endpoint (public, read-only tools) */
-        post: operations["McpController_rpc"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/mcp/admin": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** MCP JSON-RPC endpoint for admin writable tools (X-API-Key only) */
-        post: operations["McpController_adminRpc"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/mcp/admin/audits": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** MCP 工具调用审计流水（只读） */
-        get: operations["McpController_listAudits"];
+        /** 获取 AI 自动化流程列表 */
+        get: operations["AdminFlowsController_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7133,42 +7508,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/ai-assistant/admin/config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 获取 AI 助手配置 */
-        get: operations["AiAssistantController_getConfig"];
-        put?: never;
-        /** 更新 AI 助手配置 */
-        post: operations["AiAssistantController_updateConfig"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/tools": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 获取 AI 运营工具列表 */
-        get: operations["AiAssistantController_getTools"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/chat/stream": {
+    "/ai-assistant/admin/flows/{key}/toggle": {
         parameters: {
             query?: never;
             header?: never;
@@ -7177,161 +7517,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** AI 对话流式输出（SSE） */
-        post: operations["AiAssistantController_chatStream"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/jobs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 获取 AI 助手任务列表 */
-        get: operations["AiAssistantController_getJobs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/jobs/{jobId}/steps": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 获取 AI 助手任务步骤 */
-        get: operations["AiAssistantController_getJobSteps"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/jobs/{jobId}/graph": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 获取 AI 助手任务步骤图 */
-        get: operations["AiAssistantController_getJobGraph"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/jobs/{jobId}/retry": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 重试 AI 助手任务 */
-        post: operations["AiAssistantController_retryJob"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/jobs/{jobId}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 取消 AI 助手任务 */
-        post: operations["AiAssistantController_cancelJob"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/jobs/{jobId}/resume": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 恢复 AI 助手任务（断点续跑） */
-        post: operations["AiAssistantController_resumeJob"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/jobs/{jobId}/rollback": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 记录 AI 助手任务回滚动作 */
-        post: operations["AiAssistantController_rollbackJob"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/ops/albums/random-preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 随机选取专辑游戏（预览） */
-        post: operations["AiAssistantController_previewRandomPick"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/ai-assistant/admin/ops/albums/random-apply": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 随机选取并写入专辑游戏 */
-        post: operations["AiAssistantController_applyRandomPick"];
+        /** 开关 AI 自动化流程 */
+        post: operations["AdminFlowsController_toggle"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7389,6 +7576,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/seo/category-pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取分类落地页计数（公开，供 sitemap 与阈值判定使用） */
+        get: operations["SeoController_categoryPages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/seo/audit/games": {
         parameters: {
             query?: never;
@@ -7417,6 +7621,74 @@ export interface paths {
         get: operations["SeoController_sitemapUsers"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/seo/admin/backfill/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 预览 SEO 回填改动（不写库，最多回 20 条） */
+        post: operations["SeoAdminController_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/seo/admin/backfill/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 执行 SEO 回填（同步，单批最多 200 条） */
+        post: operations["SeoAdminController_apply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/seo/admin/backfill/batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SEO 回填批次列表 */
+        get: operations["SeoAdminController_listBatches"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/seo/admin/backfill/batches/{batchId}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 回滚整批 SEO 回填（已回滚返回 409） */
+        post: operations["SeoAdminController_rollback"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8768,23 +9040,252 @@ export interface components {
             static_pages: {
                 [key: string]: unknown;
             };
-            /**
-             * @example {
-             *       "post_enabled": false,
-             *       "auto_publish": false,
-             *       "max_images": 9,
-             *       "max_image_bytes": 10485760,
-             *       "max_content_chars": 50000,
-             *       "rules": []
-             *     }
-             */
-            community: {
-                [key: string]: unknown;
-            };
             /** @example true */
             is_active: boolean;
             /** @example false */
             is_maintenance: boolean;
+        };
+        DirectLinkBatchUpdateDto: {
+            /** @description 资源 ID 列表，单次最多 200 个 */
+            ids: string[];
+            /** @description 直链开关目标值 */
+            enabled: boolean;
+        };
+        AiModelConfigDto: {
+            /** @description 模型ID（可不传，服务端自动生成） */
+            id?: string;
+            /**
+             * @description 模型名称
+             * @example GPT-4.1
+             */
+            name: string;
+            /**
+             * @description 供应商标识
+             * @example openai
+             */
+            provider: string;
+            /**
+             * @description 模型名
+             * @example gpt-4.1-mini
+             */
+            model: string;
+            /**
+             * @description Base URL
+             * @example https://api.openai.com/v1
+             */
+            base_url?: string;
+            /** @description API Key */
+            api_key?: string;
+            /**
+             * @description 是否启用
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * @description 是否默认模型
+             * @default false
+             */
+            is_default: boolean;
+            /**
+             * @description 请求超时毫秒
+             * @example 30000
+             */
+            timeout_ms?: number;
+            /**
+             * @description 温度参数
+             * @example 0.7
+             */
+            temperature?: number;
+            /**
+             * @description 最大tokens
+             * @example 2000
+             */
+            max_tokens?: number;
+            /** @description 额外参数 */
+            extra?: Record<string, never>;
+            /** @description 模型级系统提示词 */
+            system_prompt?: string;
+        };
+        UpdateAiConfigDto: {
+            /**
+             * @description 是否启用AI助手
+             * @default false
+             */
+            enabled: boolean;
+            /** @description 当前选中模型ID */
+            selected_model_id?: string;
+            /** @description 全局系统提示词 */
+            system_prompt?: string;
+            /**
+             * @description 边界守卫模式（当前仅支持 strict）
+             * @enum {string}
+             */
+            guard_mode?: "strict";
+            /** @description 超范围统一回复模板 */
+            guard_reply_template?: string;
+            /** @description 模型列表 */
+            models?: components["schemas"]["AiModelConfigDto"][];
+            /**
+             * @description LLM 全局并发上限（1–10）
+             * @default 3
+             */
+            max_concurrency: number;
+            /**
+             * @description 每日 token 预算（0 表示不限）
+             * @default 500000
+             */
+            daily_token_budget: number;
+        };
+        AiModelProbeDto: {
+            /** @description 已保存配置里的模型 ID（与 base_url/api_key 二选一） */
+            model_id?: string;
+            /**
+             * @description 草稿态试连的 Base URL
+             * @example https://api.openai.com/v1
+             */
+            base_url?: string;
+            /** @description 草稿态试连的 API Key */
+            api_key?: string;
+            /**
+             * @description 草稿态供应商标识（仅回显，不参与探测）
+             * @example openai
+             */
+            provider?: string;
+        };
+        AiChatMessageDto: {
+            /**
+             * @description 角色
+             * @enum {string}
+             */
+            role: "system" | "user" | "assistant";
+            /** @description 消息内容 */
+            content: string;
+        };
+        AiChatStreamDto: {
+            /** @description 会话消息列表，不传则仅使用 prompt */
+            messages?: components["schemas"]["AiChatMessageDto"][];
+            /** @description 单条输入内容（便捷模式） */
+            prompt?: string;
+            /** @description 模型ID，不传则使用默认/选中模型 */
+            model_id?: string;
+            /** @description 会话ID（用于任务追踪） */
+            conversation_id?: string;
+            /** @description 温度参数 */
+            temperature?: number;
+            /** @description 最大tokens */
+            max_tokens?: number;
+        };
+        AlbumRandomPickPreviewDto: {
+            /** @description 专辑ID */
+            album_id: string;
+            /**
+             * @description 随机数量
+             * @default 10
+             */
+            count: number;
+            /**
+             * @description 来源类型过滤，例如 GP
+             * @example GP
+             */
+            source_type?: string;
+            /**
+             * @description 状态过滤（0预约，1正常，2下线）
+             * @example 1
+             */
+            status?: number;
+            /**
+             * @description 是否排除已在专辑中的应用
+             * @default true
+             */
+            exclude_existing: boolean;
+        };
+        AlbumRandomPickApplyDto: {
+            /** @description 专辑ID */
+            album_id: string;
+            /**
+             * @description 随机数量
+             * @default 10
+             */
+            count: number;
+            /**
+             * @description 来源类型过滤，例如 GP
+             * @example GP
+             */
+            source_type?: string;
+            /**
+             * @description 状态过滤（0预约，1正常，2下线）
+             * @example 1
+             */
+            status?: number;
+            /**
+             * @description 是否排除已在专辑中的应用
+             * @default true
+             */
+            exclude_existing: boolean;
+            /**
+             * @description true=追加到原列表，false=覆盖专辑列表
+             * @default true
+             */
+            append_mode: boolean;
+        };
+        CreateResourceUpdateJobsDto: {
+            /** @description 包名列表，最多 20 个；与 pkg 二选一或同时给出 */
+            packages?: string[];
+            /** @description 单个包名，等价于 packages:[pkg] */
+            pkg?: string;
+            /**
+             * @description 执行方式；资源更新只支持 remote，internal 会在服务端被拒绝
+             * @enum {string}
+             */
+            execution_mode?: "internal" | "remote";
+            /** @description 强制重跑：该版本已有终态任务时复活它重新下载；任务仍在队列/执行中则拒绝，已被忽略或被新版本取代的终态任务不会被复活 */
+            force?: boolean;
+        };
+        UpsertApkeepAccountDto: {
+            account_id: string;
+            label?: string;
+            email: string;
+            /** @enum {string} */
+            auth_mode: "aas" | "auth";
+            aas_token?: string;
+            auth_token?: string;
+            oauth_token?: string;
+            device?: string;
+            locale?: string;
+            timezone?: string;
+            region?: string;
+            split_apk?: boolean;
+            accept_tos?: boolean;
+            weight?: number;
+            /** @enum {string} */
+            status?: "active" | "disabled" | "cooldown" | "invalid";
+        };
+        UpdateApkeepAccountDto: {
+            account_id?: string;
+            label?: string;
+            email?: string;
+            /** @enum {string} */
+            auth_mode?: "aas" | "auth";
+            aas_token?: string;
+            auth_token?: string;
+            oauth_token?: string;
+            device?: string;
+            locale?: string;
+            timezone?: string;
+            region?: string;
+            split_apk?: boolean;
+            accept_tos?: boolean;
+            weight?: number;
+            /** @enum {string} */
+            status?: "active" | "disabled" | "cooldown" | "invalid";
+        };
+        TestApkeepAccountDto: {
+            /**
+             * @description probe：只下基础包验证鉴权，不拆分、不上传、不解析，产物立即删除；full：按账号配置拆分下载
+             * @default probe
+             * @enum {string}
+             */
+            test_mode: "probe" | "full";
         };
         CreateClientVersionDto: Record<string, never>;
         CreateAppReleaseDto: Record<string, never>;
@@ -8878,65 +9379,6 @@ export interface components {
              * @example 5
              */
             auto_disable_threshold?: number;
-        };
-        CreateResourceUpdateJobsDto: {
-            /** @description 包名列表，最多 20 个；与 pkg 二选一或同时给出 */
-            packages?: string[];
-            /** @description 单个包名，等价于 packages:[pkg] */
-            pkg?: string;
-            /**
-             * @description 执行方式；资源更新只支持 remote，internal 会在服务端被拒绝
-             * @enum {string}
-             */
-            execution_mode?: "internal" | "remote";
-            /** @description 强制重跑：该版本已有终态任务时复活它重新下载；任务仍在队列/执行中则拒绝，已被忽略或被新版本取代的终态任务不会被复活 */
-            force?: boolean;
-        };
-        UpsertApkeepAccountDto: {
-            account_id: string;
-            label?: string;
-            email: string;
-            /** @enum {string} */
-            auth_mode: "aas" | "auth";
-            aas_token?: string;
-            auth_token?: string;
-            oauth_token?: string;
-            device?: string;
-            locale?: string;
-            timezone?: string;
-            region?: string;
-            split_apk?: boolean;
-            accept_tos?: boolean;
-            weight?: number;
-            /** @enum {string} */
-            status?: "active" | "disabled" | "cooldown" | "invalid";
-        };
-        UpdateApkeepAccountDto: {
-            account_id?: string;
-            label?: string;
-            email?: string;
-            /** @enum {string} */
-            auth_mode?: "aas" | "auth";
-            aas_token?: string;
-            auth_token?: string;
-            oauth_token?: string;
-            device?: string;
-            locale?: string;
-            timezone?: string;
-            region?: string;
-            split_apk?: boolean;
-            accept_tos?: boolean;
-            weight?: number;
-            /** @enum {string} */
-            status?: "active" | "disabled" | "cooldown" | "invalid";
-        };
-        TestApkeepAccountDto: {
-            /**
-             * @description probe：只下基础包验证鉴权，不拆分、不上传、不解析，产物立即删除；full：按账号配置拆分下载
-             * @default probe
-             * @enum {string}
-             */
-            test_mode: "probe" | "full";
         };
         SystemLogItemDto: {
             /** @example combined-123-2026-03-22T10:30:08.000Z */
@@ -9090,6 +9532,7 @@ export interface components {
         ResourceWorkerHeartbeatDto: Record<string, never>;
         ClaimResourceTasksDto: Record<string, never>;
         LeaseApkeepAccountDto: Record<string, never>;
+        DirectLinkUploadUrlDto: Record<string, never>;
         HeartbeatResourceTaskDto: Record<string, never>;
         ResourceTaskEventDto: Record<string, never>;
         CompleteResourceTaskDto: Record<string, never>;
@@ -9154,82 +9597,8 @@ export interface components {
         UpdateResourceWorkerTaskProfileDto: Record<string, never>;
         UpdateResourceWorkerConcurrencyDto: Record<string, never>;
         UpdateResourceWorkerApkeepDto: Record<string, never>;
-        AiChatMessageDto: {
-            /**
-             * @description 角色
-             * @enum {string}
-             */
-            role: "system" | "user" | "assistant";
-            /** @description 消息内容 */
-            content: string;
-        };
-        AiChatStreamDto: {
-            /** @description 会话消息列表，不传则仅使用 prompt */
-            messages?: components["schemas"]["AiChatMessageDto"][];
-            /** @description 单条输入内容（便捷模式） */
-            prompt?: string;
-            /** @description 模型ID，不传则使用默认/选中模型 */
-            model_id?: string;
-            /** @description 会话ID（用于任务追踪） */
-            conversation_id?: string;
-            /** @description 温度参数 */
-            temperature?: number;
-            /** @description 最大tokens */
-            max_tokens?: number;
-        };
-        AlbumRandomPickPreviewDto: {
-            /** @description 专辑ID */
-            album_id: string;
-            /**
-             * @description 随机数量
-             * @default 10
-             */
-            count: number;
-            /**
-             * @description 来源类型过滤，例如 GP
-             * @example GP
-             */
-            source_type?: string;
-            /**
-             * @description 状态过滤（0预约，1正常，2下线）
-             * @example 1
-             */
-            status?: number;
-            /**
-             * @description 是否排除已在专辑中的应用
-             * @default true
-             */
-            exclude_existing: boolean;
-        };
-        AlbumRandomPickApplyDto: {
-            /** @description 专辑ID */
-            album_id: string;
-            /**
-             * @description 随机数量
-             * @default 10
-             */
-            count: number;
-            /**
-             * @description 来源类型过滤，例如 GP
-             * @example GP
-             */
-            source_type?: string;
-            /**
-             * @description 状态过滤（0预约，1正常，2下线）
-             * @example 1
-             */
-            status?: number;
-            /**
-             * @description 是否排除已在专辑中的应用
-             * @default true
-             */
-            exclude_existing: boolean;
-            /**
-             * @description true=追加到原列表，false=覆盖专辑列表
-             * @default true
-             */
-            append_mode: boolean;
-        };
+        AiFlowToggleDto: Record<string, never>;
+        SeoBackfillRunDto: Record<string, never>;
         GlobalSearchGameMetadataDto: {
             /** @example 胜利女神：妮姬 */
             en?: string;
@@ -17433,6 +17802,39 @@ export interface operations {
             };
         };
     };
+    GameController_categoryPage: {
+        parameters: {
+            query: {
+                /** @description 分类中文名 */
+                name: string;
+                /** @description 页码，默认 1 */
+                page?: string;
+                /** @description 每页数量，默认 20，最大 50 */
+                pageSize?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
     GameController_searchFn: {
         parameters: {
             query: {
@@ -17756,6 +18158,10 @@ export interface operations {
                 cursor?: string;
                 /** @description 每页数量，1-200，默认 30 */
                 limit?: number;
+                /** @description 按来源场景过滤（登记表 source_scene 精确匹配），空值不过滤 */
+                scene?: string;
+                /** @description 按资产状态过滤（登记表 status 精确匹配），空值不过滤 */
+                status?: string;
             };
             header?: never;
             path?: never;
@@ -17784,6 +18190,28 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MediaAssetController_backfillApk: {
+        parameters: {
+            query?: {
+                /** @description 单次最多处理的对象数，默认 2000，取值 1-10000；按整页（1000 个）处理，可能略超上限 */
+                maxObjects?: number;
+                /** @description 上一页返回的 next_cursor；不传则从头开始 */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21595,6 +22023,69 @@ export interface operations {
             };
         };
     };
+    AppResourcesAdminController_listDirectLinks: {
+        parameters: {
+            query?: {
+                /** @description 页码，默认 1 */
+                page?: number;
+                /** @description 每页数量，1-100，默认 20 */
+                pageSize?: number;
+                /** @description 按直链开关过滤；缺省返回全部 */
+                enabled?: "true" | "false" | "1" | "0";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 查询直链列表成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    AppResourcesAdminController_batchDirectLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectLinkBatchUpdateDto"];
+            };
+        };
+        responses: {
+            /** @description 批量更新直链开关成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
     ArticleController_adminList: {
         parameters: {
             query: {
@@ -21798,6 +22289,1226 @@ export interface operations {
                         data: unknown;
                     };
                 };
+            };
+        };
+    };
+    RepostController_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 转载执行完成 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    RepostController_offline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 文章ID */
+                articleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 下线成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    AiAssistantController_getConfig: {
+        parameters: {
+            query?: {
+                key?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取 AI 配置成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    AiAssistantController_updateConfig: {
+        parameters: {
+            query?: {
+                key?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAiConfigDto"];
+            };
+        };
+        responses: {
+            /** @description 更新 AI 配置成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    AiAssistantController_probeModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiModelProbeDto"];
+            };
+        };
+        responses: {
+            /** @description 探测成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    AiAssistantController_getHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取运行时健康成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    AiAssistantController_getTools: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取工具列表成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    AiAssistantController_chatStream: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiChatStreamDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiAssistantController_getJobs: {
+        parameters: {
+            query: {
+                page: number;
+                pageSize: number;
+                status: string;
+                tool_name: string;
+                user_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiAssistantController_getJobSteps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiAssistantController_getJobGraph: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiAssistantController_retryJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiAssistantController_cancelJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiAssistantController_resumeJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiAssistantController_rollbackJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AiAssistantController_previewRandomPick: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlbumRandomPickPreviewDto"];
+            };
+        };
+        responses: {
+            /** @description 预览成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    AiAssistantController_applyRandomPick: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlbumRandomPickApplyDto"];
+            };
+        };
+        responses: {
+            /** @description 执行成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    McpController_rpc: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    McpController_adminRpc: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-API-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    McpController_listAudits: {
+        parameters: {
+            query?: {
+                to?: unknown;
+                from?: unknown;
+                user_id?: unknown;
+                source?: unknown;
+                status?: unknown;
+                action_id?: unknown;
+                api_key_id?: unknown;
+                tool_name?: unknown;
+                pageSize?: unknown;
+                page?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_previewDetection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_listDetections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_createDetection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_getDetection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_cancelDetection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_overview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_stats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_sourcePolicies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_updateSourcePolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ingestionSource: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_audit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_sourceMemories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_clearSourceMemory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pkg: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_clearSourceMemoryUnreachable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pkg: string;
+                source: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_unreachableTargets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_abiBlocksList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_updateAbiBlock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pkg: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_clearUnreachableTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pkg: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_sourceProbe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_listJobs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_createJobs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateResourceUpdateJobsDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_packageHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pkg: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_listFailures: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_getJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_retryJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_retryJobs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_ignoreJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_cancelJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_pauseQueue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_resumeQueue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_inspectWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceUpdateController_cleanupWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                status?: "active" | "disabled" | "cooldown" | "invalid";
+                auth_mode?: "aas" | "auth";
+                keyword?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertApkeepAccountDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_reveal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateApkeepAccountDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_enable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_disable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_exchange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ApkeepAccountController_test: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TestApkeepAccountDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -22841,747 +24552,6 @@ export interface operations {
             };
         };
     };
-    ResourceUpdateController_previewDetection: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_listDetections: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_createDetection: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_getDetection: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_cancelDetection: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_overview: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_stats: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_sourcePolicies: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_updateSourcePolicy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                ingestionSource: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_audit: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_sourceMemories: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_clearSourceMemory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                pkg: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_clearSourceMemoryUnreachable: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                pkg: string;
-                source: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_unreachableTargets: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_abiBlocksList: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_updateAbiBlock: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                pkg: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_clearUnreachableTarget: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                pkg: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_sourceProbe: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_listJobs: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_createJobs: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateResourceUpdateJobsDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_packageHistory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                pkg: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_listFailures: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_getJob: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_retryJob: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_retryJobs: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_ignoreJob: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_cancelJob: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_pauseQueue: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_resumeQueue: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_inspectWorkspace: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ResourceUpdateController_cleanupWorkspace: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ApkeepAccountController_list: {
-        parameters: {
-            query?: {
-                page?: number;
-                pageSize?: number;
-                status?: "active" | "disabled" | "cooldown" | "invalid";
-                auth_mode?: "aas" | "auth";
-                keyword?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ApkeepAccountController_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpsertApkeepAccountDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ApkeepAccountController_reveal: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ApkeepAccountController_remove: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ApkeepAccountController_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateApkeepAccountDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ApkeepAccountController_enable: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ApkeepAccountController_disable: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ApkeepAccountController_exchange: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ApkeepAccountController_test: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TestApkeepAccountDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     LogsController_getSystemLogs: {
         parameters: {
             query?: {
@@ -23995,6 +24965,32 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["LeaseApkeepAccountDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ResourceWorkerGatewayController_directLinkUploadUrl: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Worker 专用 Basic Auth，账号由 Interface 配置 */
+                Authorization: string;
+            };
+            path: {
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectLinkUploadUrlDto"];
             };
         };
         responses: {
@@ -24549,7 +25545,7 @@ export interface operations {
             };
         };
     };
-    McpController_rpc: {
+    AdminFlowsController_list: {
         parameters: {
             query?: never;
             header?: never;
@@ -24558,73 +25554,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    McpController_adminRpc: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-API-Key": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    McpController_listAudits: {
-        parameters: {
-            query?: {
-                to?: unknown;
-                from?: unknown;
-                user_id?: unknown;
-                source?: unknown;
-                status?: unknown;
-                action_id?: unknown;
-                api_key_id?: unknown;
-                tool_name?: unknown;
-                pageSize?: unknown;
-                page?: unknown;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiAssistantController_getConfig: {
-        parameters: {
-            query?: {
-                key?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 获取 AI 配置成功 */
+            /** @description 获取流程列表成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -24641,262 +25571,22 @@ export interface operations {
             };
         };
     };
-    AiAssistantController_updateConfig: {
-        parameters: {
-            query?: {
-                key?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 更新 AI 配置成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    AiAssistantController_getTools: {
+    AdminFlowsController_toggle: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 获取工具列表成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
+            path: {
+                key: string;
             };
-        };
-    };
-    AiAssistantController_chatStream: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AiChatStreamDto"];
+                "application/json": components["schemas"]["AiFlowToggleDto"];
             };
         };
         responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiAssistantController_getJobs: {
-        parameters: {
-            query: {
-                page: number;
-                pageSize: number;
-                status: string;
-                tool_name: string;
-                user_id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiAssistantController_getJobSteps: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiAssistantController_getJobGraph: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiAssistantController_retryJob: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiAssistantController_cancelJob: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiAssistantController_resumeJob: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiAssistantController_rollbackJob: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    AiAssistantController_previewRandomPick: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AlbumRandomPickPreviewDto"];
-            };
-        };
-        responses: {
-            /** @description 预览成功 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        /** @example 0 */
-                        code: number;
-                        /** @example ok */
-                        message: string;
-                        data: unknown;
-                    };
-                };
-            };
-        };
-    };
-    AiAssistantController_applyRandomPick: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AlbumRandomPickApplyDto"];
-            };
-        };
-        responses: {
-            /** @description 执行成功 */
+            /** @description 开关已保存 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -25021,6 +25711,35 @@ export interface operations {
             };
         };
     };
+    SeoController_categoryPages: {
+        parameters: {
+            query: {
+                /** @description 逗号分隔的中文分类名，最多 40 个 */
+                names: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
     SeoController_auditGames: {
         parameters: {
             query?: {
@@ -25067,6 +25786,122 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description 获取成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    SeoAdminController_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeoBackfillRunDto"];
+            };
+        };
+        responses: {
+            /** @description 预览成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    SeoAdminController_apply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeoBackfillRunDto"];
+            };
+        };
+        responses: {
+            /** @description 执行完成 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    SeoAdminController_listBatches: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取批次列表成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    SeoAdminController_rollback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batchId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 回滚完成 */
             200: {
                 headers: {
                     [name: string]: unknown;

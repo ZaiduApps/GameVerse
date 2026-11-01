@@ -10,6 +10,12 @@ import { buildTrackingHeaders } from '@/lib/tracking-headers';
  * 只在用户真正发起下载动作时调用（「获取游戏」打开下载弹窗、弹窗里的渠道按钮、
  * 服务端直出直链）；`surface` 用来区分这三种位置。
  *
+ * `intent_stage`（待决策 #74）标出这次点击是不是终态：
+ * - `open`：`detail_open`，只是打开了下载弹窗，还没下发任何地址；
+ * - `terminal`：`detail_ssr` / `detail_dialog`，真正拿了一次下载地址。
+ * 同一个用户的一次下载会先 open 再 terminal，统计侧只数 terminal 才不会被算成两次；
+ * 老事件没有这个字段，按「未知」处理，不猜。
+ *
  * 不阻塞跳转：失败静默，下载可用性永远优先。
  */
 
@@ -41,7 +47,10 @@ export function reportDownloadClick(input: DownloadClickInput): void {
       app_id: String(input.appId || '').trim() || undefined,
       pkg: String(input.pkg || '').trim() || undefined,
       channel_id: String(input.channelId || '').trim() || undefined,
-      props: { surface: input.surface },
+      props: {
+        surface: input.surface,
+        intent_stage: input.surface === 'detail_open' ? 'open' : 'terminal',
+      },
     };
 
     // keepalive：跳转到 302 入口后请求仍然送达；失败静默，不重试、不排队。

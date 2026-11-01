@@ -11,9 +11,31 @@
  *   - urlCount 必须等于文件里 <loc> 的条数；不一致即视为产物损坏，运行时回落实时生成。
  */
 
+import {
+  SEARCH_INDEXABLE_MAX_SITEMAP_ENTRIES,
+  SEARCH_INDEXABLE_QUERIES,
+  SEARCH_PAGE_TIER,
+  buildSearchQueryPath,
+  resolveSearchPageTier,
+} from './search-indexable.mjs';
+// 分类落地页的 slug 映射与收录阈值只在 category-pages.mjs 里定义一份：
+// 页面（够不够格、要不要 404）和 sitemap（收不收录）必须同口径，否则会出现
+// 「页面 404 但 sitemap 还在推」或「页面能开但永远进不了 sitemap」。
+// 用 .mjs 而不是 .ts：本文件被裸 node 的构建脚本直接导入，只有 .mjs 两边都能用。
+import { CATEGORY_PAGES, CATEGORY_PAGE_NAMES, isCategoryQualified } from './category-pages.mjs';
+
 export const SITEMAP_PAGE_SIZE = 500;
 export const SITEMAP_MAX_PAGES = 200;
 export const NEWS_SITEMAP_MAX_PAGES = 80;
+/**
+ * 质量审计接口（/seo/audit/games）的分页与并发上限。
+ *
+ * 该接口要在应用集合上做聚合 + 质量评估，是全站最重的一个：构建期以 pageSize=500 拉 11 页、
+ * 并发 10 个请求时会把 Mongo 聚合压到 `operation exceeded time limit`，10-27 构建因此产生
+ * 9 条 nginx 500。页内条数降到 200、并发降到 2 后总条数不变，请求压力被摊平。
+ */
+export const AUDIT_PAGE_SIZE = 200;
+export const AUDIT_PAGE_CONCURRENCY = 2;
 /** 运行时抓接口的缓存时长（秒）。 */
 export const SITEMAP_REVALIDATE_SECONDS = 1800;
 
@@ -68,12 +90,20 @@ function normalizeListData(payload) {
   return { list: [] };
 }
 
+/**
+ * sitemap 只收已发布（status=1）的游戏：预约（0）与下线（2）的详情页是 200 软 404，
+ * 收进来等于把 79 条空页喂给爬虫。status 口径沿用 app.entity 的既有定义，不另造字段。
+ */
+function isUnpublishedGame(item) {
+  return Number(item?.status) !== 1;
+}
+
 function toGameEntry(item, absolute) {
   const pkg = String(item?.pkg || '').trim();
   if (!pkg) return null;
   const isDeleted = item?.is_deleted === true || Number(item?.is_deleted || 0) === 1;
   if (isDeleted) return null;
-  if (item?.status !== undefined && ![0, 1].includes(Number(item.status))) return null;
+  if (isUnpublishedGame(item)) return null;
 
   const lastmod = parseDate(item.updated_at) || parseDate(item.latest_at) || parseDate(item.created_at);
   return {
@@ -119,6 +149,22 @@ function toAlbumEntry(item, absolute) {
   };
 }
 
+/** 按固定并发跑一批异步任务，结果按输入顺序返回（构建期的审计分页用它把压力摊开）。 */
+async function mapWithConcurrency(items, limit, mapper) {
+  const results = new Array(items.length);
+  let cursor = 0;
+  const workerCount = Math.max(1, Math.min(limit, items.length));
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (cursor < items.length) {
+      const index = cursor;
+      cursor += 1;
+      results[index] = await mapper(items[index], index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
 function toTopicEntry(item, absolute) {
   const id = String(item?._id || '').trim();
   const slug = String(item?.slug || '').trim();
@@ -140,28 +186,6 @@ function toTopicEntry(item, absolute) {
     lastModified: lastmod,
     changeFrequency: 'daily',
     priority: 0.58,
-  };
-}
-
-function toUserEntry(item, absolute) {
-  const username = String(item?.username || '').trim();
-  const id = String(item?._id || '').trim();
-
-  // 邮箱型用户名属于 PII，且这类主页通常是薄页面；即使认证过也不进 sitemap。
-  if (username.includes('@')) return null;
-
-  const pathTarget = username || id;
-  if (!pathTarget) return null;
-
-  const postCount = Number(item?.post_count || 0);
-  // 只有可认证作者或至少 3 条公开动态的主页才值得收录。
-  if (!item?.isVerified && postCount < 3) return null;
-
-  return {
-    url: absolute(`/u/${encodeURIComponent(pathTarget)}`),
-    lastModified: parseDate(item?.updated_at) || parseDate(item?.created_at),
-    changeFrequency: 'weekly',
-    priority: item?.isVerified ? 0.52 : 0.46,
   };
 }
 
@@ -189,7 +213,9 @@ export function createSitemapBuilder(options = {}) {
   // URL 拼接与 src/lib/seo.ts 的 absoluteUrl 同口径（路由侧会显式传入 getSiteUrl() 的结果）。
   const absolute = (path) => (path.startsWith('/') ? `${siteUrl}${path}` : `${siteUrl}/${path}`);
 
-  async function fetchJsonOnce(path) {
+  // forceFresh=true 时无视 revalidate 走 no-store：lastmod 补丁查询必须看到最新写入，
+  // 否则首次请求把「写入前」的响应缓存 30 分钟，补丁在缓存纪元内恒为 0。
+  async function fetchJsonOnce(path, forceFresh = false) {
     try {
       const init = {
         headers: {
@@ -197,7 +223,7 @@ export function createSitemapBuilder(options = {}) {
           'x-client-platform': 'web',
         },
       };
-      if (revalidate !== undefined) {
+      if (revalidate !== undefined && !forceFresh) {
         init.cache = 'force-cache';
         init.next = { revalidate };
       } else {
@@ -212,10 +238,10 @@ export function createSitemapBuilder(options = {}) {
     }
   }
 
-  async function fetchJson(path) {
-    let json = await fetchJsonOnce(path);
+  async function fetchJson(path, forceFresh = false) {
+    let json = await fetchJsonOnce(path, forceFresh);
     for (let attempt = 0; attempt < retryCount && !json; attempt += 1) {
-      json = await fetchJsonOnce(path);
+      json = await fetchJsonOnce(path, forceFresh);
     }
     return json;
   }
@@ -263,8 +289,14 @@ export function createSitemapBuilder(options = {}) {
       (page) => `/seo/sitemap/games?page=${page}&pageSize=${SITEMAP_PAGE_SIZE}`,
       SITEMAP_MAX_PAGES,
     );
+    // 未发布条数单独统计：验收要看「少掉的正是预约/下线页」，而不是被别的过滤顺手丢弃。
+    const unpublishedSkipped = items.filter((item) => {
+      if (!String(item?.pkg || '').trim()) return false;
+      if (item?.is_deleted === true || Number(item?.is_deleted || 0) === 1) return false;
+      return isUnpublishedGame(item);
+    }).length;
     collect(items, toGameEntry, seen, result);
-    return { entries: result, rawCount: items.length, complete };
+    return { entries: result, rawCount: items.length, unpublishedSkipped, complete };
   }
 
   async function fetchCommunityPostsFromFeed() {
@@ -282,13 +314,11 @@ export function createSitemapBuilder(options = {}) {
 
   async function fetchIndexableGamePackages() {
     const result = new Set();
-    const first = extractList(await fetchJson(`/seo/audit/games?page=1&pageSize=${SITEMAP_PAGE_SIZE}`));
+    const fetchAuditPage = async (page) => extractList(await fetchJson(`/seo/audit/games?page=${page}&pageSize=${AUDIT_PAGE_SIZE}`));
+    const first = await fetchAuditPage(1);
     if (!first) return { packages: null, complete: false };
     const pageSize = Math.max(first.pageSize || first.list?.length || 1, 1);
     const totalPages = Math.min(SITEMAP_MAX_PAGES, first.total ? Math.ceil(first.total / pageSize) : 1);
-    const pages = totalPages > 1
-      ? await Promise.all(Array.from({ length: totalPages - 1 }, (_, index) => fetchJson(`/seo/audit/games?page=${index + 2}&pageSize=${SITEMAP_PAGE_SIZE}`)))
-      : [];
     const collectPage = (data) => {
       for (const item of data.list || []) {
         const pkg = String(item?.pkg || '').trim();
@@ -296,11 +326,18 @@ export function createSitemapBuilder(options = {}) {
       }
     };
     collectPage(first);
-    for (const json of pages) {
-      const data = extractList(json);
-      // 任一页失败就整体放弃过滤：宁可多收录，也不能因为审计接口抖动把游戏从 sitemap 里删掉。
-      if (!data) return { packages: null, complete: false };
-      collectPage(data);
+    if (totalPages > 1) {
+      // 并发 2：审计接口跟着应用集合大小线性变慢，并发拉满会把 Mongo 聚合打到超时。
+      const rest = await mapWithConcurrency(
+        Array.from({ length: totalPages - 1 }, (_, index) => index + 2),
+        AUDIT_PAGE_CONCURRENCY,
+        fetchAuditPage,
+      );
+      for (const data of rest) {
+        // 任一页失败就整体放弃过滤：宁可多收录，也不能因为审计接口抖动把游戏从 sitemap 里删掉。
+        if (!data) return { packages: null, complete: false };
+        collectPage(data);
+      }
     }
     return { packages: result, complete: true };
   }
@@ -340,17 +377,70 @@ export function createSitemapBuilder(options = {}) {
     toTopicEntry,
   );
 
-  const fetchUsers = () => fetchPagedSection(
-    (page) => `/seo/sitemap/users?page=${page}&pageSize=${SITEMAP_PAGE_SIZE}`,
-    toUserEntry,
-  );
-
   function buildStaticEntries() {
     return FALLBACK_STATIC_PATHS.map((path) => ({
       url: absolute(path),
       changeFrequency: path === '/' ? 'hourly' : 'daily',
       priority: path === '/' ? 1 : 0.7,
     }));
+  }
+
+  /**
+   * `/search?q=` 只放「白名单 ∩ 这一刻真的可收录」的词：逐个打一次搜索接口拿真实结果量，
+   * 结果变薄（games<3 或 total<5）就跳过，绝不把 noindex 页塞进 sitemap。
+   * 这一节失败只跳过，不算进 complete —— 搜索页是加成，不能因为它把整份快照卡住。
+   */
+  async function fetchSearchEntries() {
+    const queries = SEARCH_INDEXABLE_QUERIES.slice(0, SEARCH_INDEXABLE_MAX_SITEMAP_ENTRIES);
+    const payloads = await Promise.all(
+      queries.map((query) => fetchJson(`/search/global?q=${encodeURIComponent(query)}&limitPerType=1`)),
+    );
+    const entries = [];
+    queries.forEach((query, index) => {
+      const data = payloads[index]?.data;
+      if (!data) return;
+      if (resolveSearchPageTier(query, data?.games?.total, data?.total) !== SEARCH_PAGE_TIER.INDEXABLE) return;
+      entries.push({
+        url: absolute(buildSearchQueryPath(query)),
+        changeFrequency: 'weekly',
+        priority: 0.4,
+      });
+    });
+    if (entries.length < queries.length) {
+      logger.log(`[sitemap] /search?q= 收录 ${entries.length}/${queries.length}：其余结果不够厚或接口失败`);
+    }
+    return entries;
+  }
+
+  /**
+   * 分类落地页：一次请求拿到映射表里全部分类的「已发布 / 有资源」计数。
+   *
+   * 后端只给原始计数，阈值判定走 category-pages.ts 的同一份常量——页面 404 的口径
+   * 与 sitemap 收录的口径必须一致。这一节失败只跳过，不算进 complete：分类页是加成，
+   * 不能因为一个接口抖动让整份 sitemap 放弃落盘。
+   */
+  async function fetchCategoryEntries() {
+    const json = await fetchJson(
+      `/seo/category-pages?names=${encodeURIComponent(CATEGORY_PAGE_NAMES.join(','))}`,
+    );
+    if (!json || (json.code !== 0 && json.code !== undefined)) {
+      logger.warn('[sitemap] 分类计数接口不可用，本次不收录分类页');
+      return [];
+    }
+    const rows = Array.isArray(json.data?.list) ? json.data.list : [];
+    const slugByName = new Map(CATEGORY_PAGES.map((item) => [item.name, item.slug]));
+    const entries = [];
+    for (const row of rows) {
+      const slug = slugByName.get(String(row?.name || '').trim());
+      if (!slug) continue;
+      if (!isCategoryQualified({ published: row?.published, withResources: row?.with_resources })) continue;
+      entries.push({
+        url: absolute(`/category/${slug}`),
+        changeFrequency: 'weekly',
+        priority: 0.7,
+      });
+    }
+    return entries;
   }
 
   /**
@@ -373,20 +463,25 @@ export function createSitemapBuilder(options = {}) {
         })
       : games.entries;
 
-    const [posts, albums, topics, users] = await Promise.all([
+    const [posts, albums, topics, search, categoryPages] = await Promise.all([
       fetchCommunityPostsFromFeed(),
       fetchHomeAlbumEntries(),
       fetchTopics(),
-      fetchUsers(),
+      fetchSearchEntries(),
+      fetchCategoryEntries(),
     ]);
+    logger.log(`[sitemap] category pages: ${categoryPages.length}`);
 
+    // 用户主页（/u/<name>）整节不收录：薄页 + 用户生成内容，收录只会稀释站点质量信号。
+    // `/seo/sitemap/users` 接口保留给其它调用方，sitemap 不再抓取。
     const entries = [
       ...buildStaticEntries(),
+      ...categoryPages,
       ...albums.entries,
       ...gameEntries,
       ...topics.entries,
-      ...users.entries,
       ...posts.entries,
+      ...search,
     ];
 
     return {
@@ -395,15 +490,17 @@ export function createSitemapBuilder(options = {}) {
       apiReachable: games.rawCount > 0,
       // 任一节抓取不完整（分页失败/接口报错）时不得落盘成静态快照，否则会把 URL 静默删掉。
       complete:
-        games.complete && posts.complete && albums.complete && topics.complete && users.complete && indexable.complete,
+        games.complete && posts.complete && albums.complete && topics.complete && indexable.complete,
       stats: {
         staticPaths: FALLBACK_STATIC_PATHS.length,
+        categoryPages: categoryPages.length,
         games: gameEntries.length,
+        gamesSkippedUnpublished: games.unpublishedSkipped,
         gamesSkippedByIndexable: games.entries.length - gameEntries.length,
         posts: posts.entries.length,
         albums: albums.entries.length,
         topics: topics.entries.length,
-        users: users.entries.length,
+        search: search.length,
       },
     };
   }
@@ -428,7 +525,8 @@ export function createSitemapBuilder(options = {}) {
    */
   async function getRecentGameUpdates(sinceInput, limit = 1000) {
     const since = parseDate(sinceInput);
-    const data = extractList(await fetchJson(`/seo/sitemap/games?page=1&pageSize=${limit}`));
+    // 补丁查询单独 no-store：它只拿「构建之后写入了什么」，缓存反而会让补丁恒滞后。
+    const data = extractList(await fetchJson(`/seo/sitemap/games?page=1&pageSize=${limit}`, true));
     const total = Number(data?.total || 0) || null;
     if (!data || !since) return { total, games: [], complete: false };
 
