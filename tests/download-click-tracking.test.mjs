@@ -9,6 +9,36 @@ import {
   reportDownloadFailure,
 } from '../src/lib/download-click-tracking.ts';
 
+/** 两份上报测试共用的浏览器环境与接口桩：只抓包，不打真实接口。 */
+function withTrackingEnv() {
+  const store = new Map();
+  const bodies = [];
+  const originals = {
+    window: globalThis.window,
+    localStorage: globalThis.localStorage,
+    apiStub: globalThis.__GAME_REVIEW_API_STUB__,
+  };
+  globalThis.window = {};
+  globalThis.localStorage = {
+    getItem: (key) => (store.has(key) ? store.get(key) : null),
+    setItem: (key, value) => store.set(key, String(value)),
+  };
+  globalThis.__GAME_REVIEW_API_STUB__ = {
+    fetch: async (_path, init) => {
+      bodies.push(JSON.parse(String(init?.body || '{}')));
+      return { ok: true };
+    },
+  };
+  return {
+    bodies,
+    restore() {
+      globalThis.window = originals.window;
+      globalThis.localStorage = originals.localStorage;
+      globalThis.__GAME_REVIEW_API_STUB__ = originals.apiStub;
+    },
+  };
+}
+
 test('dedupe_key 按同访客 + 同日 + 同游戏 + 同 surface 归并', () => {
   const occurredAt = new Date('2026-11-01T10:00:00.000Z');
   const base = {
@@ -47,25 +77,7 @@ test('dedupe_key 按同访客 + 同日 + 同游戏 + 同 surface 归并', () => 
 });
 
 test('上报事件带 dedupe_key / schema_version，且重复点击仍生成新 event_id', () => {
-  const store = new Map();
-  const originals = {
-    window: globalThis.window,
-    localStorage: globalThis.localStorage,
-    apiStub: globalThis.__GAME_REVIEW_API_STUB__,
-  };
-  const bodies = [];
-  globalThis.window = {};
-  globalThis.localStorage = {
-    getItem: (key) => (store.has(key) ? store.get(key) : null),
-    setItem: (key, value) => store.set(key, String(value)),
-  };
-  // alias-loader 把 @/lib/api 换成测试桩：抓取上报体，不打真实接口。
-  globalThis.__GAME_REVIEW_API_STUB__ = {
-    fetch: async (_path, init) => {
-      bodies.push(JSON.parse(String(init?.body || '{}')));
-      return { ok: true };
-    },
-  };
+  const { bodies, restore } = withTrackingEnv();
 
   try {
     reportDownloadClick({
@@ -81,9 +93,7 @@ test('上报事件带 dedupe_key / schema_version，且重复点击仍生成新 
       surface: 'detail_dialog',
     });
   } finally {
-    globalThis.window = originals.window;
-    globalThis.localStorage = originals.localStorage;
-    globalThis.__GAME_REVIEW_API_STUB__ = originals.apiStub;
+    restore();
   }
 
   assert.equal(bodies.length, 2);
@@ -99,24 +109,7 @@ test('上报事件带 dedupe_key / schema_version，且重复点击仍生成新 
 });
 
 test('下载失败复用 fail_reason 事件，并带 pump 与渠道信息', () => {
-  const store = new Map();
-  const originals = {
-    window: globalThis.window,
-    localStorage: globalThis.localStorage,
-    apiStub: globalThis.__GAME_REVIEW_API_STUB__,
-  };
-  const bodies = [];
-  globalThis.window = {};
-  globalThis.localStorage = {
-    getItem: (key) => (store.has(key) ? store.get(key) : null),
-    setItem: (key, value) => store.set(key, String(value)),
-  };
-  globalThis.__GAME_REVIEW_API_STUB__ = {
-    fetch: async (_path, init) => {
-      bodies.push(JSON.parse(String(init?.body || '{}')));
-      return { ok: true };
-    },
-  };
+  const { bodies, restore } = withTrackingEnv();
 
   try {
     reportDownloadFailure({
@@ -131,9 +124,7 @@ test('下载失败复用 fail_reason 事件，并带 pump 与渠道信息', () =
       reasonCode: 404,
     });
   } finally {
-    globalThis.window = originals.window;
-    globalThis.localStorage = originals.localStorage;
-    globalThis.__GAME_REVIEW_API_STUB__ = originals.apiStub;
+    restore();
   }
 
   assert.equal(bodies.length, 1);
