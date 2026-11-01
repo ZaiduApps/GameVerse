@@ -26,8 +26,10 @@ import type { ApiDownloadResource, CardConfigItem } from '@/types';
 import Image from 'next/image';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { trackedApiFetch } from '@/lib/api';
-import { reportDownloadClick } from '@/lib/download-click-tracking';
+import DownloadFailureAlert from '@/components/download-failure-alert';
+import { reportDownloadClick, reportDownloadFailure } from '@/lib/download-click-tracking';
 import { resolveDownloadChannelId, shouldGuideToApp } from '@/lib/game-download-channel';
+import { pickDownloadRetryTarget } from '@/lib/download-retry';
 import type { GameSourceInfo } from '@/lib/game-source-link';
 import AppDownloadGuideDialog from '@/components/app-download-guide-dialog';
 import ContentReportDialog from '@/components/content-report-dialog';
@@ -67,12 +69,35 @@ export default function GameDownloadDialog({
 }: GameDownloadDialogProps) {
   const [loadingChannelId, setLoadingChannelId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [failedChannelId, setFailedChannelId] = useState<string | null>(null);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   const handleDownloadClick = async (resource: ApiDownloadResource) => {
     const channelId = resolveDownloadChannelId(resource);
+    const channelName = String(resource.channel?.name || '').trim();
+
+    // 失败一律：可见提示 + 记下失败渠道 + fail_reason 归因，不阻断换渠道重试。
+    const fail = (
+      message: string,
+      meta: { reasonCode?: string | number | null } = {},
+    ) => {
+      setError(message);
+      setFailedChannelId(channelId || null);
+      reportDownloadFailure({
+        appId,
+        pkg,
+        channelId,
+        channelCode: resource.channel?.code,
+        channelName,
+        pump: 'web_detail_dialog',
+        stage: 'request_download_url',
+        reason: message,
+        reasonCode: meta.reasonCode ?? null,
+      });
+    };
+
     if ((!appId && !pkg) || !channelId) {
-      setError('下载参数缺失，请刷新页面后重试');
+      fail('下载参数缺失，请刷新页面后重试');
       return;
     }
 
@@ -88,6 +113,7 @@ export default function GameDownloadDialog({
 
     setLoadingChannelId(channelId);
     setError(null);
+    setFailedChannelId(null);
 
     try {
       const response = await trackedApiFetch('/game/getAppDownload', {
@@ -105,28 +131,41 @@ export default function GameDownloadDialog({
       });
 
       if (!response.ok) {
-        throw new Error('网络请求失败');
+        fail(`「${channelName || '当前渠道'}」请求失败（HTTP ${response.status}），请换一个渠道重试`, {
+          reasonCode: `http_${response.status}`,
+        });
+        return;
       }
 
       const result = await response.json();
       if (result.code === 0 && result.data?.url) {
         window.open(result.data.url, '_blank');
-      } else {
-        throw new Error(result.message || '无法获取下载链接');
+        return;
       }
+
+      fail(`「${channelName || '当前渠道'}」暂时不可用：${result.message || '无法获取下载链接'}`, {
+        reasonCode: result.code ?? 'no_url',
+      });
     } catch (e: any) {
-      setError(e.message || '发生未知错误');
+      fail(`「${channelName || '当前渠道'}」下载失败：${e?.message || '发生未知错误'}`, {
+        reasonCode: 'exception',
+      });
     } finally {
       setLoadingChannelId(null);
     }
   };
+
+  const retryTarget = pickDownloadRetryTarget(resources, failedChannelId);
 
   return (
     <>
       <Dialog
         open={open}
         onOpenChange={(nextOpen) => {
-          if (!nextOpen) setError(null);
+          if (!nextOpen) {
+            setError(null);
+            setFailedChannelId(null);
+          }
           onOpenChange?.(nextOpen);
         }}
       >
@@ -247,11 +286,16 @@ export default function GameDownloadDialog({
             )}
 
             {error && (
-              <Alert variant="destructive" className="mt-2">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>出错了</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+              <DownloadFailureAlert
+                message={error}
+                retryLabel={retryTarget?.label}
+                onRetry={
+                  retryTarget
+                    ? () => handleDownloadClick(retryTarget.resource)
+                    : undefined
+                }
+                disabled={loadingChannelId !== null}
+              />
             )}
           </div>
 

@@ -64,6 +64,64 @@ function createEventId(): string {
   return `dl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/**
+ * 下载失败上报（待决策 #119）：复用既有的 `fail_reason` 事件，不新造事件名。
+ *
+ * `pump` 标出失败发生在哪条下载链路，`channel_*` 标出具体渠道，`reason` 是给
+ * 人看的失败原因；三者齐全才能归因「是某个渠道坏了，还是整条链路挂了」。
+ * 与点击上报一样不阻塞用户操作、失败静默。
+ */
+export interface DownloadFailureInput {
+  appId?: string | null;
+  pkg?: string | null;
+  channelId?: string | null;
+  channelCode?: string | null;
+  channelName?: string | null;
+  /** 下载链路标识，例如 web 详情页弹窗 `web_detail_dialog`。 */
+  pump: string;
+  /** 链路阶段，例如 `request_download_url`。 */
+  stage?: string;
+  reason: string;
+  reasonCode?: string | number | null;
+}
+
+export const DOWNLOAD_FAILURE_EVENT = 'fail_reason';
+
+export function reportDownloadFailure(input: DownloadFailureInput): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const body = {
+      event_name: DOWNLOAD_FAILURE_EVENT,
+      event_id: createEventId(),
+      occurred_at: new Date().toISOString(),
+      app_id: String(input.appId || '').trim() || undefined,
+      pkg: String(input.pkg || '').trim() || undefined,
+      channel_id: String(input.channelId || '').trim() || undefined,
+      channel_code: String(input.channelCode || '').trim() || undefined,
+      channel_name: String(input.channelName || '').trim() || undefined,
+      props: {
+        pump: input.pump,
+        stage: String(input.stage || '').trim(),
+        reason: String(input.reason || 'unknown').trim().slice(0, 200),
+        ...(input.reasonCode != null && String(input.reasonCode).trim() !== ''
+          ? { reason_code: String(input.reasonCode).slice(0, 40) }
+          : {}),
+      },
+    };
+
+    void trackedApiFetch('/tracking/event', {
+      method: 'POST',
+      keepalive: true,
+      cache: 'no-store',
+      headers: { 'content-type': 'application/json', ...buildTrackingHeaders() },
+      body: JSON.stringify(body),
+    }).catch(() => {});
+  } catch {
+    // 失败上报本身失败不打扰用户。
+  }
+}
+
 export function reportDownloadClick(input: DownloadClickInput): void {
   if (typeof window === 'undefined') return;
 

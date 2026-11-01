@@ -3,8 +3,10 @@ import test from 'node:test';
 
 import {
   DOWNLOAD_CLICK_SCHEMA_VERSION,
+  DOWNLOAD_FAILURE_EVENT,
   buildDownloadClickDedupeKey,
   reportDownloadClick,
+  reportDownloadFailure,
 } from '../src/lib/download-click-tracking.ts';
 
 test('dedupe_key 按同访客 + 同日 + 同游戏 + 同 surface 归并', () => {
@@ -94,4 +96,55 @@ test('上报事件带 dedupe_key / schema_version，且重复点击仍生成新 
     bodies[0].props.dedupe_key,
     /^web-[^|]+\|\d{4}-\d{2}-\d{2}\|67f0a66d0b2f421bca0a0001\|detail_dialog$/,
   );
+});
+
+test('下载失败复用 fail_reason 事件，并带 pump 与渠道信息', () => {
+  const store = new Map();
+  const originals = {
+    window: globalThis.window,
+    localStorage: globalThis.localStorage,
+    apiStub: globalThis.__GAME_REVIEW_API_STUB__,
+  };
+  const bodies = [];
+  globalThis.window = {};
+  globalThis.localStorage = {
+    getItem: (key) => (store.has(key) ? store.get(key) : null),
+    setItem: (key, value) => store.set(key, String(value)),
+  };
+  globalThis.__GAME_REVIEW_API_STUB__ = {
+    fetch: async (_path, init) => {
+      bodies.push(JSON.parse(String(init?.body || '{}')));
+      return { ok: true };
+    },
+  };
+
+  try {
+    reportDownloadFailure({
+      appId: '67f0a66d0b2f421bca0a0001',
+      pkg: 'com.demo.one',
+      channelId: '67f0a66d0b2f421bca0a0002',
+      channelCode: 'official',
+      channelName: '官方渠道',
+      pump: 'web_detail_dialog',
+      stage: 'request_download_url',
+      reason: '「官方渠道」暂时不可用：资源不存在',
+      reasonCode: 404,
+    });
+  } finally {
+    globalThis.window = originals.window;
+    globalThis.localStorage = originals.localStorage;
+    globalThis.__GAME_REVIEW_API_STUB__ = originals.apiStub;
+  }
+
+  assert.equal(bodies.length, 1);
+  const [body] = bodies;
+  assert.equal(body.event_name, DOWNLOAD_FAILURE_EVENT);
+  assert.equal(body.event_name, 'fail_reason');
+  assert.equal(body.channel_id, '67f0a66d0b2f421bca0a0002');
+  assert.equal(body.channel_code, 'official');
+  assert.equal(body.channel_name, '官方渠道');
+  assert.equal(body.props.pump, 'web_detail_dialog');
+  assert.equal(body.props.stage, 'request_download_url');
+  assert.equal(body.props.reason, '「官方渠道」暂时不可用：资源不存在');
+  assert.equal(body.props.reason_code, '404');
 });
