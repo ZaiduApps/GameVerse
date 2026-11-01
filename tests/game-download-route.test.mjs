@@ -254,10 +254,11 @@ test('302 路由：Location 只接受 http/https，不接受开放重定向', ()
 });
 
 test('route handler 与详情页接线符合派发单约束（源码级）', async () => {
-  const [routeSource, viewSource, dialogSource] = await Promise.all([
+  const [routeSource, viewSource, dialogSource, requestSource] = await Promise.all([
     readSource('../src/app/app/[id]/download/[channelId]/route.ts'),
     readSource('../src/app/app/[id]/GameDetailView.tsx'),
     readSource('../src/components/game-download-dialog.tsx'),
+    readSource('../src/lib/download-request.ts'),
   ]);
 
   // 302 链路：force-dynamic + no-store + 带着来源位与访客 UA 去调现有 POST 接口
@@ -276,7 +277,10 @@ test('route handler 与详情页接线符合派发单约束（源码级）', asy
 
   // 客户端打点：渠道按钮上报 download_click，服务端不再代记
   assert.match(dialogSource, /reportDownloadClick\(\{ appId, pkg, channelId, surface: 'detail_dialog' \}\)/);
-  assert.match(dialogSource, /'x-ac-surface': 'detail_dialog'/);
   assert.match(dialogSource, /from '@\/lib\/game-download-channel'/);
+  assert.match(dialogSource, /from '@\/lib\/download-request'/);
   assert.doesNotMatch(dialogSource, /const shouldGuideToApp = \(resource/);
+  // 请求体与来源位在抽出的请求层：仍必须是弹窗来源位。
+  assert.match(requestSource, /'x-ac-surface': 'detail_dialog'/);
+  assert.match(requestSource, /'\/game\/getAppDownload'/);
 });

@@ -25,10 +25,10 @@ import {
 import type { ApiDownloadResource, CardConfigItem } from '@/types';
 import Image from 'next/image';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { trackedApiFetch } from '@/lib/api';
 import DownloadFailureAlert from '@/components/download-failure-alert';
 import { reportDownloadClick, reportDownloadFailure } from '@/lib/download-click-tracking';
 import { resolveDownloadChannelId, shouldGuideToApp } from '@/lib/game-download-channel';
+import { requestDownloadUrl } from '@/lib/download-request';
 import { pickDownloadRetryTarget } from '@/lib/download-retry';
 import type { GameSourceInfo } from '@/lib/game-source-link';
 import AppDownloadGuideDialog from '@/components/app-download-guide-dialog';
@@ -79,7 +79,7 @@ export default function GameDownloadDialog({
     // 失败一律：可见提示 + 记下失败渠道 + fail_reason 归因，不阻断换渠道重试。
     const fail = (
       message: string,
-      meta: { reasonCode?: string | number | null } = {},
+      reasonCode?: string | number | null,
     ) => {
       setError(message);
       setFailedChannelId(channelId || null);
@@ -92,7 +92,7 @@ export default function GameDownloadDialog({
         pump: 'web_detail_dialog',
         stage: 'request_download_url',
         reason: message,
-        reasonCode: meta.reasonCode ?? null,
+        reasonCode,
       });
     };
 
@@ -116,40 +116,17 @@ export default function GameDownloadDialog({
     setFailedChannelId(null);
 
     try {
-      const response = await trackedApiFetch('/game/getAppDownload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // 来源位：让 interface 能把「弹窗直下」与「服务端直出 302」分开统计。
-          'x-ac-surface': 'detail_dialog',
-        },
-        body: JSON.stringify({
-          app_id: appId,
-          pkg,
-          channel_id: channelId,
-        }),
+      const result = await requestDownloadUrl({
+        appId,
+        pkg,
+        channelId,
+        channelName,
       });
-
-      if (!response.ok) {
-        fail(`「${channelName || '当前渠道'}」请求失败（HTTP ${response.status}），请换一个渠道重试`, {
-          reasonCode: `http_${response.status}`,
-        });
+      if (result.ok) {
+        window.open(result.url, '_blank');
         return;
       }
-
-      const result = await response.json();
-      if (result.code === 0 && result.data?.url) {
-        window.open(result.data.url, '_blank');
-        return;
-      }
-
-      fail(`「${channelName || '当前渠道'}」暂时不可用：${result.message || '无法获取下载链接'}`, {
-        reasonCode: result.code ?? 'no_url',
-      });
-    } catch (e: any) {
-      fail(`「${channelName || '当前渠道'}」下载失败：${e?.message || '发生未知错误'}`, {
-        reasonCode: 'exception',
-      });
+      fail(result.message, result.reasonCode);
     } finally {
       setLoadingChannelId(null);
     }
