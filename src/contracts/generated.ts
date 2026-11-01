@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 d78ef576af475a0009c623bd80c50dd092411e520662d2edfb842f4225455403
+ * @contract-sha256 c1c4f283b9e040ab321e38877b3dac0478b881b248de6824cc9c733b1853af96
  */
 
 export interface paths {
@@ -3416,7 +3416,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 回填桶内 apk/ 前缀直链对象进媒体库（幂等，可重复执行） */
+        /** 回填桶内 apk/ 前缀直链对象进媒体库（幂等，可分批执行） */
         post: operations["MediaAssetController_backfillApk"];
         delete?: never;
         options?: never;
@@ -5255,6 +5255,40 @@ export interface paths {
         get: operations["ResourcesController_listUpdates"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/app-resources/direct-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 分页查询最新版本资源的直链开关与地址 */
+        get: operations["AppResourcesAdminController_listDirectLinks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/app-resources/direct-link/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 批量设置资源直链开关（单次最多 200 个，幂等） */
+        post: operations["AppResourcesAdminController_batchDirectLinks"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9010,6 +9044,12 @@ export interface components {
             is_active: boolean;
             /** @example false */
             is_maintenance: boolean;
+        };
+        DirectLinkBatchUpdateDto: {
+            /** @description 资源 ID 列表，单次最多 200 个 */
+            ids: string[];
+            /** @description 直链开关目标值 */
+            enabled: boolean;
         };
         AiModelConfigDto: {
             /** @description 模型ID（可不传，服务端自动生成） */
@@ -18159,7 +18199,12 @@ export interface operations {
     };
     MediaAssetController_backfillApk: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 单次最多处理的对象数，默认 2000，取值 1-10000；按整页（1000 个）处理，可能略超上限 */
+                maxObjects?: number;
+                /** @description 上一页返回的 next_cursor；不传则从头开始 */
+                cursor?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -21962,6 +22007,69 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description 查询更新任务成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    AppResourcesAdminController_listDirectLinks: {
+        parameters: {
+            query?: {
+                /** @description 页码，默认 1 */
+                page?: number;
+                /** @description 每页数量，1-100，默认 20 */
+                pageSize?: number;
+                /** @description 按直链开关过滤；缺省返回全部 */
+                enabled?: "true" | "false" | "1" | "0";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 查询直链列表成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    AppResourcesAdminController_batchDirectLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DirectLinkBatchUpdateDto"];
+            };
+        };
+        responses: {
+            /** @description 批量更新直链开关成功 */
             200: {
                 headers: {
                     [name: string]: unknown;
