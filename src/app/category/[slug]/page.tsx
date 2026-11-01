@@ -12,11 +12,16 @@ import {
   CATEGORY_PAGES,
   buildCategoryPath,
   categoryDisplayName,
-  isCategoryQualified,
   resolveCategoryBySlug,
   type CategoryGame,
-  type CategoryPagePayload,
 } from '@/lib/category-pages';
+import {
+  CATEGORY_PAGE_API_TIMEOUT_MS,
+  CATEGORY_PAGE_RETRY_TIMEOUT_MS,
+  emptyCategoryPayload,
+  loadCategoryPageWithRetry,
+  type CategoryPageLoadResult,
+} from '@/lib/category-page-resilience';
 import { resolveGameName } from '@/lib/game-display-name';
 import { getPreviewImageUrl } from '@/lib/image-preview';
 import { absoluteUrl, buildSeoDescription } from '@/lib/seo';
@@ -26,20 +31,12 @@ export const revalidate = 900;
 
 const CATEGORY_REVALIDATE_SECONDS = 900;
 const CATEGORY_PAGE_SIZE = 24;
-const CATEGORY_API_TIMEOUT_MS = 6000;
 const RELATED_CATEGORY_LIMIT = 12;
 const PAGINATION_WINDOW_RADIUS = 3;
 const FALLBACK_SITE_NAME = 'APKScc';
 
 type CategorySearchParams = {
   page?: string;
-};
-
-type CategoryPageData = {
-  /** 接口原样返回的分页体。 */
-  payload: CategoryPagePayload;
-  /** 有资源条数决定翻页范围。 */
-  totalPages: number;
 };
 
 /**
@@ -88,15 +85,13 @@ function getGameHref(game: CategoryGame): string {
 }
 
 /**
- * 分类落地页的数据判定：
- * - `missing`：未知 slug / 接口 code 400（分类不存在）/ 未达收录阈值 / 页码越界 → 404；
- * - 其它任何失败（code 502、非 2xx、超时、网络异常）→ 抛错进 error boundary（5xx）。
+ * 分类落地页的数据装载：未知 slug → `missing`；其余交给
+ * `loadCategoryPageWithRetry`（首次失败用 no-store 重取一次，仍失败 → `unavailable`）。
  *
- * 「暂时失败」绝不能写成 404：上游抖一下就把整个分类从索引里摘掉，恢复后还要等爬虫重来。
+ * 「暂时失败」绝不能写成 404，也不能进 error boundary：上游抖一下就把整个分类
+ * 从索引里摘掉，或者让用户看到 500，都比渲染一个 200 空态页更糟。
  */
-type CategoryLoadResult = { kind: 'ok'; data: CategoryPageData } | { kind: 'missing' };
-
-const loadCategoryPage = cache(async (slug: string, page: number): Promise<CategoryLoadResult> => {
+const loadCategoryPage = cache(async (slug: string, page: number): Promise<CategoryPageLoadResult> => {
   const category = resolveCategoryBySlug(slug);
   if (!category) return { kind: 'missing' };
 
@@ -105,70 +100,31 @@ const loadCategoryPage = cache(async (slug: string, page: number): Promise<Categ
     page: String(page),
     pageSize: String(CATEGORY_PAGE_SIZE),
   });
+  const requestPath = `/game/category?${params.toString()}`;
 
-  let json: unknown;
-  try {
-    const response = await trackedApiFetch(`/game/category?${params.toString()}`, {
-      cache: 'force-cache',
-      next: { revalidate: CATEGORY_REVALIDATE_SECONDS },
-      timeoutMs: CATEGORY_API_TIMEOUT_MS,
-      logKey: 'category-page',
-    });
-    if (!response.ok) {
-      throw new Error(`分类列表接口失败: status=${response.status}`);
-    }
-    json = await response.json();
-  } catch (error) {
-    console.error('[category-page] 分类列表请求失败', {
-      slug,
-      name: category.name,
-      page,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw error;
-  }
-
-  const payload = json as { code?: number; message?: string; data?: Partial<CategoryPagePayload> } | null;
-  const code = payload?.code;
-  if (code === 400) return { kind: 'missing' };
-  if (code !== undefined && code !== 0) {
-    throw new Error(`分类列表接口返回错误: code=${code} message=${payload?.message || ''}`);
-  }
-
-  const raw = payload?.data;
-  if (!raw || typeof raw !== 'object') {
-    throw new Error(`分类列表接口返回结构异常: slug=${slug}`);
-  }
-
-  const list = Array.isArray(raw.list) ? raw.list : [];
-  const withResources = Number(raw.total ?? list.length);
-  const publishedTotal = Number(raw.publishedTotal ?? 0);
-  const responsePage = Math.max(1, Number(raw.page ?? page));
-  const pageSize = Math.max(1, Number(raw.pageSize ?? CATEGORY_PAGE_SIZE));
-
-  // 阈值判定只认这一份规则（与 sitemap 共用），不在这里另写数字。
-  if (!isCategoryQualified({ published: publishedTotal, withResources })) {
-    return { kind: 'missing' };
-  }
-
-  const totalPages = Math.max(1, Math.ceil(withResources / pageSize));
-  if (responsePage > totalPages) return { kind: 'missing' };
-  // 空页在阈值达标时只可能是越界（后端已按 page 返回），同样 404 而不是渲染空网格。
-  if (list.length === 0 && responsePage > 1) return { kind: 'missing' };
-
-  return {
-    kind: 'ok',
-    data: {
-      payload: {
-        list,
-        total: withResources,
-        page: responsePage,
-        pageSize,
-        publishedTotal,
-      },
-      totalPages,
+  return await loadCategoryPageWithRetry({
+    page,
+    pageSize: CATEGORY_PAGE_SIZE,
+    load: async (attempt) => {
+      const response = await trackedApiFetch(
+        requestPath,
+        attempt === 'primary'
+          ? {
+              cache: 'force-cache',
+              next: { revalidate: CATEGORY_REVALIDATE_SECONDS },
+              timeoutMs: CATEGORY_PAGE_API_TIMEOUT_MS,
+              logKey: 'category-page',
+            }
+          : {
+              cache: 'no-store',
+              timeoutMs: CATEGORY_PAGE_RETRY_TIMEOUT_MS,
+              logKey: 'category-page-retry',
+            },
+      );
+      if (!response.ok) return { status: response.status };
+      return { status: response.status, payload: await response.json() };
     },
-  };
+  });
 });
 
 export async function generateMetadata({
@@ -186,21 +142,34 @@ export async function generateMetadata({
   const result = await loadCategoryPage(slug, page);
   if (result.kind === 'missing') notFound();
 
-  const [config, { payload }] = [await getPublicSiteConfig(300), result.data];
+  const degraded = result.kind === 'unavailable';
+  const [config, payload] = [
+    await getPublicSiteConfig(300),
+    degraded ? emptyCategoryPayload(page, CATEGORY_PAGE_SIZE) : result.data.payload,
+  ];
   const siteName = String(config?.basic?.site_name || FALLBACK_SITE_NAME).trim() || FALLBACK_SITE_NAME;
   const published = Number(payload.publishedTotal || payload.total || payload.list.length);
   const latestUpdate = resolveLatestUpdate(payload.list);
   const pageSuffix = page > 1 ? `（第 ${page} 页）` : '';
+  const displayName = categoryDisplayName(category.name);
 
-  const title = `${categoryDisplayName(category.name)}推荐（${published} 款）- ${siteName}${pageSuffix}`;
-  const description = buildSeoDescription(
-    `${category.name}分类共收录 ${published} 款已发布安卓游戏，其中 ${payload.total} 款提供可下载资源`,
-    [
-      latestUpdate ? `最近更新于 ${latestUpdate}` : null,
-      `可按游戏名、版本与更新时间进入详情页查看下载渠道、截图与玩家评价`,
-      `${siteName} ${category.name}游戏榜`,
-    ],
-  );
+  // 降级空态页拿不到真实计数，标题/描述不再写「0 款」这种假数据。
+  const title = degraded
+    ? `${displayName}推荐 - ${siteName}${pageSuffix}`
+    : `${displayName}推荐（${published} 款）- ${siteName}${pageSuffix}`;
+  const description = degraded
+    ? buildSeoDescription(`${category.name}分类安卓游戏推荐，按评分与更新时间排列`, [
+        '可按游戏名、版本与更新时间进入详情页查看下载渠道、截图与玩家评价',
+        `${siteName} ${category.name}游戏榜`,
+      ])
+    : buildSeoDescription(
+        `${category.name}分类共收录 ${published} 款已发布安卓游戏，其中 ${payload.total} 款提供可下载资源`,
+        [
+          latestUpdate ? `最近更新于 ${latestUpdate}` : null,
+          `可按游戏名、版本与更新时间进入详情页查看下载渠道、截图与玩家评价`,
+          `${siteName} ${category.name}游戏榜`,
+        ],
+      );
 
   // 第 1 页归一到 /category/<slug>；从第 2 页起内容已不同，canonical 自引用。
   const canonicalPath = buildCategoryPath(category.slug, page);
@@ -344,7 +313,10 @@ export default async function CategoryPage({
   const result = await loadCategoryPage(slug, page);
   if (result.kind === 'missing') notFound();
 
-  const { payload, totalPages } = result.data;
+  const degraded = result.kind === 'unavailable';
+  const { payload, totalPages } = degraded
+    ? { payload: emptyCategoryPayload(page, CATEGORY_PAGE_SIZE), totalPages: 1 }
+    : result.data;
   const published = Number(payload.publishedTotal || payload.total || payload.list.length);
   const latestUpdate = resolveLatestUpdate(payload.list);
   const prevHref = payload.page > 1 ? buildCategoryPath(slug, payload.page - 1) : '';
@@ -366,9 +338,21 @@ export default async function CategoryPage({
           {categoryDisplayName(category.name)}推荐{payload.page > 1 ? `（第 ${payload.page} 页）` : ''}
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
-          {category.name}分类共收录 {published} 款已发布安卓游戏，其中 {payload.total} 款提供可下载资源
-          {latestUpdate ? `，最近更新于 ${latestUpdate}` : ''}
-          。列表按评分与更新时间排列，点进详情页可以核对版本、安装包大小、下载渠道与玩家评价，再决定是否安装。
+          {degraded ? (
+            <>
+              {category.name}分类的内容暂时加载不出来，刷新页面即可重试；也可以先回到
+              <Link href="/app" className="mx-1 font-semibold text-primary hover:underline">
+                游戏库
+              </Link>
+              按关键词或分类筛选。
+            </>
+          ) : (
+            <>
+              {category.name}分类共收录 {published} 款已发布安卓游戏，其中 {payload.total} 款提供可下载资源
+              {latestUpdate ? `，最近更新于 ${latestUpdate}` : ''}
+              。列表按评分与更新时间排列，点进详情页可以核对版本、安装包大小、下载渠道与玩家评价，再决定是否安装。
+            </>
+          )}
         </p>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
           想看其它题材可以回到
@@ -391,7 +375,7 @@ export default async function CategoryPage({
         </div>
       ) : (
         <p className="rounded-2xl border border-border/60 bg-card p-6 text-sm text-muted-foreground shadow-sm">
-          这个分类暂时没有可展示的游戏，可以先回到
+          {degraded ? '该分类暂无更多内容' : '这个分类暂时没有可展示的游戏'}，可以先回到
           <Link href="/app" className="mx-1 font-semibold text-primary hover:underline">
             游戏库
           </Link>
