@@ -64,6 +64,17 @@ function createEventId(): string {
   return `dl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/** 两个上报共用：keepalive + 不缓存 + 失败静默，不阻塞跳转也不排队重试。 */
+function postTrackingEvent(body: Record<string, unknown>): void {
+  void trackedApiFetch('/tracking/event', {
+    method: 'POST',
+    keepalive: true,
+    cache: 'no-store',
+    headers: { 'content-type': 'application/json', ...buildTrackingHeaders() },
+    body: JSON.stringify(body),
+  }).catch(() => {});
+}
+
 /**
  * 下载失败上报（待决策 #119）：复用既有的 `fail_reason` 事件，不新造事件名。
  *
@@ -110,13 +121,7 @@ export function reportDownloadFailure(input: DownloadFailureInput): void {
       },
     };
 
-    void trackedApiFetch('/tracking/event', {
-      method: 'POST',
-      keepalive: true,
-      cache: 'no-store',
-      headers: { 'content-type': 'application/json', ...buildTrackingHeaders() },
-      body: JSON.stringify(body),
-    }).catch(() => {});
+    postTrackingEvent(body);
   } catch {
     // 失败上报本身失败不打扰用户。
   }
@@ -149,13 +154,7 @@ export function reportDownloadClick(input: DownloadClickInput): void {
     };
 
     // keepalive：跳转到 302 入口后请求仍然送达；失败静默，不重试、不排队。
-    void trackedApiFetch('/tracking/event', {
-      method: 'POST',
-      keepalive: true,
-      cache: 'no-store',
-      headers: { 'content-type': 'application/json', ...buildTrackingHeaders() },
-      body: JSON.stringify(body),
-    }).catch(() => {});
+    postTrackingEvent(body);
   } catch {
     // 序列化失败、隐私模式等一律静默。
   }
