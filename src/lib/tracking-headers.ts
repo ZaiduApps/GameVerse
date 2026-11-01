@@ -37,6 +37,14 @@ export function getTrackingAppVersion(): string {
   );
 }
 
+/**
+ * 访客稳定标识（localStorage 设备号）：与服务端 `x-device-id` 头同源。
+ * 埋点需要「同访客」归并时用它拼去重键，避免另造一套访客 id。
+ */
+export function getTrackingDeviceId(): string {
+  return getOrCreateStorageValue(DEVICE_ID_KEY, 'web');
+}
+
 export function buildTrackingHeaders(
   extra: Record<string, string> = {},
 ): Record<string, string> {
