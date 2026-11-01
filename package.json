@@ -24,6 +24,7 @@
     "test:game-description": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/alias-loader.mjs --test tests/game-description-markdown.test.mjs",
     "test:game-description-sanitize": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/alias-loader.mjs --test tests/game-description-sanitize.test.mjs",
     "test:game-display-name": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/game-display-name.test.mjs",
+    "test:game-catalog": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/game-catalog.test.mjs",
     "test:authed-fetch": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/alias-loader.mjs --test tests/authed-fetch.test.mjs",
     "test:route-template": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/route-template.test.mjs",
     "test:screen-view": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/helpers/alias-loader.mjs --test tests/screen-view-props.test.mjs",

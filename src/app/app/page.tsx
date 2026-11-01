@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense, cache } from 'react';
 
@@ -6,6 +7,11 @@ import AppLibraryView from './AppLibraryView';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
 import { trackedApiFetch } from '@/lib/api';
+import {
+  GAME_CATALOG_INDEX_PAGE_SIZE,
+  getPublishedGameCatalog,
+  sliceCatalogPage,
+} from '@/lib/game-catalog';
 import { resolveGameName } from '@/lib/game-display-name';
 import {
   GAME_LIBRARY_BROWSE_PAGE_SIZE,
@@ -150,18 +156,25 @@ const getLibraryBounds = cache(async (keyword: string): Promise<LibraryBounds> =
   const browseMode = !normalizedKeyword;
   const queries = browseMode ? [...GAME_LIBRARY_BROWSE_QUERIES] : [normalizedKeyword];
   const pageSize = browseMode ? GAME_LIBRARY_BROWSE_PAGE_SIZE : GAME_LIBRARY_PAGE_SIZE;
-  const firstPages = await Promise.all(
-    queries.map(async (query) => ({
-      query,
-      result: await fetchLibraryQuery(query, pageSize, 1, browseMode),
-    })),
-  );
+  const [firstPages, catalog] = await Promise.all([
+    Promise.all(
+      queries.map(async (query) => ({
+        query,
+        result: await fetchLibraryQuery(query, pageSize, 1, browseMode),
+      })),
+    ),
+    browseMode ? getPublishedGameCatalog() : Promise.resolve(null),
+  ]);
   const successful = firstPages
     .map((entry) => entry.result)
     .filter((result): result is LibraryQueryResult => result !== null);
+  const catalogPages = catalog
+    ? Math.max(1, Math.ceil(catalog.length / GAME_CATALOG_INDEX_PAGE_SIZE))
+    : 1;
+  // 深度取两者较大值：浏览词的分页与全量索引都可能决定最后一页。
   const maxPage = successful.reduce(
     (max, result) => Math.max(max, Math.ceil(result.total / result.pageSize)),
-    1,
+    catalogPages,
   );
   return { browseMode, pageSize, firstPages, maxPage, ready: successful.length > 0 };
 });
@@ -313,6 +326,54 @@ function LibraryPagination({
         </span>
       )}
     </nav>
+  );
+}
+
+/**
+ * 全量游戏索引：分页列出「全部已发布游戏」，与 sitemap 详情页集合一致。
+ *
+ * 存在的理由不是再加一个列表，而是补入口：分类页只收 23 个标签且要求有下载资源，
+ * 浏览模式只查 6 个关键词，两者都覆盖不到的作品此前没有任何内链。索引按包名排序、
+ * 每页固定 48 条，条目只在唯一一页出现，爬虫顺着 `/app?page=N` 的 rel=next 就能走完。
+ */
+function AllGamesIndex({
+  games,
+  page,
+  totalPages,
+  total,
+}: {
+  games: Array<{ pkg: string; name: string }>;
+  page: number;
+  totalPages: number;
+  total: number;
+}) {
+  if (games.length === 0) return null;
+
+  return (
+    <section className="mt-10 rounded-2xl border border-border/60 bg-card p-6 shadow-sm">
+      <h2 className="text-lg font-semibold text-foreground">全部游戏索引</h2>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+        本站收录的全部已发布游戏，按包名排序，第 {page} / {totalPages} 页，共 {total} 款。用于查找未出现在分类页或关键词结果里的作品。
+      </p>
+      <ul className="mt-4 grid gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+        {games.map((game) => {
+          // 目录接口只下发 name（Google Play 原名），没有运营维护的 metadata；
+          // 走 resolveGameName 保持与全站同一取数口径，拿不到中文名时回退原名。
+          const name = resolveGameName({ name: game.name, pkg: game.pkg }) || game.pkg;
+          return (
+            <li key={game.pkg} className="min-w-0">
+              <Link
+                href={`/app/${encodeURIComponent(game.pkg)}`}
+                title={name}
+                className="block truncate text-sm text-muted-foreground transition-colors hover:text-primary"
+              >
+                {name}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -471,7 +532,15 @@ async function GameLibraryContent({
   ]);
   const siteName = String(config?.basic?.site_name || 'APKScc').trim();
   const games = initialLibraryData.games.slice(0, GAME_JSONLD_PAGE_SIZE);
-  const totalPages = initialLibraryData.totalPages;
+  // 浏览模式（无关键词）才渲染全量索引；搜索结果是另一套分页口径。
+  const catalogIndex = initialKeyword
+    ? null
+    : sliceCatalogPage(
+        (await getPublishedGameCatalog()) ?? [],
+        currentPage,
+        GAME_CATALOG_INDEX_PAGE_SIZE,
+      );
+  const totalPages = Math.max(initialLibraryData.totalPages, catalogIndex?.totalPages ?? 1);
   const canonicalPath = initialLibraryData.page > 1 ? `/app?page=${initialLibraryData.page}` : '/app';
   const prevPageHref =
     currentPage > 1 ? buildLibraryPageHref(currentPage - 1, initialKeyword, initialCategory) : '';
@@ -553,6 +622,14 @@ async function GameLibraryContent({
         keyword={initialKeyword}
         category={initialCategory}
       />
+      {catalogIndex ? (
+        <AllGamesIndex
+          games={catalogIndex.games}
+          page={currentPage}
+          totalPages={catalogIndex.totalPages}
+          total={catalogIndex.total}
+        />
+      ) : null}
     </>
   );
 }
