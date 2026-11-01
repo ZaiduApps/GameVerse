@@ -27,13 +27,17 @@ function okPayload(overrides = {}) {
 
 function silentLogger() {
   const calls = { warn: 0, error: 0 };
+  const entries = [];
   return {
     calls,
-    warn: () => {
+    entries,
+    warn: (...args) => {
       calls.warn += 1;
+      entries.push(args);
     },
-    error: () => {
+    error: (...args) => {
       calls.error += 1;
+      entries.push(args);
     },
   };
 }
@@ -47,6 +51,7 @@ test('首次成功：只请求一次 primary，不触发降级', async () => {
   const attempts = [];
   const logger = silentLogger();
   const result = await loadCategoryPageWithRetry({
+    categoryName: '角色扮演',
     page: 3,
     pageSize: PAGE_SIZE,
     logger,
@@ -68,6 +73,7 @@ test('首次 504：用 retry 再取一次，成功后正常渲染', async () => 
   const attempts = [];
   const logger = silentLogger();
   const result = await loadCategoryPageWithRetry({
+    categoryName: '角色扮演',
     page: 3,
     pageSize: PAGE_SIZE,
     logger,
@@ -87,6 +93,7 @@ test('首次 504：用 retry 再取一次，成功后正常渲染', async () => 
 test('旧版「HTTP 200 + code 502」也按失败处理并重取（清掉缓存毒化）', async () => {
   const attempts = [];
   const result = await loadCategoryPageWithRetry({
+    categoryName: '角色扮演',
     page: 3,
     pageSize: PAGE_SIZE,
     logger: silentLogger(),
@@ -107,6 +114,7 @@ test('两次都失败：返回 unavailable（上层渲染 200 空态页），不
   const attempts = [];
   const logger = silentLogger();
   const result = await loadCategoryPageWithRetry({
+    categoryName: '角色扮演',
     page: 3,
     pageSize: PAGE_SIZE,
     logger,
@@ -120,11 +128,15 @@ test('两次都失败：返回 unavailable（上层渲染 200 空态页），不
   assert.equal(result.kind, 'unavailable');
   assert.equal(logger.calls.warn, 1);
   assert.equal(logger.calls.error, 1);
+  // 线上排障要靠日志定位到具体分类，不能只留页码。
+  assert.equal(logger.entries.at(-1)[1].name, '角色扮演');
+  assert.equal(logger.entries.at(-1)[1].page, 3);
 });
 
 test('请求抛错（超时/网络异常）同样进入降级重取', async () => {
   const attempts = [];
   const result = await loadCategoryPageWithRetry({
+    categoryName: '角色扮演',
     page: 1,
     pageSize: PAGE_SIZE,
     logger: silentLogger(),
@@ -144,6 +156,7 @@ test('请求抛错（超时/网络异常）同样进入降级重取', async () =
 test('HTTP 400 是确定性结论：直接 missing，不浪费第二次请求', async () => {
   const attempts = [];
   const result = await loadCategoryPageWithRetry({
+    categoryName: '角色扮演',
     page: 1,
     pageSize: PAGE_SIZE,
     logger: silentLogger(),

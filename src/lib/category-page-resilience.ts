@@ -115,11 +115,13 @@ export function classifyCategoryPageResponse(
  * `load(attempt)` 抛错表示网络/超时/解析失败；返回 `{ status, payload }` 时由这里判定。
  */
 export async function loadCategoryPageWithRetry({
+  categoryName,
   page,
   pageSize,
   load,
   logger = console,
 }: {
+  categoryName: string;
   page: number;
   pageSize: number;
   load: (attempt: 'primary' | 'retry') => Promise<{ status: number; payload?: unknown }>;
@@ -137,6 +139,7 @@ export async function loadCategoryPageWithRetry({
   if (primary.kind !== 'failed') return primary;
 
   logger.warn('[category-page] 分类列表首次请求失败，改用 no-store 再取一次', {
+    name: categoryName,
     page,
     reason: primary.reason,
   });
@@ -145,6 +148,7 @@ export async function loadCategoryPageWithRetry({
   if (retried.kind !== 'failed') return retried;
 
   logger.error('[category-page] 分类列表降级重取仍失败，返回 200 空态页', {
+    name: categoryName,
     page,
     primary: primary.reason,
     retry: retried.reason,

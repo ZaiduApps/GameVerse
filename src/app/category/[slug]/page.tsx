@@ -103,6 +103,7 @@ const loadCategoryPage = cache(async (slug: string, page: number): Promise<Categ
   const requestPath = `/game/category?${params.toString()}`;
 
   return await loadCategoryPageWithRetry({
+    categoryName: category.name,
     page,
     pageSize: CATEGORY_PAGE_SIZE,
     load: async (attempt) => {
