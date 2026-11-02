@@ -39,7 +39,14 @@ export const AUDIT_PAGE_CONCURRENCY = 2;
 /** 运行时抓接口的缓存时长（秒）。 */
 export const SITEMAP_REVALIDATE_SECONDS = 1800;
 
-export const FALLBACK_STATIC_PATHS = ['/', '/app', '/community', '/community/topics', '/rankings'];
+/**
+ * sitemap 分层（#126）：详情页优先，社区页让路。
+ *   - main（/sitemap.xml）：静态入口 + 分类页 + 游戏详情页 + /search?q=；
+ *   - community（/sitemap-community.xml）：社区静态入口 + albums + topics + posts。
+ * 两份文件各自独立校验/降级，互不拖累。
+ */
+export const MAIN_STATIC_PATHS = ['/', '/app', '/rankings'];
+export const COMMUNITY_STATIC_PATHS = ['/community', '/community/topics'];
 
 /** 静态 sitemap 与线上游戏总数的允许偏差；超过即判定静态文件过期。 */
 export const STATIC_COUNT_DEVIATION_LIMIT = 0.05;
@@ -377,8 +384,9 @@ export function createSitemapBuilder(options = {}) {
     toTopicEntry,
   );
 
-  function buildStaticEntries() {
-    return FALLBACK_STATIC_PATHS.map((path) => ({
+  function buildStaticEntries(kind = 'main') {
+    const paths = kind === 'community' ? COMMUNITY_STATIC_PATHS : MAIN_STATIC_PATHS;
+    return paths.map((path) => ({
       url: absolute(path),
       changeFrequency: path === '/' ? 'hourly' : 'daily',
       priority: path === '/' ? 1 : 0.7,
@@ -444,8 +452,9 @@ export function createSitemapBuilder(options = {}) {
   }
 
   /**
-   * 全量构建。任何单节接口失败都不会抛异常（与历史运行时行为一致）；
-   * games 一节为空时视为 API 不可用，调用方据此决定是否落盘/降级。
+   * 全量构建，按 main / community 两条线拆分。任何单节接口失败都不会抛异常
+   * （与历史运行时行为一致）；games 一节为空时视为 API 不可用，调用方据此决定
+   * 是否落盘/降级。main 与 community 的 complete 各自独立：一份残缺不该拖垮另一份。
    */
   async function buildEntries() {
     const [games, indexable] = await Promise.all([
@@ -474,25 +483,31 @@ export function createSitemapBuilder(options = {}) {
 
     // 用户主页（/u/<name>）整节不收录：薄页 + 用户生成内容，收录只会稀释站点质量信号。
     // `/seo/sitemap/users` 接口保留给其它调用方，sitemap 不再抓取。
-    const entries = [
-      ...buildStaticEntries(),
+    const main = [
+      ...buildStaticEntries('main'),
       ...categoryPages,
-      ...albums.entries,
       ...gameEntries,
+      ...search,
+    ];
+    const community = [
+      ...buildStaticEntries('community'),
+      ...albums.entries,
       ...topics.entries,
       ...posts.entries,
-      ...search,
     ];
 
     return {
-      entries,
+      sections: { main, community },
       // games 源为空说明 API 基本不可用，调用方不应拿这份残缺结果覆盖已有静态文件。
       apiReachable: games.rawCount > 0,
       // 任一节抓取不完整（分页失败/接口报错）时不得落盘成静态快照，否则会把 URL 静默删掉。
-      complete:
-        games.complete && posts.complete && albums.complete && topics.complete && indexable.complete,
+      complete: {
+        main: games.complete && indexable.complete,
+        community: posts.complete && albums.complete && topics.complete,
+      },
       stats: {
-        staticPaths: FALLBACK_STATIC_PATHS.length,
+        staticMain: MAIN_STATIC_PATHS.length,
+        staticCommunity: COMMUNITY_STATIC_PATHS.length,
         categoryPages: categoryPages.length,
         games: gameEntries.length,
         gamesSkippedUnpublished: games.unpublishedSkipped,

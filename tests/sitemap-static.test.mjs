@@ -120,12 +120,14 @@ test('createSitemapBuilder: 构建期与运行时产出同形条目（分页 + �
   };
 
   const builder = createSitemapBuilder({ apiBaseUrl: 'https://api.test', siteUrl: 'https://apks.cc', fetchImpl });
-  const { entries, apiReachable, complete, stats } = await builder.buildEntries();
+  const { sections, apiReachable, complete, stats } = await builder.buildEntries();
 
   assert.equal(apiReachable, true);
-  assert.equal(complete, true);
+  assert.equal(complete.main, true);
+  assert.equal(complete.community, true);
   assert.deepEqual(stats, {
-    staticPaths: 5,
+    staticMain: 3,
+    staticCommunity: 2,
     // 本用例的 fetch 对 /seo/category-pages 一律 404，分类页整节跳过，故为 0。
     categoryPages: 0,
     games: 1,
@@ -138,16 +140,22 @@ test('createSitemapBuilder: 构建期与运行时产出同形条目（分页 + �
     // /search?q= 白名单这一节：本用例的 fetch 对 /search/global 一律 404，全部跳过，故为 0。
     search: 0,
   });
-  const urls = entries.map((entry) => entry.url);
-  assert.ok(urls.includes('https://apks.cc/app/com.a'));
+  const mainUrls = sections.main.map((entry) => entry.url);
+  const communityUrls = sections.community.map((entry) => entry.url);
+  assert.ok(mainUrls.includes('https://apks.cc/app/com.a'));
   // 非 indexable 的游戏被过滤掉（与历史运行时行为一致）
-  assert.equal(urls.includes('https://apks.cc/app/com.gone'), false);
-  assert.ok(urls.includes('https://apks.cc/community/post/post1'));
-  assert.ok(urls.includes('https://apks.cc/albums/album1'));
-  assert.ok(urls.includes('https://apks.cc/community/topic/topic-slug'));
+  assert.equal(mainUrls.includes('https://apks.cc/app/com.gone'), false);
+  // 分层（#126）：main 只装详情页 + 分类/榜单/静态入口，社区页全部让路
+  assert.equal(mainUrls.some((url) => url.includes('/community/')), false);
+  assert.equal(mainUrls.some((url) => url.includes('/albums/')), false);
+  assert.ok(communityUrls.includes('https://apks.cc/community/post/post1'));
+  assert.ok(communityUrls.includes('https://apks.cc/albums/album1'));
+  assert.ok(communityUrls.includes('https://apks.cc/community/topic/topic-slug'));
+  assert.ok(communityUrls.includes('https://apks.cc/community'));
+  assert.ok(communityUrls.includes('https://apks.cc/community/topics'));
   // 即使用户接口有数据，/u/ 也不进 sitemap（薄页 + UGC）
   assert.equal(calls.some((call) => call.includes('/seo/sitemap/users')), false);
-  assert.equal(urls.some((url) => url.includes('/u/')), false);
+  assert.equal(communityUrls.some((url) => url.includes('/u/')), false);
   assert.ok(calls.some((call) => call.includes('/seo/sitemap/games?page=1')));
 });
 
@@ -179,8 +187,8 @@ test('createSitemapBuilder: 未发布游戏剔除、已发布保留，页面条�
   };
 
   const builder = createSitemapBuilder({ apiBaseUrl: 'https://api.test', siteUrl: 'https://apks.cc', fetchImpl });
-  const { entries, stats } = await builder.buildEntries();
-  const urls = entries.map((entry) => entry.url);
+  const { sections, stats } = await builder.buildEntries();
+  const urls = sections.main.map((entry) => entry.url);
 
   assert.ok(urls.includes('https://apks.cc/app/com.published.one'));
   assert.ok(!urls.includes('https://apks.cc/app/com.reserved.one'));
@@ -190,8 +198,8 @@ test('createSitemapBuilder: 未发布游戏剔除、已发布保留，页面条�
   assert.ok(!urls.includes('https://apks.cc/app/com.published.two'));
   assert.equal(stats.games, 1);
   assert.equal(stats.gamesSkippedUnpublished, 3);
-  // 其它段落条数与历史一致（本夹具下只有 5 条静态入口）
-  assert.equal(entries.length, 6);
+  // 其它段落条数与历史一致（本夹具下 main 只有 3 条静态入口）
+  assert.equal(sections.main.length, 4);
 });
 
 test('createSitemapBuilder: 审计接口按 pageSize=200、并发≤2 分页，抓到的高质量 id 数量不变', async () => {
@@ -233,22 +241,24 @@ test('createSitemapBuilder: 审计接口按 pageSize=200、并发≤2 分页，�
   };
 
   const builder = createSitemapBuilder({ apiBaseUrl: 'https://api.test', siteUrl: 'https://apks.cc', fetchImpl });
-  const { entries } = await builder.buildEntries();
+  const { sections } = await builder.buildEntries();
 
   assert.ok(auditRequests.length >= 5);
   assert.ok(auditRequests.every((request) => request.pageSize === 200));
   assert.ok(peak <= 2, `审计接口并发峰值 ${peak} 超过 2`);
   // 页大小变小不影响总量：1000 个高质量包全部拿到，sitemap 里仍是 1000 条游戏
-  assert.equal(entries.filter((entry) => entry.url.includes('/app/')).length, games.length);
+  assert.equal(sections.main.filter((entry) => entry.url.includes('/app/')).length, games.length);
 });
 
 test('createSitemapBuilder: 游戏目录为空时 apiReachable=false，调用方据此不覆盖旧产物', async () => {
   const fetchImpl = async () => new Response('{}', { status: 500 });
   const builder = createSitemapBuilder({ apiBaseUrl: 'https://api.test', siteUrl: 'https://apks.cc', fetchImpl });
-  const { entries, apiReachable, complete } = await builder.buildEntries();
+  const { sections, apiReachable, complete } = await builder.buildEntries();
   assert.equal(apiReachable, false);
-  assert.equal(complete, false);
-  assert.equal(entries.length, 5); // 仅静态入口
+  assert.equal(complete.main, false);
+  assert.equal(complete.community, false);
+  assert.equal(sections.main.length, 3); // 仅 main 静态入口
+  assert.equal(sections.community.length, 2); // 仅 community 静态入口
 });
 
 const STATIC_FIXTURE = serializeSitemapXml([
@@ -442,8 +452,8 @@ test('createSitemapBuilder: 分类页只收达到阈值的分类，且全部名�
   };
 
   const builder = createSitemapBuilder({ apiBaseUrl: 'https://api.test', siteUrl: 'https://apks.cc', fetchImpl });
-  const { entries, stats } = await builder.buildEntries();
-  const urls = entries.map((entry) => entry.url);
+  const { sections, stats } = await builder.buildEntries();
+  const urls = sections.main.map((entry) => entry.url);
 
   assert.ok(urls.includes('https://apks.cc/category/rpg'));
   assert.ok(urls.includes('https://apks.cc/category/moba'));
@@ -451,7 +461,7 @@ test('createSitemapBuilder: 分类页只收达到阈值的分类，且全部名�
   assert.equal(urls.some((url) => url.includes('/category/music')), false); // 有资源 7 < 8
   assert.equal(stats.categoryPages, 2);
 
-  const rpg = entries.find((entry) => entry.url === 'https://apks.cc/category/rpg');
+  const rpg = sections.main.find((entry) => entry.url === 'https://apks.cc/category/rpg');
   assert.equal(rpg.changeFrequency, 'weekly');
   assert.equal(rpg.priority, 0.7);
 
@@ -488,13 +498,42 @@ test('createSitemapBuilder: 分类计数接口报错只跳过分类页，整份 
     fetchImpl,
     logger: { log: () => {}, warn: (...args) => warnings.push(args.join(' ')) },
   });
-  const { entries, complete, stats } = await builder.buildEntries();
-  const urls = entries.map((entry) => entry.url);
+  const { sections, complete, stats } = await builder.buildEntries();
+  const urls = sections.main.map((entry) => entry.url);
 
   assert.equal(stats.categoryPages, 0);
   assert.equal(urls.some((url) => url.includes('/category/')), false);
   // 分类页是加成，不能因为它把整份 sitemap 判成残缺（否则静态快照永远写不出来）
-  assert.equal(complete, true);
+  assert.equal(complete.main, true);
   assert.ok(urls.includes('https://apks.cc/app/com.a'));
   assert.ok(warnings.some((line) => line.includes('[sitemap] 分类计数接口不可用')));
+});
+
+test('createSitemapBuilder: 社区节抓取失败只判 community 残缺，main 照常完整（#126 分层解耦）', async () => {
+  const fetchImpl = async (url) => {
+    const parsed = new URL(url);
+    const payload = (list, total) => new Response(
+      JSON.stringify({ code: 0, data: { page: 1, pageSize: 500, total: total ?? list.length, list } }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+    if (parsed.pathname.endsWith('/seo/sitemap/games')) return payload([{ pkg: 'com.a', status: 1 }]);
+    if (parsed.pathname.endsWith('/seo/audit/games')) {
+      return payload([{ pkg: 'com.a', quality: { indexable: true } }]);
+    }
+    // 社区三节全部 5xx：complete.community 必须为 false，但不得影响 main。
+    if (parsed.pathname.endsWith('/content/feed')) return new Response('{}', { status: 500 });
+    if (parsed.pathname.endsWith('/albums/home')) return new Response('{}', { status: 500 });
+    if (parsed.pathname.endsWith('/content/topics/public')) return new Response('{}', { status: 500 });
+    return payload([]);
+  };
+
+  const builder = createSitemapBuilder({ apiBaseUrl: 'https://api.test', siteUrl: 'https://apks.cc', fetchImpl });
+  const { sections, apiReachable, complete } = await builder.buildEntries();
+
+  assert.equal(apiReachable, true);
+  assert.equal(complete.main, true);
+  assert.equal(complete.community, false);
+  assert.ok(sections.main.some((entry) => entry.url === 'https://apks.cc/app/com.a'));
+  // community 残缺时只剩两条静态入口，调用方（构建脚本/运行时）据此放弃落盘该份。
+  assert.equal(sections.community.length, 2);
 });
