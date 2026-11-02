@@ -180,8 +180,9 @@ export async function generateMetadata({
     title: { absolute: title },
     description,
     // 第 1 页是真正的分类入口，第 2 页起只是同一批游戏的翻页：跟进链接、不进索引。
+    // 降级空态（接口两次失败渲染的 200 空页）即使是第 1 页也不进索引，避免被收成薄页。
     robots:
-      page > 1
+      page > 1 || degraded
         ? { index: false, follow: true }
         : {
             index: true,
