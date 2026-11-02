@@ -36,6 +36,10 @@ export interface CategoryGame {
   tags?: string[];
   latest_at?: string;
   updated_at?: string;
+  /** 列表卡片直下信息（#125）：接口下发则展示，缺则缺省。 */
+  version?: string;
+  file_size?: number | null;
+  source_type?: string | null;
 }
 
 /** 分类列表接口的分页响应体。total = 有资源条数，publishedTotal = 已发布条数。 */

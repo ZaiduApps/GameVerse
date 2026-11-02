@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 import { trackedApiFetch } from '@/lib/api';
+import { buildGameCardMeta } from '@/lib/game-card-meta';
 import { resolveGameName } from '@/lib/game-display-name';
 import {
   GAME_LIBRARY_BROWSE_PAGE_SIZE,
@@ -48,7 +49,6 @@ interface LibraryGame extends Game {
   latestAt: string;
   latestTimestamp: number;
 }
-
 interface FacetOption {
   id: string;
   name: string;
@@ -180,6 +180,9 @@ function transformApiGameToGame(apiGame: ApiGame, sourceIndex: number): LibraryG
     category: tags[0] || '游戏',
     rating: Number(apiGame.star || 0),
     tags,
+    version: String(apiGame.version || '').trim() || undefined,
+    fileSize: apiGame.file_size ?? null,
+    sourceType: String(apiGame.source_type || '').trim() || undefined,
     status: 'released',
     dataAiHint: `game cover ${resolveGameName(apiGame) || 'game'}`,
     sourceIndex,
@@ -294,6 +297,13 @@ function LibraryGameCard({ game }: { game: LibraryGame }) {
     .map((device) => DEVICE_LABELS[device])
     .filter(Boolean)
     .join(' / ');
+  // 直下信息（#125）：缺一项就不渲染那一项，不写「未知」占位。
+  const meta = buildGameCardMeta({
+    version: game.version,
+    fileSize: game.fileSize,
+    updatedAt: game.latestAt,
+    sourceType: game.sourceType,
+  });
 
   return (
     <div className="group relative flex flex-col gap-3">
@@ -348,9 +358,18 @@ function LibraryGameCard({ game }: { game: LibraryGame }) {
               {deviceText ? (
                 <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-zinc-500">{deviceText}</span>
               ) : null}
+              {meta.version ? (
+                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-zinc-500">v{meta.version}</span>
+              ) : null}
+              {meta.sizeText ? (
+                <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-zinc-500">{meta.sizeText}</span>
+              ) : null}
               <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-zinc-500">
                 更新于 {formatLatestAt(game.latestAt)}
               </span>
+              {meta.sourceLabel ? (
+                <span className="rounded-full bg-zinc-100 px-2 py-0.5 font-medium text-zinc-500">{meta.sourceLabel}</span>
+              ) : null}
             </div>
           </div>
           <Link

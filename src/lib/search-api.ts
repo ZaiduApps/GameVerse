@@ -28,6 +28,10 @@ interface ApiSearchItem {
   pkg?: string;
   region?: string;
   rating?: number;
+  version?: string;
+  fileSize?: number | null;
+  latestAt?: string;
+  sourceType?: string;
   metadata?: {
     chs?: string;
     cht?: string;
@@ -93,6 +97,10 @@ function normalizeItem(input: ApiSearchItem): SearchResult | null {
       input?.rating === undefined || input?.rating === null
         ? undefined
         : Number(input.rating),
+    version: String(input?.version || '').trim() || undefined,
+    fileSize: input?.fileSize ?? undefined,
+    latestAt: String(input?.latestAt || '').trim() || undefined,
+    sourceType: String(input?.sourceType || '').trim() || undefined,
   };
 }
 

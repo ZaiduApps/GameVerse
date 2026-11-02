@@ -8,6 +8,7 @@ import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
+import { buildGameCardMeta } from '@/lib/game-card-meta';
 import { searchGlobal, type GlobalSearchResult, type GlobalSearchSection } from '@/lib/search-api';
 import { SEARCH_PAGE_TIER, buildSearchQueryPath, findWhitelistedSearchQuery, resolveSearchPageTier } from '@/lib/search-indexable.mjs';
 import { absoluteUrl } from '@/lib/seo';
@@ -197,29 +198,51 @@ export default async function SearchPage({
                   <span className="ml-2 text-xs font-normal text-muted-foreground">{section.total} 条</span>
                 </h2>
                 <ul className="space-y-1">
-                  {section.list.map((item) => (
-                    <li key={`${item.type}-${item.id}`}>
-                      <Link
-                        href={getResultHref(item)}
-                        prefetch={false}
-                        className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-muted"
-                      >
-                        <Image
-                          src={item.imageUrl || FALLBACK_ICON}
-                          alt={item.title}
-                          width={48}
-                          height={48}
-                          className="h-12 w-12 shrink-0 rounded-md object-cover"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="line-clamp-1 font-semibold text-foreground">{item.title}</p>
-                          <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">
-                            {item.subtitle || item.category}
-                          </p>
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
+                  {section.list.map((item) => {
+                    // 游戏行的直下信息（#125）：非游戏条目与缺失字段一律不渲染。
+                    const meta =
+                      item.type === 'game'
+                        ? buildGameCardMeta({
+                            version: item.version,
+                            fileSize: item.fileSize,
+                            updatedAt: item.latestAt,
+                            sourceType: item.sourceType,
+                          })
+                        : null;
+                    return (
+                      <li key={`${item.type}-${item.id}`}>
+                        <Link
+                          href={getResultHref(item)}
+                          prefetch={false}
+                          className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-muted"
+                        >
+                          <Image
+                            src={item.imageUrl || FALLBACK_ICON}
+                            alt={item.title}
+                            width={48}
+                            height={48}
+                            className="h-12 w-12 shrink-0 rounded-md object-cover"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="line-clamp-1 font-semibold text-foreground">{item.title}</p>
+                            <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">
+                              {item.subtitle || item.category}
+                            </p>
+                            {meta && (meta.version || meta.sizeText || meta.updatedText || meta.sourceLabel) ? (
+                              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                                {meta.version ? <span>v{meta.version}</span> : null}
+                                {meta.sizeText ? <span>{meta.sizeText}</span> : null}
+                                {meta.updatedText ? <span>{meta.updatedText} 更新</span> : null}
+                                {meta.sourceLabel ? (
+                                  <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{meta.sourceLabel}</span>
+                                ) : null}
+                              </p>
+                            ) : null}
+                          </div>
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             );

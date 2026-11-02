@@ -6,12 +6,20 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Badge } from '@/components/ui/badge';
 import { Star, Download } from 'lucide-react';
 import { Button } from './ui/button';
+import { buildGameCardMeta, hasGameCardMeta } from '@/lib/game-card-meta';
 
 interface GameCardProps extends React.HTMLAttributes<HTMLDivElement> {
   game: Game;
 }
 
 export default function GameCard({ game, className, ...props }: GameCardProps) {
+  // 直下信息缺一项就不渲染那一项；整行全空则不占位。
+  const meta = buildGameCardMeta({
+    version: game.version,
+    fileSize: game.fileSize,
+    updatedAt: game.updateDate,
+    sourceType: game.sourceType,
+  });
   return (
     <Card
       className={`overflow-hidden transition-all duration-300 ease-in-out hover:shadow-xl hover:border-primary/50 flex flex-col min-w-[140px] ${className}`}
@@ -58,6 +66,16 @@ export default function GameCard({ game, className, ...props }: GameCardProps) {
             ) : <div />}
             <Badge variant="outline" className="text-xs">{game.category}</Badge>
           </div>
+          {hasGameCardMeta(meta) ? (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 pt-0.5 text-[11px] text-muted-foreground">
+              {meta.version ? <span title={`版本 ${meta.version}`}>v{meta.version}</span> : null}
+              {meta.sizeText ? <span>{meta.sizeText}</span> : null}
+              {meta.updatedText ? <span title={`更新于 ${meta.updatedText}`}>{meta.updatedText} 更新</span> : null}
+              {meta.sourceLabel ? (
+                <span className="ml-auto rounded bg-muted px-1.5 py-0.5 font-medium">{meta.sourceLabel}</span>
+              ) : null}
+            </div>
+          ) : null}
         </CardContent>
       </Link>
       <CardFooter className="p-3 pt-0 mt-auto">

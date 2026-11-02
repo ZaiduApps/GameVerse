@@ -23,6 +23,7 @@ import {
   type CategoryPageLoadResult,
 } from '@/lib/category-page-resilience';
 import { resolveGameName } from '@/lib/game-display-name';
+import { buildGameCardMeta } from '@/lib/game-card-meta';
 import { getPreviewImageUrl } from '@/lib/image-preview';
 import { absoluteUrl, buildSeoDescription } from '@/lib/seo';
 import { getPublicSiteConfig } from '@/lib/site-config';
@@ -221,6 +222,13 @@ function CategoryGameCard({ game }: { game: CategoryGame }) {
   const summary = String(game.summary || '').trim();
   const icon = getPreviewImageUrl(game.icon, 160);
   const score = Number(game.star);
+  // 直下信息（#125）：缺一项就不渲染那一项，不写「未知」占位。
+  const meta = buildGameCardMeta({
+    version: game.version,
+    fileSize: game.file_size,
+    updatedAt: game.latest_at || game.updated_at,
+    sourceType: game.source_type,
+  });
 
   return (
     <Link
@@ -237,12 +245,20 @@ function CategoryGameCard({ game }: { game: CategoryGame }) {
         <span className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
           {summary || '查看游戏详情与下载渠道'}
         </span>
-        {Number.isFinite(score) && score > 0 ? (
-          <span className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-            <Star className="h-3 w-3 text-tone-amber" aria-hidden="true" />
-            {score.toFixed(1)}
-          </span>
-        ) : null}
+        <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+          {Number.isFinite(score) && score > 0 ? (
+            <span className="flex items-center gap-1">
+              <Star className="h-3 w-3 text-tone-amber" aria-hidden="true" />
+              {score.toFixed(1)}
+            </span>
+          ) : null}
+          {meta.version ? <span>v{meta.version}</span> : null}
+          {meta.sizeText ? <span>{meta.sizeText}</span> : null}
+          {meta.updatedText ? <span>{meta.updatedText} 更新</span> : null}
+          {meta.sourceLabel ? (
+            <span className="rounded bg-muted px-1.5 py-0.5 font-medium">{meta.sourceLabel}</span>
+          ) : null}
+        </span>
       </span>
     </Link>
   );

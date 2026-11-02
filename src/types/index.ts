@@ -16,6 +16,10 @@ export interface Game {
   downloads?: string; // not in api for now
   version?: string; // not in api for now
   size?: string; // not in api for now
+  /** 安装包原始字节数（file_size），卡片文案由 game-card-meta 统一格式化。 */
+  fileSize?: number | null;
+  /** 来源渠道（GP/APKPURE/QOO/GITHUB/工口实验室），卡片标注下载来源用。 */
+  sourceType?: string;
   tags?: string[]; // was tags from api
   developer?: string; // not in api for now
   releaseDate?: string; // not in api for now
@@ -128,10 +132,11 @@ export interface SearchResult {
     region?: string;
     href?: string;
     subtitle?: string;
-    /** 游戏版本号（如 4.6.0）。/search/global 暂未返回，接入后由结果行条件渲染。 */
+    /** 游戏条目的卡片直下信息（#125），非游戏条目与缺失时为空，渲染层条件展示。 */
     version?: string;
-    /** 安装包大小文案（如 24.5 MB）。/search/global 暂未返回，接入后由结果行条件渲染。 */
-    size?: string;
+    fileSize?: number | null;
+    latestAt?: string;
+    sourceType?: string;
 }
 
 // API Types
@@ -158,6 +163,8 @@ export interface ApiGame {
   version?: string;
   latest_at?: string;
   file_size?: number | null;
+  /** 来源渠道（GP/APKPURE/QOO/GITHUB/工口实验室），列表卡片标注下载来源用。 */
+  source_type?: string | null;
   file_size_text?: string;
   download_count_show?: string;
   /**

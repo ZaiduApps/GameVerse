@@ -25,6 +25,7 @@ import RecentUpdatesSection from '@/components/home/RecentUpdatesSection';
 import { getAlbumHref } from '@/lib/albums';
 import { getClientLandingAppData, type ClientLandingAppData } from '@/lib/client-landing';
 import { capByAuthor, getHomeLatestCommunityPosts } from '@/lib/home-community-posts';
+import { buildGameCardMeta } from '@/lib/game-card-meta';
 import { resolveGameName } from '@/lib/game-display-name';
 import type { Announcement, ApiAlbum, ApiArticle, ApiBanner, ApiDynamicPost, ApiGame, HomeData } from '@/types';
 import { trackedApiFetch } from '@/lib/api';
@@ -176,6 +177,36 @@ function formatDeviceLabel(value: string | null | undefined): string {
   if (/ios|iphone|ipad/i.test(normalized)) return 'iOS';
   if (/pc|windows|win/i.test(normalized)) return 'PC';
   return normalized;
+}
+
+/** 专辑卡片直下信息（#125）：缺一项就不渲染那一项，不写「未知」占位。 */
+function getGameCardMeta(game: ApiGame) {
+  return buildGameCardMeta({
+    version: game.version,
+    fileSize: game.file_size,
+    updatedAt: game.latest_at,
+    sourceType: game.source_type,
+  });
+}
+
+function GameCardMetaLine({
+  meta,
+  className = '',
+}: {
+  meta: ReturnType<typeof buildGameCardMeta>;
+  className?: string;
+}) {
+  if (!(meta.version || meta.sizeText || meta.updatedText || meta.sourceLabel)) return null;
+  return (
+    <p className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-[#595c5d] dark:text-[#9ca6b8] ${className}`}>
+      {meta.version ? <span>v{meta.version}</span> : null}
+      {meta.sizeText ? <span>{meta.sizeText}</span> : null}
+      {meta.updatedText ? <span>{meta.updatedText} 更新</span> : null}
+      {meta.sourceLabel ? (
+        <span className="rounded bg-[#eff1f2] px-1.5 py-0.5 font-medium dark:bg-[#223043]">{meta.sourceLabel}</span>
+      ) : null}
+    </p>
+  );
 }
 
 interface CombinedHomeData {
@@ -647,6 +678,7 @@ export default async function HomePage() {
                           )}
                         </div>
                         <p className="mt-1 line-clamp-1 text-[11px] text-[#595c5d] dark:text-[#9ca6b8]">{game.summary || game.tags?.[0] || '精品推荐'}</p>
+                        <GameCardMetaLine meta={getGameCardMeta(game)} />
                         <span className="mt-1.5 inline-flex w-full items-center justify-center rounded-full bg-[#b3d4ff] py-1 text-[11px] font-semibold text-[#004a7e] transition-colors group-hover:bg-[#005e9f] group-hover:text-white">
                           下载
                         </span>
@@ -860,6 +892,7 @@ export default async function HomePage() {
                       </div>
                       <p className="line-clamp-1 text-sm font-semibold">{resolveGameName(game)}</p>
                       <p className="mt-1 line-clamp-1 text-xs text-[#595c5d] dark:text-[#9ca6b8]">{game.tags?.[0] || game.summary || '热门推荐'}</p>
+                      <GameCardMetaLine meta={getGameCardMeta(game)} className="mt-1" />
                       <Link
                         href={getGameHref(game)}
                         prefetch={false}
