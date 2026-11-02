@@ -6,6 +6,7 @@ import { BadgeCheck, ChevronRight, CreditCard, Download, ExternalLink, MessageSq
 import GameAnnouncements from '@/components/game-announcements';
 import GameFaqSection from '@/components/game-detail/GameFaqSection';
 import { buildResourceChecksumItems } from '@/lib/game-resource-signature';
+import { buildGameVariantRows, type GameVariantRow } from '@/lib/game-detail-variants';
 import { normalizeGameFaqItems } from '@/lib/game-faq';
 import { resolveGameName } from '@/lib/game-display-name';
 import { isWebGameType } from '@/lib/game-resource-type';
@@ -232,6 +233,50 @@ function ResourceLinksCard({ items }: { items: ReturnType<typeof buildResourceLi
   );
 }
 
+// 版本 / 渠道变体表：只渲染接口真实返回的渠道（行由 buildGameVariantRows 过滤），
+// 版本 / 包大小缺失时留空单元格，不写「未知」。整块服务端渲染，行内链接可被抓取。
+function GameVariantTable({ rows }: { rows: GameVariantRow[] }) {
+  return (
+    <div className="overflow-x-auto rounded-xl border border-border/60">
+      <table className="w-full min-w-[420px] text-left text-xs lg:text-sm">
+        <thead>
+          <tr className="border-b border-border/60 bg-muted/60 text-[11px] text-muted-foreground lg:text-xs">
+            <th scope="col" className="px-3 py-2 font-medium lg:px-4">渠道</th>
+            <th scope="col" className="px-3 py-2 font-medium lg:px-4">版本</th>
+            <th scope="col" className="px-3 py-2 font-medium lg:px-4">包大小</th>
+            <th scope="col" className="px-3 py-2 font-medium lg:px-4">下载</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.key} className="border-b border-border/40 last:border-b-0">
+              <td className="px-3 py-2.5 font-semibold text-foreground lg:px-4">
+                <Link
+                  href={row.href}
+                  className="transition-colors [@media(hover:hover)]:hover:text-primary"
+                >
+                  {row.channelName}
+                </Link>
+              </td>
+              <td className="px-3 py-2.5 text-muted-foreground lg:px-4">{row.version || '—'}</td>
+              <td className="px-3 py-2.5 text-muted-foreground lg:px-4">{row.sizeLabel || '—'}</td>
+              <td className="px-3 py-2.5 lg:px-4">
+                <Link
+                  href={row.href}
+                  className="inline-flex items-center gap-1 font-semibold text-primary [@media(hover:hover)]:hover:underline"
+                >
+                  <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                  下载
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function CertificationCard() {
   return (
     <section className="rounded-2xl border border-tone-green/25 bg-gradient-to-br from-tone-green/[0.07] to-card p-4 shadow-sm lg:p-5">
@@ -329,6 +374,8 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   const isWebGame = isWebGameType(game.type);
   // 资源校验值只取接口真实返回的 signature；没有就整块显示「暂无校验值」。
   const checksumItems = buildResourceChecksumItems(resources);
+  // 渠道变体表：无有效渠道数据时整块不渲染。
+  const variantRows = buildGameVariantRows(resources, game.pkg || game._id);
   const tags = getGameTags(game);
   const primaryCategory = getPrimaryCategory(game, tags);
   const cardConfig = (gameData.cardConfig || {}) as Record<string, CardConfigItem[] | undefined>;
@@ -589,6 +636,16 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                 ))}
               </div>
             </DetailSection>
+
+            {variantRows.length > 0 ? (
+              <DetailSection
+                id="game-detail-variants"
+                title="版本与渠道变体"
+                subtitle="同一游戏在各渠道的真实版本与包大小"
+              >
+                <GameVariantTable rows={variantRows} />
+              </DetailSection>
+            ) : null}
 
             <DetailSection
               id="game-detail-checksums"

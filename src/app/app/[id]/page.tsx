@@ -10,9 +10,11 @@ import {
   absoluteUrl,
   buildGameDetailSeo,
   getSiteShareImageUrl,
+  normalizeText,
   resolveGameSeoImage,
   sanitizeSeoText,
 } from '@/lib/seo';
+import { buildDetailJsonLd } from '@/lib/game-detail-jsonld';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { getCommunityFeed, getCommunityPostsByGame } from '@/lib/community-api';
 import {
@@ -122,21 +124,6 @@ export async function generateStaticParams(): Promise<Array<{ id: string }>> {
   return Array.from(targets, (id) => ({ id }));
 }
 
-function normalizeText(input?: string | null): string {
-  return String(input || '')
-    .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function toIsoDate(input?: string | null): string | undefined {
-  if (!input) return undefined;
-  const date = new Date(input);
-  if (Number.isNaN(date.getTime())) return undefined;
-  return date.toISOString();
-}
-
 type RelatedNewsItem = {
   id: string;
   title: string;
@@ -227,14 +214,6 @@ async function resolveDetailRelatedNews(
   return items.slice(0, MAX_DETAIL_RELATED_NEWS);
 }
 
-function formatFileSize(bytes?: number | null): string | undefined {
-  if (!bytes || bytes <= 0) return undefined;
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const value = bytes / Math.pow(1024, index);
-  return `${value.toFixed(index === 0 ? 0 : 2)} ${units[index]}`;
-}
-
 // GameSeoContent 类型尚未声明 aliases，但后台写入与快照都会原样下发该字段。
 // 数据侧存在两代来源：seo.aliases（人工/后台写入）与 metadata.chs|cht|en（采集时
 // 抓到的多语言名称）。后者在中文游戏上就是用户实际搜索的别名，这里合并兜底，
@@ -260,12 +239,6 @@ function readGameSeoAliases(game: GameDetailData['app']): string[] | null {
     .filter((value) => value && value !== (game.name || '').trim());
   const unique = [...new Set(aliases)];
   return unique.length ? unique : null;
-}
-
-function schemaApplicationCategory(input?: string | null): string {
-  const value = normalizeText(input).toLowerCase();
-  const applicationTypes = new Set(['app', 'application', 'tool', 'software']);
-  return applicationTypes.has(value) ? 'UtilitiesApplication' : 'GameApplication';
 }
 
 function normalizeRelatedNewsPayload(payload: unknown): RelatedNewsItem[] {
@@ -671,64 +644,23 @@ export default async function GameDetailPage({
       ? normalizeRecommendedGamesPayload(initialGameData.recommendedGames, game)
       : getRecommendedGames(game),
   ]);
-  const ratingCount = Math.max(0, Number(initialGameData.reviewSummary?.ratingCount || 0));
-  // 评分结构化数据只使用站点真实评价数据；来源评分（app.star）仅作为展示参考，不进 JSON-LD。
-  const siteRatingAverage = Number(initialGameData.reviewSummary?.userAverage || 0);
   const genre = normalizeText(Array.isArray(game.tags) ? game.tags[0] : '');
   const screenshots = (Array.isArray(game.detail_images) ? game.detail_images : [])
     .map((item) => normalizeText(item))
     .filter(Boolean)
     .slice(0, 5);
 
-  const detailJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
-    name: resolveGameName(game),
-    alternateName: aliases.length > 0 ? aliases : undefined,
-    applicationCategory: schemaApplicationCategory(game.type),
-    operatingSystem: isWebGame ? 'Web Browser' : 'Android',
-    inLanguage: 'zh-CN',
-    image: heroImage || undefined,
-    description: description || undefined,
-    url: canonicalUrl,
-    genre: genre || undefined,
-    screenshot: screenshots.length > 0 ? screenshots : undefined,
-    softwareVersion: isWebGame ? undefined : normalizeText(game.version) || undefined,
-    fileSize: isWebGame ? undefined : formatFileSize(game.file_size),
-    datePublished: toIsoDate(game.release_at),
-    dateModified: toIsoDate(game.latest_at),
-    publisher: game.developer
-      ? {
-          '@type': 'Organization',
-          name: normalizeText(game.developer),
-        }
-      : undefined,
-    ...(!isWebGame && Array.isArray(initialGameData.resources) && initialGameData.resources.length > 0
-      ? {
-          offers: {
-            '@type': 'Offer',
-            url: canonicalUrl,
-            price: '0',
-            priceCurrency: 'CNY',
-            availability: 'https://schema.org/InStock',
-          },
-          potentialAction: {
-            '@type': 'InstallAction',
-            target: canonicalUrl,
-            platform: ['https://schema.org/AndroidPlatform'],
-          },
-        }
-      : {}),
-    aggregateRating: ratingCount > 0 && siteRatingAverage > 0
-      ? {
-          '@type': 'AggregateRating',
-          ratingValue: Math.round(siteRatingAverage * 10) / 10,
-          ratingCount,
-          bestRating: 5,
-          worstRating: 1,
-        }
-      : undefined,
-  };
+  const detailJsonLd = buildDetailJsonLd({
+    game,
+    reviewSummary: initialGameData.reviewSummary,
+    resources: initialGameData.resources,
+    description,
+    aliases,
+    canonicalUrl,
+    heroImage: heroImage || undefined,
+    genre,
+    screenshots,
+  });
 
   const dedicatedFaqItems = selectDedicatedGameFaqItems(initialGameData.faq);
   const faqJsonLd = {

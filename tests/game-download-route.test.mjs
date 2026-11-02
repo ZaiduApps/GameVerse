@@ -42,8 +42,11 @@ function resource(overrides = {}) {
 }
 
 test('JSON-LD InstallAction.target 恒等于页面 canonical URL', async () => {
+  // 组装逻辑已抽到纯函数模块（#80 抽测可直接解析 JSON），源码断言跟着搬。
+  const jsonLdSource = await readSource('../src/lib/game-detail-jsonld.ts');
+  assert.match(jsonLdSource, /target: canonicalUrl/);
   const pageSource = await readSource('../src/app/app/[id]/page.tsx');
-  assert.match(pageSource, /target: canonicalUrl/);
+  assert.match(pageSource, /buildDetailJsonLd\(/);
   assert.doesNotMatch(pageSource, /installActionTarget/);
 });
 

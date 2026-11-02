@@ -81,6 +81,16 @@ export function clampSeoDescription(input?: string | null, max = 155): string {
   return `${sliced || text.slice(0, Math.max(1, max - 3)).trim()}...`;
 }
 
+// 最简文本清洗：换行标签转空格、去全部标签、折叠空白。与 sanitizeSeoText 的区别是
+// 不处理 markdown 与实体，只用于 version / developer / 分类这类短字段的兜底清洗。
+export function normalizeText(input?: string | null): string {
+  return String(input || '')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function trimSeoDescriptionPart(input?: string | null): string {
   return sanitizeSeoText(input)
     .replace(/^[\s,，、。；;：:]+/u, '')
