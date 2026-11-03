@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { cache } from 'react';
 import { FileText, Gamepad2, Hash, MessageSquare, Search as SearchIcon } from 'lucide-react';
 
@@ -51,12 +52,27 @@ function getSection(result: GlobalSearchResult | null, key: (typeof RESULT_GROUP
 }
 
 /**
+ * 后端按客户端 IP 划分限流桶（30 次/分）。SSR 直连 127.0.0.1 且不带访客 IP 时，
+ * 全站访客共用一个桶，正常搜索会被 429 伪装成「没有结果」。
+ * 原样转发 X-Forwarded-For 链（不要取第一跳），由后端 trust proxy 取最右侧真实访客，
+ * 否则客户端自带伪造头就能绕开限流。
+ */
+async function resolveForwardedFor(): Promise<string | undefined> {
+  const headerStore = await headers();
+  const forwardedFor = String(headerStore.get('x-forwarded-for') || '').trim();
+  if (forwardedFor) return forwardedFor;
+  const realIp = String(headerStore.get('x-real-ip') || '').trim();
+  return realIp || undefined;
+}
+
+/**
  * 同一个请求里 generateMetadata 与页面本体都要结果量（决定收录分级），
  * 用 React cache 去重，别让一次搜索渲染打两次后端。
  */
 const loadSearchResult = cache(async (keyword: string): Promise<GlobalSearchResult | null> => {
   try {
-    return await searchGlobal({ q: keyword, limitPerType: SEARCH_LIMIT_PER_TYPE });
+    const forwardedFor = await resolveForwardedFor();
+    return await searchGlobal({ q: keyword, limitPerType: SEARCH_LIMIT_PER_TYPE, forwardedFor });
   } catch {
     // 搜索是自助入口，上游抖动时退化成本页空态 + 明确提示，不把整页打成 500。
     return null;

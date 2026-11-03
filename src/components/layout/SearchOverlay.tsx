@@ -27,6 +27,7 @@ import {
   searchGlobal,
   type GlobalSearchResult,
 } from '@/lib/search-api';
+import { resolveSearchEmptyState } from '@/lib/search-empty-state';
 import { SEARCH_RECOMMEND_ALBUM_ID } from '@/lib/search-recommend-album';
 
 interface SearchOverlayProps {
@@ -81,6 +82,8 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
   const [searchTerm, setSearchTerm] = useState('');
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const [searchData, setSearchData] = useState<GlobalSearchResult>(() => createEmptySearchState());
+  const [searchError, setSearchError] = useState<unknown>(null);
+  const [retryToken, setRetryToken] = useState(0);
   const [recommendedGames, setRecommendedGames] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
@@ -117,6 +120,18 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
     if (trimmedTerm) {
       setSearchTerm(trimmedTerm);
       updateSearchHistory(trimmedTerm);
+    }
+  };
+
+  /**
+   * useDeferredValue 把新关键词交出去之前还有一帧旧空态，输入时先切加载态，
+   * 避免「未找到相关结果」一闪而过，让人误以为已经搜完了。
+   */
+  const handleSearchTermChange = (value: string) => {
+    setSearchTerm(value);
+    if (value.trim().length >= 2) {
+      setIsSearching(true);
+      setSearchError(null);
     }
   };
 
@@ -158,18 +173,24 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
       setSearchData(createEmptySearchState());
       setResultFilter('all');
       setIsSearching(false);
+      setSearchError(null);
       return;
     }
 
     if (keyword.length < 2) {
       setSearchData(createEmptySearchState(keyword));
       setIsSearching(false);
+      setSearchError(null);
       return;
     }
 
+    // 立刻进入加载态：否则 300ms 防抖窗口里会先渲染一帧「未找到相关结果」，
+    // 上一轮的错误态也会在用户改词后继续残留。
+    setIsSearching(true);
+    setSearchError(null);
+
     const controller = new AbortController();
     const debounceTimer = setTimeout(() => {
-      setIsSearching(true);
       searchGlobal({
         q: keyword,
         limitPerType: SEARCH_LIMIT_PER_TYPE,
@@ -182,8 +203,11 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
           if (controller.signal.aborted) {
             return;
           }
+          // 请求失败 ≠ 没有结果。限流/断网必须让用户看到「繁忙」并能手动重试，
+          // 否则 429 会被渲染成「未找到相关结果」，和「站里确实没有」无法区分。
           console.error('Failed to fetch search results:', error);
           setSearchData(createEmptySearchState(keyword));
+          setSearchError(error);
         })
         .finally(() => {
           if (!controller.signal.aborted) {
@@ -196,7 +220,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
       controller.abort();
       clearTimeout(debounceTimer);
     };
-  }, [deferredSearchTerm]);
+  }, [deferredSearchTerm, retryToken]);
 
   const handleClearHistory = () => {
     setSearchHistory([]);
@@ -205,6 +229,15 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
     } catch (error) {
       console.error('Failed to clear search history from localStorage', error);
     }
+  };
+
+  /**
+   * 手动重试，不做自动重试：429 的窗口是 60s，立刻自动重试只会再撞一次，
+   * 把用户的请求额度烧得更快。
+   */
+  const handleRetrySearch = () => {
+    setIsSearching(true);
+    setRetryToken((token) => token + 1);
   };
 
   const keywordLength = searchTerm.trim().length;
@@ -235,6 +268,11 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
     resultCounts.post +
     resultCounts.topic;
   const visibleResultCount = filteredResults.length;
+  const emptyStateKey = resolveSearchEmptyState({
+    isLoading: isSearching,
+    error: searchError,
+    totalResultCount,
+  });
 
   if (!isOpen) {
     return null;
@@ -259,7 +297,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
               placeholder="搜索游戏、话题、帖子、文章..."
               className="h-14 w-full rounded-full border bg-background/80 pl-14 pr-14 text-lg"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchTermChange(e.target.value)}
               autoComplete="off"
             />
           </form>
@@ -329,13 +367,27 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
               </div>
 
               <div className="space-y-2 pr-2">
-                {isSearching ? (
+                {emptyStateKey === 'loading' ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
                 ) : keywordLength < 2 ? (
                   <div className="py-8 text-center">
                     <p className="text-muted-foreground">请输入至少 2 个字符开始搜索。</p>
+                  </div>
+                ) : emptyStateKey === 'error' ? (
+                  <div className="py-8 text-center">
+                    <p className="text-muted-foreground">搜索服务繁忙，请稍后重试。</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      data-acbox-action="global_search_retry"
+                      data-acbox-label="重试搜索"
+                      onClick={handleRetrySearch}
+                    >
+                      重试
+                    </Button>
                   </div>
                 ) : visibleResultCount > 0 ? (
                   <>
@@ -409,7 +461,7 @@ export default function SearchOverlay({ isOpen, setIsOpen }: SearchOverlayProps)
                 ) : (
                   <div className="py-8 text-center">
                     <p className="text-muted-foreground">
-                      {totalResultCount > 0 ? '当前分类暂无结果。' : '未找到相关结果。'}
+                      {emptyStateKey === 'filter-empty' ? '当前分类暂无结果。' : '未找到相关结果。'}
                     </p>
                     <Link
                       href="/submit-resource"

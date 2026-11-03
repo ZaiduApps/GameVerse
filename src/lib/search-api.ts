@@ -52,6 +52,22 @@ function createEmptySection(): GlobalSearchSection {
   };
 }
 
+/**
+ * 搜索接口失败（HTTP 非 2xx 或业务 code 非 0）。
+ *
+ * 调用方必须能区分「请求失败」与「确实没有结果」：过去两者都被 catch 成空态，
+ * 限流时浮层显示「未找到相关结果」，用户会以为站点里没有这个游戏。
+ */
+export class SearchApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'SearchApiError';
+    this.status = status;
+  }
+}
+
 export function createEmptyGlobalSearchResult(q = '', limitPerType = 6): GlobalSearchResult {
   return {
     q,
@@ -119,6 +135,11 @@ export async function searchGlobal(params: {
   q: string;
   limitPerType?: number;
   signal?: AbortSignal;
+  /**
+   * SSR 场景透传访客 IP。后端按 IP 分限流桶；服务端直连 127.0.0.1 时不带这个头，
+   * 全站访客会共用一个桶。原样转发 X-Forwarded-For 链，由后端 trust proxy 取真实访客。
+   */
+  forwardedFor?: string;
 }): Promise<GlobalSearchResult> {
   const q = String(params.q || '').trim();
   const limitPerType = Math.min(12, Math.max(1, Number(params.limitPerType || 6)));
@@ -132,19 +153,22 @@ export async function searchGlobal(params: {
     limitPerType: String(limitPerType),
   });
 
+  const forwardedFor = String(params.forwardedFor || '').trim();
+
   const response = await trackedApiFetch(`/search/global?${query.toString()}`, {
     signal: params.signal,
     timeoutMs: 12000,
     logKey: 'search-global',
+    ...(forwardedFor ? { headers: { 'x-forwarded-for': forwardedFor } } : {}),
   });
 
   if (!response.ok) {
-    throw new Error(`Search request failed with status ${response.status}`);
+    throw new SearchApiError(`Search request failed with status ${response.status}`, response.status);
   }
 
   const payload = await response.json().catch(() => null);
   if (!payload || payload?.code !== 0) {
-    throw new Error(String(payload?.message || 'Search response is invalid'));
+    throw new SearchApiError(String(payload?.message || 'Search response is invalid'), response.status);
   }
 
   const data = payload?.data || {};
