@@ -19,14 +19,36 @@ const reply = (body, { ok = true, status = 200 } = {}) => ({
 test('成功时返回可下发的地址', async () => {
   const calls = [];
   const result = await requestDownloadUrl(input, async (path, init) => {
-    calls.push({ path, body: JSON.parse(init.body), surface: init.headers['x-ac-surface'] });
+    calls.push({ path, body: JSON.parse(init.body), headers: init.headers });
     return reply({ code: 0, data: { url: 'https://cdn.example/a.apk' } });
   });
 
   assert.deepEqual(result, { ok: true, url: 'https://cdn.example/a.apk' });
   assert.equal(calls[0].path, '/game/getAppDownload');
-  assert.equal(calls[0].surface, 'detail_dialog');
+  assert.equal(calls[0].headers['x-ac-surface'], 'detail_dialog');
   assert.equal(calls[0].body.channel_id, input.channelId);
+  // 老调用方不传 dedupeKey 时不发这个头，保持旧行为。
+  assert.equal(calls[0].headers['x-ac-dedupe-key'], undefined);
+});
+
+test('带 dedupeKey 时下发 x-ac-dedupe-key，供服务端关联点击与签发', async () => {
+  const calls = [];
+  await requestDownloadUrl(
+    {
+      ...input,
+      dedupeKey: 'web-abc|2026-11-04|67f0a66d0b2f421bca0a0001|detail_dialog',
+    },
+    async (path, init) => {
+      calls.push({ path, headers: init.headers });
+      return reply({ code: 0, data: { url: 'https://cdn.example/a.apk' } });
+    },
+  );
+
+  assert.equal(
+    calls[0].headers['x-ac-dedupe-key'],
+    'web-abc|2026-11-04|67f0a66d0b2f421bca0a0001|detail_dialog',
+  );
+  assert.equal(calls[0].headers['x-ac-surface'], 'detail_dialog');
 });
 
 test('失败后换渠道重试成功：第二次请求返回地址', async () => {

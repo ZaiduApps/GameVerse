@@ -26,7 +26,10 @@ import type { ApiDownloadResource, CardConfigItem } from '@/types';
 import Image from 'next/image';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import DownloadFailureAlert from '@/components/download-failure-alert';
-import { reportDownloadClick, reportDownloadFailure } from '@/lib/download-click-tracking';
+import {
+  reportDownloadClick,
+  reportDownloadFailure,
+} from '@/lib/download-click-tracking';
 import { resolveDownloadChannelId, shouldGuideToApp } from '@/lib/game-download-channel';
 import { requestDownloadUrl } from '@/lib/download-request';
 import { pickDownloadRetryTarget } from '@/lib/download-retry';
@@ -76,6 +79,10 @@ export default function GameDownloadDialog({
     const channelId = resolveDownloadChannelId(resource);
     const channelName = String(resource.channel?.name || '').trim();
 
+    // 本次点击的 dedupe_key：点击、服务端签发、失败回执共用，三条事件才能对齐（#131）。
+    // 参数缺失时还没产生点击，保持 null，失败回执不带键。
+    let intentKey: string | null = null;
+
     // 失败一律：可见提示 + 记下失败渠道 + fail_reason 归因，不阻断换渠道重试。
     const fail = (
       message: string,
@@ -93,6 +100,7 @@ export default function GameDownloadDialog({
         stage: 'request_download_url',
         reason: message,
         reasonCode,
+        dedupeKey: intentKey,
       });
     };
 
@@ -109,7 +117,7 @@ export default function GameDownloadDialog({
 
     // 用户真实点击了某个可直下渠道 → 客户端声明一次点击意图（服务端按 event_id 去重）。
     // 不阻塞跳转：上报失败静默，下载可用性优先。
-    reportDownloadClick({ appId, pkg, channelId, surface: 'detail_dialog' });
+    intentKey = reportDownloadClick({ appId, pkg, channelId, surface: 'detail_dialog' });
 
     setLoadingChannelId(channelId);
     setError(null);
@@ -121,6 +129,7 @@ export default function GameDownloadDialog({
         pkg,
         channelId,
         channelName,
+        dedupeKey: intentKey,
       });
       if (result.ok) {
         window.open(result.url, '_blank');

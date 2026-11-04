@@ -5,6 +5,7 @@ import { BadgeCheck, ChevronRight, CreditCard, Download, ExternalLink, MessageSq
 
 import GameAnnouncements from '@/components/game-announcements';
 import GameFaqSection from '@/components/game-detail/GameFaqSection';
+import InstallTroubleshootingDialog from '@/components/install-troubleshooting-dialog';
 import { buildResourceChecksumItems } from '@/lib/game-resource-signature';
 import { buildGameVariantRows, type GameVariantRow } from '@/lib/game-detail-variants';
 import { normalizeGameFaqItems } from '@/lib/game-faq';
@@ -314,7 +315,11 @@ function BoxDownloadCard() {
         <Download className="h-5 w-5" aria-hidden="true" />
         立即下载 AC 盒子 App
       </Link>
-      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{BOX_DOWNLOAD_CARD.helper}</p>
+      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+        {/* 三选一分流入口就挂在原来那句「无法安装？」的位置（待决策 #132）。 */}
+        <InstallTroubleshootingDialog />
+        <span className="ml-1">{BOX_DOWNLOAD_CARD.helper}</span>
+      </p>
     </section>
   );
 }

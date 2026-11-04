@@ -14,6 +14,12 @@ export interface DownloadUrlRequest {
   pkg?: string | null;
   channelId: string;
   channelName?: string | null;
+  /**
+   * 本次终态意图的 dedupe_key（待决策 #131）：与 download_click / fail_reason
+   * 同值，服务端据此把签发事件归到同一次意图并做顺序去重。老调用方不传时
+   * 不发送该头，行为与之前一致。
+   */
+  dedupeKey?: string | null;
 }
 
 export type DownloadUrlResult =
@@ -25,6 +31,7 @@ export async function requestDownloadUrl(
   send: typeof trackedApiFetch = trackedApiFetch,
 ): Promise<DownloadUrlResult> {
   const channelLabel = String(input.channelName || '').trim() || '当前渠道';
+  const dedupeKey = String(input.dedupeKey || '').trim();
 
   try {
     const response = await send('/game/getAppDownload', {
@@ -33,6 +40,7 @@ export async function requestDownloadUrl(
         'Content-Type': 'application/json',
         // 来源位：让 interface 能把「弹窗直下」与「服务端直出 302」分开统计。
         'x-ac-surface': 'detail_dialog',
+        ...(dedupeKey ? { 'x-ac-dedupe-key': dedupeKey } : {}),
       },
       body: JSON.stringify({
         app_id: input.appId,

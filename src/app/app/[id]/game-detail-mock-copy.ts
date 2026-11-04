@@ -63,7 +63,7 @@ export const CERTIFICATION_CARD = {
 export const BOX_DOWNLOAD_CARD = {
   title: '官方盒子下载',
   status: '稳定节点已激活',
-  helper: '无法安装？推荐下载 AC 盒子 | 安装器助手 | Google 环境全搞定！',
+  helper: '推荐下载 AC 盒子 | 安装器助手 | Google 环境全搞定！',
 } as const;
 
 // 移动端吸顶分类 Tab（稿件：详情 / 评价 / 攻略指南 / 社区动态）。

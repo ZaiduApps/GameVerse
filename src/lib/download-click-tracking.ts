@@ -22,6 +22,12 @@ import { buildTrackingHeaders, getTrackingDeviceId } from '@/lib/tracking-header
  * `event_id` 每次点击都会新生成，挡不住同一来源位的重复点击；统计脚本按
  * `dedupe_key` 想去重。`props.schema_version` 标出口径切换日，新旧事件不可比。
  *
+ * 同一次终态意图的点击 / 服务端签发 / 失败回执共用这一个键（待决策 #131）：
+ * `reportDownloadClick` 把本次意图的 `dedupeKey` 返回给调用方，调用方把它
+ * 传给 `requestDownloadUrl`（服务端签发事件）与 `reportDownloadFailure`（失败回执），
+ * 服务端用同一个键的顺序去重做签发幂等（事件表无唯一索引，并发仍可能重复），
+ * 统计侧按 `props.dedupe_key` 对齐三条事件。
+ *
  * 不阻塞跳转：失败静默，下载可用性永远优先。
  */
 
@@ -80,6 +86,7 @@ function postTrackingEvent(body: Record<string, unknown>): void {
  *
  * `pump` 标出失败发生在哪条下载链路，`channel_*` 标出具体渠道，`reason` 是给
  * 人看的失败原因；三者齐全才能归因「是某个渠道坏了，还是整条链路挂了」。
+ * `dedupe_key` 与同一次点击 / 签发相同（待决策 #131），失败回执因此能对齐到意图。
  * 与点击上报一样不阻塞用户操作、失败静默。
  */
 export interface DownloadFailureInput {
@@ -94,6 +101,8 @@ export interface DownloadFailureInput {
   stage?: string;
   reason: string;
   reasonCode?: string | number | null;
+  /** 与本次点击 / 服务端签发相同的 intent 键（待决策 #131）；老调用方可省略。 */
+  dedupeKey?: string | null;
 }
 
 export const DOWNLOAD_FAILURE_EVENT = 'fail_reason';
@@ -115,6 +124,9 @@ export function reportDownloadFailure(input: DownloadFailureInput): void {
         pump: input.pump,
         stage: String(input.stage || '').trim(),
         reason: String(input.reason || 'unknown').trim().slice(0, 200),
+        ...(input.dedupeKey
+          ? { dedupe_key: String(input.dedupeKey).trim().slice(0, 200) }
+          : {}),
         ...(input.reasonCode != null && String(input.reasonCode).trim() !== ''
           ? { reason_code: String(input.reasonCode).slice(0, 40) }
           : {}),
@@ -127,12 +139,23 @@ export function reportDownloadFailure(input: DownloadFailureInput): void {
   }
 }
 
-export function reportDownloadClick(input: DownloadClickInput): void {
-  if (typeof window === 'undefined') return;
+/**
+ * 上报点击并返回本次意图的 dedupe_key：调用方把它继续传给签发请求与失败上报，
+ * 三条事件就能在统计侧按同一个键对齐（待决策 #131）。
+ * 浏览器环境不可用或序列化失败时返回 `null`，由调用方按「无键」继续。
+ */
+export function reportDownloadClick(input: DownloadClickInput): string | null {
+  if (typeof window === 'undefined') return null;
 
   try {
     const occurredAt = new Date();
     const gameId = String(input.appId || input.pkg || '').trim();
+    const dedupeKey = buildDownloadClickDedupeKey({
+      visitorId: getTrackingDeviceId(),
+      occurredAt,
+      gameId,
+      surface: input.surface,
+    });
     const body = {
       event_name: 'download_click',
       event_id: createEventId(),
@@ -143,19 +166,16 @@ export function reportDownloadClick(input: DownloadClickInput): void {
       props: {
         surface: input.surface,
         intent_stage: input.surface === 'detail_open' ? 'open' : 'terminal',
-        dedupe_key: buildDownloadClickDedupeKey({
-          visitorId: getTrackingDeviceId(),
-          occurredAt,
-          gameId,
-          surface: input.surface,
-        }),
+        dedupe_key: dedupeKey,
         schema_version: DOWNLOAD_CLICK_SCHEMA_VERSION,
       },
     };
 
     // keepalive：跳转到 302 入口后请求仍然送达；失败静默，不重试、不排队。
     postTrackingEvent(body);
+    return dedupeKey;
   } catch {
     // 序列化失败、隐私模式等一律静默。
+    return null;
   }
 }

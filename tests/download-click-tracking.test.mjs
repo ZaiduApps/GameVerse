@@ -79,8 +79,9 @@ test('dedupe_key 按同访客 + 同日 + 同游戏 + 同 surface 归并', () => 
 test('上报事件带 dedupe_key / schema_version，且重复点击仍生成新 event_id', () => {
   const { bodies, restore } = withTrackingEnv();
 
+  let first;
   try {
-    reportDownloadClick({
+    first = reportDownloadClick({
       appId: '67f0a66d0b2f421bca0a0001',
       pkg: 'com.demo.one',
       channelId: '67f0a66d0b2f421bca0a0002',
@@ -102,13 +103,15 @@ test('上报事件带 dedupe_key / schema_version，且重复点击仍生成新 
   assert.equal(bodies[0].props.schema_version, DOWNLOAD_CLICK_SCHEMA_VERSION);
   assert.equal(bodies[0].props.surface, 'detail_dialog');
   assert.equal(bodies[0].props.intent_stage, 'terminal');
+  // 调用方拿到的键与事件里的键一致，才能继续传给签发与失败上报。
+  assert.equal(first, bodies[0].props.dedupe_key);
   assert.match(
     bodies[0].props.dedupe_key,
     /^web-[^|]+\|\d{4}-\d{2}-\d{2}\|67f0a66d0b2f421bca0a0001\|detail_dialog$/,
   );
 });
 
-test('下载失败复用 fail_reason 事件，并带 pump 与渠道信息', () => {
+test('下载失败复用 fail_reason 事件，并带 pump、渠道信息与同一 dedupe_key', () => {
   const { bodies, restore } = withTrackingEnv();
 
   try {
@@ -122,6 +125,7 @@ test('下载失败复用 fail_reason 事件，并带 pump 与渠道信息', () =
       stage: 'request_download_url',
       reason: '「官方渠道」暂时不可用：资源不存在',
       reasonCode: 404,
+      dedupeKey: 'web-abc|2026-11-04|67f0a66d0b2f421bca0a0001|detail_dialog',
     });
   } finally {
     restore();
@@ -138,4 +142,8 @@ test('下载失败复用 fail_reason 事件，并带 pump 与渠道信息', () =
   assert.equal(body.props.stage, 'request_download_url');
   assert.equal(body.props.reason, '「官方渠道」暂时不可用：资源不存在');
   assert.equal(body.props.reason_code, '404');
+  assert.equal(
+    body.props.dedupe_key,
+    'web-abc|2026-11-04|67f0a66d0b2f421bca0a0001|detail_dialog',
+  );
 });
