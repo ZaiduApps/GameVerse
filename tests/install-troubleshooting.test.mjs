@@ -59,10 +59,9 @@ test('「无法安装？」入口渲染三选一症状，初始态不展示建�
     assert.match(html, new RegExp(label));
   }
 
-  // 三个入口都是可聚焦按钮，并声明互斥的 pressed 状态。
+  // 三个入口都是按钮，并声明互斥的 pressed 状态；键盘焦点由浏览器冒烟验证。
   assert.equal((html.match(/data-acbox-action="install_help_option"/g) || []).length, 3);
   assert.equal((html.match(/aria-pressed="false"/g) || []).length, 3);
-  assert.match(html, /focus-visible:outline/);
 
   for (const { advice } of OPTIONS) {
     assert.doesNotMatch(html, new RegExp(advice));
