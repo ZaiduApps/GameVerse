@@ -6,7 +6,7 @@
  * 就只剩静态入口。构建期抓一遍落成静态文件，运行时优先直出，失败再回落实时生成。
  *
  * sitemap 分层（#126）：一次抓取产出两份文件——
- *   public/sitemap.xml           主 sitemap：详情页 + 分类/榜单/静态入口 + /search?q=
+ *   public/sitemap.xml           主 sitemap：详情页 + 分类/榜单/静态入口（不含 /search?q=，#133）
  *   public/sitemap-community.xml 社区 sitemap：社区静态入口 + albums/topics/posts
  * main 与 community 的完整性各自判定：一份残缺只跳过那一份，另一份照常落盘。
  *
@@ -115,7 +115,7 @@ async function generate() {
     log(
       `urlCount main=${sections.main.length} community=${sections.community.length} buildTime=${buildTime}；` +
         `games=${stats.games}（未发布剔除 ${stats.gamesSkippedUnpublished}、质量审计过滤 ${stats.gamesSkippedByIndexable}） ` +
-        `posts=${stats.posts} topics=${stats.topics} albums=${stats.albums} search=${stats.search}；${Date.now() - startedAt} ms`,
+        `posts=${stats.posts} topics=${stats.topics} albums=${stats.albums}；${Date.now() - startedAt} ms`,
     );
   }
   return 0;

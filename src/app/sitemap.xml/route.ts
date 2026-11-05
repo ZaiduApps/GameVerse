@@ -19,8 +19,9 @@ const LOG_TAG = '[sitemap]';
 const STATIC_FILE_NAME = 'sitemap.xml';
 
 /**
- * 主 sitemap（/sitemap.xml）：静态入口 + 分类页 + 游戏详情页 + /search?q=。
- * 社区页拆去了 /sitemap-community.xml（#126），把抓取预算让给详情页。
+ * 主 sitemap（/sitemap.xml）：静态入口 + 分类页 + 游戏详情页。
+ * `/search?q=` 不进 sitemap（#133）；社区页拆去了 /sitemap-community.xml（#126），
+ * 把抓取预算让给详情页。
  */
 export async function GET(): Promise<Response> {
   const builder = createSitemapBuilder({
@@ -69,7 +70,7 @@ export async function GET(): Promise<Response> {
     try {
       const { sections, stats, apiReachable } = await builder.buildEntries();
       console.warn(
-        `${LOG_TAG} 运行时生成 main ${sections.main.length} 条（games=${stats.games} category=${stats.categoryPages} search=${stats.search}；剔除未发布游戏 ${stats.gamesSkippedUnpublished} 条${apiReachable ? '' : '，API 不可达'}`,
+        `${LOG_TAG} 运行时生成 main ${sections.main.length} 条（games=${stats.games} category=${stats.categoryPages}；剔除未发布游戏 ${stats.gamesSkippedUnpublished} 条${apiReachable ? '' : '，API 不可达'}`,
       );
       return xmlResponse(serializeSitemapXml(sections.main), 'runtime');
     } catch (error) {

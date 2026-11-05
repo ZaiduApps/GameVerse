@@ -137,14 +137,15 @@ test('createSitemapBuilder: 构建期与运行时产出同形条目（分页 + �
     posts: 1,
     albums: 1,
     topics: 1,
-    // /search?q= 白名单这一节：本用例的 fetch 对 /search/global 一律 404，全部跳过，故为 0。
-    search: 0,
   });
   const mainUrls = sections.main.map((entry) => entry.url);
   const communityUrls = sections.community.map((entry) => entry.url);
   assert.ok(mainUrls.includes('https://apks.cc/app/com.a'));
   // 非 indexable 的游戏被过滤掉（与历史运行时行为一致）
   assert.equal(mainUrls.includes('https://apks.cc/app/com.gone'), false);
+  // #133：主 sitemap 不再收录 /search?q=，也不该再去打搜索接口。
+  assert.equal(mainUrls.some((url) => url.includes('/search?q=')), false);
+  assert.equal(calls.some((call) => call.includes('/search/global')), false);
   // 分层（#126）：main 只装详情页 + 分类/榜单/静态入口，社区页全部让路
   assert.equal(mainUrls.some((url) => url.includes('/community/')), false);
   assert.equal(mainUrls.some((url) => url.includes('/albums/')), false);

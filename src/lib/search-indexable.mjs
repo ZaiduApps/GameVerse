@@ -28,11 +28,8 @@ export const SEARCH_INDEXABLE_MIN_TOTAL = 5;
 /** 单实体：唯一答案就是那个游戏，搜索页没有存在价值，把信号让给详情页。 */
 export const SEARCH_SINGLE_ENTITY_MAX_GAMES = 1;
 
-/** sitemap 里 `/search?q=` 的条数上限。 */
-export const SEARCH_INDEXABLE_MAX_SITEMAP_ENTRIES = 50;
-
 export const SEARCH_PAGE_TIER = Object.freeze({
-  /** 白名单 + 结果够厚：index,follow，canonical 自指，进 sitemap。 */
+  /** 白名单 + 结果够厚：index,follow，canonical 自指（不放进 sitemap，#133）。 */
   INDEXABLE: 'indexable',
   /** 单实体：noindex,follow，canonical 指向该游戏详情页。 */
   SINGLE_ENTITY: 'single',
@@ -81,7 +78,7 @@ export function resolveSearchPageTier(query, gamesTotal, total) {
   return SEARCH_PAGE_TIER.EXCLUDED;
 }
 
-/** `/search?q=` 路径。canonical、站内链接与 sitemap 都走这里，别各自拼字符串。 */
+/** `/search?q=` 路径。canonical 与站内链接都走这里，别各自拼字符串。 */
 export function buildSearchQueryPath(query) {
   const q = String(query ?? '').trim();
   return q ? `/search?q=${encodeURIComponent(q)}` : '/search';

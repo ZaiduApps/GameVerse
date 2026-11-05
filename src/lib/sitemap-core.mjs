@@ -11,13 +11,6 @@
  *   - urlCount 必须等于文件里 <loc> 的条数；不一致即视为产物损坏，运行时回落实时生成。
  */
 
-import {
-  SEARCH_INDEXABLE_MAX_SITEMAP_ENTRIES,
-  SEARCH_INDEXABLE_QUERIES,
-  SEARCH_PAGE_TIER,
-  buildSearchQueryPath,
-  resolveSearchPageTier,
-} from './search-indexable.mjs';
 // 分类落地页的 slug 映射与收录阈值只在 category-pages.mjs 里定义一份：
 // 页面（够不够格、要不要 404）和 sitemap（收不收录）必须同口径，否则会出现
 // 「页面 404 但 sitemap 还在推」或「页面能开但永远进不了 sitemap」。
@@ -41,7 +34,9 @@ export const SITEMAP_REVALIDATE_SECONDS = 1800;
 
 /**
  * sitemap 分层（#126）：详情页优先，社区页让路。
- *   - main（/sitemap.xml）：静态入口 + 分类页 + 游戏详情页 + /search?q=；
+ *   - main（/sitemap.xml）：静态入口 + 分类页 + 游戏详情页；
+ *     `/search?q=` 搜索结果页不进 sitemap（#133）：查询词无界且结果随数据变薄，
+ *     收录只会把 noindex 页和薄页喂给爬虫；页面自身的收录分级保持不变。
  *   - community（/sitemap-community.xml）：社区静态入口 + albums + topics + posts。
  * 两份文件各自独立校验/降级，互不拖累。
  */
@@ -394,33 +389,6 @@ export function createSitemapBuilder(options = {}) {
   }
 
   /**
-   * `/search?q=` 只放「白名单 ∩ 这一刻真的可收录」的词：逐个打一次搜索接口拿真实结果量，
-   * 结果变薄（games<3 或 total<5）就跳过，绝不把 noindex 页塞进 sitemap。
-   * 这一节失败只跳过，不算进 complete —— 搜索页是加成，不能因为它把整份快照卡住。
-   */
-  async function fetchSearchEntries() {
-    const queries = SEARCH_INDEXABLE_QUERIES.slice(0, SEARCH_INDEXABLE_MAX_SITEMAP_ENTRIES);
-    const payloads = await Promise.all(
-      queries.map((query) => fetchJson(`/search/global?q=${encodeURIComponent(query)}&limitPerType=1`)),
-    );
-    const entries = [];
-    queries.forEach((query, index) => {
-      const data = payloads[index]?.data;
-      if (!data) return;
-      if (resolveSearchPageTier(query, data?.games?.total, data?.total) !== SEARCH_PAGE_TIER.INDEXABLE) return;
-      entries.push({
-        url: absolute(buildSearchQueryPath(query)),
-        changeFrequency: 'weekly',
-        priority: 0.4,
-      });
-    });
-    if (entries.length < queries.length) {
-      logger.log(`[sitemap] /search?q= 收录 ${entries.length}/${queries.length}：其余结果不够厚或接口失败`);
-    }
-    return entries;
-  }
-
-  /**
    * 分类落地页：一次请求拿到映射表里全部分类的「已发布 / 有资源」计数。
    *
    * 后端只给原始计数，阈值判定走 category-pages.ts 的同一份常量——页面 404 的口径
@@ -472,11 +440,10 @@ export function createSitemapBuilder(options = {}) {
         })
       : games.entries;
 
-    const [posts, albums, topics, search, categoryPages] = await Promise.all([
+    const [posts, albums, topics, categoryPages] = await Promise.all([
       fetchCommunityPostsFromFeed(),
       fetchHomeAlbumEntries(),
       fetchTopics(),
-      fetchSearchEntries(),
       fetchCategoryEntries(),
     ]);
     logger.log(`[sitemap] category pages: ${categoryPages.length}`);
@@ -487,7 +454,6 @@ export function createSitemapBuilder(options = {}) {
       ...buildStaticEntries('main'),
       ...categoryPages,
       ...gameEntries,
-      ...search,
     ];
     const community = [
       ...buildStaticEntries('community'),
@@ -515,7 +481,6 @@ export function createSitemapBuilder(options = {}) {
         posts: posts.entries.length,
         albums: albums.entries.length,
         topics: topics.entries.length,
-        search: search.length,
       },
     };
   }
