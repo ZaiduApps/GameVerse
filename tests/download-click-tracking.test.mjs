@@ -8,9 +8,13 @@ import {
   reportDownloadClick,
   reportDownloadFailure,
 } from '../src/lib/download-click-tracking.ts';
+import {
+  currentDownloadPagePath,
+  normalizeDownloadPagePath,
+} from '../src/lib/download-path.ts';
 
 /** 两份上报测试共用的浏览器环境与接口桩：只抓包，不打真实接口。 */
-function withTrackingEnv() {
+function withTrackingEnv(pathname = '/app/com.demo.one') {
   const store = new Map();
   const bodies = [];
   const originals = {
@@ -18,7 +22,7 @@ function withTrackingEnv() {
     localStorage: globalThis.localStorage,
     apiStub: globalThis.__GAME_REVIEW_API_STUB__,
   };
-  globalThis.window = {};
+  globalThis.window = { location: { pathname } };
   globalThis.localStorage = {
     getItem: (key) => (store.has(key) ? store.get(key) : null),
     setItem: (key, value) => store.set(key, String(value)),
@@ -38,6 +42,25 @@ function withTrackingEnv() {
     },
   };
 }
+
+test('页面路径只保留 pathname，去掉查询串/哈希并拒绝脏值', () => {
+  assert.equal(normalizeDownloadPagePath('/app/com.demo.one?x=1#top'), '/app/com.demo.one');
+  assert.equal(normalizeDownloadPagePath('  /search  '), '/search');
+  assert.equal(normalizeDownloadPagePath('https://evil.example.com/x'), '');
+  assert.equal(normalizeDownloadPagePath('app/no-slash'), '');
+  assert.equal(normalizeDownloadPagePath('/a b'), '');
+  assert.equal(normalizeDownloadPagePath('/a\\b'), '');
+  assert.equal(normalizeDownloadPagePath(`/${'x'.repeat(400)}`).length, 200);
+  assert.equal(normalizeDownloadPagePath(undefined), '');
+
+  const { restore } = withTrackingEnv('/rankings?page=2');
+  try {
+    assert.equal(currentDownloadPagePath(), '/rankings');
+  } finally {
+    restore();
+  }
+  assert.equal(currentDownloadPagePath(), '');
+});
 
 test('dedupe_key 按同访客 + 同日 + 同游戏 + 同 surface 归并', () => {
   const occurredAt = new Date('2026-11-01T10:00:00.000Z');
@@ -76,8 +99,8 @@ test('dedupe_key 按同访客 + 同日 + 同游戏 + 同 surface 归并', () => 
   );
 });
 
-test('上报事件带 dedupe_key / schema_version，且重复点击仍生成新 event_id', () => {
-  const { bodies, restore } = withTrackingEnv();
+test('上报事件带 dedupe_key / schema_version / path，且重复点击仍生成新 event_id', () => {
+  const { bodies, restore } = withTrackingEnv('/app/com.demo.one');
 
   let first;
   try {
@@ -102,6 +125,7 @@ test('上报事件带 dedupe_key / schema_version，且重复点击仍生成新 
   assert.equal(bodies[0].props.dedupe_key, bodies[1].props.dedupe_key);
   assert.equal(bodies[0].props.schema_version, DOWNLOAD_CLICK_SCHEMA_VERSION);
   assert.equal(bodies[0].props.surface, 'detail_dialog');
+  assert.equal(bodies[0].props.path, '/app/com.demo.one');
   assert.equal(bodies[0].props.intent_stage, 'terminal');
   // 调用方拿到的键与事件里的键一致，才能继续传给签发与失败上报。
   assert.equal(first, bodies[0].props.dedupe_key);
@@ -111,8 +135,8 @@ test('上报事件带 dedupe_key / schema_version，且重复点击仍生成新 
   );
 });
 
-test('下载失败复用 fail_reason 事件，并带 pump、渠道信息与同一 dedupe_key', () => {
-  const { bodies, restore } = withTrackingEnv();
+test('下载失败复用 fail_reason 事件，并带 pump、path、reason_kind 与同一 dedupe_key', () => {
+  const { bodies, restore } = withTrackingEnv('/app/com.demo.one');
 
   try {
     reportDownloadFailure({
@@ -125,6 +149,7 @@ test('下载失败复用 fail_reason 事件，并带 pump、渠道信息与同�
       stage: 'request_download_url',
       reason: '「官方渠道」暂时不可用：资源不存在',
       reasonCode: 404,
+      reasonKind: 'no_channel',
       dedupeKey: 'web-abc|2026-11-04|67f0a66d0b2f421bca0a0001|detail_dialog',
     });
   } finally {
@@ -140,10 +165,32 @@ test('下载失败复用 fail_reason 事件，并带 pump、渠道信息与同�
   assert.equal(body.channel_name, '官方渠道');
   assert.equal(body.props.pump, 'web_detail_dialog');
   assert.equal(body.props.stage, 'request_download_url');
+  assert.equal(body.props.reason_kind, 'no_channel');
+  assert.equal(body.props.path, '/app/com.demo.one');
   assert.equal(body.props.reason, '「官方渠道」暂时不可用：资源不存在');
   assert.equal(body.props.reason_code, '404');
   assert.equal(
     body.props.dedupe_key,
     'web-abc|2026-11-04|67f0a66d0b2f421bca0a0001|detail_dialog',
   );
+});
+
+test('超时失败按 timeout 归类，事件名不变', () => {
+  const { bodies, restore } = withTrackingEnv();
+
+  try {
+    reportDownloadFailure({
+      pump: 'web_detail_dialog',
+      stage: 'request_download_url',
+      reason: '「官方渠道」响应超时，可以重试或稍后再试',
+      reasonCode: 'timeout',
+      reasonKind: 'timeout',
+    });
+  } finally {
+    restore();
+  }
+
+  assert.equal(bodies.length, 1);
+  assert.equal(bodies[0].event_name, DOWNLOAD_FAILURE_EVENT);
+  assert.equal(bodies[0].props.reason_kind, 'timeout');
 });

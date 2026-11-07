@@ -270,6 +270,11 @@ test('route handler 与详情页接线符合派发单约束（源码级）', asy
   assert.match(routeSource, /status: 302/);
   assert.match(routeSource, /'x-ac-surface': 'detail_ssr'/);
   assert.match(routeSource, /'x-ac-visitor-ua'/);
+  // 页面路径维度（#140）：SSR 下载入口也要把详情页 pathname 带给 interface。
+  assert.match(routeSource, /'x-ac-path'/);
+  assert.match(routeSource, /normalizeDownloadPagePath/);
+  // 3 秒内失败可见（#140）：与弹窗共用同一个请求上限（2500ms + 渲染余量）。
+  assert.match(routeSource, /const DOWNLOAD_API_TIMEOUT_MS = DOWNLOAD_REQUEST_TIMEOUT_MS/);
   assert.match(routeSource, /AbortController/);
   assert.match(routeSource, /apiUrl\('\/game\/getAppDownload'\)/);
   assert.doesNotMatch(routeSource, /NextResponse\.redirect/);

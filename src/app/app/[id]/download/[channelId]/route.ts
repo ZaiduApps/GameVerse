@@ -1,10 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { apiUrl } from '@/lib/api';
+import { normalizeDownloadPagePath } from '@/lib/download-path';
 import {
   describeDownloadErrorPage,
   renderDownloadErrorPage,
 } from '@/lib/download-error-page';
+import { DOWNLOAD_REQUEST_TIMEOUT_MS } from '@/lib/download-request';
 import {
   decideDownloadRedirect,
   type DownloadIssueResult,
@@ -24,7 +26,12 @@ import {
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const DOWNLOAD_API_TIMEOUT_MS = 5000;
+/**
+ * 3 秒失败可见（待决策 #140）：与弹窗共用同一个渠道请求上限
+ * （2500ms + 渲染余量），上游超时就回详情页的失败提示，
+ * 不把用户挂在「点了没反应」的等待里。
+ */
+const DOWNLOAD_API_TIMEOUT_MS = DOWNLOAD_REQUEST_TIMEOUT_MS;
 const VISITOR_UA_MAX_LENGTH = 256;
 const NO_STORE = { 'cache-control': 'no-store' } as const;
 /**
@@ -46,7 +53,13 @@ export async function GET(
   const decision = await decideDownloadRedirect({
     id: params?.id,
     channelId: params?.channelId,
-    requestIssuedUrl: (body) => requestIssuedDownloadUrl(body, request, requestId),
+    requestIssuedUrl: (body) =>
+      requestIssuedDownloadUrl(
+        body,
+        request,
+        requestId,
+        normalizeDownloadPagePath(`/app/${encodeURIComponent(String(params?.id || ''))}`),
+      ),
   });
 
   if (decision.kind === 'error_page') {
@@ -90,6 +103,7 @@ async function requestIssuedDownloadUrl(
   body: Record<string, string>,
   request: NextRequest,
   requestId: string,
+  pagePath: string,
 ): Promise<DownloadIssueResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), DOWNLOAD_API_TIMEOUT_MS);
@@ -103,6 +117,8 @@ async function requestIssuedDownloadUrl(
         'content-type': 'application/json',
         // 来源位：区分「服务端直出」与弹窗/原生 App，统计上必须能拆开。
         'x-ac-surface': 'detail_ssr',
+        // 页面路径：失败/签发事件按页面归因（待决策 #140）。
+        ...(pagePath ? { 'x-ac-path': pagePath } : {}),
         // 真实访客 UA 转发给 interface：本请求的 UA 是 Next 的 fetch，不能用来判机器人。
         'x-ac-visitor-ua': resolveVisitorUserAgent(request),
         'x-request-id': requestId,

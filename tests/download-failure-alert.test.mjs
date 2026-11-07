@@ -30,27 +30,44 @@ const renderAlert = (props) =>
     },
   });
 
-test('失败提示是可见 alert，并带一键换渠道按钮', async () => {
+test('失败提示是可见 alert，重试与备用渠道是两个独立动作', async () => {
   const html = await renderAlert({
     message: '「官方渠道」暂时不可用：资源不存在',
-    retryLabel: '换「备用渠道」重试',
+    retryLabel: '重试',
     onRetry: () => {},
+    backupLabel: '备用渠道「备用渠道」',
+    onBackup: () => {},
   });
 
   assert.match(html, /role="alert"/);
   assert.match(html, /下载失败/);
   assert.match(html, /「官方渠道」暂时不可用：资源不存在/);
-  assert.match(html, /换「备用渠道」重试/);
+  assert.match(html, /重试/);
+  assert.match(html, /备用渠道「备用渠道」/);
   assert.match(html, /data-acbox-action="game_download_retry"/);
+  assert.match(html, /data-acbox-action="game_download_backup"/);
 });
 
-test('没有可换的渠道时不渲染重试按钮', async () => {
+test('没有备用渠道时只渲染重试按钮', async () => {
+  const html = await renderAlert({
+    message: '「官方渠道」暂时没有响应（HTTP 502），可以重试或稍后再试',
+    retryLabel: '重试',
+    onRetry: () => {},
+    backupLabel: null,
+  });
+
+  assert.match(html, /game_download_retry/);
+  assert.doesNotMatch(html, /game_download_backup/);
+});
+
+test('参数缺失等没有可操作目标时不渲染按钮', async () => {
   const html = await renderAlert({
     message: '下载参数缺失，请刷新页面后重试',
     retryLabel: null,
+    backupLabel: null,
   });
 
   assert.match(html, /下载参数缺失/);
   assert.doesNotMatch(html, /game_download_retry/);
-  assert.doesNotMatch(html, /重试<\/button>/);
+  assert.doesNotMatch(html, /game_download_backup/);
 });

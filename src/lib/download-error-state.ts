@@ -57,7 +57,7 @@ export function buildDownloadErrorActions(params: {
   ];
 }
 
-/** 两条失败原因的标题与说明：渠道故障可换渠道，资源失效需要补档。 */
+/** 两条失败原因的标题与说明：只描述症状，不写死机型/版本，也不承诺换源可解。 */
 export function describeDownloadError(reason: DownloadFailureReason): {
   title: string;
   description: string;
@@ -69,7 +69,7 @@ export function describeDownloadError(reason: DownloadFailureReason): {
       }
     : {
         title: '这个下载渠道暂时不可用',
-        description: '渠道可能临时故障或限流。换一个渠道通常就能继续下载；如果所有渠道都不行，请反馈给我们。',
+        description: '渠道可能临时故障或限流。可以稍后重试，或在其它渠道再试一次；如果持续失败，请反馈给我们。',
       };
 }
 

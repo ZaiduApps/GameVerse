@@ -1,4 +1,6 @@
 import { trackedApiFetch } from '@/lib/api';
+import { currentDownloadPagePath, normalizeDownloadPagePath } from '@/lib/download-path';
+import type { DownloadFailureReasonKind } from '@/lib/download-request';
 import { buildTrackingHeaders, getTrackingDeviceId } from '@/lib/tracking-headers';
 
 /**
@@ -28,6 +30,10 @@ import { buildTrackingHeaders, getTrackingDeviceId } from '@/lib/tracking-header
  * 服务端用同一个键的顺序去重做签发幂等（事件表无唯一索引，并发仍可能重复），
  * 统计侧按 `props.dedupe_key` 对齐三条事件。
  *
+ * `path`（待决策 #140）= 发生点击/失败时的页面 pathname，让失败能按页面类别归因；
+ * `reason_kind`（同批 #144）把失败原因收敛成 http_status / timeout / network /
+ * no_channel 四类，和 #131 的 `fail_reason` 事件共用同一套，不新增事件名。
+ *
  * 不阻塞跳转：失败静默，下载可用性永远优先。
  */
 
@@ -49,6 +55,8 @@ export interface DownloadClickInput {
   pkg?: string | null;
   channelId?: string | null;
   surface: DownloadClickSurface;
+  /** 页面 pathname（待决策 #140）；不传时浏览器环境自动取当前页面。 */
+  path?: string | null;
 }
 
 /** 去重键的纯函数形式：输入全部显式传入，便于单测固定访客与时间。 */
@@ -101,6 +109,10 @@ export interface DownloadFailureInput {
   stage?: string;
   reason: string;
   reasonCode?: string | number | null;
+  /** 失败原因分类（待决策 #140/#144），与 requestDownloadUrl 的返回值同口径。 */
+  reasonKind?: DownloadFailureReasonKind | null;
+  /** 失败发生的页面 pathname（待决策 #140）；不传时浏览器环境自动取当前页面。 */
+  path?: string | null;
   /** 与本次点击 / 服务端签发相同的 intent 键（待决策 #131）；老调用方可省略。 */
   dedupeKey?: string | null;
 }
@@ -111,6 +123,8 @@ export function reportDownloadFailure(input: DownloadFailureInput): void {
   if (typeof window === 'undefined') return;
 
   try {
+    const pagePath =
+      normalizeDownloadPagePath(input.path) || currentDownloadPagePath();
     const body = {
       event_name: DOWNLOAD_FAILURE_EVENT,
       event_id: createEventId(),
@@ -124,6 +138,8 @@ export function reportDownloadFailure(input: DownloadFailureInput): void {
         pump: input.pump,
         stage: String(input.stage || '').trim(),
         reason: String(input.reason || 'unknown').trim().slice(0, 200),
+        ...(pagePath ? { path: pagePath } : {}),
+        ...(input.reasonKind ? { reason_kind: input.reasonKind } : {}),
         ...(input.dedupeKey
           ? { dedupe_key: String(input.dedupeKey).trim().slice(0, 200) }
           : {}),
@@ -156,6 +172,8 @@ export function reportDownloadClick(input: DownloadClickInput): string | null {
       gameId,
       surface: input.surface,
     });
+    const pagePath =
+      normalizeDownloadPagePath(input.path) || currentDownloadPagePath();
     const body = {
       event_name: 'download_click',
       event_id: createEventId(),
@@ -166,6 +184,7 @@ export function reportDownloadClick(input: DownloadClickInput): string | null {
       props: {
         surface: input.surface,
         intent_stage: input.surface === 'detail_open' ? 'open' : 'terminal',
+        ...(pagePath ? { path: pagePath } : {}),
         dedupe_key: dedupeKey,
         schema_version: DOWNLOAD_CLICK_SCHEMA_VERSION,
       },

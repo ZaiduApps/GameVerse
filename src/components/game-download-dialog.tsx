@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import type React from 'react';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -31,8 +31,14 @@ import {
   reportDownloadFailure,
 } from '@/lib/download-click-tracking';
 import { resolveDownloadChannelId, shouldGuideToApp } from '@/lib/game-download-channel';
-import { requestDownloadUrl } from '@/lib/download-request';
-import { pickDownloadRetryTarget } from '@/lib/download-retry';
+import {
+  requestDownloadUrl,
+  type DownloadFailureReasonKind,
+} from '@/lib/download-request';
+import {
+  pickDownloadBackupTarget,
+  pickDownloadRetryTarget,
+} from '@/lib/download-retry';
 import type { GameSourceInfo } from '@/lib/game-source-link';
 import AppDownloadGuideDialog from '@/components/app-download-guide-dialog';
 import ContentReportDialog from '@/components/content-report-dialog';
@@ -74,6 +80,30 @@ export default function GameDownloadDialog({
   const [error, setError] = useState<string | null>(null);
   const [failedChannelId, setFailedChannelId] = useState<string | null>(null);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const emptyChannelsReported = useRef(false);
+
+  /**
+   * 打开弹窗却没有任何可点渠道（待决策 #140/#144）：这不是「点了没反应」，
+   * 而是一个明确的失败态。每个打开周期最多上报一次，避免重复渲染刷事件。
+   */
+  const reportEmptyChannels = useCallback(() => {
+    if (emptyChannelsReported.current) return;
+    emptyChannelsReported.current = true;
+    reportDownloadFailure({
+      appId,
+      pkg,
+      pump: 'web_detail_dialog',
+      stage: 'select_channel',
+      reason: '当前没有可用的下载渠道',
+      reasonKind: 'no_channel',
+    });
+  }, [appId, pkg]);
+
+  useEffect(() => {
+    if (open === true && (!resources || resources.length === 0)) {
+      reportEmptyChannels();
+    }
+  }, [open, resources, reportEmptyChannels]);
 
   const handleDownloadClick = async (resource: ApiDownloadResource) => {
     const channelId = resolveDownloadChannelId(resource);
@@ -87,6 +117,7 @@ export default function GameDownloadDialog({
     const fail = (
       message: string,
       reasonCode?: string | number | null,
+      reasonKind?: DownloadFailureReasonKind,
     ) => {
       setError(message);
       setFailedChannelId(channelId || null);
@@ -100,12 +131,13 @@ export default function GameDownloadDialog({
         stage: 'request_download_url',
         reason: message,
         reasonCode,
+        reasonKind,
         dedupeKey: intentKey,
       });
     };
 
     if ((!appId && !pkg) || !channelId) {
-      fail('下载参数缺失，请刷新页面后重试');
+      fail('下载参数缺失，请刷新页面后重试', 'missing_params', 'no_channel');
       return;
     }
 
@@ -135,13 +167,14 @@ export default function GameDownloadDialog({
         window.open(result.url, '_blank');
         return;
       }
-      fail(result.message, result.reasonCode);
+      fail(result.message, result.reasonCode, result.reasonKind);
     } finally {
       setLoadingChannelId(null);
     }
   };
 
   const retryTarget = pickDownloadRetryTarget(resources, failedChannelId);
+  const backupTarget = pickDownloadBackupTarget(resources, failedChannelId);
 
   return (
     <>
@@ -151,6 +184,9 @@ export default function GameDownloadDialog({
           if (!nextOpen) {
             setError(null);
             setFailedChannelId(null);
+            emptyChannelsReported.current = false;
+          } else if (!resources || resources.length === 0) {
+            reportEmptyChannels();
           }
           onOpenChange?.(nextOpen);
         }}
@@ -278,6 +314,12 @@ export default function GameDownloadDialog({
                 onRetry={
                   retryTarget
                     ? () => handleDownloadClick(retryTarget.resource)
+                    : undefined
+                }
+                backupLabel={backupTarget?.label}
+                onBackup={
+                  backupTarget
+                    ? () => handleDownloadClick(backupTarget.resource)
                     : undefined
                 }
                 disabled={loadingChannelId !== null}
