@@ -1,25 +1,68 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useAuth } from '@/context/auth-context';
-import { useToast } from '@/hooks/use-toast';
 import {
-  createCommunityPost,
-  getCommunityTopicSuggestions,
-  quickCreateCommunityTopic,
-  type CommunityTopicItem,
-} from '@/lib/community-api';
-import { cn } from '@/lib/utils';
+  AlertCircle,
+  HashIcon,
+  ImagePlus,
+  Loader2,
+  PlusCircle,
+  RotateCcw,
+  Send,
+  Trash2,
+  X,
+} from 'lucide-react';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { HashIcon, Loader2, PlusCircle, Send, X } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast';
+import {
+  getCommunityTopicSuggestions,
+  quickCreateCommunityTopic,
+  type CommunityTopicItem,
+} from '@/lib/community-api';
+import {
+  DEFAULT_COMMUNITY_CONFIG,
+  normalizeCommunityConfig,
+  type CommunityRuntimeConfig,
+} from '@/lib/community-config';
+import {
+  clearDraft,
+  deleteDraftImage,
+  putDraftImage,
+  pruneExpiredDrafts,
+  readDraft,
+  readDraftImages,
+  resolveDraftKey,
+  writeDraft,
+  type CommunityDraft,
+} from '@/lib/community-draft';
+import {
+  deletePublishJob,
+  processPublishQueue,
+  savePublishJob,
+  subscribePublishQueue,
+  uploadCommunityPostImage,
+  type CommunityPublishImage,
+  type CommunityPublishJob,
+} from '@/lib/community-publish-queue';
+import { cn } from '@/lib/utils';
+
+const CommunityEditor = dynamic(() => import('./CommunityEditor'), {
+  ssr: false,
+});
+const AuthModal = dynamic(() => import('@/components/auth/auth-modal'), {
+  ssr: false,
+});
 
 interface CreatePostFormProps {
+  communityConfig?: Partial<CommunityRuntimeConfig>;
   forcedAppId?: string;
   initialContent?: string;
   initialTitle?: string;
@@ -47,7 +90,25 @@ interface CreatePostFormProps {
   onAutoFocusHandled?: () => void;
 }
 
+interface LocalImage {
+  blob: Blob;
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url: string;
+}
+
 const MAX_TOPIC_NAME_LENGTH = 24;
+const AUTOSAVE_DELAY_MS = 800;
+
+function createId(prefix: string) {
+  const cryptoObject = typeof globalThis !== 'undefined' ? globalThis.crypto : undefined;
+  if (cryptoObject && typeof cryptoObject.randomUUID === 'function') {
+    return cryptoObject.randomUUID();
+  }
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 function extractHashtagNames(text: string): string[] {
   const source = String(text || '');
@@ -61,11 +122,8 @@ function extractHashtagNames(text: string): string[] {
   return Array.from(result);
 }
 
-function detectCurrentHashtag(text: string, cursor: number): string {
-  const safeCursor = Math.max(0, Math.min(cursor, text.length));
-  const before = text.slice(0, safeCursor);
-  const match = before.match(/(?:^|\s)#([^\s#]{0,24})$/);
-  return String(match?.[1] || '').trim();
+function countMarkdownImages(text: string) {
+  return (String(text || '').match(/!\[[^\]]*\]\(/g) || []).length;
 }
 
 function upsertTopic(
@@ -78,7 +136,9 @@ function upsertTopic(
   return [...list, item];
 }
 
-function normalizeTopicList(input: CommunityTopicItem[] | undefined): CommunityTopicItem[] {
+function normalizeTopicList(
+  input: CommunityTopicItem[] | undefined,
+): CommunityTopicItem[] {
   const result: CommunityTopicItem[] = [];
   for (const topic of input || []) {
     const id = String(topic?._id || '').trim();
@@ -95,7 +155,21 @@ function normalizeTopicList(input: CommunityTopicItem[] | undefined): CommunityT
   return result;
 }
 
+function formatDraftTime(timestamp: number) {
+  try {
+    return new Date(timestamp).toLocaleString('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
+}
+
 export default function CreatePostForm({
+  communityConfig,
   forcedAppId,
   initialContent = '',
   initialTitle = '',
@@ -113,21 +187,33 @@ export default function CreatePostForm({
 }: CreatePostFormProps) {
   const { user, token, isAuthenticated } = useAuth();
   const { toast } = useToast();
+  const config = useMemo(
+    () => normalizeCommunityConfig({ ...DEFAULT_COMMUNITY_CONFIG, ...communityConfig }),
+    [communityConfig],
+  );
 
   const [title, setTitle] = useState(() => String(initialTitle || ''));
   const [content, setContent] = useState(() => String(initialContent || ''));
-  const [cursor, setCursor] = useState(() => String(initialContent || '').length);
-
+  const [editorMarkdown, setEditorMarkdown] = useState(() => String(initialContent || ''));
+  const [editorKey, setEditorKey] = useState(0);
+  const [editorOpen, setEditorOpen] = useState(
+    () => mode === 'edit' || Boolean(String(initialContent || '').trim()),
+  );
   const [selectedTopics, setSelectedTopics] = useState<CommunityTopicItem[]>(
     () => normalizeTopicList(initialTopics),
   );
+  const [topicQuery, setTopicQuery] = useState('');
   const [topicSuggestions, setTopicSuggestions] = useState<CommunityTopicItem[]>([]);
   const [isSuggestingTopic, setIsSuggestingTopic] = useState(false);
   const [isCreatingTopic, setIsCreatingTopic] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [draftCandidate, setDraftCandidate] = useState<CommunityDraft | null>(null);
+  const [isReadingDraft, setIsReadingDraft] = useState(false);
 
-  const hashtagKeyword = useMemo(() => detectCurrentHashtag(content, cursor), [content, cursor]);
+  const imagesRef = useRef(new Map<string, LocalImage>());
+  const draftKey = useMemo(() => resolveDraftKey(user?._id), [user?._id]);
+
   const resolvedAppId = useMemo(() => {
     const fixedAppId = String(forcedAppId || '').trim();
     if (fixedAppId) return fixedAppId;
@@ -140,14 +226,7 @@ export default function CreatePostForm({
     return '';
   }, [forcedAppId, selectedTopic, selectedTopics]);
 
-  const setTextareaCursor = (nextCursor: number) => {
-    const safeCursor = Math.max(0, nextCursor);
-    setCursor(safeCursor);
-    requestAnimationFrame(() => {
-      textareaRef.current?.focus();
-      textareaRef.current?.setSelectionRange(safeCursor, safeCursor);
-    });
-  };
+  const imageCount = useMemo(() => countMarkdownImages(content), [content]);
 
   useEffect(() => {
     if (!selectedTopic?._id) return;
@@ -156,22 +235,65 @@ export default function CreatePostForm({
 
   useEffect(() => {
     if (!shouldAutoFocus) return;
-    requestAnimationFrame(() => {
-      textareaRef.current?.focus();
-      const end = textareaRef.current?.value.length || 0;
-      textareaRef.current?.setSelectionRange(end, end);
-      onAutoFocusHandled?.();
-    });
+    setEditorOpen(true);
+    onAutoFocusHandled?.();
   }, [onAutoFocusHandled, shouldAutoFocus]);
 
   useEffect(() => {
+    if (mode === 'edit') return;
+    void pruneExpiredDrafts();
+    const draft = readDraft(draftKey);
+    if (draft && (draft.title.trim() || draft.content.trim())) {
+      setDraftCandidate(draft);
+    }
+  }, [draftKey, mode]);
+
+  useEffect(() => {
+    if (mode === 'edit') return;
+    if (!title.trim() && !content.trim() && selectedTopics.length === 0) return;
+    const timer = window.setTimeout(() => {
+      writeDraft(draftKey, {
+        version: 1,
+        userId: String(user?._id || ''),
+        title,
+        content: toStoredContent(content),
+        topicIds: selectedTopics.map((topic) => String(topic?._id || '')).filter(Boolean),
+        topicNames: selectedTopics.map((topic) => String(topic?.name || '')).filter(Boolean),
+        updatedAt: Date.now(),
+      });
+    }, AUTOSAVE_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [content, draftKey, mode, selectedTopics, title, user?._id]);
+
+  useEffect(() => {
+    const registry = imagesRef.current;
+    return () => {
+      for (const image of registry.values()) {
+        URL.revokeObjectURL(image.url);
+      }
+      registry.clear();
+    };
+  }, []);
+
+  useEffect(
+    () =>
+      subscribePublishQueue((event) => {
+        if (event.type === 'edit_job') {
+          void restoreFromJob(event.job);
+        }
+      }),
+    // restoreFromJob 只依赖稳定的 setState/ref，不需要重复订阅
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  useEffect(() => {
     let active = true;
-    const keyword = String(hashtagKeyword || '').trim();
+    const keyword = String(topicQuery || '').trim();
     if (!keyword) {
       setTopicSuggestions([]);
       return;
     }
-
     const timer = window.setTimeout(async () => {
       setIsSuggestingTopic(true);
       const list = await getCommunityTopicSuggestions({
@@ -183,35 +305,139 @@ export default function CreatePostForm({
       setTopicSuggestions(list);
       setIsSuggestingTopic(false);
     }, 180);
-
     return () => {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [hashtagKeyword, resolvedAppId]);
+  }, [resolvedAppId, topicQuery]);
+
+  function toStoredContent(text: string) {
+    let next = String(text || '');
+    for (const image of imagesRef.current.values()) {
+      if (image.url && next.includes(image.url)) {
+        next = next.split(image.url).join(`local-image://${image.id}`);
+      }
+    }
+    return next;
+  }
+
+  async function handleImageFile(file: File) {
+    if (!file.type.startsWith('image/')) {
+      throw new Error('仅支持图片文件');
+    }
+    if (file.size > config.max_image_bytes) {
+      throw new Error(`单张图片不能超过 ${Math.round(config.max_image_bytes / 1024 / 1024)}MB`);
+    }
+    if (imagesRef.current.size >= config.max_images) {
+      throw new Error(`最多上传 ${config.max_images} 张图片`);
+    }
+    const id = createId('img');
+    const url = URL.createObjectURL(file);
+    imagesRef.current.set(id, {
+      blob: file,
+      id,
+      name: file.name || 'image',
+      size: file.size,
+      type: file.type,
+      url,
+    });
+    await putDraftImage(
+      draftKey,
+      { id, name: file.name || 'image', size: file.size, type: file.type },
+      file,
+    );
+    return url;
+  }
+
+  async function restoreDraft(draft: CommunityDraft) {
+    setIsReadingDraft(true);
+    try {
+      let restoredContent = draft.content;
+      const storedImages = await readDraftImages(draftKey);
+      for (const [id, record] of storedImages) {
+        const url = URL.createObjectURL(record.blob);
+        imagesRef.current.set(id, {
+          blob: record.blob,
+          id,
+          name: record.meta.name,
+          size: record.meta.size,
+          type: record.meta.type,
+          url,
+        });
+        restoredContent = restoredContent
+          .split(`local-image://${id}`)
+          .join(url);
+      }
+      setTitle(draft.title);
+      setContent(restoredContent);
+      setEditorMarkdown(restoredContent);
+      setSelectedTopics(
+        draft.topicIds.map((id, index) => ({
+          _id: id,
+          name: draft.topicNames[index] || id,
+          slug: id,
+        })) as CommunityTopicItem[],
+      );
+      setEditorOpen(true);
+      setEditorKey((prev) => prev + 1);
+      setDraftCandidate(null);
+    } finally {
+      setIsReadingDraft(false);
+    }
+  }
+
+  async function discardDraft() {
+    if (draftCandidate) {
+      await clearDraft(draftKey);
+    }
+    setDraftCandidate(null);
+  }
+
+  async function restoreFromJob(job: CommunityPublishJob) {
+    const restoredImages = new Map<string, LocalImage>();
+    let restoredContent = job.content;
+    for (const image of job.images) {
+      const url = URL.createObjectURL(image.blob);
+      restoredImages.set(image.id, { ...image, url });
+      restoredContent = restoredContent
+        .split(`local-image://${image.id}`)
+        .join(url);
+    }
+    imagesRef.current = restoredImages;
+    setTitle(job.title);
+    setContent(restoredContent);
+    setEditorMarkdown(restoredContent);
+    setSelectedTopics(
+      job.topicIds.map((id, index) => ({
+        _id: id,
+        name: job.topicNames[index] || id,
+        slug: id,
+      })) as CommunityTopicItem[],
+    );
+    setEditorOpen(true);
+    setEditorKey((prev) => prev + 1);
+    await deletePublishJob(job.id);
+    toast({ title: '已恢复到编辑器', description: '请修改后重新发布。' });
+  }
+
+  function resetComposer() {
+    for (const image of imagesRef.current.values()) {
+      URL.revokeObjectURL(image.url);
+    }
+    imagesRef.current.clear();
+    setTitle('');
+    setContent('');
+    setEditorMarkdown('');
+    setSelectedTopics([]);
+    setTopicQuery('');
+    setEditorOpen(false);
+    setEditorKey((prev) => prev + 1);
+  }
 
   function handlePickTopic(topic: CommunityTopicItem) {
-    const topicName = String(topic?.name || '').trim();
-    if (!topicName) return;
-
     setSelectedTopics((prev) => upsertTopic(prev, topic));
-
-    const safeCursor = Math.max(0, Math.min(cursor, content.length));
-    const before = content.slice(0, safeCursor);
-    const after = content.slice(safeCursor);
-    const hashIndex = before.lastIndexOf('#');
-
-    if (hashIndex >= 0) {
-      const nextValue = `${before.slice(0, hashIndex + 1)}${topicName} ${after}`;
-      setContent(nextValue);
-      setTextareaCursor(hashIndex + topicName.length + 2);
-      return;
-    }
-
-    const suffix = content.endsWith(' ') || content.length === 0 ? '' : ' ';
-    const nextValue = `${content}${suffix}#${topicName} `;
-    setContent(nextValue);
-    setTextareaCursor(nextValue.length);
+    setTopicQuery('');
+    setTopicSuggestions([]);
   }
 
   function handleRemoveTopic(topicId: string) {
@@ -221,17 +447,15 @@ export default function CreatePostForm({
   }
 
   async function handleQuickCreateTopic() {
-    const keyword = String(hashtagKeyword || '').trim();
+    const keyword = String(topicQuery || '').trim();
     if (!keyword) {
       toast({ title: '请先输入话题关键字', variant: 'destructive' });
       return;
     }
-
     if (!isAuthenticated || !token) {
-      toast({ title: '需要登录', description: '请先登录后再创建话题', variant: 'destructive' });
+      setAuthOpen(true);
       return;
     }
-
     setIsCreatingTopic(true);
     const result = await quickCreateCommunityTopic({
       token,
@@ -239,12 +463,10 @@ export default function CreatePostForm({
       appId: resolvedAppId || undefined,
     });
     setIsCreatingTopic(false);
-
     if (!result.ok || !result.topic) {
       toast({ title: '创建失败', description: result.message, variant: 'destructive' });
       return;
     }
-
     handlePickTopic(result.topic);
     toast({
       title: result.created ? '话题创建成功' : '已使用现有话题',
@@ -252,86 +474,178 @@ export default function CreatePostForm({
     });
   }
 
+  async function submitEdit() {
+    const trimmedContent = String(content || '').trim();
+    if (!trimmedContent || !token || !onSubmitPost) {
+      toast({ title: '帖子内容不能为空', variant: 'destructive' });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      let finalContent = trimmedContent;
+      for (const image of imagesRef.current.values()) {
+        const marker = `local-image://${image.id}`;
+        if (!finalContent.includes(marker) && !finalContent.includes(image.url)) continue;
+        const url = await uploadCommunityPostImage(token, image);
+        finalContent = finalContent
+          .split(marker)
+          .join(url)
+          .split(image.url)
+          .join(url);
+      }
+      const hashtagNames = Array.from(
+        new Set([
+          ...extractHashtagNames(finalContent),
+          ...selectedTopics.map((topic) => String(topic?.name || '').trim()).filter(Boolean),
+        ]),
+      );
+      const result = await onSubmitPost({
+        title: String(title || '').trim() || undefined,
+        content: finalContent,
+        topicIds: selectedTopics.map((topic) => String(topic?._id || '').trim()).filter(Boolean),
+        topicNames: hashtagNames,
+        source: 'web',
+        appId: resolvedAppId || undefined,
+      });
+      if (!result.ok) {
+        toast({ title: '保存失败', description: result.message, variant: 'destructive' });
+        return;
+      }
+      await clearDraft(draftKey);
+      onPosted?.();
+    } catch (error) {
+      toast({
+        title: '保存失败',
+        description: String((error as Error)?.message || '请稍后重试'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function handleSubmitPost() {
     if (isSubmitting) return;
-
+    if (mode === 'edit') {
+      await submitEdit();
+      return;
+    }
     const trimmedContent = String(content || '').trim();
     if (!trimmedContent) {
       toast({ title: '帖子内容不能为空', variant: 'destructive' });
       return;
     }
-
-    if (!isAuthenticated || !token) {
-      toast({ title: '需要登录', description: '请先登录后再发布帖子', variant: 'destructive' });
+    if (!isAuthenticated || !token || !user?._id) {
+      setAuthOpen(true);
       return;
     }
-
-    setIsSubmitting(true);
-    const hashtagNames = Array.from(
-      new Set([
-        ...extractHashtagNames(trimmedContent),
-        ...selectedTopics
-          .map((topic) => String(topic?.name || '').trim())
-          .filter(Boolean),
-      ]),
-    );
-
-    const submitPost = onSubmitPost
-      ? onSubmitPost
-      : async (payload: {
-          appId?: string;
-          content: string;
-          source: string;
-          title?: string;
-          topicIds?: string[];
-          topicNames?: string[];
-        }) =>
-          await createCommunityPost({
-            token,
-            ...payload,
-          });
-    const result = await submitPost({
-      title: String(title || '').trim() || undefined,
-      content: trimmedContent,
-      topicIds: selectedTopics
-        .map((topic) => String(topic?._id || '').trim())
-        .filter(Boolean),
-      topicNames: hashtagNames,
-      source: 'web',
-      appId: resolvedAppId || undefined,
-    });
-    setIsSubmitting(false);
-
-    if (!result.ok) {
+    if (trimmedContent.length > config.max_content_chars) {
       toast({
-        title: mode === 'edit' ? '保存失败' : '发布失败',
-        description: result.message,
+        title: '正文过长',
+        description: `最多 ${config.max_content_chars} 个字符`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (imageCount > config.max_images) {
+      toast({
+        title: '图片过多',
+        description: `最多 ${config.max_images} 张图片`,
         variant: 'destructive',
       });
       return;
     }
 
-    if (mode === 'create') {
-      setTitle('');
-      setContent('');
-      setTopicSuggestions([]);
-      setSelectedTopics(selectedTopic?._id ? [selectedTopic] : []);
+    setIsSubmitting(true);
+    try {
+      const storedContent = toStoredContent(trimmedContent);
+      const hashtagNames = Array.from(
+        new Set([
+          ...extractHashtagNames(trimmedContent),
+          ...selectedTopics.map((topic) => String(topic?.name || '').trim()).filter(Boolean),
+        ]),
+      );
+      const images: CommunityPublishImage[] = Array.from(imagesRef.current.values())
+        .filter((image) => storedContent.includes(`local-image://${image.id}`))
+        .map((image) => ({
+          blob: image.blob,
+          id: image.id,
+          name: image.name,
+          size: image.size,
+          type: image.type,
+        }));
+      const job: CommunityPublishJob = {
+        id: createId('post'),
+        userId: String(user._id),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        status: 'pending',
+        attempts: 0,
+        title: String(title || '').trim(),
+        content: storedContent,
+        topicIds: selectedTopics.map((topic) => String(topic?._id || '').trim()).filter(Boolean),
+        topicNames: hashtagNames,
+        appId: resolvedAppId || undefined,
+        source: 'web',
+        images,
+      };
+      await savePublishJob(job);
+      await clearDraft(draftKey);
+      setDraftCandidate(null);
+      resetComposer();
+      void processPublishQueue(String(user._id), token);
+      toast({
+        title: config.auto_publish ? '发布成功' : '已提交审核',
+        description: '图片会在后台上传，无需停留本页。',
+      });
+    } catch (error) {
+      toast({
+        title: '发布失败',
+        description: String((error as Error)?.message || '请稍后重试'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-
-    toast({
-      title: mode === 'edit' ? '保存成功' : '发布成功',
-      description: result.message || (mode === 'edit' ? '帖子已更新' : '帖子已提交'),
-    });
-    onPosted?.();
   }
 
-  const suggestionVisible = hashtagKeyword.length > 0;
   const submitText = isSubmitting
     ? submittingLabel || (mode === 'edit' ? '保存中...' : '发布中...')
     : submitLabel || (mode === 'edit' ? '保存修改' : '发布');
 
   const contentNode = (
     <>
+      {draftCandidate ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs">
+          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            <RotateCcw className="h-3.5 w-3.5" />
+            发现 {formatDraftTime(draftCandidate.updatedAt)} 的本地草稿
+          </span>
+          <span className="flex items-center gap-1">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs"
+              disabled={isReadingDraft}
+              onClick={() => void discardDraft()}
+            >
+              丢弃
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              disabled={isReadingDraft}
+              onClick={() => void restoreDraft(draftCandidate)}
+            >
+              {isReadingDraft ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+              恢复
+            </Button>
+          </span>
+        </div>
+      ) : null}
+
       <div className={surface === 'card' ? 'space-y-3 p-4' : 'space-y-3'}>
         <div className="flex items-start space-x-3">
           <Avatar className="mt-1">
@@ -340,10 +654,12 @@ export default function CreatePostForm({
               alt={user?.name || user?.username || '当前用户'}
               data-ai-hint="user avatar current"
             />
-            <AvatarFallback>{(user?.name || user?.username || '我').slice(0, 1)}</AvatarFallback>
+            <AvatarFallback>
+              {(user?.name || user?.username || '我').slice(0, 1)}
+            </AvatarFallback>
           </Avatar>
 
-          <div className="relative flex-grow">
+          <div className="min-w-0 flex-grow">
             <Input
               type="text"
               placeholder="标题（可选）"
@@ -352,45 +668,70 @@ export default function CreatePostForm({
               className="mb-2 h-auto rounded-none border-0 border-b px-1 py-1.5 shadow-none focus-visible:border-primary focus-visible:ring-0 focus-visible:ring-offset-0"
             />
 
-            <Textarea
-              ref={textareaRef}
-              placeholder="分享你的游戏体验，输入 # 可关联话题"
-              value={content}
-              rows={4}
-              onChange={(event) => {
-                setContent(event.target.value);
-                setCursor(event.target.selectionStart || event.target.value.length);
-              }}
-              onClick={(event) => setCursor(event.currentTarget.selectionStart || 0)}
-              onKeyUp={(event) => setCursor(event.currentTarget.selectionStart || 0)}
-              className="resize-none border-0 px-1 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-            />
-
-            {selectedTopics.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {selectedTopics.map((topic) => (
-                  <Badge key={topic._id} variant="secondary" className="gap-1 pr-1 text-xs">
-                    #{topic.name}
-                    <button
-                      type="button"
-                      className="rounded p-0.5 hover:bg-black/10"
-                      onClick={() => handleRemoveTopic(topic._id)}
-                      aria-label="移除话题"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
+            {!editorOpen ? (
+              <button
+                type="button"
+                onClick={() => setEditorOpen(true)}
+                className="w-full rounded-md border border-input bg-background px-3 py-3 text-left text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+              >
+                分享你的游戏体验，支持 Markdown、粘贴或拖拽图片
+              </button>
+            ) : (
+              <CommunityEditor
+                key={editorKey}
+                markdown={editorMarkdown}
+                onChange={(value) => setContent(value)}
+                onImageFile={handleImageFile}
+                onError={(message) =>
+                  toast({ title: '图片处理失败', description: message, variant: 'destructive' })
+                }
+                disabled={isSubmitting}
+              />
             )}
 
-            {suggestionVisible && (
-              <div className="mt-2 rounded-md border bg-background p-2 shadow-sm">
-                <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>话题联想：#{hashtagKeyword}</span>
-                  {isSuggestingTopic ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1">
+                <ImagePlus className="h-3.5 w-3.5" />
+                粘贴/拖拽图片，单张 ≤{Math.round(config.max_image_bytes / 1024 / 1024)}MB，最多 {config.max_images} 张
+              </span>
+              <span className={cn(imageCount > config.max_images && 'text-destructive')}>
+                {imageCount}/{config.max_images} 张
+              </span>
+              <span className={cn(content.length > config.max_content_chars && 'text-destructive')}>
+                {content.length}/{config.max_content_chars} 字
+              </span>
+            </div>
 
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {selectedTopics.map((topic) => (
+                <Badge key={topic._id} variant="secondary" className="gap-1 pr-1 text-xs">
+                  #{topic.name}
+                  <button
+                    type="button"
+                    className="rounded p-0.5 hover:bg-black/10"
+                    onClick={() => handleRemoveTopic(topic._id)}
+                    aria-label="移除话题"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+              <div className="relative flex items-center gap-1">
+                <HashIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={topicQuery}
+                  onChange={(event) => setTopicQuery(event.target.value)}
+                  placeholder="搜索或创建话题"
+                  className="h-7 w-40 px-1 text-xs"
+                />
+                {isSuggestingTopic ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                ) : null}
+              </div>
+            </div>
+
+            {topicQuery.trim() ? (
+              <div className="mt-2 rounded-md border bg-background p-2 shadow-sm">
                 {topicSuggestions.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {topicSuggestions.map((topic) => (
@@ -415,7 +756,7 @@ export default function CreatePostForm({
                       variant="outline"
                       className="h-7 px-2 text-xs"
                       disabled={isCreatingTopic}
-                      onClick={handleQuickCreateTopic}
+                      onClick={() => void handleQuickCreateTopic()}
                     >
                       {isCreatingTopic ? (
                         <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
@@ -427,7 +768,7 @@ export default function CreatePostForm({
                   </div>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -439,8 +780,14 @@ export default function CreatePostForm({
         )}
       >
         <div className="flex items-center text-xs text-muted-foreground">
-          <HashIcon className="mr-1 h-3.5 w-3.5" />
-          输入 # 即可搜索和关联话题
+          {config.auto_publish ? (
+            <span>发布后立即公开</span>
+          ) : (
+            <span className="inline-flex items-center gap-1">
+              <AlertCircle className="h-3.5 w-3.5" />
+              发布后进入审核，通过后公开
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -458,15 +805,21 @@ export default function CreatePostForm({
           ) : null}
           <Button
             size="sm"
-            onClick={handleSubmitPost}
+            onClick={() => void handleSubmitPost()}
             disabled={!content.trim() || isSubmitting}
             className="btn-interactive h-8"
           >
-            {isSubmitting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Send className="mr-1.5 h-4 w-4" />}
+            {isSubmitting ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="mr-1.5 h-4 w-4" />
+            )}
             {submitText}
           </Button>
         </div>
       </div>
+
+      {authOpen ? <AuthModal open={authOpen} onOpenChange={setAuthOpen} /> : null}
     </>
   );
 

@@ -22,6 +22,8 @@
 
 ## Runtime And Env
 
+- 游戏详情默认 SEO 标题固定为 `{name}下载_{name}安卓版APK下载-{site_name}`，默认描述不使用版本号或日期；人工 SEO 标题/描述仍拥有最高优先级并保持原样。新入库和管理员默认值由 `AC-interface` 生成，修改前后都要同步 `tests/seo-template.test.mjs`。
+
 - Copy from `.env.example`. Important defaults are `API_BASE_URL_DEV=http://127.0.0.1:9527`, `API_BASE_URL_PROD=https://api.hk.apks.cc`, `NEXT_PUBLIC_API_USE_PROXY=true`, `SITE_CONFIG_KEY=main`, and `HOME_DYNAMIC_COUNT=8`.
 - Dev and prod build artifacts are intentionally split: `.next-dev` for `pnpm dev`, `.next` for `pnpm build` and `pnpm start`. This is controlled by `next.config.ts` and `scripts/next-runner.mjs`.
 - If dev output gets stale, rerun with `CLEAN_NEXT_DEV_DIST=1 pnpm dev` to delete `.next-dev` first.
