@@ -1,4 +1,5 @@
 import { trackedApiFetch } from '@/lib/api';
+import { normalizeDownloadClickSource, type DownloadClickSource } from '@/lib/download-click-source';
 import { currentDownloadPagePath, normalizeDownloadPagePath } from '@/lib/download-path';
 import type { DownloadFailureReasonKind } from '@/lib/download-request';
 import { buildTrackingHeaders, getTrackingDeviceId } from '@/lib/tracking-headers';
@@ -31,6 +32,8 @@ import { buildTrackingHeaders, getTrackingDeviceId } from '@/lib/tracking-header
  * 统计侧按 `props.dedupe_key` 对齐三条事件。
  *
  * `path`（待决策 #140）= 发生点击/失败时的页面 pathname，让失败能按页面类别归因；
+ * `click_source`（待决策 #145）= 点击来自列表卡片（list）还是详情页（detail），
+ * 来源不明归 other；由调用点显式传，不从 URL 猜，缺省即 other。
  * `reason_kind`（同批 #144）把失败原因收敛成 http_status / timeout / network /
  * no_channel 四类，和 #131 的 `fail_reason` 事件共用同一套，不新增事件名。
  *
@@ -57,6 +60,8 @@ export interface DownloadClickInput {
   surface: DownloadClickSurface;
   /** 页面 pathname（待决策 #140）；不传时浏览器环境自动取当前页面。 */
   path?: string | null;
+  /** 点击来源（待决策 #145）：list / detail / other，缺省即 other。 */
+  source?: DownloadClickSource | null;
 }
 
 /** 去重键的纯函数形式：输入全部显式传入，便于单测固定访客与时间。 */
@@ -183,6 +188,7 @@ export function reportDownloadClick(input: DownloadClickInput): string | null {
       channel_id: String(input.channelId || '').trim() || undefined,
       props: {
         surface: input.surface,
+        click_source: normalizeDownloadClickSource(input.source),
         intent_stage: input.surface === 'detail_open' ? 'open' : 'terminal',
         ...(pagePath ? { path: pagePath } : {}),
         dedupe_key: dedupeKey,

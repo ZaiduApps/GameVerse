@@ -1,4 +1,5 @@
 import { trackedApiFetch } from '@/lib/api';
+import { normalizeDownloadClickSource, type DownloadClickSource } from '@/lib/download-click-source';
 import { currentDownloadPagePath, normalizeDownloadPagePath } from '@/lib/download-path';
 
 /**
@@ -43,6 +44,8 @@ export interface DownloadUrlRequest {
   dedupeKey?: string | null;
   /** 页面 pathname（待决策 #140）；不传时浏览器环境自动取当前页面。 */
   path?: string | null;
+  /** 点击来源（待决策 #145）：与 download_click 同值，随签发事件落库；缺省即 other。 */
+  source?: DownloadClickSource | null;
 }
 
 export type DownloadUrlResult =
@@ -82,6 +85,8 @@ export async function requestDownloadUrl(
         'Content-Type': 'application/json',
         // 来源位：让 interface 能把「弹窗直下」与「服务端直出 302」分开统计。
         'x-ac-surface': 'detail_dialog',
+        // 点击来源（待决策 #145）：list / detail / other，签发事件与点击事件同口径。
+        'x-ac-click-source': normalizeDownloadClickSource(input.source),
         ...(dedupeKey ? { 'x-ac-dedupe-key': dedupeKey } : {}),
         ...(pagePath ? { 'x-ac-path': pagePath } : {}),
       },

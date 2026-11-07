@@ -117,6 +117,8 @@ async function requestIssuedDownloadUrl(
         'content-type': 'application/json',
         // 来源位：区分「服务端直出」与弹窗/原生 App，统计上必须能拆开。
         'x-ac-surface': 'detail_ssr',
+        // 点击来源（待决策 #145）：这个 302 入口由详情页直链渲染，归 detail。
+        'x-ac-click-source': 'detail',
         // 页面路径：失败/签发事件按页面归因（待决策 #140）。
         ...(pagePath ? { 'x-ac-path': pagePath } : {}),
         // 真实访客 UA 转发给 interface：本请求的 UA 是 Next 的 fetch，不能用来判机器人。

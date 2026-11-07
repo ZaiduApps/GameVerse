@@ -148,8 +148,15 @@ export default function GameDownloadDialog({
     }
 
     // 用户真实点击了某个可直下渠道 → 客户端声明一次点击意图（服务端按 event_id 去重）。
-    // 不阻塞跳转：上报失败静默，下载可用性优先。
-    intentKey = reportDownloadClick({ appId, pkg, channelId, surface: 'detail_dialog' });
+    // 不阻塞跳转：上报失败静默，下载可用性优先。来源维度（#145）显式传 detail，
+    // 不按当前 URL 猜，免得分不清列表卡与详情页。
+    intentKey = reportDownloadClick({
+      appId,
+      pkg,
+      channelId,
+      surface: 'detail_dialog',
+      source: 'detail',
+    });
 
     setLoadingChannelId(channelId);
     setError(null);
@@ -162,6 +169,7 @@ export default function GameDownloadDialog({
         channelId,
         channelName,
         dedupeKey: intentKey,
+        source: 'detail',
       });
       if (result.ok) {
         window.open(result.url, '_blank');

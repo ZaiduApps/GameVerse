@@ -9,6 +9,10 @@ import {
   reportDownloadFailure,
 } from '../src/lib/download-click-tracking.ts';
 import {
+  DOWNLOAD_CLICK_SOURCES,
+  normalizeDownloadClickSource,
+} from '../src/lib/download-click-source.ts';
+import {
   currentDownloadPagePath,
   normalizeDownloadPagePath,
 } from '../src/lib/download-path.ts';
@@ -126,6 +130,8 @@ test('上报事件带 dedupe_key / schema_version / path，且重复点击仍生
   assert.equal(bodies[0].props.schema_version, DOWNLOAD_CLICK_SCHEMA_VERSION);
   assert.equal(bodies[0].props.surface, 'detail_dialog');
   assert.equal(bodies[0].props.path, '/app/com.demo.one');
+  // 来源维度（#145）：不传时按「来源不明」落 other，保证老调用点也有完整维度。
+  assert.equal(bodies[0].props.click_source, 'other');
   assert.equal(bodies[0].props.intent_stage, 'terminal');
   // 调用方拿到的键与事件里的键一致，才能继续传给签发与失败上报。
   assert.equal(first, bodies[0].props.dedupe_key);
@@ -133,6 +139,39 @@ test('上报事件带 dedupe_key / schema_version / path，且重复点击仍生
     bodies[0].props.dedupe_key,
     /^web-[^|]+\|\d{4}-\d{2}-\d{2}\|67f0a66d0b2f421bca0a0001\|detail_dialog$/,
   );
+});
+
+test('来源维度只收 list / detail / other，脏值归 other（#145）', () => {
+  assert.deepEqual([...DOWNLOAD_CLICK_SOURCES], ['list', 'detail', 'other']);
+  assert.equal(normalizeDownloadClickSource('list'), 'list');
+  assert.equal(normalizeDownloadClickSource(' detail '), 'detail');
+  assert.equal(normalizeDownloadClickSource('OTHER'), 'other');
+  assert.equal(normalizeDownloadClickSource(undefined), 'other');
+  assert.equal(normalizeDownloadClickSource('list_card'), 'other');
+  assert.equal(normalizeDownloadClickSource('/app/com.demo.one'), 'other');
+
+  const { bodies, restore } = withTrackingEnv('/app/com.demo.one');
+  try {
+    reportDownloadClick({
+      appId: '67f0a66d0b2f421bca0a0001',
+      pkg: 'com.demo.one',
+      surface: 'detail_dialog',
+      source: 'detail',
+    });
+    reportDownloadClick({
+      appId: '67f0a66d0b2f421bca0a0001',
+      pkg: 'com.demo.one',
+      surface: 'list_card',
+      source: 'list',
+    });
+  } finally {
+    restore();
+  }
+
+  assert.equal(bodies.length, 2);
+  assert.equal(bodies[0].props.click_source, 'detail');
+  assert.equal(bodies[1].props.click_source, 'list');
+  assert.equal(bodies[1].props.surface, 'list_card');
 });
 
 test('下载失败复用 fail_reason 事件，并带 pump、path、reason_kind 与同一 dedupe_key', () => {

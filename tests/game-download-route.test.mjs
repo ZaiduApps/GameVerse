@@ -273,6 +273,8 @@ test('route handler 与详情页接线符合派发单约束（源码级）', asy
   // 页面路径维度（#140）：SSR 下载入口也要把详情页 pathname 带给 interface。
   assert.match(routeSource, /'x-ac-path'/);
   assert.match(routeSource, /normalizeDownloadPagePath/);
+  // 来源维度（#145）：302 入口由详情页直链渲染，签发事件带 detail。
+  assert.match(routeSource, /'x-ac-click-source': 'detail'/);
   // 3 秒内失败可见（#140）：与弹窗共用同一个请求上限（2500ms + 渲染余量）。
   assert.match(routeSource, /const DOWNLOAD_API_TIMEOUT_MS = DOWNLOAD_REQUEST_TIMEOUT_MS/);
   assert.match(routeSource, /AbortController/);
@@ -284,11 +286,13 @@ test('route handler 与详情页接线符合派发单约束（源码级）', asy
   assert.doesNotMatch(viewSource, /GameDirectDownloadLinks/);
 
   // 客户端打点：渠道按钮上报 download_click，服务端不再代记
-  assert.match(dialogSource, /reportDownloadClick\(\{ appId, pkg, channelId, surface: 'detail_dialog' \}\)/);
+  assert.match(dialogSource, /reportDownloadClick\(\{[\s\S]*?surface: 'detail_dialog'[\s\S]*?source: 'detail'/);
   assert.match(dialogSource, /from '@\/lib\/game-download-channel'/);
   assert.match(dialogSource, /from '@\/lib\/download-request'/);
   assert.doesNotMatch(dialogSource, /const shouldGuideToApp = \(resource/);
   // 请求体与来源位在抽出的请求层：仍必须是弹窗来源位。
   assert.match(requestSource, /'x-ac-surface': 'detail_dialog'/);
+  // 来源维度（#145）在请求层下发，值来自调用点。
+  assert.match(requestSource, /'x-ac-click-source'/);
   assert.match(requestSource, /'\/game\/getAppDownload'/);
 });

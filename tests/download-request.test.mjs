@@ -39,6 +39,30 @@ test('成功时返回可下发的地址，并给请求设 3 秒上限', async ()
   assert.equal(calls[0].body.channel_id, input.channelId);
   // 老调用方不传 dedupeKey 时不发这个头，保持旧行为。
   assert.equal(calls[0].headers['x-ac-dedupe-key'], undefined);
+  // 来源维度（#145）：不传 source 时按「来源不明」发 other，而不是省略。
+  assert.equal(calls[0].headers['x-ac-click-source'], 'other');
+});
+
+test('来源维度随签发请求下发 x-ac-click-source（#145）', async () => {
+  const calls = [];
+  await requestDownloadUrl(
+    { ...input, source: 'detail' },
+    async (path, init) => {
+      calls.push({ path, headers: init.headers });
+      return reply({ code: 0, data: { url: 'https://cdn.example/a.apk' } });
+    },
+  );
+  assert.equal(calls[0].headers['x-ac-click-source'], 'detail');
+
+  await requestDownloadUrl(
+    { ...input, source: 'not-a-source' },
+    async (path, init) => {
+      calls.push({ path, headers: init.headers });
+      return reply({ code: 0, data: { url: 'https://cdn.example/a.apk' } });
+    },
+  );
+  // 自由文本不落到请求头里。
+  assert.equal(calls[1].headers['x-ac-click-source'], 'other');
 });
 
 test('带 dedupeKey 时下发 x-ac-dedupe-key，供服务端关联点击与签发', async () => {

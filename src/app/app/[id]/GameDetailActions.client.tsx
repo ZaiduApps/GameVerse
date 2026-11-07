@@ -167,7 +167,8 @@ export default function GameDetailActions({
     if (primaryActionKind === 'app-guide') setAppGuideOpen(true);
     else {
       // 老板 2026-10-25 定口径：「获取游戏」按钮也算一次 download_click（surface=detail_open）。
-      reportDownloadClick({ appId: game._id, pkg: game.pkg, surface: 'detail_open' });
+      // 来源维度（#145）显式传 detail：这一处只发生在详情页。
+      reportDownloadClick({ appId: game._id, pkg: game.pkg, surface: 'detail_open', source: 'detail' });
       setDownloadOpen(true);
     }
   }, [primaryActionKind, game._id, game.pkg]);
