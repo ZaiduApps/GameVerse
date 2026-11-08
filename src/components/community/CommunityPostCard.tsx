@@ -22,6 +22,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { trackedApiFetch } from '@/lib/api';
+import {
+  buildCommunityPostHref,
+  type CommunityEntryAction,
+} from '@/lib/community-entry';
+import { reportCommunityLinkClick } from '@/lib/link-click-tracking';
 import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
 import { getCommunityAuthorProfileHref } from '@/lib/community-profile';
 import { useRouter } from 'next/navigation';
@@ -34,6 +39,16 @@ interface CommunityPostCardProps {
   onDelete?: (post: CommunityPost) => void;
   onHide?: (post: CommunityPost) => void;
   onOpenPost?: (postId: string) => void;
+  /**
+   * 来源归因（提案 2026-11-08 §1.4）：给了就把 from/pkg/topic_slug 带到帖子 URL 上，
+   * 并在点击时上报 link_click.entry_action；不给则保持原有跳转与 URL。
+   */
+  linkTracking?: {
+    entryAction: CommunityEntryAction;
+    from: string;
+    pkg?: string | null;
+    topicSlug?: string | null;
+  } | null;
 }
 
 const BOOKMARK_STORAGE_KEY = 'community:bookmarked-posts:v1';
@@ -159,6 +174,7 @@ export default function CommunityPostCard({
   onDelete,
   onHide,
   onOpenPost,
+  linkTracking,
 }: CommunityPostCardProps) {
   const router = useRouter();
   const { token, isAuthenticated } = useAuth();
@@ -186,10 +202,26 @@ export default function CommunityPostCard({
   const relatedAppPrimaryTag =
     relatedApp?.regionTag || relatedApp?.tags?.[0] || (relatedApp?.pkg ? '国际服' : '');
   const postId = String(post.id || '').trim();
-  const postHref = postId ? `/community/post/${encodeURIComponent(postId)}` : '/community';
+  const postBaseHref = buildCommunityPostHref(postId) || '/community';
+  const postHref = postId
+    ? buildCommunityPostHref(postId, {
+        from: linkTracking?.from || '',
+        pkg: linkTracking?.pkg,
+        topicSlug: linkTracking?.topicSlug,
+      })
+    : postBaseHref;
   const authorProfileHref = getCommunityAuthorProfileHref(post);
   const handleOpenPost = () => {
     if (!postId) return;
+    if (linkTracking) {
+      reportCommunityLinkClick({
+        entryAction: linkTracking.entryAction,
+        from: linkTracking.from,
+        to: postBaseHref,
+        pkg: linkTracking.pkg,
+        topicSlug: linkTracking.topicSlug,
+      });
+    }
     onOpenPost?.(postId);
   };
 

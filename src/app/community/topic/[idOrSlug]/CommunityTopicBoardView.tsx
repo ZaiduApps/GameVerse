@@ -54,6 +54,8 @@ import {
   type CommunityTopicItem,
   unfollowTopic,
 } from '@/lib/community-api';
+import { buildCommunityPostHref } from '@/lib/community-entry';
+import { reportCommunityLinkClick } from '@/lib/link-click-tracking';
 import type { CommunityPost } from '@/types';
 import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
 import { ArrowLeft, Hash, Loader2, Megaphone, MoreHorizontal, PenSquare, Share2, Users } from 'lucide-react';
@@ -603,6 +605,12 @@ export default function CommunityTopicBoardView({
 
     const { announcementPosts, regularPosts } = buildAnnouncementPosts(posts);
 
+    // 话题页 → 帖子详情的归因参数：落地页据 from/pkg/topic_slug 生成 traffic_class。
+    const topicPkg = String(topic?.app_info?.pkg || '').trim() || undefined;
+    const topicSlug = String(topic?.slug || topicId || '').trim() || undefined;
+    const buildPostHref = (postId: string, from: string) =>
+      buildCommunityPostHref(postId, { from, pkg: topicPkg, topicSlug }) || '/community';
+
     return (
       <div className="space-y-4">
         {announcementPosts.length ? (
@@ -619,10 +627,24 @@ export default function CommunityTopicBoardView({
                 const postId = String(post.id || '').trim();
                 const isPinned =
                   postId && postId === String(topic?.pinned_post_id || '').trim();
+                const postPath = buildCommunityPostHref(postId);
+                const postHref = buildPostHref(postId, 'topic_announcement');
+                const handleAnnouncementClick = () => {
+                  if (!postPath) return;
+                  reportCommunityLinkClick({
+                    entryAction: 'topic_announcement_cta',
+                    from: 'topic_announcement',
+                    to: postPath,
+                    pkg: topicPkg,
+                    topicSlug,
+                  });
+                };
                 return (
                   <Link
                     key={`topic-announcement-${postId}`}
-                    href={`/community/post/${postId}`}
+                    href={postHref}
+                    onClick={handleAnnouncementClick}
+                    onAuxClick={handleAnnouncementClick}
                     data-acbox-action="topic_announcement_click"
                     data-acbox-label={extractAnnouncementText(post)}
                     className="flex items-center gap-2 rounded-md bg-background px-3 py-2 text-sm shadow-sm transition-colors hover:bg-primary/5"
@@ -655,6 +677,12 @@ export default function CommunityTopicBoardView({
                 moderationBusy={moderationPostId === String(post.id || '').trim()}
                 onHide={handleHidePost}
                 onDelete={handleDeletePost}
+                linkTracking={{
+                  entryAction: 'topic_post_click',
+                  from: 'topic_board',
+                  pkg: topicPkg,
+                  topicSlug,
+                }}
               />
             );
           })

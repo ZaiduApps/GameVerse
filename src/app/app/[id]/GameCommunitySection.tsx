@@ -1,3 +1,4 @@
+import { buildGameTopicHref, topicSlugFromPkg } from '@/lib/community-entry';
 import { getCommunityPostPreviewText } from '@/lib/community-post-preview';
 import { resolveGameName } from '@/lib/game-display-name';
 import { getCommunityPostsByGame } from '@/lib/community-api';
@@ -80,7 +81,22 @@ export default async function GameCommunitySection({ game }: GameCommunitySectio
   }
 
   // 卡片外壳与标题行统一由 GameCommunityFeed 渲染：排序切换和「进入完整专区」要和标题同处一行。
-  return <GameCommunityFeed gameName={resolveGameName(game)} latest={latest} hot={hot.length > 0 ? hot : latest} />;
+  const gameName = resolveGameName(game);
+  const topicSlug = topicSlugFromPkg(game.pkg);
+  const communityHref =
+    buildGameTopicHref(game.pkg, { from: 'detail_section' }) ||
+    '/community/topics?q=' + encodeURIComponent(gameName);
+
+  return (
+    <GameCommunityFeed
+      gameName={gameName}
+      latest={latest}
+      hot={hot.length > 0 ? hot : latest}
+      pkg={game.pkg || undefined}
+      topicSlug={topicSlug || undefined}
+      communityHref={communityHref}
+    />
+  );
 }
 
 export function GameCommunitySkeleton() {

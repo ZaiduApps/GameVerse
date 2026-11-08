@@ -32,3 +32,53 @@ test('其它页面不带 pkg/post_id，UTM 照常进 props', () => {
   assert.equal(props.utm_medium, 'cpc');
   assert.equal(props.referer, 'https://example.com');
 });
+
+test('带站内入口参数的话题页：透传 from/pkg/topic_slug 并归为 internal_entry', () => {
+  const props = buildScreenViewProps(
+    '/community/topic/game-com-tencent-ig',
+    '?from=detail_tab&pkg=com.tencent.ig&topic_slug=game-com-tencent-ig',
+    '',
+  );
+  assert.equal(props.route_template, '/community/topic/[idOrSlug]');
+  assert.equal(props.from, 'detail_tab');
+  assert.equal(props.pkg, 'com.tencent.ig');
+  assert.equal(props.topic_slug, 'game-com-tencent-ig');
+  assert.equal(props.traffic_class, 'internal_entry');
+});
+
+test('空入口参数 + 站外 referer：natural_external', () => {
+  const props = buildScreenViewProps(
+    '/community/topic/game-com-tencent-ig',
+    '',
+    'https://www.bing.com/search?q=pubg',
+  );
+  assert.equal(props.traffic_class, 'natural_external');
+  // 没有查询参数时，话题 slug 从路径补，审计仍能按话题聚合。
+  assert.equal(props.topic_slug, 'game-com-tencent-ig');
+});
+
+test('空 referer 只能记 unknown，不能冒充自然流量', () => {
+  const props = buildScreenViewProps('/community/topic/game-com-tencent-ig', '', '');
+  assert.equal(props.traffic_class, 'unknown');
+
+  const malformed = buildScreenViewProps(
+    '/community/topic/game-com-tencent-ig',
+    '',
+    'not a url',
+  );
+  assert.equal(malformed.traffic_class, 'unknown');
+});
+
+test('同站 referer 但无入口参数：internal_entry', () => {
+  for (const referer of ['https://apks.cc/community', 'https://m.apks.cc/community/topics']) {
+    const props = buildScreenViewProps('/community/topic/game-com-tencent-ig', '', referer);
+    assert.equal(props.traffic_class, 'internal_entry', referer);
+  }
+});
+
+test('详情页路径推导的 pkg 不算入口参数，traffic_class 只看查询与 referer', () => {
+  const props = buildScreenViewProps('/app/com.tencent.ig', '', '');
+  assert.equal(props.pkg, 'com.tencent.ig');
+  assert.equal(props.from, undefined);
+  assert.equal(props.traffic_class, 'unknown');
+});

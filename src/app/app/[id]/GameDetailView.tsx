@@ -8,6 +8,7 @@ import GameFaqSection from '@/components/game-detail/GameFaqSection';
 import InstallTroubleshootingDialog from '@/components/install-troubleshooting-dialog';
 import { buildResourceChecksumItems } from '@/lib/game-resource-signature';
 import { buildGameVariantRows, type GameVariantRow } from '@/lib/game-detail-variants';
+import { buildGameTopicHref, topicSlugFromPkg } from '@/lib/community-entry';
 import { normalizeGameFaqItems } from '@/lib/game-faq';
 import { resolveGameName } from '@/lib/game-display-name';
 import { isWebGameType } from '@/lib/game-resource-type';
@@ -22,6 +23,7 @@ import DetailSection from './GameDetailSection';
 import GameDetailActions from './GameDetailActions.client';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import GameDetailMobileTabs from './GameDetailMobileTabs.client';
+import GameTopicEntryLink from './GameTopicEntryLink.client';
 import GameHeroArtwork from './GameHeroArtwork.client';
 import GameHeroVideo from './GameHeroVideo.client';
 import GameScreenshotGallery from './GameScreenshotGallery.client';
@@ -363,6 +365,12 @@ function SimilarGamesCard({ items }: { items: ReturnType<typeof buildSimilarGame
 export default function GameDetailView({ gameData, recommendedGames, relatedNews, snapshotSavedAt }: GameDetailViewProps) {
   const game = gameData.app;
   const displayName = resolveGameName(game);
+  // 固定游戏话题：社区入口直达话题页，不再落到 /community/topics?q= 搜索页（提案 2026-11-08 B 档）。
+  // 包名生成不出 slug 时回落到搜索页，保证链接始终可用。
+  const communityTopicSlug = topicSlugFromPkg(game.pkg);
+  const communitySearchHref = '/community/topics?q=' + encodeURIComponent(displayName);
+  const guideCommunityHref =
+    buildGameTopicHref(game.pkg, { from: 'detail_guide' }) || communitySearchHref;
   const storedAliases = (
     game.seo as (typeof game.seo & { aliases?: string[] | null }) | undefined
   )?.aliases;
@@ -603,7 +611,12 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
         </div>
       </section>
 
-      <GameDetailMobileTabs reviewCountLabel={reviewCountLabel} />
+      <GameDetailMobileTabs
+        reviewCountLabel={reviewCountLabel}
+        communityHref={buildGameTopicHref(game.pkg, { from: 'detail_tab' }) || undefined}
+        pkg={game.pkg || undefined}
+        topicSlug={communityTopicSlug || undefined}
+      />
 
       {/* 主体：左列内容 8 / 右列侧栏 4（lg 及以上），移动端单列堆叠 */}
       <div data-stitch="main" className={cn('relative z-10 mx-auto max-w-7xl px-4 pb-28 sm:px-6 lg:px-16 lg:pb-16 2xl:px-20', hasDetailAnnouncements ? 'pt-5 lg:pt-8' : 'pt-3 lg:pt-8')}>
@@ -742,13 +755,23 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
               title="攻略指南与常见问题"
               hint={GUIDE_SECTION_HINT}
               action={
-                <Link
-                  href={'/community/topics?q=' + encodeURIComponent(resolveGameName(game))}
+                <GameTopicEntryLink
+                  href={guideCommunityHref}
                   className="inline-flex items-center gap-1 text-xs font-semibold text-primary transition-colors [@media(hover:hover)]:hover:underline"
+                  tracking={
+                    communityTopicSlug
+                      ? {
+                          entryAction: 'detail_topic_cta',
+                          from: 'detail_guide',
+                          pkg: game.pkg,
+                          topicSlug: communityTopicSlug,
+                        }
+                      : null
+                  }
                 >
                   社区攻略讨论
                   <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-                </Link>
+                </GameTopicEntryLink>
               }
               items={faqItems}
               intro={isWebGame ? undefined : <InstallationGuide installSteps={buildInstallSteps(game)} riskNotes={buildRiskNotes(game)} />}

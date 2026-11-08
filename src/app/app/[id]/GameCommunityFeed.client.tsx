@@ -6,7 +6,12 @@ import { ChevronRight, Eye, MessageSquare, ThumbsUp } from 'lucide-react';
 import { useState } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  buildCommunityPostHref,
+  toTrackingTarget,
+} from '@/lib/community-entry';
 import { getPreviewImageUrl } from '@/lib/image-preview';
+import { reportCommunityLinkClick } from '@/lib/link-click-tracking';
 import { cn } from '@/lib/utils';
 import GameDetailSection from './GameDetailSection';
 import { formatCompactCount, type CommunityFeedItem } from './game-detail-presenter';
@@ -15,6 +20,10 @@ interface GameCommunityFeedProps {
   gameName: string;
   latest: CommunityFeedItem[];
   hot: CommunityFeedItem[];
+  pkg?: string;
+  topicSlug?: string;
+  /** 固定游戏话题 URL；生成不出 slug 时是搜索页兜底。 */
+  communityHref: string;
 }
 
 const SORT_OPTIONS = [
@@ -60,9 +69,27 @@ function SortToggle({
   );
 }
 
-export default function GameCommunityFeed({ gameName, latest, hot }: GameCommunityFeedProps) {
+export default function GameCommunityFeed({
+  gameName,
+  latest,
+  hot,
+  pkg,
+  topicSlug,
+  communityHref,
+}: GameCommunityFeedProps) {
   const [sort, setSort] = useState<'latest' | 'hot'>('latest');
   const posts = sort === 'hot' ? hot : latest;
+
+  const handleSectionEntryClick = () => {
+    if (!topicSlug) return;
+    reportCommunityLinkClick({
+      entryAction: 'detail_topic_cta',
+      from: 'detail_section',
+      to: toTrackingTarget(communityHref),
+      pkg,
+      topicSlug,
+    });
+  };
 
   return (
     <GameDetailSection
@@ -73,8 +100,10 @@ export default function GameCommunityFeed({ gameName, latest, hot }: GameCommuni
           {/* 视觉稿是静态图，没有排序入口；保留既有「最新/热门」能力，PC 端收敛到标题行，不做第二层小标题。 */}
           <SortToggle className="hidden lg:inline-flex" gameName={gameName} sort={sort} onSortChange={setSort} />
           <Link
-            href={'/community/topics?q=' + encodeURIComponent(gameName)}
+            href={communityHref}
             prefetch={false}
+            onClick={handleSectionEntryClick}
+            onAuxClick={handleSectionEntryClick}
             className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary transition-colors [@media(hover:hover)]:hover:underline"
           >
             进入完整专区
@@ -88,7 +117,15 @@ export default function GameCommunityFeed({ gameName, latest, hot }: GameCommuni
       </div>
       <div className="space-y-2.5 lg:space-y-3">
         {posts.length > 0 ? (
-          posts.map((post) => <CommunityPostRow key={sort + '-' + post.id} gameName={gameName} post={post} />)
+          posts.map((post) => (
+            <CommunityPostRow
+              key={sort + '-' + post.id}
+              gameName={gameName}
+              post={post}
+              pkg={pkg}
+              topicSlug={topicSlug}
+            />
+          ))
         ) : (
           <div className="rounded-xl border border-[#abadae]/15 bg-[#f7f8f9]/70 p-3 text-xs text-[#595c5d] lg:p-4 lg:text-sm dark:border-border/45 dark:bg-card/50 dark:text-muted-foreground">
             暂无关联社区动态。
@@ -100,8 +137,33 @@ export default function GameCommunityFeed({ gameName, latest, hot }: GameCommuni
 }
 
 // 单条帖子：移动端紧凑横排（64×64 缩略图），PC 端按视觉稿放大（192×112 缩略图 + 摘要 + 阅读全文）。
-function CommunityPostRow({ post, gameName }: { post: CommunityFeedItem; gameName: string }) {
-  const href = '/community/post/' + encodeURIComponent(post.id);
+function CommunityPostRow({
+  post,
+  gameName,
+  pkg,
+  topicSlug,
+}: {
+  post: CommunityFeedItem;
+  gameName: string;
+  pkg?: string;
+  topicSlug?: string;
+}) {
+  const postPath = buildCommunityPostHref(post.id);
+  const href = buildCommunityPostHref(post.id, {
+    from: 'detail_section',
+    pkg,
+    topicSlug,
+  });
+  const handlePostClick = () => {
+    if (!postPath) return;
+    reportCommunityLinkClick({
+      entryAction: 'detail_post_click',
+      from: 'detail_section',
+      to: postPath,
+      pkg,
+      topicSlug,
+    });
+  };
 
   return (
     <article className="group flex items-start gap-3 rounded-xl border border-[#abadae]/15 bg-[#f7f8f9]/70 p-3 transition-colors lg:gap-4 lg:p-4 dark:border-border/40 dark:bg-card/50 [@media(hover:hover)]:hover:bg-[#eff1f2]/80 dark:[@media(hover:hover)]:hover:bg-muted/60">
@@ -130,7 +192,12 @@ function CommunityPostRow({ post, gameName }: { post: CommunityFeedItem; gameNam
         </div>
 
         <h3 className="mt-1 line-clamp-2 text-xs font-bold leading-snug text-[#2c2f30] lg:mt-0 lg:line-clamp-1 lg:text-sm dark:text-foreground">
-          <Link href={href} className="transition-colors [@media(hover:hover)]:hover:text-primary">
+          <Link
+            href={href}
+            onClick={handlePostClick}
+            onAuxClick={handlePostClick}
+            className="transition-colors [@media(hover:hover)]:hover:text-primary"
+          >
             {post.title}
           </Link>
         </h3>
@@ -158,6 +225,8 @@ function CommunityPostRow({ post, gameName }: { post: CommunityFeedItem; gameNam
           </div>
           <Link
             href={href}
+            onClick={handlePostClick}
+            onAuxClick={handlePostClick}
             className="hidden shrink-0 text-xs font-semibold text-primary transition-colors lg:inline [@media(hover:hover)]:hover:underline"
           >
             阅读全文
@@ -168,6 +237,8 @@ function CommunityPostRow({ post, gameName }: { post: CommunityFeedItem; gameNam
       {post.imageUrl ? (
         <Link
           href={href}
+          onClick={handlePostClick}
+          onAuxClick={handlePostClick}
           aria-label={post.title || gameName}
           className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-[#abadae]/15 bg-[#eff1f2] lg:h-28 lg:w-32 xl:w-48 dark:border-border/40 dark:bg-muted/60"
         >

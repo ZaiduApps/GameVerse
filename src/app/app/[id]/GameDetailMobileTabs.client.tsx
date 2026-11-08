@@ -1,18 +1,36 @@
 'use client';
 
 // 移动端吸顶分类 Tab，对应视觉稿的「详情 / 评价 / 攻略指南 / 社区动态」。
-// 交互：点击平滑滚动到对应区块，滚动时按区块位置自动切换高亮。
+// 交互：前三个平滑滚动到对应区块（滚动时自动切换高亮）；社区动态直接进入固定游戏话题。
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
+import { toTrackingTarget } from '@/lib/community-entry';
+import { reportCommunityLinkClick } from '@/lib/link-click-tracking';
 import { cn } from '@/lib/utils';
 
 import { MOBILE_TABS } from './game-detail-mock-copy';
 
 // 吸顶偏移 = 顶部 56px 导航 + Tab 栏自身高度，滚动定位时用于抵消固定栏遮挡。
 const STICKY_OFFSET = 104;
+const COMMUNITY_SECTION_ID = 'game-detail-section-community';
 
-export default function GameDetailMobileTabs({ reviewCountLabel }: { reviewCountLabel?: string }) {
+interface GameDetailMobileTabsProps {
+  reviewCountLabel?: string;
+  /** 固定游戏话题 URL；有值时「社区动态」Tab 直接进话题页，不再只做页内滚动。 */
+  communityHref?: string;
+  pkg?: string;
+  topicSlug?: string;
+}
+
+export default function GameDetailMobileTabs({
+  reviewCountLabel,
+  communityHref,
+  pkg,
+  topicSlug,
+}: GameDetailMobileTabsProps) {
+  const router = useRouter();
   const [activeId, setActiveId] = useState<string>(MOBILE_TABS[0].id);
 
   useEffect(() => {
@@ -34,13 +52,31 @@ export default function GameDetailMobileTabs({ reviewCountLabel }: { reviewCount
     return () => window.removeEventListener('scroll', syncActive);
   }, []);
 
-  const handleSelect = useCallback((id: string) => {
-    const target = document.getElementById(id);
-    if (!target) return;
-    const top = target.getBoundingClientRect().top + window.scrollY - STICKY_OFFSET;
-    window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
-    setActiveId(id);
-  }, []);
+  const handleSelect = useCallback(
+    (id: string) => {
+      // 社区动态 Tab 走固定游戏话题（B 档最短路径），不再滚到页内区块。
+      if (id === COMMUNITY_SECTION_ID && communityHref) {
+        if (topicSlug) {
+          reportCommunityLinkClick({
+            entryAction: 'detail_tab',
+            from: 'detail_tab',
+            to: toTrackingTarget(communityHref),
+            pkg,
+            topicSlug,
+          });
+        }
+        router.push(communityHref);
+        return;
+      }
+
+      const target = document.getElementById(id);
+      if (!target) return;
+      const top = target.getBoundingClientRect().top + window.scrollY - STICKY_OFFSET;
+      window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
+      setActiveId(id);
+    },
+    [communityHref, pkg, router, topicSlug],
+  );
 
   return (
     <div className="sticky top-14 z-30 border-b border-border/40 bg-muted/95 px-4 pt-2 pb-1 backdrop-blur-md dark:bg-background/95 lg:hidden">
