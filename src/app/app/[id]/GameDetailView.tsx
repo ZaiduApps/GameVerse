@@ -28,6 +28,7 @@ import GameScreenshotGallery from './GameScreenshotGallery.client';
 import GameResourceChecksums from './GameResourceChecksums.client';
 import DownloadErrorNotice from './DownloadErrorNotice.client';
 import { BOX_DOWNLOAD_CARD, CERTIFICATION_CARD, GUIDE_SECTION_HINT } from './game-detail-mock-copy';
+import { applyLiveVersionHighlights } from './game-detail-highlights';
 import { resolveHeroVideo } from './game-detail-video';
 import {
   buildHeroMetrics,
@@ -393,7 +394,8 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   // 没有可播放的源就不渲染 PV 入口，避免出现点开必失败的按钮。
   const heroVideo = resolveHeroVideo(game);
   const facts = buildGameFactItems(game, { category: primaryCategory, resourceCount: resources.length, isWebGame });
-  const highlights = Array.isArray(game.seo?.highlights) ? game.seo.highlights.map(cleanText).filter(Boolean).slice(0, 8) : [];
+  // highlights 里可能存着写死的「当前版本 vX」；渲染时用实时版本覆盖，避免页面挂旧版本号。
+  const highlights = applyLiveVersionHighlights(game.seo?.highlights, game.version).slice(0, 8);
   const latestContent = cleanText(game.latest_content);
   const fullDescriptionHtml = formatDescriptionHtml(game.description || game.summary) || '暂无介绍';
   const hasLongDescription = toPlainTextWithBreaks(game.description || game.summary).length > 260;
