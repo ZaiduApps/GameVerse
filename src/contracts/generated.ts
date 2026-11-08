@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 a8e2e9bae4ddba8c5ac76b69305034251a25f13c74a4c38380b691603215685c
+ * @contract-sha256 e8c3bf07fe4e637eef7ce9a901e3f36ec087eb0bcd991ce70514fa9a2b229ae5
  */
 
 export interface paths {
@@ -9101,6 +9101,19 @@ export interface components {
             static_pages: {
                 [key: string]: unknown;
             };
+            /**
+             * @example {
+             *       "post_enabled": false,
+             *       "auto_publish": false,
+             *       "max_images": 9,
+             *       "max_image_bytes": 10485760,
+             *       "max_content_chars": 50000,
+             *       "rules": []
+             *     }
+             */
+            community: {
+                [key: string]: unknown;
+            };
             /** @example true */
             is_active: boolean;
             /** @example false */
@@ -10265,6 +10278,8 @@ export interface operations {
                 isActive?: boolean;
                 /** @description 是否封禁 */
                 isBlocked?: boolean;
+                /** @description 是否已验证邮箱（true=已认证，false=未认证） */
+                isVerified?: boolean;
                 /** @description 角色代码 */
                 role?: string;
                 /** @description 性别 */
