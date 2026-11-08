@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,8 +23,16 @@ import {
 } from '@/lib/game-review-api';
 import type { ApiResponse, User } from '@/types';
 import {
+  describeAuthFailure,
+  describeFetchException,
+  formatRateLimitMessage,
+  type AuthFailure,
+} from '@/lib/auth-errors';
+import {
+  AtSign,
   Calendar,
   Cake,
+  Camera,
   CheckCircle2,
   History,
   KeyRound,
@@ -52,6 +60,43 @@ function hasAdminRole(roles: User['roles'] | undefined): boolean {
     const name = String((role as { name?: unknown }).name || '').trim();
     return /(admin|administrator|super|ops|moderator|manage)/i.test(`${code} ${name}`);
   });
+}
+
+type ApiErrorPayload = {
+  code?: number;
+  message?: string;
+  retry_after_seconds?: unknown;
+  data?: unknown;
+} | null;
+
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+
+/**
+ * 限流秒数可能只在响应体里（`retry_after_seconds`），响应头缺失时用它兜底，
+ * 保证倒计时与提示文案和后台文案一致。
+ */
+function readBodyRetryAfterSeconds(payload: ApiErrorPayload): number {
+  if (!payload || typeof payload !== 'object') return 0;
+  const root = Number(payload.retry_after_seconds || 0);
+  const data = payload.data;
+  const nested =
+    data && typeof data === 'object'
+      ? Number((data as { retry_after_seconds?: unknown }).retry_after_seconds || 0)
+      : 0;
+  const seconds = Number.isFinite(root) && root > 0 ? root : nested;
+  return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : 0;
+}
+
+function describeProfileFailure(
+  response: Pick<Response, 'status' | 'headers'> | null,
+  payload: ApiErrorPayload,
+  fallback: string,
+): AuthFailure {
+  const failure = describeAuthFailure(response, payload, fallback);
+  if (failure.kind !== 'rate_limited' || failure.retryAfterSeconds) return failure;
+  const seconds = readBodyRetryAfterSeconds(payload);
+  if (seconds <= 0) return failure;
+  return { ...failure, message: formatRateLimitMessage(seconds), retryAfterSeconds: seconds };
 }
 
 export default function ProfilePage() {
@@ -85,6 +130,24 @@ export default function ProfilePage() {
   const [isSavingAdminEmailSwitch, setIsSavingAdminEmailSwitch] = useState(false);
   const isAdminUser = hasAdminRole(profile?.roles || authUser?.roles);
 
+  const [activeTab, setActiveTab] = useState('account');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const [changeEmail, setChangeEmail] = useState('');
+  const [changeEmailCode, setChangeEmailCode] = useState('');
+  const [changeEmailCountdown, setChangeEmailCountdown] = useState(0);
+  const [isSendingChangeEmailCode, setIsSendingChangeEmailCode] = useState(false);
+  const [isChangingEmail, setIsChangingEmail] = useState(false);
+
+  const notifyFailure = (title: string, failure: AuthFailure) => {
+    toast({
+      variant: 'destructive',
+      title: failure.kind === 'rate_limited' ? '操作太频繁' : title,
+      description: failure.message,
+    });
+  };
+
   useEffect(() => {
     const fetchDetailedProfile = async () => {
       if (!token) return;
@@ -106,10 +169,10 @@ export default function ProfilePage() {
           setEditProvince(json.data.province || '');
           setEditCity(json.data.city || '');
         } else {
-          toast({ variant: 'destructive', title: '获取资料失败', description: json.message || '请稍后重试' });
+          notifyFailure('获取资料失败', describeProfileFailure(res, json, '请稍后重试'));
         }
       } catch (error) {
-        toast({ variant: 'destructive', title: '网络请求失败', description: '请检查网络连接' });
+        notifyFailure('获取资料失败', describeFetchException(error, '请检查网络连接'));
       } finally {
         setIsFetchingProfile(false);
       }
@@ -155,6 +218,16 @@ export default function ProfilePage() {
     };
   }, [emailVerifyCountdown]);
 
+  useEffect(() => {
+    if (changeEmailCountdown <= 0) return;
+    const timer = window.setTimeout(() => {
+      setChangeEmailCountdown((current) => Math.max(0, current - 1));
+    }, 1000);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [changeEmailCountdown]);
+
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
@@ -184,12 +257,147 @@ export default function ProfilePage() {
         login({ user: json.data, token });
         toast({ title: '个人资料已更新' });
       } else {
-        toast({ variant: 'destructive', title: '更新失败', description: json.message || '请稍后重试' });
+        notifyFailure('更新失败', describeProfileFailure(res, json, '请稍后重试'));
       }
     } catch (error) {
-      toast({ variant: 'destructive', title: '网络请求失败' });
+      notifyFailure('更新失败', describeFetchException(error));
     } finally {
       setIsUpdatingProfile(false);
+    }
+  };
+
+  const handleAvatarFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.target;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file || !token) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ variant: 'destructive', title: '请选择图片文件' });
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      toast({ variant: 'destructive', title: '图片不能超过 5MB' });
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append('files', file);
+      formData.append('scene', 'image');
+      // 不手写 Content-Type：multipart 的 boundary 必须由浏览器补。
+      const uploadRes = await trackedApiFetch('/upload/public', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+        timeoutMs: 60_000,
+        logKey: 'profile.avatar-upload',
+      });
+      const uploadJson: ApiResponse<{ urls?: string[] }> = await uploadRes.json();
+      const avatarUrl = String(uploadJson.data?.urls?.[0] || '');
+      if (uploadJson.code !== 0 || !avatarUrl) {
+        notifyFailure('头像上传失败', describeProfileFailure(uploadRes, uploadJson, '上传失败，请稍后重试'));
+        return;
+      }
+
+      const res = await trackedApiFetch('/users/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ avatar: avatarUrl }),
+      });
+      const json: ApiResponse<User> = await res.json();
+      if (json.code === 0 && json.data) {
+        setProfile(json.data);
+        login({ user: json.data, token });
+        toast({ title: '头像已更新' });
+      } else {
+        notifyFailure('头像更新失败', describeProfileFailure(res, json, '请稍后重试'));
+      }
+    } catch (error) {
+      notifyFailure('头像上传失败', describeFetchException(error));
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleSendChangeEmailCode = async () => {
+    if (!token) return;
+    const nextEmail = changeEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+      toast({ variant: 'destructive', title: '请输入有效的新邮箱' });
+      return;
+    }
+
+    setIsSendingChangeEmailCode(true);
+    try {
+      const res = await trackedApiFetch('/auth/change-email/send-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email: nextEmail }),
+      });
+      const json = await res.json();
+      if (json.code === 0) {
+        setChangeEmailCountdown(60);
+        toast({ title: json.data?.message || json.message || '验证码已发送，请查收新邮箱' });
+      } else {
+        const failure = describeProfileFailure(res, json, '请稍后重试');
+        if (failure.retryAfterSeconds && failure.retryAfterSeconds > 0) {
+          setChangeEmailCountdown(failure.retryAfterSeconds);
+        }
+        notifyFailure('发送失败', failure);
+      }
+    } catch (error) {
+      notifyFailure('发送失败', describeFetchException(error));
+    } finally {
+      setIsSendingChangeEmailCode(false);
+    }
+  };
+
+  const handleChangeEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    const nextEmail = changeEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+      toast({ variant: 'destructive', title: '请输入有效的新邮箱' });
+      return;
+    }
+    if (!/^\d{6}$/.test(changeEmailCode.trim())) {
+      toast({ variant: 'destructive', title: '请输入 6 位邮箱验证码' });
+      return;
+    }
+
+    setIsChangingEmail(true);
+    try {
+      const res = await trackedApiFetch('/auth/change-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email: nextEmail, code: changeEmailCode.trim() }),
+      });
+      const json = await res.json();
+      if (json.code === 0 && json.data?.user) {
+        setProfile(json.data.user);
+        login({ user: json.data.user, token });
+        setChangeEmail('');
+        setChangeEmailCode('');
+        setChangeEmailCountdown(0);
+        toast({ title: json.data?.message || '邮箱更换成功' });
+      } else {
+        notifyFailure('邮箱更换失败', describeProfileFailure(res, json, '请稍后重试'));
+      }
+    } catch (error) {
+      notifyFailure('邮箱更换失败', describeFetchException(error));
+    } finally {
+      setIsChangingEmail(false);
     }
   };
 
@@ -226,10 +434,10 @@ export default function ProfilePage() {
         setConfirmPassword('');
         logout();
       } else {
-        toast({ variant: 'destructive', title: '修改失败', description: json.message || '请稍后重试' });
+        notifyFailure('修改失败', describeProfileFailure(res, json, '请稍后重试'));
       }
     } catch (error) {
-      toast({ variant: 'destructive', title: '网络请求失败' });
+      notifyFailure('修改失败', describeFetchException(error));
     } finally {
       setIsChangingPassword(false);
     }
@@ -252,14 +460,14 @@ export default function ProfilePage() {
         setEmailVerifyCountdown(json.data?.verified ? 0 : 60);
         toast({ title: json.data?.message || json.message || '验证码已发送，请查收邮件' });
       } else {
-        const retryAfter = Number(json.data?.retry_after_seconds || json.retry_after_seconds || 0);
-        if (retryAfter > 0) {
-          setEmailVerifyCountdown(retryAfter);
+        const failure = describeProfileFailure(res, json, '请稍后重试');
+        if (failure.retryAfterSeconds && failure.retryAfterSeconds > 0) {
+          setEmailVerifyCountdown(failure.retryAfterSeconds);
         }
-        toast({ variant: 'destructive', title: '发送失败', description: json.message || '请稍后重试' });
+        notifyFailure('发送失败', failure);
       }
-    } catch {
-      toast({ variant: 'destructive', title: '网络请求失败' });
+    } catch (error) {
+      notifyFailure('发送失败', describeFetchException(error));
     } finally {
       setIsSendingEmailVerifyCode(false);
     }
@@ -291,10 +499,10 @@ export default function ProfilePage() {
         setEmailVerifyCountdown(0);
         toast({ title: json.data?.message || '邮箱认证成功' });
       } else {
-        toast({ variant: 'destructive', title: '认证失败', description: json.message || '请稍后重试' });
+        notifyFailure('认证失败', describeProfileFailure(res, json, '请稍后重试'));
       }
-    } catch {
-      toast({ variant: 'destructive', title: '网络请求失败' });
+    } catch (error) {
+      notifyFailure('认证失败', describeFetchException(error));
     } finally {
       setIsVerifyingEmail(false);
     }
@@ -381,6 +589,7 @@ export default function ProfilePage() {
 
   const profileDisplayName = profile.name || profile.username || '社区用户';
   const profileHandle = profile.username ? `@${profile.username}` : '';
+  const profileRegion = [profile.country, profile.province, profile.city].filter(Boolean).join(' / ');
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 py-4 md:py-8 fade-in">
@@ -396,15 +605,57 @@ export default function ProfilePage() {
                 </AvatarFallback>
               </Avatar>
 
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => {
+                  void handleAvatarFileChange(event);
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                disabled={isUploadingAvatar}
+                onClick={() => avatarInputRef.current?.click()}
+                data-acbox-action="profile_avatar_upload"
+                data-acbox-label="更换头像"
+              >
+                {isUploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                更换头像
+              </Button>
+
               <div className="mt-4 space-y-1 text-center">
                 <h2 className="text-lg font-bold">{profileDisplayName}</h2>
-                <p className="text-sm text-muted-foreground">{profile.email}</p>
+                {profileHandle ? <p className="text-sm text-muted-foreground">{profileHandle}</p> : null}
+                <p className="break-all text-sm text-muted-foreground">{profile.email}</p>
               </div>
 
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
-                {profile.isVerified && (
+              <div className="mt-3 flex flex-wrap justify-center gap-2">
+                {profile.isVerified ? (
                   <Badge variant="secondary" className="gap-1 border-green-200 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                     <CheckCircle2 className="h-3 w-3" /> 已认证
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="outline"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setActiveTab('security')}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setActiveTab('security');
+                      }
+                    }}
+                    className="cursor-pointer gap-1 border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-300"
+                    data-acbox-action="profile_email_unverified_jump"
+                    data-acbox-label="去认证邮箱"
+                  >
+                    邮箱未认证，去认证
                   </Badge>
                 )}
                 <Badge variant="secondary" className="border-blue-200 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
@@ -415,11 +666,17 @@ export default function ProfilePage() {
               <Separator className="my-6" />
 
               <div className="w-full space-y-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2 text-muted-foreground">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="flex shrink-0 items-center gap-2 text-muted-foreground">
                     <History className="h-4 w-4" /> 登录次数
                   </span>
                   <span className="font-semibold">{profile.loginCount || 0}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="flex shrink-0 items-center gap-2 text-muted-foreground">
+                    <MapPin className="h-4 w-4" /> 地区
+                  </span>
+                  <span className="min-w-0 truncate text-right text-xs font-medium">{profileRegion || '未设置'}</span>
                 </div>
                 <div className="space-y-1">
                   <span className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -443,8 +700,8 @@ export default function ProfilePage() {
         </div>
 
         <div className="flex-1">
-          <Tabs defaultValue="account" className="w-full">
-            <TabsList className="mb-6 grid w-full grid-cols-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="mb-6 grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-6">
               <TabsTrigger
                 value="dashboard"
                 data-acbox-action="profile_tab_dashboard"
@@ -584,7 +841,7 @@ export default function ProfilePage() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="edit-name">姓名 / 显示名称</Label>
-                        <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="请输入你的姓名" />
+                        <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} maxLength={30} placeholder="请输入你的姓名" />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="edit-gender">性别</Label>
@@ -711,6 +968,64 @@ export default function ProfilePage() {
                         </div>
                       </form>
                     ) : null}
+                  </div>
+
+                  <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
+                    <div className="flex items-center gap-2">
+                      <AtSign className="h-4 w-4 text-primary" />
+                      <p className="font-medium">更换邮箱</p>
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      验证码会发送到新邮箱，验证通过后邮箱立即变更为已认证。
+                    </p>
+
+                    <form onSubmit={handleChangeEmail} className="mt-4 space-y-3">
+                      <div className="flex flex-col gap-3 sm:flex-row">
+                        <Input
+                          type="email"
+                          value={changeEmail}
+                          onChange={(e) => setChangeEmail(e.target.value)}
+                          className="flex-1"
+                          placeholder="输入新邮箱"
+                          autoComplete="email"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={isSendingChangeEmailCode || changeEmailCountdown > 0}
+                          onClick={() => {
+                            void handleSendChangeEmailCode();
+                          }}
+                          data-acbox-action="profile_change_email_send"
+                          data-acbox-label="发送更换邮箱验证码"
+                        >
+                          {isSendingChangeEmailCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          {changeEmailCountdown > 0 ? `${changeEmailCountdown}s` : '发送验证码'}
+                        </Button>
+                      </div>
+                      <div className="flex flex-col gap-3 sm:flex-row">
+                        <div className="relative flex-1">
+                          <KeyRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            value={changeEmailCode}
+                            onChange={(e) => setChangeEmailCode(e.target.value)}
+                            className="pl-9"
+                            inputMode="numeric"
+                            maxLength={6}
+                            placeholder="输入新邮箱收到的 6 位验证码"
+                          />
+                        </div>
+                        <Button
+                          type="submit"
+                          disabled={isChangingEmail}
+                          data-acbox-action="profile_change_email_submit"
+                          data-acbox-label="确认更换邮箱"
+                        >
+                          {isChangingEmail && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          确认更换
+                        </Button>
+                      </div>
+                    </form>
                   </div>
 
                   <form
