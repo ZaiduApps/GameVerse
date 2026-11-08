@@ -1,3 +1,5 @@
+import { isPlaceholderVersion } from '@/lib/game-version';
+
 const FALLBACK_SITE_URL = 'https://apks.cc';
 
 const DEFAULT_SITE_SHARE_IMAGE = '/opengraph-image.png';
@@ -170,14 +172,15 @@ const PURE_BUILD_NUMBER_VERSION = /^\d{6,}$/;
 
 /**
  * 模板版本号归一化：
+ * - 占位符（`VARY` / `VARY@<epoch>`）不是可读版本号，按空值处理；
  * - 纯数字构建号（Android versionCode，如 `160402020`）不是用户可读版本，丢弃；
  * - 去掉重复的 `v` 前缀，统一成 `v1.2.3` 风格（模板自带 `v` 时不会拼成 `vv1.2`）。
  */
 export function normalizeSeoTemplateVersion(input?: string | null): string {
   const raw = sanitizeSeoText(input);
-  if (!raw) return '';
+  if (!raw || isPlaceholderVersion(raw)) return '';
   const bare = raw.replace(/^[vV]+/, '').trim();
-  if (!bare || PURE_BUILD_NUMBER_VERSION.test(bare)) return '';
+  if (!bare || isPlaceholderVersion(bare) || PURE_BUILD_NUMBER_VERSION.test(bare)) return '';
   return `v${bare}`;
 }
 

@@ -18,6 +18,7 @@ import { reportDownloadClick } from '@/lib/download-click-tracking';
 import { buildFeedbackCommonFields, submitFeedbackTicket } from '@/lib/feedback';
 import { resolveGameName } from '@/lib/game-display-name';
 import { resolveGameSourceInfo } from '@/lib/game-source-link';
+import { resolveDisplayVersion } from '@/lib/game-version';
 import { getGamePrimaryActionKind, isWebGameType } from '@/lib/game-resource-type';
 import { cn } from '@/lib/utils';
 import type { ApiDownloadResource, ApiGameDetail, CardConfigItem } from '@/types';
@@ -146,7 +147,7 @@ export default function GameDetailActions({
           description: [
             '缺少资源：' + resolveGameName(game),
             '游戏包名：' + (game.pkg || '未提供'),
-            '当前版本：' + (game.version || '未提供'),
+            '当前版本：' + (resolveDisplayVersion(game.version) || '未提供'),
             '提交用户：' + (common.nickname || '游客'),
             '联系方式：' + (common.contact || '未提供'),
             '提交入口：Web /app/[id] 详情页催更',

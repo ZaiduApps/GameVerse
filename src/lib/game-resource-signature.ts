@@ -1,3 +1,5 @@
+import { resolveDisplayVersion } from '@/lib/game-version';
+
 import type { ApiDownloadResource } from '@/types';
 
 /**
@@ -52,7 +54,7 @@ export function buildResourceChecksumItems(
     items.push({
       resourceId: String(resource?._id || ''),
       channelName: String(resource?.channel?.name || '').trim() || '下载渠道',
-      version: String(resource?.version || '').trim(),
+      version: resolveDisplayVersion(resource?.version),
       signature,
       signatureShort: shortenResourceSignature(signature),
     });

@@ -1,5 +1,6 @@
 import { resolveGameName } from '@/lib/game-display-name';
 import { normalizeText } from '@/lib/seo';
+import { resolveDisplayVersion } from '@/lib/game-version';
 import { isWebGameType } from '@/lib/game-resource-type';
 import type { ApiDownloadResource, GameDetailData, GamePageSnapshot } from '@/types';
 
@@ -68,7 +69,7 @@ export function buildDetailJsonLd(input: DetailJsonLdInput): Record<string, unkn
     url: canonicalUrl,
     genre: genre || undefined,
     screenshot: screenshots.length > 0 ? screenshots : undefined,
-    softwareVersion: isWebGame ? undefined : normalizeText(game.version) || undefined,
+    softwareVersion: isWebGame ? undefined : resolveDisplayVersion(normalizeText(game.version)) || undefined,
     fileSize: isWebGame ? undefined : formatFileSize(game.file_size),
     datePublished: toIsoDate(game.release_at),
     dateModified: toIsoDate(game.latest_at),

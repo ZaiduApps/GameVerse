@@ -2,6 +2,7 @@ import DOMPurify, { type Config as SanitizeConfig } from 'isomorphic-dompurify';
 
 import { buildCategoryPath, resolveCategoryByName } from '@/lib/category-pages';
 import { resolveGameName } from '@/lib/game-display-name';
+import { resolveDisplayVersion } from '@/lib/game-version';
 import { buildRenderedMarkdownDocument } from '@/lib/utils';
 import type { CardConfigItem, GameDetailData } from '@/types';
 
@@ -343,7 +344,7 @@ export function buildGameFactItems(
 
   if (!options.isWebGame) {
     pushFact('包名', game.pkg);
-    pushFact('当前版本', game.version);
+    pushFact('当前版本', resolveDisplayVersion(game.version));
   }
   pushFact('更新日期', formatDateText(game.latest_at));
   if (!options.isWebGame) pushFact('安装包大小', formatBytes(game.file_size));

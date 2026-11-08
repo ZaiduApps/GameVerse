@@ -6,6 +6,8 @@
 
 import type { ApiGameDetail, ApiRecommendedGame, CardConfigItem, GameDetailData, GamePageSnapshot } from '@/types';
 
+import { resolveDisplayVersion } from '@/lib/game-version';
+
 import {
   HERO_IN_APP_PURCHASE_NOTE,
   HERO_PLATFORM_NOTE,
@@ -18,6 +20,7 @@ import {
   WHATS_NEW_FALLBACK,
   type MockResourceLink,
 } from './game-detail-mock-copy';
+
 import { cleanText, formatBytes, formatCompactCount, formatDateText, normalizeScore } from './game-detail-presenter';
 
 export interface TrustBadge {
@@ -159,7 +162,9 @@ export function buildLatestUpdate(
   game: GameDetailData['app'],
   latestContent: string,
 ): LatestUpdateView {
-  const versionLabel = game.version ? `版本 v${game.version}` : '版本信息待补充';
+  // 占位符（VARY / VARY@<epoch>）不是可读版本号，按缺失处理并复用既有兜底文案。
+  const version = resolveDisplayVersion(game.version);
+  const versionLabel = version ? `版本 v${version}` : '版本信息待补充';
   const updatedAt = formatDateText(game.latest_at);
   const meta = updatedAt !== '未知' ? `${versionLabel} · 更新于 ${updatedAt}` : versionLabel;
   const bullets = latestContent
@@ -236,7 +241,8 @@ export function buildRelatedPosts(
 // Hero 主按钮右侧的包体描述，例如 “v2.4 · 179.40 MB”。
 export function buildPrimaryActionMeta(game: Pick<ApiGameDetail, 'version' | 'file_size'>): string {
   const parts: string[] = [];
-  if (game.version) parts.push(`v${game.version}`);
+  const version = resolveDisplayVersion(game.version);
+  if (version) parts.push(`v${version}`);
   if (game.file_size) parts.push(formatBytes(game.file_size));
   return parts.join(' · ') || '版本信息待补充';
 }

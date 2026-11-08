@@ -11,6 +11,7 @@ import {
   normalizeAlbumGames,
 } from '@/lib/albums';
 import { resolveGameName } from '@/lib/game-display-name';
+import { resolveDisplayVersion } from '@/lib/game-version';
 import Breadcrumbs from '@/components/layout/Breadcrumbs';
 import { BREADCRUMB_ROOT } from '@/lib/breadcrumbs';
 import type { ApiAlbum, ApiGame } from '@/types';
@@ -210,10 +211,11 @@ function collectPrimaryTags(games: ApiGame[]): string[] {
 }
 
 function buildGameMetaLine(game: ApiGame): string {
+  const version = resolveDisplayVersion(normalizeText(game?.version));
   const parts = [
     normalizeText(game?.metadata?.region),
     normalizeText(game?.download_count_show) ? `${normalizeText(game.download_count_show)} 下载` : '',
-    normalizeText(game?.version) ? `v${normalizeText(game.version)}` : '',
+    version ? `v${version}` : '',
   ].filter(Boolean);
 
   return parts.join(' · ') || '详情页内查看完整信息';

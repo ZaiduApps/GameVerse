@@ -1,5 +1,6 @@
 import { formatFileSize } from '@/lib/game-detail-jsonld';
 import { resolveDownloadChannelId } from '@/lib/game-download-channel';
+import { resolveDisplayVersion } from '@/lib/game-version';
 import type { ApiDownloadResource } from '@/types';
 
 /**
@@ -35,6 +36,7 @@ export function buildGameVariantRows(
     if (!channelId || !channelName) continue;
     const version = String(resource?.version || '').trim();
     // 同渠道同版本只出一行；同渠道不同版本（多 ABI / 历史包）各自成行。
+    // 去重仍按原始值，展示时才把 VARY 占位符当空单元格。
     const dedupeKey = `${channelId}|${version}`;
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
@@ -42,7 +44,7 @@ export function buildGameVariantRows(
       key: dedupeKey,
       channelId,
       channelName,
-      version,
+      version: resolveDisplayVersion(version),
       sizeLabel: formatFileSize(resource?.size) || '',
       href: `/app/${encodeURIComponent(canonicalPkg)}/download/${encodeURIComponent(channelId)}`,
     });

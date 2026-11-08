@@ -1,4 +1,5 @@
 import { formatFileSize } from '@/lib/game-detail-jsonld';
+import { resolveDisplayVersion } from '@/lib/game-version';
 
 /**
  * 列表卡片「直下信息」（版本 / 包大小 / 更新时间 / 下载来源）的纯函数组装。
@@ -48,9 +49,9 @@ export function formatCardUpdateDate(value?: string | null): string {
 }
 
 export function buildGameCardMeta(input: GameCardMetaInput): GameCardMeta {
-  const version = String(input?.version ?? '').trim();
+  const version = resolveDisplayVersion(input?.version);
   return {
-    // 库里混有「因设备而异」这类非版本号文本，卡片只认「数字开头」的版本串。
+    // 库里混有 VARY 占位符与「因设备而异」这类非版本号文本，卡片只认「数字开头」的版本串。
     version: /^\d[\w.\-+ ]{0,29}$/.test(version) ? version : '',
     // 格式化失败（负数/非数值）返回 undefined，按缺失处理。
     sizeText: formatFileSize(Number(input?.fileSize) || undefined) || '',

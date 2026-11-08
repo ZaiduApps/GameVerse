@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Download, Star } from 'lucide-react';
 
 import { resolveGameName } from '@/lib/game-display-name';
+import { resolveDisplayVersion } from '@/lib/game-version';
 import type { ApiGame } from '@/types';
 
 const PAGE_SIZE_DESKTOP = 6;
@@ -105,7 +106,7 @@ export default function RecentUpdatesSection({
 
   const renderCards = (items: ApiGame[]) => (
     items.map((game) => {
-      const version = String(game.version || '').trim();
+      const version = resolveDisplayVersion(game.version);
       const updateTime = formatRelativeTime(game.latest_at);
       const region = String(game.metadata?.region || '').trim();
       const fileSize = String(game.file_size_text || '').trim() || formatBytes(game.file_size);
