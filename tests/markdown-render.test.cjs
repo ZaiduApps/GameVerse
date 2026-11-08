@@ -81,6 +81,30 @@ function loadGameFaqUtils() {
   return moduleObj.exports;
 }
 
+// game-version.ts 是纯函数且没有 import，转译后在沙箱里直接求值；
+// seo.ts 的占位符判定就来自这里，漏掉它会让整个 markdown 测试集加载失败。
+function loadGameVersionUtils() {
+  const filePath = path.join(process.cwd(), 'src/lib/game-version.ts');
+  const source = fs.readFileSync(filePath, 'utf8');
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2020,
+    },
+  }).outputText;
+
+  const moduleObj = { exports: {} };
+  const sandbox = {
+    module: moduleObj,
+    exports: moduleObj.exports,
+    require,
+    process,
+  };
+
+  vm.runInNewContext(compiled, sandbox);
+  return moduleObj.exports;
+}
+
 function loadSeoUtils() {
   const filePath = path.join(process.cwd(), 'src/lib/seo.ts');
   const source = fs.readFileSync(filePath, 'utf8');
@@ -95,7 +119,10 @@ function loadSeoUtils() {
   const sandbox = {
     module: moduleObj,
     exports: moduleObj.exports,
-    require,
+    require: (id) => {
+      if (id === '@/lib/game-version') return loadGameVersionUtils();
+      return require(id);
+    },
     process,
   };
 
