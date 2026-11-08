@@ -168,6 +168,8 @@ interface CreateCommunityPostParams {
   source?: string;
   topicIds?: string[];
   topicNames?: string[];
+  /** 客户端幂等键：异步发布重试时避免重复建帖 */
+  clientRequestId?: string;
 }
 
 interface UpdateCommunityPostParams extends CreateCommunityPostParams {
@@ -1505,6 +1507,9 @@ export async function createCommunityPost(
   ok: boolean;
   message: string;
   postId?: string;
+  reviewStatus?: string;
+  status?: number;
+  statusCode?: number;
 }> {
   const token = String(params.token || '').trim();
   const content = String(params.content || '').trim();
@@ -1533,6 +1538,7 @@ export async function createCommunityPost(
               .map((name) => String(name || '').trim())
               .filter(Boolean)
           : [],
+        client_request_id: String(params.clientRequestId || '').trim() || undefined,
       }),
     });
 
@@ -1541,6 +1547,7 @@ export async function createCommunityPost(
       return {
         ok: false,
         message: parseApiResponseMessage(json, '发布失败'),
+        statusCode: res.status,
       };
     }
 
@@ -1548,6 +1555,8 @@ export async function createCommunityPost(
       ok: true,
       message: parseApiResponseMessage(json, '发布成功'),
       postId: String(json?.data?._id || '').trim() || undefined,
+      reviewStatus: String(json?.data?.review_status || '').trim() || undefined,
+      status: Number(json?.data?.status ?? NaN),
     };
   } catch {
     return { ok: false, message: '发布失败，请稍后重试' };
