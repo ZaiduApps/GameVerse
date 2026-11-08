@@ -24,6 +24,7 @@ test('静态路由原样返回', () => {
     '/profile/center/reservations',
     '/profile/center/topics',
     '/submit-resource',
+    '/help/install',
     '/about',
     '/contact',
     '/terms',

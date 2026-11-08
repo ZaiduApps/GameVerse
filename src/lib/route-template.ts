@@ -21,6 +21,7 @@ const STATIC_ROUTES = new Set<string>([
   '/profile/center/reservations',
   '/profile/center/topics',
   '/submit-resource',
+  '/help/install',
   '/about',
   '/contact',
   '/terms',

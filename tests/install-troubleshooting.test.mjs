@@ -63,6 +63,16 @@ test('「无法安装？」入口渲染三选一症状，初始态不展示建�
   assert.equal((html.match(/data-acbox-action="install_help_option"/g) || []).length, 3);
   assert.equal((html.match(/aria-pressed="false"/g) || []).length, 3);
 
+  // 每项都要给出完整排障页的落点，锚点必须与 /help/install 的章节 id 对齐。
+  const moreLinks = [...html.matchAll(/data-href="([^"]*\/help\/install#[^"]*)"/g)].map(
+    (match) => match[1],
+  );
+  assert.deepEqual(moreLinks, [
+    '/help/install#parse_error',
+    '/help/install#incompatible',
+    '/help/install#parse_error',
+  ]);
+
   for (const { advice } of OPTIONS) {
     assert.doesNotMatch(html, new RegExp(advice));
   }
