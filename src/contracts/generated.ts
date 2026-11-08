@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 c1c4f283b9e040ab321e38877b3dac0478b881b248de6824cc9c733b1853af96
+ * @contract-sha256 a8e2e9bae4ddba8c5ac76b69305034251a25f13c74a4c38380b691603215685c
  */
 
 export interface paths {
@@ -134,6 +134,40 @@ export interface paths {
         put?: never;
         /** 认证当前用户邮箱 */
         post: operations["AuthController_verifyCurrentUserEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/change-email/send-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 发送更换邮箱验证码（发到新邮箱） */
+        post: operations["AuthController_sendChangeEmailVerificationCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/change-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 校验新邮箱验证码并更换邮箱 */
+        post: operations["AuthController_changeEmail"];
         delete?: never;
         options?: never;
         head?: never;
@@ -762,6 +796,23 @@ export interface paths {
         put?: never;
         /** 解除账号封禁 */
         post: operations["UserController_unblockUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/send-verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 给用户当前邮箱发送认证验证码 */
+        post: operations["UserController_sendVerifyEmail"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7890,6 +7941,16 @@ export interface components {
             /** @description 6 位验证码 */
             code: string;
         };
+        SendChangeEmailCodeDto: {
+            /** @description 新邮箱 */
+            email: string;
+        };
+        ChangeEmailDto: {
+            /** @description 新邮箱 */
+            email: string;
+            /** @description 6 位验证码 */
+            code: string;
+        };
         LogoutDto: {
             /** @description 登录时下发的 refresh_token，传入则一并作废 */
             refresh_token?: string;
@@ -9240,6 +9301,10 @@ export interface components {
             execution_mode?: "internal" | "remote";
             /** @description 强制重跑：该版本已有终态任务时复活它重新下载；任务仍在队列/执行中则拒绝，已被忽略或被新版本取代的终态任务不会被复活 */
             force?: boolean;
+            /** @description 显式目标版本：仅用于 Google Play 返回 VARY 的分轨包，且调用方已人工核实真实 versionName。必须与 evidence_url 同时出现，一次只允许一个 pkg；普通包会被服务端拒绝。 */
+            target_version?: string;
+            /** @description 目标版本的证据 URL：仅接受可信商店（Google Play / APKPure）且页面必须包含该包名。与 target_version 成对出现，只用于人工核实与审计，不改变下载来源策略。 */
+            evidence_url?: string;
         };
         UpsertApkeepAccountDto: {
             account_id: string;
@@ -9926,6 +9991,78 @@ export interface operations {
         responses: {
             /** @description 邮箱认证成功 */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_sendChangeEmailVerificationCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendChangeEmailCodeDto"];
+            };
+        };
+        responses: {
+            /** @description 验证码已发送 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 新邮箱与当前邮箱相同 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 该邮箱已被占用 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_changeEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeEmailDto"];
+            };
+        };
+        responses: {
+            /** @description 邮箱更换成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 验证码错误或已过期 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 该邮箱已被占用 */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -12334,6 +12471,62 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 标准成功响应示例 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 未登录或登录态失效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 无权限访问该接口 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description 服务器内部错误 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    UserController_sendVerifyEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 用户 ID */
                 id: string;
             };
             cookie?: never;
