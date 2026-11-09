@@ -1,6 +1,6 @@
 /**
  * 此文件由 openapi-typescript 自动生成，请勿直接修改。
- * @contract-sha256 e8c3bf07fe4e637eef7ce9a901e3f36ec087eb0bcd991ce70514fa9a2b229ae5
+ * @contract-sha256 57483cff41029b0c29061f408a35835e08f3591d16eb53318b5f7f07b6948a83
  */
 
 export interface paths {
@@ -3152,6 +3152,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/game/updated": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 获取近 N 天真实更新榜（公开） */
+        get: operations["GameController_getUpdatedGames"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/game/rankings": {
         parameters: {
             query?: never;
@@ -3314,7 +3331,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 关注预约中的应用（需登录） */
+        /** 关注预约中或已上架应用（需登录） */
         post: operations["GameController_followReservation"];
         delete?: never;
         options?: never;
@@ -3332,7 +3349,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** 取消关注预约应用（需登录） */
+        /** 取消关注预约中或已上架应用（需登录） */
         delete: operations["GameController_unfollowReservation"];
         options?: never;
         head?: never;
@@ -3346,7 +3363,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 查询当前用户是否已关注预约应用（需登录） */
+        /** 查询当前用户是否已关注预约中或已上架应用（需登录） */
         get: operations["GameController_reservationFollowStatus"];
         put?: never;
         post?: never;
@@ -3363,7 +3380,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 我的已关注预约应用列表（需登录） */
+        /** 我的已关注预约中或已上架应用列表（需登录） */
         get: operations["GameController_myReservationList"];
         put?: never;
         post?: never;
@@ -17819,6 +17836,39 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description 搜索应用成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0 */
+                        code: number;
+                        /** @example ok */
+                        message: string;
+                        data: unknown;
+                    };
+                };
+            };
+        };
+    };
+    GameController_getUpdatedGames: {
+        parameters: {
+            query?: {
+                /** @description 按标签过滤（可选） */
+                tag?: unknown;
+                /** @description 返回条数，默认 30，收敛到 1-50 */
+                limit?: unknown;
+                /** @description 统计窗口天数，默认 7，收敛到 1-30 */
+                days?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 获取更新榜成功 */
             200: {
                 headers: {
                     [name: string]: unknown;

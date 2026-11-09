@@ -9,6 +9,7 @@ const STATIC_ROUTES = new Set<string>([
   '/community/topics',
   '/news',
   '/rankings',
+  '/updates',
   '/download',
   '/download/app',
   '/messages',

@@ -1,9 +1,9 @@
 'use client';
 
 // 详情页操作区（视觉稿：PC 信息卡右侧 CTA 组 + 移动端浮动顶栏与底部操作栏）。
-// 三块 UI 必须共享同一份收藏 / 上线提醒 / 下载弹窗状态，因此放在同一个客户端组件里：
-// 1) PC：外层用 hidden lg:flex 控制的主下载按钮 + 次级操作（订阅动态 / 催更新 / 分享 / 收藏）；
-// 2) 移动端：顶部浮动玻璃导航（滚动 120px 后变白）+ 底部悬浮操作栏（想玩 / 论坛 / 催更 / 订阅动态 + 主下载）；
+// 三块 UI 必须共享同一份收藏 / 更新提醒 / 下载弹窗状态，因此放在同一个客户端组件里：
+// 1) PC：外层用 hidden lg:flex 控制的主下载按钮 + 次级操作（更新提醒 / 催更新 / 分享 / 收藏）；
+// 2) 移动端：顶部浮动玻璃导航（滚动 120px 后变白）+ 底部悬浮操作栏（想玩 / 论坛 / 催更 / 更新提醒 + 主下载）；
 // 3) 重型弹窗只在交互后挂载，避免首屏加载与详情无关的代码。
 
 import dynamic from 'next/dynamic';
@@ -17,9 +17,11 @@ import { useToast } from '@/hooks/use-toast';
 import { reportDownloadClick } from '@/lib/download-click-tracking';
 import { buildFeedbackCommonFields, submitFeedbackTicket } from '@/lib/feedback';
 import { resolveGameName } from '@/lib/game-display-name';
+import { fetchReservationFollowStatus, resolveReminderIntent } from '@/lib/game-reminder';
 import { resolveGameSourceInfo } from '@/lib/game-source-link';
 import { resolveDisplayVersion } from '@/lib/game-version';
 import { getGamePrimaryActionKind, isWebGameType } from '@/lib/game-resource-type';
+import { followReservationByAppId, unfollowReservationByAppId } from '@/lib/profile-dashboard-api';
 import { cn } from '@/lib/utils';
 import type { ApiDownloadResource, ApiGameDetail, CardConfigItem } from '@/types';
 
@@ -45,20 +47,21 @@ export interface GameDetailActionsInput {
   game: GameDetailActionGame;
   resources: ApiDownloadResource[];
   downloadNotices: CardConfigItem[];
-  showPreregReminder: boolean;
+  showUpdateReminder: boolean;
 }
 
 export default function GameDetailActions({
   game,
   resources,
   downloadNotices,
-  showPreregReminder,
+  showUpdateReminder,
 }: GameDetailActionsInput) {
   const { isAuthenticated, token, user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isReminderEnabled, setIsReminderEnabled] = useState(false);
+  const [isReminderSubmitting, setIsReminderSubmitting] = useState(false);
   const [isSubmittingUrge, setIsSubmittingUrge] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [appGuideOpen, setAppGuideOpen] = useState(false);
@@ -67,16 +70,22 @@ export default function GameDetailActions({
   const isWebGame = isWebGameType(game.type);
   const primaryActionKind = getGamePrimaryActionKind(game.type);
 
-  // 上线提醒状态按游戏维度存在本地，刷新后仍保持。
+  // 订阅状态以服务端为准（#181 T181-4）：登录后读一次 follow-status，
+  // 不再用 localStorage，换设备/浏览器也能看到一致结果。未登录按未订阅展示。
   useEffect(() => {
-    const reminderKey = game._id || game.pkg;
-    if (!reminderKey) return;
-    try {
-      setIsReminderEnabled(window.localStorage.getItem('game-remind:' + reminderKey) === '1');
-    } catch {
+    if (!isAuthenticated || !token || !game._id) {
       setIsReminderEnabled(false);
+      return;
     }
-  }, [game._id, game.pkg]);
+    let active = true;
+    void fetchReservationFollowStatus({ token, appId: game._id }).then((result) => {
+      if (!active) return;
+      if (result.ok) setIsReminderEnabled(result.followed);
+    });
+    return () => {
+      active = false;
+    };
+  }, [game._id, isAuthenticated, token]);
 
   // 移动端顶栏：滚过封面后切换为实心导航。
   useEffect(() => {
@@ -112,23 +121,48 @@ export default function GameDetailActions({
     });
   }, [toast]);
 
-  const handleReminderToggle = useCallback(() => {
-    const reminderKey = game._id || game.pkg;
-    if (!reminderKey) return;
-    setIsReminderEnabled((current) => {
-      const next = !current;
-      try {
-        window.localStorage.setItem('game-remind:' + reminderKey, next ? '1' : '0');
-      } catch {
-        // 存储不可用时仍保留本次会话内状态。
-      }
-      toast({
-        title: next ? '已开启上线提醒' : '已取消上线提醒',
-        description: next ? '提醒标记已保存在当前浏览器，换设备需重新开启。' : '你可以随时再次开启提醒。',
-      });
-      return next;
+  const handleReminderToggle = useCallback(async () => {
+    const intent = resolveReminderIntent({
+      hasSession: Boolean(isAuthenticated && token),
+      followed: isReminderEnabled,
     });
-  }, [game._id, game.pkg, toast]);
+    if (intent === 'login') {
+      setAuthModalOpen(true);
+      toast({
+        title: '请先登录或注册',
+        description: '登录账号后即可订阅更新提醒。',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (isReminderSubmitting || !token || !game._id) return;
+
+    const next = intent === 'follow';
+    setIsReminderSubmitting(true);
+    setIsReminderEnabled(next);
+    const result = next
+      ? await followReservationByAppId({ token, appId: game._id })
+      : await unfollowReservationByAppId({ token, appId: game._id });
+    setIsReminderSubmitting(false);
+
+    if (!result.ok) {
+      // 失败回滚到点击前的状态，不留「看起来已订阅」的假象。
+      setIsReminderEnabled(!next);
+      toast({
+        title: next ? '订阅失败' : '取消订阅失败',
+        description: result.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    toast({
+      title: next ? '已订阅更新提醒' : '已取消更新提醒',
+      description: next
+        ? '有新版本时会通过站内消息通知你，可在消息中心查看。'
+        : '你可以随时再次订阅更新提醒。',
+    });
+  }, [game._id, isAuthenticated, isReminderEnabled, isReminderSubmitting, toast, token]);
 
   const handleUrge = useCallback(async () => {
     if (isSubmittingUrge) return;
@@ -176,7 +210,7 @@ export default function GameDetailActions({
 
   const primaryActionLabel = isWebGame ? '前往 AC 盒子游玩' : '立即高速下载';
   const primaryActionMeta = buildPrimaryActionMeta(game);
-  const reminderLabel = isReminderEnabled ? '已提醒' : '上线提醒';
+  const reminderLabel = isReminderEnabled ? '已订阅' : '更新提醒';
 
   const floatingIconClass = cn(
     'flex h-10 w-10 items-center justify-center rounded-full transition-colors lg:h-8 lg:w-8',
@@ -216,14 +250,16 @@ export default function GameDetailActions({
               {isSubmittingUrge ? '提交中…' : '催更新'}
             </button>
           )}
-          {showPreregReminder ? (
+          {showUpdateReminder ? (
             <button
               type="button"
-              onClick={handleReminderToggle}
+              onClick={() => void handleReminderToggle()}
+              disabled={isReminderSubmitting}
+              aria-pressed={isReminderEnabled}
               className={cn(secondaryButtonClass, 'flex-1', isReminderEnabled && 'border-primary/40 bg-primary/10 text-primary')}
             >
               <BookmarkPlus className="h-4 w-4" />
-              {isReminderEnabled ? '已订阅' : '订阅动态'}
+              {isReminderEnabled ? '已订阅' : '更新提醒'}
             </button>
           ) : null}
           <button
@@ -330,12 +366,13 @@ export default function GameDetailActions({
               <span className="text-[10px]">{isSubmittingUrge ? '提交中' : '催更'}</span>
             </button>
           )}
-          {showPreregReminder ? (
+          {showUpdateReminder ? (
             <button
               type="button"
-              aria-label="切换上线提醒"
+              aria-label="切换更新提醒"
               aria-pressed={isReminderEnabled}
-              onClick={handleReminderToggle}
+              disabled={isReminderSubmitting}
+              onClick={() => void handleReminderToggle()}
               className={cn('flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground', isReminderEnabled && 'text-primary')}
             >
               <BellPlus className={cn('h-5 w-5', isReminderEnabled && 'fill-current')} />

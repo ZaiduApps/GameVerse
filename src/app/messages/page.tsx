@@ -1,11 +1,12 @@
 ﻿'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Bell, CheckCheck, Loader2, MessageCircle, Heart, Megaphone, ExternalLink } from 'lucide-react';
 
 import { useAuth } from '@/context/auth-context';
 import { trackedApiFetch } from '@/lib/api';
+import { triggerReservationFollowSync } from '@/lib/game-reminder';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,6 +58,8 @@ export default function MessagesPage() {
   const [summary, setSummary] = useState<{ total_unread: number; unread_by_category: Record<string, number> } | null>(null);
   const [data, setData] = useState<NotificationListData>({ list: [], total: 0, page: 1, pageSize: 20 });
   const [page, setPage] = useState(1);
+  // 每次进入消息页只触发一次关注列表的惰性同步；换账号后按 token 重新触发。
+  const followSyncTokenRef = useRef<string | null>(null);
 
   const categoryLabel = useMemo(
     () => ({ all: '全部', system: '系统', reply: '回复', like: '点赞' } as const),
@@ -90,6 +93,12 @@ export default function MessagesPage() {
     if (!isAuthenticated || !token) return;
     setLoading(true);
     try {
+      // 打开消息中心时触发一次服务端关注同步：版本/更新时间有变化的关注应用
+      // 会在这次 /game/reservations/my 调用里生成站内通知，避免「订阅了却看不到」。
+      if (followSyncTokenRef.current !== token) {
+        followSyncTokenRef.current = token;
+        await triggerReservationFollowSync(token);
+      }
       await Promise.all([loadSummary(), loadList()]);
     } catch (error) {
       toast({

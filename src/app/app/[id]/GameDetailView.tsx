@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Suspense, type ReactNode } from 'react';
-import { BadgeCheck, ChevronRight, CreditCard, Download, ExternalLink, MessageSquare, RefreshCw, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, BadgeCheck, ChevronRight, CreditCard, Download, ExternalLink, MessageSquare, RefreshCw, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
 
 import GameAnnouncements from '@/components/game-announcements';
 import GameFaqSection from '@/components/game-detail/GameFaqSection';
@@ -57,7 +57,6 @@ import {
   formatDescriptionHtml,
   getGameTags,
   getPrimaryCategory,
-  isPreregGameLike,
   resolveSupportItems,
   toPlainTextWithBreaks,
   type RelatedNewsItem,
@@ -459,7 +458,9 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   const hasDetailAnnouncements = Array.isArray(detailAnnouncements)
     ? detailAnnouncements.length > 0
     : Boolean(detailAnnouncements && Object.values(detailAnnouncements).some((group) => Array.isArray(group) && group.length > 0));
-  const showPreregReminder = isPreregGameLike(game) && !isWebGame;
+  // 预约中与已上架游戏都允许订阅更新提醒（接口 T181-3 已放开 status=1）；
+  // 页游没有可安装的包，不展示。关注接口需要 _id，缺失时不渲染，避免点了必失败。
+  const showUpdateReminder = !isWebGame && Boolean(game._id);
   // GitHub Release 分发的开源版单独标注来源与仓库；其它渠道不渲染这一行。
   const gameSource = resolveGameSourceInfo(game);
 
@@ -622,7 +623,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                   game={actionGame}
                   resources={resources}
                   downloadNotices={downloadNotices}
-                  showPreregReminder={showPreregReminder}
+                  showUpdateReminder={showUpdateReminder}
                 />
               </div>
 
@@ -721,7 +722,21 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
 
             <DetailSection
               title="最新更新 (What's New)"
-              action={<span className="text-[11px] text-muted-foreground lg:text-xs">{latestUpdate.versionLabel}</span>}
+              action={
+                <div className="flex items-center gap-3">
+                  {latestUpdate.versionLabel ? (
+                    <span className="text-[11px] text-muted-foreground lg:text-xs">{latestUpdate.versionLabel}</span>
+                  ) : null}
+                  <Link
+                    href="/updates"
+                    prefetch={false}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline lg:text-xs"
+                  >
+                    查看近 7 天更新榜
+                    <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                  </Link>
+                </div>
+              }
             >
               <div className="rounded-xl border border-primary/20 bg-primary/[0.06] p-3 lg:p-4">
                 <div className="flex items-center gap-2 text-xs font-bold text-primary lg:text-sm">

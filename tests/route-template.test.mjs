@@ -12,6 +12,7 @@ test('静态路由原样返回', () => {
     '/community/topics',
     '/news',
     '/rankings',
+    '/updates',
     '/download',
     '/download/app',
     '/messages',

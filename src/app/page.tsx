@@ -3,6 +3,8 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import {
   Apple,
+  ArrowRight,
+  Clock3,
   Download,
   Flame,
   MessageCircle,
@@ -928,6 +930,23 @@ export default async function HomePage() {
         </div>
 
         <aside className="space-y-8 xl:col-span-4">
+          <Link
+            href="/updates"
+            prefetch={false}
+            className="flex items-center gap-3 rounded-2xl border border-border/70 bg-white p-4 shadow-sm transition-colors [@media(hover:hover)]:hover:border-primary/40 dark:bg-[#111824]"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Clock3 className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold">近 7 天更新榜</span>
+              <span className="mt-0.5 block truncate text-xs text-[#595c5d] dark:text-[#9ca6b8]">
+                看看最近有新版本的 30 款游戏
+              </span>
+            </span>
+            <ArrowRight className="h-4 w-4 shrink-0 text-[#8a8d8f]" aria-hidden="true" />
+          </Link>
+
           {rankingSections.map(({ album, games }) => (
             <section
               key={album._id}
