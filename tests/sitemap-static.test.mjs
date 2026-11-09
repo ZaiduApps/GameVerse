@@ -126,7 +126,7 @@ test('createSitemapBuilder: 构建期与运行时产出同形条目（分页 + �
   assert.equal(complete.main, true);
   assert.equal(complete.community, true);
   assert.deepEqual(stats, {
-    staticMain: 3,
+    staticMain: 4,
     staticCommunity: 2,
     // 本用例的 fetch 对 /seo/category-pages 一律 404，分类页整节跳过，故为 0。
     categoryPages: 0,
@@ -199,8 +199,8 @@ test('createSitemapBuilder: 未发布游戏剔除、已发布保留，页面条�
   assert.ok(!urls.includes('https://apks.cc/app/com.published.two'));
   assert.equal(stats.games, 1);
   assert.equal(stats.gamesSkippedUnpublished, 3);
-  // 其它段落条数与历史一致（本夹具下 main 只有 3 条静态入口）
-  assert.equal(sections.main.length, 4);
+  // 其它段落条数与历史一致（本夹具下 main 为 4 条静态入口 + 1 条游戏详情页）
+  assert.equal(sections.main.length, 5);
 });
 
 test('createSitemapBuilder: 审计接口按 pageSize=200、并发≤2 分页，抓到的高质量 id 数量不变', async () => {
@@ -258,7 +258,7 @@ test('createSitemapBuilder: 游戏目录为空时 apiReachable=false，调用方
   assert.equal(apiReachable, false);
   assert.equal(complete.main, false);
   assert.equal(complete.community, false);
-  assert.equal(sections.main.length, 3); // 仅 main 静态入口
+  assert.equal(sections.main.length, 4); // 仅 main 静态入口
   assert.equal(sections.community.length, 2); // 仅 community 静态入口
 });
 

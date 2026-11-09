@@ -40,7 +40,7 @@ export const SITEMAP_REVALIDATE_SECONDS = 1800;
  *   - community（/sitemap-community.xml）：社区静态入口 + albums + topics + posts。
  * 两份文件各自独立校验/降级，互不拖累。
  */
-export const MAIN_STATIC_PATHS = ['/', '/app', '/rankings'];
+export const MAIN_STATIC_PATHS = ['/', '/app', '/rankings', '/updates'];
 export const COMMUNITY_STATIC_PATHS = ['/community', '/community/topics'];
 
 /** 静态 sitemap 与线上游戏总数的允许偏差；超过即判定静态文件过期。 */
