@@ -29,7 +29,8 @@ import {
  */
 
 // Next 要求 route segment config 必须字面量；常量只给 fetch 的 next.revalidate 复用。
-export const revalidate = 900;
+// 60s：部署期预渲染的空榜最多挂 1 分钟就自愈，与 UPDATES_REVALIDATE_SECONDS 保持一致。
+export const revalidate = 60;
 
 const UPDATES_API_TIMEOUT_MS = 8000;
 const FALLBACK_GAME_IMAGE = '/favicon.ico';
@@ -179,7 +180,7 @@ export default async function UpdatesPage() {
         )}
 
         <p className="mt-8 text-xs text-muted-foreground">
-          本页数据每 15 分钟刷新一次；完整游戏库请前往
+          本页数据每分钟刷新一次；完整游戏库请前往
           <Link href="/app" prefetch={false} className="ml-1 font-semibold text-primary hover:underline">
             全部游戏
           </Link>

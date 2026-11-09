@@ -16,7 +16,9 @@ import { absoluteUrl } from '@/lib/seo';
 export const UPDATES_PATH = '/updates';
 export const UPDATES_WINDOW_DAYS = 7;
 export const UPDATES_LIMIT = 30;
-export const UPDATES_REVALIDATE_SECONDS = 900;
+// 部署后的空窗期等于 revalidate：构建期预渲染拿不到接口时会先落一版空榜，
+// 900s 意味着线上空页要挂 15 分钟（#181 上线实测）。压到 60s 与站内其它数据页一致。
+export const UPDATES_REVALIDATE_SECONDS = 60;
 
 /** `/game/updated` 单条记录（字段以 interface `UpdatedGameRow` 为准，全部做防御式读取）。 */
 export interface ApiUpdatedGame {
