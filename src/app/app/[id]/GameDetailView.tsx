@@ -5,14 +5,17 @@ import { BadgeCheck, ChevronRight, CreditCard, Download, ExternalLink, MessageSq
 
 import GameAnnouncements from '@/components/game-announcements';
 import GameFaqSection from '@/components/game-detail/GameFaqSection';
+import GameTrustStrip from '@/components/game-detail/GameTrustStrip';
 import InstallTroubleshootingDialog from '@/components/install-troubleshooting-dialog';
 import { buildResourceChecksumItems } from '@/lib/game-resource-signature';
+import { buildGameTrustItems } from '@/lib/game-trust-strip';
 import { buildGameVariantRows, type GameVariantRow } from '@/lib/game-detail-variants';
 import { buildGameTopicHref, topicSlugFromPkg } from '@/lib/community-entry';
 import { normalizeGameFaqItems } from '@/lib/game-faq';
 import { resolveGameName } from '@/lib/game-display-name';
 import { isWebGameType } from '@/lib/game-resource-type';
 import { resolveGameSourceInfo } from '@/lib/game-source-link';
+import { resolveDisplayVersion } from '@/lib/game-version';
 import { prependAliasToDescription, resolveChineseAlias } from '@/lib/seo';
 import { getPreviewImageUrl } from '@/lib/image-preview';
 import { cn } from '@/lib/utils';
@@ -29,7 +32,7 @@ import GameHeroVideo from './GameHeroVideo.client';
 import GameScreenshotGallery from './GameScreenshotGallery.client';
 import GameResourceChecksums from './GameResourceChecksums.client';
 import DownloadErrorNotice from './DownloadErrorNotice.client';
-import { BOX_DOWNLOAD_CARD, CERTIFICATION_CARD, GUIDE_SECTION_HINT } from './game-detail-mock-copy';
+import { BOX_DOWNLOAD_CARD, GUIDE_SECTION_HINT } from './game-detail-mock-copy';
 import { applyLiveVersionHighlights } from './game-detail-highlights';
 import { resolveHeroVideo } from './game-detail-video';
 import {
@@ -281,7 +284,27 @@ function GameVariantTable({ rows }: { rows: GameVariantRow[] }) {
   );
 }
 
-function CertificationCard() {
+// 侧栏资源校验信息：只展示接口真实存在的字段，缺项不渲染。
+// 这里不再做「官方纯净认证」之类的结论性表述——仓库里没有对应的扫描或校验集成。
+function CertificationCard({
+  checksumCount,
+  resourceCount,
+  pkg,
+  version,
+}: {
+  checksumCount: number;
+  resourceCount: number;
+  pkg?: string | null;
+  version: string;
+}) {
+  const chips: { key: string; label: string; value: string }[] = [];
+  if (checksumCount > 0 && resourceCount > 0) {
+    chips.push({ key: 'checksum', label: 'SHA-256', value: `${checksumCount}/${resourceCount}` });
+  }
+  const pkgText = String(pkg || '').trim();
+  if (pkgText) chips.push({ key: 'pkg', label: '包名', value: pkgText });
+  if (version) chips.push({ key: 'version', label: '当前版本', value: version });
+
   return (
     <section className="rounded-2xl border border-tone-green/25 bg-gradient-to-br from-tone-green/[0.07] to-card p-4 shadow-sm lg:p-5">
       <div className="flex items-start gap-3.5">
@@ -289,17 +312,26 @@ function CertificationCard() {
           <ShieldCheck className="h-6 w-6" />
         </span>
         <div className="min-w-0">
-          <p className="flex items-center gap-1 text-sm font-bold text-foreground">{CERTIFICATION_CARD.title}</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{CERTIFICATION_CARD.description}</p>
+          <p className="flex items-center gap-1 text-sm font-bold text-foreground">资源校验信息</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            SHA-256 校验值来自资源记录，可与下载文件比对；未提供校验值的渠道不显示该标记。
+          </p>
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-3 gap-2 border-t border-tone-green/20 pt-3 text-center text-[11px] font-medium text-tone-green">
-        {CERTIFICATION_CARD.chips.map((chip) => (
-          <div key={chip} className="rounded-lg bg-tone-green/10 py-1.5">
-            ✓ {chip}
-          </div>
-        ))}
-      </div>
+      {chips.length > 0 ? (
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-tone-green/20 pt-3">
+          {chips.map((chip) => (
+            <span
+              key={chip.key}
+              title={chip.value}
+              className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-lg bg-tone-green/10 px-2 py-1 text-[11px] font-medium text-tone-green"
+            >
+              <span className="shrink-0">{chip.label}</span>
+              <span className="truncate font-semibold">{chip.value}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -388,6 +420,15 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   const isWebGame = isWebGameType(game.type);
   // 资源校验值只取接口真实返回的 signature；没有就整块显示「暂无校验值」。
   const checksumItems = buildResourceChecksumItems(resources);
+  // 首屏可信信息条：只汇总真实字段，缺项由纯函数直接跳过。
+  const trustItems = buildGameTrustItems({
+    version: game.version,
+    fileSize: game.file_size,
+    updatedAt: game.latest_at,
+    sourceType: game.source_type,
+    resources,
+    isWebGame,
+  });
   // 渠道变体表：无有效渠道数据时整块不渲染。
   const variantRows = buildGameVariantRows(resources, game.pkg || game._id);
   const tags = getGameTags(game);
@@ -506,6 +547,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
               <div className="mb-2 lg:hidden">
                 <Breadcrumbs items={breadcrumbItems} withJsonLd={false} />
               </div>
+              <GameTrustStrip items={trustItems} className="mb-4 lg:mb-5" />
               <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
                 <div className="flex items-center gap-3.5 lg:gap-6">
                   <div className="relative shrink-0">
@@ -523,15 +565,17 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                         />
                       ) : null}
                     </div>
-                    <span
-                      className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-tone-green text-white"
-                      title="已通过官方安全校验"
-                    >
-                      <BadgeCheck className="h-3 w-3" />
-                    </span>
+                    {checksumItems.length > 0 ? (
+                      <span
+                        className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-tone-green text-white"
+                        title="已提供 SHA-256 校验值"
+                      >
+                        <BadgeCheck className="h-3 w-3" />
+                      </span>
+                    ) : null}
                   </div>
                   <div className="min-w-0 space-y-2">
-                    <HeroBadges badges={trustBadges} />
+                    {trustBadges.length > 0 ? <HeroBadges badges={trustBadges} /> : null}
                     <h1 className="text-lg font-bold leading-snug tracking-tight text-foreground sm:text-xl lg:text-2xl">{resolveGameName(game)}</h1>
                     {chineseAlias ? (
                       <p className="mt-1 text-sm text-muted-foreground">中文名：{chineseAlias}</p>
@@ -788,7 +832,12 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
 
           <aside data-stitch="side-column" className="space-y-3.5 lg:space-y-6">
             <ResourceLinksCard items={resourceLinks} />
-            <CertificationCard />
+            <CertificationCard
+              checksumCount={checksumItems.length}
+              resourceCount={resources.length}
+              pkg={game.pkg}
+              version={resolveDisplayVersion(game.version)}
+            />
             <BoxDownloadCard />
             <SimilarGamesCard items={similarGames} />
             <div id="game-detail-section-reviews">

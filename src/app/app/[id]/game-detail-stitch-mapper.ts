@@ -11,11 +11,9 @@ import { resolveDisplayVersion } from '@/lib/game-version';
 import {
   HERO_IN_APP_PURCHASE_NOTE,
   HERO_PLATFORM_NOTE,
-  HERO_TRUST_BADGES,
   OFFICIAL_RESOURCE_LINKS_FALLBACK,
   RATING_FALLBACK_COUNT,
   RATING_FALLBACK_SCORE,
-  SIGNATURE_VERIFY_TILE,
   TECH_SPEC_FILLERS,
   WHATS_NEW_FALLBACK,
   type MockResourceLink,
@@ -83,10 +81,10 @@ const BADGE_TONES = [
 // 技术参数宫格最多展示 8 条，与视觉稿的 4 列 × 2 行一致。
 const MAX_SPEC_TILES = 8;
 
-// Hero 徽章：有真实标签就用标签，不足三条时用稿件徽章补位。
+// Hero 徽章：只用接口真实标签；没有标签就不渲染。
+// 不再用「官方正版 / 编辑精选」这类没有证据的稿件徽章补位（派发单 #180）。
 export function buildTrustBadges(tags: string[]): TrustBadge[] {
-  const source = tags.length > 0 ? tags.slice(0, 3) : [...HERO_TRUST_BADGES];
-  return source.map((label, index) => ({
+  return tags.slice(0, 3).map((label, index) => ({
     label,
     className: BADGE_TONES[index % BADGE_TONES.length],
   }));
@@ -133,7 +131,8 @@ export function buildHeroMetrics(args: {
   ];
 }
 
-// 技术参数宫格：真实 facts 优先，不足 8 条时用稿件条目补齐，末位固定为签名校验。
+// 技术参数宫格：真实 facts 优先，不足 8 条时用稿件条目补齐。
+// 原稿固定追加的“安全签名校验”条目已移除——没有签名校验集成，不能作为事实展示。
 export function buildSpecTiles(facts: { label: string; value: string }[]): SpecTile[] {
   const labelMap: Record<string, string> = {
     包名: '应用包名',
@@ -150,9 +149,8 @@ export function buildSpecTiles(facts: { label: string; value: string }[]): SpecT
   }));
 
   TECH_SPEC_FILLERS.forEach((item) => {
-    if (tiles.length < MAX_SPEC_TILES - 1) tiles.push({ label: item.label, value: item.value });
+    if (tiles.length < MAX_SPEC_TILES) tiles.push({ label: item.label, value: item.value });
   });
-  tiles.push({ label: SIGNATURE_VERIFY_TILE.label, value: SIGNATURE_VERIFY_TILE.value, verified: true });
 
   return tiles.slice(0, MAX_SPEC_TILES);
 }

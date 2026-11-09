@@ -124,7 +124,7 @@ export default function GameDetailActions({
       }
       toast({
         title: next ? '已开启上线提醒' : '已取消上线提醒',
-        description: next ? '游戏上线后可在消息中心查看提醒。' : '你可以随时再次开启提醒。',
+        description: next ? '提醒标记已保存在当前浏览器，换设备需重新开启。' : '你可以随时再次开启提醒。',
       });
       return next;
     });

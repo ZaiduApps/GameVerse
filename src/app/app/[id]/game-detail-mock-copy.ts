@@ -12,9 +12,6 @@ export interface MockResourceLink {
   icon: 'message' | 'card' | 'rocket';
 }
 
-// Hero 徽章行（稿件原文：官方正版 / 编辑精选 / 全新第4赛季）。真实标签不足 3 个时用于补位。
-export const HERO_TRUST_BADGES = ['官方正版', '编辑精选', '全新第4赛季'] as const;
-
 // Hero 副信息与封面角标。
 export const HERO_IN_APP_PURCHASE_NOTE = '包含应用内购买';
 export const HERO_PLATFORM_NOTE = '国际服 / 需加速';
@@ -29,8 +26,8 @@ export const TECH_SPEC_FILLERS = [
   { label: '支持语言', value: '中文、英文、韩文、泰文' },
 ] as const;
 
-// 稿件中的“安全签名校验”条目，渲染为绿色校验态。
-export const SIGNATURE_VERIFY_TILE = { label: '安全签名校验', value: '官方原包·未篡改' } as const;
+// 稿件中的“安全签名校验”条目已移除：仓库没有任何签名校验集成，不能凭空下安全结论。
+// 真实的校验值覆盖由详情页的「资源校验值（SHA-256）」区块与首屏信任条展示。
 
 // 最新更新的兜底内容：接口没有更新日志时按稿件原文展示，保证区块不塌陷。
 // 这是本文件里唯一与示例游戏强相关的一段文案，接入真实更新日志数据源后应优先移除。
@@ -51,13 +48,8 @@ export const OFFICIAL_RESOURCE_LINKS_FALLBACK: MockResourceLink[] = [
   { title: '国际服游戏专属加速工具', description: '降低延迟 Ping 值 / 告别掉线', tone: 'bg-tone-green/10 text-tone-green border-tone-green/25', icon: 'rocket' },
 ];
 
-// 官方纯净认证卡（文案按视觉稿原文保留）。
-export const CERTIFICATION_CARD = {
-  title: 'APKScc 官方纯净认证',
-  description:
-    '经由 360 核心安全卫士与 VirusTotal 全面沙盒病毒扫描，无篡改、无暗扣插件，100% 提取自 Google Play 官方分发服务器。',
-  chips: ['无恶意弹窗', '正版签名一致', '高速 CDN 节点'],
-} as const;
+// 侧栏“官方纯净认证”卡已删除：原稿的安全扫描与“100% 官方分发”结论没有对应数据源与集成，
+// 属于无证据承诺；现由 GameDetailView 内的数据驱动「资源校验信息」卡替代。
 
 // 侧栏“官方盒子下载”卡。
 export const BOX_DOWNLOAD_CARD = {
