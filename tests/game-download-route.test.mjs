@@ -333,6 +333,68 @@ test('落地页分流：external 只接外部浏览器顶层导航', () => {
   );
 });
 
+test('落地页分流：反代后站内 Referer 仍判为站内（request.url 是内网地址）', () => {
+  const referer = 'https://apks.cc/app/com.demo.game';
+
+  // ① 生产形态：反代/隧道后 request.url 是内网地址，真实 host 在 x-forwarded-host。
+  assert.equal(
+    shouldShowLanding(
+      landingRequest(
+        { ...BROWSER_NAV, 'x-forwarded-host': 'apks.cc', referer },
+        'http://127.0.0.1:3002/app/com.demo.game/download/67f000000000000000000333',
+      ),
+      'external',
+    ),
+    false,
+  );
+  // ② x-forwarded-host 带端口、带代理链时取第一段并去端口。
+  assert.equal(
+    shouldShowLanding(
+      landingRequest(
+        { ...BROWSER_NAV, 'x-forwarded-host': 'apks.cc:443, 127.0.0.1:3002', referer },
+        'http://127.0.0.1:3002/app/com.demo.game/download/67f000000000000000000333',
+      ),
+      'external',
+    ),
+    false,
+  );
+  // ③ 无 x-forwarded-host 时退回 host 头。
+  assert.equal(
+    shouldShowLanding(
+      landingRequest(
+        { ...BROWSER_NAV, host: 'apks.cc', referer },
+        'http://127.0.0.1:3002/app/com.demo.game/download/67f000000000000000000333',
+      ),
+      'external',
+    ),
+    false,
+  );
+  // ④ 无任何 host 头时退回 request.url（本地/单测兜底）。
+  assert.equal(
+    shouldShowLanding(
+      landingRequest({ ...BROWSER_NAV, referer }, 'https://apks.cc/app/com.demo.game/download/67f000000000000000000333'),
+      'external',
+    ),
+    false,
+  );
+  // ⑤ 同 host 但不在 /app/ 下（社区页）→ 按外部处理。
+  assert.equal(
+    shouldShowLanding(
+      landingRequest({ ...BROWSER_NAV, 'x-forwarded-host': 'apks.cc', referer: 'https://apks.cc/community' }, 'http://127.0.0.1:3002/app/com.demo.game/download/67f000000000000000000333'),
+      'external',
+    ),
+    true,
+  );
+  // ⑥ 跨 host 的 /app/ Referer → 按外部处理。
+  assert.equal(
+    shouldShowLanding(
+      landingRequest({ ...BROWSER_NAV, 'x-forwarded-host': 'apks.cc', referer: 'https://evil.example/app/com.demo.game' }, 'http://127.0.0.1:3002/app/com.demo.game/download/67f000000000000000000333'),
+      'external',
+    ),
+    true,
+  );
+});
+
 test('落地页分流：all 连站内详情页点击也落页，但 confirm=1 仍排除', () => {
   assert.equal(
     shouldShowLanding(landingRequest({ ...BROWSER_NAV, referer: DETAIL_REFERER }), 'all'),

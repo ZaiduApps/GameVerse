@@ -55,15 +55,40 @@ function hasConfirmFlag(request: DownloadLandingRequestLike | null | undefined):
   return parseRequestUrl(request)?.searchParams.get('confirm') === '1';
 }
 
-/** 站内详情页的 Referer：同源且 pathname 以 `/app/` 开头。跨域 Referer 不算站内。 */
-function isInternalDetailReferer(
-  referer: string,
-  requestUrl: URL | null,
-): boolean {
-  if (!referer) return false;
+/** 取代理链里的第一个 host（`a, b` 只认 `a`），去端口、转小写；空值/非法值返回空串。 */
+function normalizeHostValue(raw: string): string {
+  const first = String(raw || '').split(',')[0].trim();
+  if (!first) return '';
+  try {
+    // 交给 URL 解析：同时处理 `apks.cc:443` 与 IPv6 的 `[::1]:3002`。
+    return new URL(`http://${first}`).hostname.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * 请求对外可见的 host，按可信度排序：
+ * `x-forwarded-host`（反代/隧道后 `request.url` 是内网地址）→ `host` 头 → `request.url`（本地/单测兜底）。
+ *
+ * 只取 hostname、不含端口：生产 Referer 常省略端口，比带端口的 host 更稳。
+ */
+export function resolveRequestHost(
+  request: DownloadLandingRequestLike | null | undefined,
+): string {
+  const forwarded = normalizeHostValue(readHeader(request, 'x-forwarded-host'));
+  if (forwarded) return forwarded;
+  const host = normalizeHostValue(readHeader(request, 'host'));
+  if (host) return host;
+  return parseRequestUrl(request)?.hostname.toLowerCase() || '';
+}
+
+/** 站内详情页的 Referer：与请求同 host 且 pathname 以 `/app/` 开头。跨域 Referer 不算站内。 */
+function isInternalDetailReferer(referer: string, requestHost: string): boolean {
+  if (!referer || !requestHost) return false;
   try {
     const parsed = new URL(referer);
-    if (requestUrl && parsed.host !== requestUrl.host) return false;
+    if (parsed.hostname.toLowerCase() !== requestHost) return false;
     return parsed.pathname.startsWith('/app/');
   } catch {
     return false;
@@ -98,7 +123,7 @@ export function shouldShowLanding(
 
   if (
     mode === 'external' &&
-    isInternalDetailReferer(readHeader(request, 'referer'), parseRequestUrl(request))
+    isInternalDetailReferer(readHeader(request, 'referer'), resolveRequestHost(request))
   ) {
     return false;
   }
