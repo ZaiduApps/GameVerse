@@ -20,6 +20,11 @@ import {
   renderDownloadErrorPage,
   resolveDownloadErrorAppPath,
 } from '../src/lib/download-error-page.ts';
+import {
+  resolveDownloadLandingMode,
+  resolveDownloadPagePath,
+  shouldShowLanding,
+} from '../src/lib/download-landing.ts';
 
 const readSource = (relativePath) => readFile(new URL(relativePath, import.meta.url), 'utf8');
 
@@ -256,6 +261,128 @@ test('302 路由：Location 只接受 http/https，不接受开放重定向', ()
   assert.equal(resolveIssuedDownloadUrl(null), null);
 });
 
+/**
+ * 落地页分流（#179 T179-1）。
+ *
+ * `off` 是线上默认档，必须恒 false——否则「默认行为与改动前一致」无从保证。
+ * `external` 只接外部浏览器顶层导航；`all` 连站内详情页点击也先落页。
+ * `confirm=1` 永远不落页（否则落地页的「继续下载」会打回自己）。
+ */
+function landingRequest(headers = {}, url = 'https://apks.cc/app/com.demo.game/download/67f000000000000000000333') {
+  return { headers: new Headers(headers), url };
+}
+
+const BROWSER_NAV = {
+  accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'sec-fetch-dest': 'document',
+};
+const DETAIL_REFERER = 'https://apks.cc/app/com.demo.game';
+
+test('落地页开关：三档解析，未知值一律回落 off', () => {
+  assert.equal(resolveDownloadLandingMode('off'), 'off');
+  assert.equal(resolveDownloadLandingMode('external'), 'external');
+  assert.equal(resolveDownloadLandingMode(' ALL '), 'all');
+  assert.equal(resolveDownloadLandingMode(undefined), 'off');
+  assert.equal(resolveDownloadLandingMode(''), 'off');
+  assert.equal(resolveDownloadLandingMode('yes'), 'off');
+});
+
+test('落地页分流：off 恒 false（默认档不改线上行为）', () => {
+  const combos = [
+    landingRequest(BROWSER_NAV),
+    landingRequest({ ...BROWSER_NAV, referer: DETAIL_REFERER }),
+    landingRequest({ ...BROWSER_NAV, 'sec-fetch-dest': '' }),
+    landingRequest({ ...BROWSER_NAV, accept: 'application/json' }),
+  ];
+  for (const request of combos) {
+    assert.equal(shouldShowLanding(request, 'off'), false);
+  }
+});
+
+test('落地页分流：external 只接外部浏览器顶层导航', () => {
+  // ① 标准浏览器导航、无 Referer → 落页
+  assert.equal(shouldShowLanding(landingRequest(BROWSER_NAV), 'external'), true);
+  // ② Sec-Fetch-Dest 缺失按浏览器导航处理
+  assert.equal(
+    shouldShowLanding(landingRequest({ accept: 'text/html' }), 'external'),
+    true,
+  );
+  // ③ 非顶层导航（下载器/子资源）不落页
+  assert.equal(
+    shouldShowLanding(landingRequest({ ...BROWSER_NAV, 'sec-fetch-dest': 'empty' }), 'external'),
+    false,
+  );
+  // ④ 非 HTML 客户端（下载器、爬虫、API 调用）不落页
+  assert.equal(
+    shouldShowLanding(landingRequest({ accept: 'application/octet-stream' }), 'external'),
+    false,
+  );
+  assert.equal(shouldShowLanding(landingRequest({}), 'external'), false);
+  // ⑤ 站内详情页点击不落页
+  assert.equal(
+    shouldShowLanding(landingRequest({ ...BROWSER_NAV, referer: DETAIL_REFERER }), 'external'),
+    false,
+  );
+  // ⑥ confirm=1 恒不落页（落地页「继续下载」）
+  assert.equal(
+    shouldShowLanding(
+      landingRequest(BROWSER_NAV, 'https://apks.cc/app/com.demo.game/download/67f000000000000000000333?confirm=1'),
+      'external',
+    ),
+    false,
+  );
+});
+
+test('落地页分流：all 连站内详情页点击也落页，但 confirm=1 仍排除', () => {
+  assert.equal(
+    shouldShowLanding(landingRequest({ ...BROWSER_NAV, referer: DETAIL_REFERER }), 'all'),
+    true,
+  );
+  assert.equal(
+    shouldShowLanding(
+      landingRequest(BROWSER_NAV, 'https://apks.cc/app/com.demo.game/download/67f000000000000000000333?confirm=1'),
+      'all',
+    ),
+    false,
+  );
+  assert.equal(shouldShowLanding(landingRequest({ accept: 'application/json' }), 'all'), false);
+});
+
+test('落地页路径与 x-ac-path：站内入口仍记详情页，落地页来源记落地页', () => {
+  const id = 'com.demo.game';
+  const channelId = CHANNEL_OFFICIAL;
+  const path = `/download/${id}/${channelId}`;
+
+  const fromDetail = resolveDownloadPagePath(
+    id,
+    channelId,
+    landingRequest({ ...BROWSER_NAV, referer: DETAIL_REFERER }),
+  );
+  assert.deepEqual(fromDetail, { path, pagePath: `/app/${id}` });
+
+  const external = resolveDownloadPagePath(id, channelId, landingRequest(BROWSER_NAV));
+  assert.deepEqual(external, { path, pagePath: `/app/${id}` });
+
+  const fromLanding = resolveDownloadPagePath(
+    id,
+    channelId,
+    landingRequest(BROWSER_NAV, `https://apks.cc${path}?confirm=1`),
+  );
+  assert.deepEqual(fromLanding, { path, pagePath: path });
+
+  const landingReferer = resolveDownloadPagePath(
+    id,
+    channelId,
+    landingRequest({ ...BROWSER_NAV, referer: `https://apks.cc${path}` }),
+  );
+  assert.deepEqual(landingReferer, { path, pagePath: path });
+
+  // 非法 id / channelId 继续走原 302 的 400 错误页，不产出落地路径。
+  assert.equal(resolveDownloadPagePath('a/b', channelId, landingRequest(BROWSER_NAV)), null);
+  assert.equal(resolveDownloadPagePath(id, 'channel-1', landingRequest(BROWSER_NAV)), null);
+  assert.equal(resolveDownloadPagePath('', channelId, landingRequest(BROWSER_NAV)), null);
+});
+
 test('route handler 与详情页接线符合派发单约束（源码级）', async () => {
   const [routeSource, viewSource, dialogSource, requestSource] = await Promise.all([
     readSource('../src/app/app/[id]/download/[channelId]/route.ts'),
@@ -280,6 +407,10 @@ test('route handler 与详情页接线符合派发单约束（源码级）', asy
   assert.match(routeSource, /AbortController/);
   assert.match(routeSource, /apiUrl\('\/game\/getAppDownload'\)/);
   assert.doesNotMatch(routeSource, /NextResponse\.redirect/);
+  // 落地页分流（#179）：307 只在开关非 off 且判定为浏览器导航时触发，默认档不生效。
+  assert.match(routeSource, /process\.env\.DOWNLOAD_LANDING_MODE/);
+  assert.match(routeSource, /shouldShowLanding\(request, landingMode\)/);
+  assert.match(routeSource, /status: 307/);
 
   // 详情页不再渲染直链渠道块：302 入口既不在页面上露出，也不在 JSON-LD 里声明
   assert.doesNotMatch(viewSource, /game-detail-channels/);

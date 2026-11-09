@@ -27,6 +27,8 @@ const renderAlert = (props) =>
     modules: {
       '@/components/ui/alert': alertModule,
       '@/components/ui/button': buttonModule,
+      // 默认 stub 只保留 data-href；这里要断言 data-acbox-action，用 <a> 透传。
+      'next/link': { __esModule: true, default: passthrough('a') },
     },
   });
 
@@ -46,6 +48,10 @@ test('失败提示是可见 alert，重试与备用渠道是两个独立动作',
   assert.match(html, /备用渠道「备用渠道」/);
   assert.match(html, /data-acbox-action="game_download_retry"/);
   assert.match(html, /data-acbox-action="game_download_backup"/);
+  // 安装后的失败 Web 无法自动判定，固定给一个排障入口（#179）。
+  assert.match(html, /查看安装排障/);
+  assert.match(html, /href="\/help\/install"/);
+  assert.match(html, /data-acbox-action="game_download_install_help"/);
 });
 
 test('没有备用渠道时只渲染重试按钮', async () => {

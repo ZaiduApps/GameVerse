@@ -1,6 +1,7 @@
 'use client';
 
-import { AlertTriangle, RefreshCw, Shuffle } from 'lucide-react';
+import Link from 'next/link';
+import { AlertTriangle, LifeBuoy, RefreshCw, Shuffle } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -70,6 +71,15 @@ export default function DownloadFailureAlert({
             ) : null}
           </div>
         ) : null}
+        {/* 安装后的失败（空间/签名/权限/系统版本）Web 无法自动判定，只给用户自选排障入口。 */}
+        <Link
+          href="/help/install"
+          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-foreground underline decoration-dotted underline-offset-2"
+          data-acbox-action="game_download_install_help"
+        >
+          <LifeBuoy className="h-4 w-4" aria-hidden />
+          查看安装排障
+        </Link>
       </AlertDescription>
     </Alert>
   );

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import React from 'react';
@@ -6,6 +7,7 @@ import React from 'react';
 import { renderTsx } from './helpers/render-tsx.mjs';
 
 const COMPONENT = new URL('../src/components/install-troubleshooting-dialog.tsx', import.meta.url).pathname;
+const HELP_PAGE = new URL('../src/app/help/install/page.tsx', import.meta.url).pathname;
 
 const OPTIONS = [
   {
@@ -75,6 +77,23 @@ test('「无法安装？」入口渲染三选一症状，初始态不展示建�
 
   for (const { advice } of OPTIONS) {
     assert.doesNotMatch(html, new RegExp(advice));
+  }
+});
+
+test('排障页新增 permission 锚点，弹窗与落地页的深链都能落到位（#179）', async () => {
+  const source = await readFile(HELP_PAGE, 'utf8');
+
+  // 权限一节：未知来源 / 安装权限被拒，文案与锚点都要在。
+  assert.match(source, /id: 'permission'/);
+  assert.match(source, /安装权限被拒/);
+  assert.match(source, /未知来源/);
+
+  // 弹窗里引用的每个 /help/install#anchor 都必须在页面里有对应章节 id。
+  const html = await renderWithSelection(null);
+  const anchors = [...html.matchAll(/\/help\/install#([a-z_]+)/g)].map((match) => match[1]);
+  assert.ok(anchors.length > 0);
+  for (const anchor of new Set(anchors)) {
+    assert.match(source, new RegExp(`id: '${anchor}'`), `缺少章节 ${anchor}`);
   }
 });
 

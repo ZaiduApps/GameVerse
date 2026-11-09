@@ -8,6 +8,11 @@ import {
 } from '@/lib/download-error-page';
 import { DOWNLOAD_REQUEST_TIMEOUT_MS } from '@/lib/download-request';
 import {
+  resolveDownloadLandingMode,
+  resolveDownloadPagePath,
+  shouldShowLanding,
+} from '@/lib/download-landing';
+import {
   decideDownloadRedirect,
   type DownloadIssueResult,
 } from '@/lib/game-download-redirect';
@@ -50,16 +55,31 @@ export async function GET(
     String(request.headers.get('x-request-id') || '').trim() ||
     `dl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
+  // 落地页分流（#179）：`off` 时下面整段不生效，行为与改动前逐字节一致。
+  const landingMode = resolveDownloadLandingMode(process.env.DOWNLOAD_LANDING_MODE);
+  const landingTarget = resolveDownloadPagePath(params?.id, params?.channelId, request);
+
+  if (landingMode !== 'off' && landingTarget && shouldShowLanding(request, landingMode)) {
+    // 307 保持方法语义；这里没有调 interface，所以不产生签发/计数事件。
+    return new NextResponse(null, {
+      status: 307,
+      headers: { ...NO_STORE, ...NO_INDEX, location: landingTarget.path },
+    });
+  }
+
+  // 归因（#179）：从落地页「继续下载」发出的请求记 `/download/{id}/{channelId}`，
+  // 站内其余入口仍记 `/app/{id}`；`off` 下恒走后者，与改动前一致。
+  const downloadPagePath =
+    landingMode === 'off'
+      ? normalizeDownloadPagePath(`/app/${encodeURIComponent(String(params?.id || ''))}`)
+      : normalizeDownloadPagePath(landingTarget?.pagePath) ||
+        normalizeDownloadPagePath(`/app/${encodeURIComponent(String(params?.id || ''))}`);
+
   const decision = await decideDownloadRedirect({
     id: params?.id,
     channelId: params?.channelId,
     requestIssuedUrl: (body) =>
-      requestIssuedDownloadUrl(
-        body,
-        request,
-        requestId,
-        normalizeDownloadPagePath(`/app/${encodeURIComponent(String(params?.id || ''))}`),
-      ),
+      requestIssuedDownloadUrl(body, request, requestId, downloadPagePath),
   });
 
   if (decision.kind === 'error_page') {
