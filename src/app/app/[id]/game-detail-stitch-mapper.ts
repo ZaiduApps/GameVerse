@@ -14,7 +14,6 @@ import {
   OFFICIAL_RESOURCE_LINKS_FALLBACK,
   RATING_FALLBACK_COUNT,
   RATING_FALLBACK_SCORE,
-  TECH_SPEC_FILLERS,
   WHATS_NEW_FALLBACK,
   type MockResourceLink,
 } from './game-detail-mock-copy';
@@ -131,8 +130,9 @@ export function buildHeroMetrics(args: {
   ];
 }
 
-// 技术参数宫格：真实 facts 优先，不足 8 条时用稿件条目补齐。
-// 原稿固定追加的“安全签名校验”条目已移除——没有签名校验集成，不能作为事实展示。
+// 技术参数宫格：只展示真实 facts，不再用稿件条目补齐。
+// 「最低系统要求 / 支持语言」两条对所有游戏写死同一句编造值，会误导安装（#194）；
+// 「安全签名校验」已移除——没有签名校验集成，不能作为事实展示。
 export function buildSpecTiles(facts: { label: string; value: string }[]): SpecTile[] {
   const labelMap: Record<string, string> = {
     包名: '应用包名',
@@ -147,10 +147,6 @@ export function buildSpecTiles(facts: { label: string; value: string }[]): SpecT
     emphasize: fact.label === '安装包大小',
     badge: fact.label === '当前版本' ? '最新' : undefined,
   }));
-
-  TECH_SPEC_FILLERS.forEach((item) => {
-    if (tiles.length < MAX_SPEC_TILES) tiles.push({ label: item.label, value: item.value });
-  });
 
   return tiles.slice(0, MAX_SPEC_TILES);
 }

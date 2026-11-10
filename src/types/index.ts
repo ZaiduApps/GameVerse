@@ -323,6 +323,11 @@ export interface ApiGameDetail {
   source_type?: string | null;
   version: string;
   file_size: number | null;
+  /**
+   * 系统要求（最低 Android 版本）。各抓取源写法不一（`8.0` / `Android 8.0+` /
+   * `5.0 及更高版本`），原样下发；空值或占位符由详情页按缺失处理，不补默认文案。
+   */
+  limit_android_version?: string;
   latest_content?: string;
   seo?: GameSeoContent;
   /**

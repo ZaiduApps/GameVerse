@@ -20,13 +20,9 @@ export const HERO_PLATFORM_NOTE = '国际服 / 需加速';
 export const RATING_FALLBACK_SCORE = 4.4;
 export const RATING_FALLBACK_COUNT = 124592;
 
-// 技术参数宫格中，接口无法提供、按稿件补齐的条目。
-export const TECH_SPEC_FILLERS = [
-  { label: '最低系统要求', value: 'Android 8.0 或更高版本' },
-  { label: '支持语言', value: '中文、英文、韩文、泰文' },
-] as const;
-
-// 稿件中的“安全签名校验”条目已移除：仓库没有任何签名校验集成，不能凭空下安全结论。
+// 稿件中的“系统要求 / 支持语言 / 安全签名校验”条目已移除：
+// 系统要求改由接口真实字段 limit_android_version 提供（缺失时不展示），
+// 支持语言没有数据源，安全校验没有对应集成——三者都不能按稿件写死展示。
 // 真实的校验值覆盖由详情页的「资源校验值（SHA-256）」区块与首屏信任条展示。
 
 // 最新更新的兜底内容：接口没有更新日志时按稿件原文展示，保证区块不塌陷。

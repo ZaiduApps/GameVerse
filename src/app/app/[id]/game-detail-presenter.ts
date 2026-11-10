@@ -332,6 +332,16 @@ export function resolveSupportItems(
   }).slice(0, 6);
 }
 
+// 系统要求的原始值来自第三方抓取：Play 商店对部分应用返回「Varies with device」，
+// 抓取链路还可能出现与 version 同源的 VARY 占位。它们都不是可安装的系统版本，
+// 按缺失处理，不补任何编造的默认文案（#194）。
+const ANDROID_REQUIREMENT_PLACEHOLDER = /^(?:vary(?:@.*)?|varies? with device)$/i;
+
+function resolveAndroidRequirement(raw?: string | null): string {
+  const text = cleanText(String(raw || ''));
+  return ANDROID_REQUIREMENT_PLACEHOLDER.test(text) ? '' : text;
+}
+
 export function buildGameFactItems(
   game: GameDetailData['app'],
   options: { category: string; resourceCount: number; isWebGame: boolean },
@@ -351,6 +361,7 @@ export function buildGameFactItems(
   pushFact('开发者', game.developer);
   pushFact('区服/地区', game.metadata?.region);
   pushFact('游戏分类', options.category);
+  pushFact('系统要求', resolveAndroidRequirement(game.limit_android_version));
   if (!options.isWebGame && options.resourceCount > 0) {
     pushFact('可用下载渠道', `${options.resourceCount} 个`);
   }
