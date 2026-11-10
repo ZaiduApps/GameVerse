@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Suspense, type ReactNode } from 'react';
-import { ArrowRight, BadgeCheck, ChevronRight, CreditCard, Download, ExternalLink, MessageSquare, RefreshCw, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, BadgeCheck, CalendarClock, ChevronRight, CreditCard, Download, ExternalLink, MessageSquare, RefreshCw, Rocket, ShieldCheck, Sparkles } from 'lucide-react';
 
 import GameAnnouncements from '@/components/game-announcements';
 import GameFaqSection from '@/components/game-detail/GameFaqSection';
@@ -101,6 +101,50 @@ function DegradedDataNotice({ savedAt }: { savedAt: string }) {
     </div>
   );
 }
+/**
+ * 预约中（status=0）游戏的预约说明块，只在首屏主信息卡内渲染。
+ * 这是纯展示组件：订阅动作复用页面既有的「更新提醒」按钮，不新增提醒逻辑。
+ * pkg 缺失时只保留文字，不拼接无效的 Play 商店地址。
+ */
+function PreregisterPanel({ pkg }: { pkg?: string | null }) {
+  const pkgText = String(pkg || '').trim();
+  const playUrl = pkgText
+    ? `https://play.google.com/store/apps/details?id=${encodeURIComponent(pkgText)}`
+    : '';
+  return (
+    <section
+      aria-label="预约信息"
+      className="mb-4 rounded-2xl border border-tone-amber/30 bg-tone-amber/[0.07] p-4 lg:mb-5 lg:p-5"
+    >
+      <div className="flex items-start gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-tone-amber/30 bg-tone-amber/10 text-tone-amber">
+          <CalendarClock className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-foreground lg:text-base">预约中 · 尚未上线</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground lg:text-sm">
+            该游戏已在 Google Play 开放预注册，上线后本站会第一时间提供安装包。
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+            {playUrl ? (
+              <a
+                href={playUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-tone-amber/40 bg-tone-amber/15 px-3.5 text-xs font-semibold text-tone-amber transition-colors [@media(hover:hover)]:hover:bg-tone-amber/25 lg:text-sm"
+              >
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                前往 Google Play 预约
+              </a>
+            ) : null}
+            <p className="text-[11px] text-muted-foreground lg:text-xs">点「更新提醒」订阅上线通知</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // 更新日志的单条内容：把“小标题：正文”的结构拆出来加粗，和视觉稿的排版一致。
 function LatestBullet({ text }: { text: string }) {
   const match = text.match(/^([^：:]{2,20})[：:]\s*(.+)$/);
@@ -548,6 +592,8 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
               <div className="mb-2 lg:hidden">
                 <Breadcrumbs items={breadcrumbItems} withJsonLd={false} />
               </div>
+              {/* 预约态信息放在主信息卡最上方，保证首屏可见；已上架（status=1）不渲染。 */}
+              {game.status === 0 ? <PreregisterPanel pkg={game.pkg} /> : null}
               <GameTrustStrip items={trustItems} className="mb-4 lg:mb-5" />
               <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
                 <div className="flex items-center gap-3.5 lg:gap-6">

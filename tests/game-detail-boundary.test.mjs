@@ -202,6 +202,19 @@ test('GitHub 来源在详情页与下载弹窗显示官方源与仓库链接', (
   assert.match(downloadDialogSource, /href=\{sourceInfo\.repoUrl\}/);
 });
 
+test('预约中（status=0）展示预约区块，已上架游戏不渲染', () => {
+  // 只有 status=0 才渲染，status=1/2 的既有渲染路径保持不变。
+  assert.match(viewSource, /\{game\.status === 0 \? <PreregisterPanel pkg=\{game\.pkg\} \/> : null\}/);
+  assert.match(viewSource, /预约中 · 尚未上线/);
+  assert.match(viewSource, /该游戏已在 Google Play 开放预注册，上线后本站会第一时间提供安装包。/);
+  // Play 链接由包名拼出，缺包名时不渲染按钮；外链必须带 noopener。
+  assert.match(viewSource, /play\.google\.com\/store\/apps\/details\?id=\$\{encodeURIComponent\(pkgText\)\}/);
+  assert.match(viewSource, /target="_blank"\s+rel="noopener noreferrer"/);
+  // 不新造提醒逻辑，订阅入口复用页面既有「更新提醒」按钮。
+  assert.match(viewSource, /点「更新提醒」订阅上线通知/);
+  assert.doesNotMatch(viewSource, /followReservationByAppId|localStorage/);
+});
+
 test('详情页把「游戏不存在」与「上游故障」分开处理', () => {
   // 上游数据统一走降级装载：成功写快照、明确不存在→404、故障有快照→降级渲染、故障无快照→兜底壳。
   assert.match(pageSource, /loadGameDetailWithFallback\(\{/);

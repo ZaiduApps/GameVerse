@@ -303,6 +303,8 @@ export interface ApiGameDetail {
   _id: string;
   name: string;
   pkg?: string | null;
+  /** 0=预约中，1=已上架，2=已下线（详情接口只公开 0/1，2 按 404 处理）。 */
+  status?: number;
   type: 'game' | 'app' | 'web' | string;
   original_url?: string | null;
   description: string;
