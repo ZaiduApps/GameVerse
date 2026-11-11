@@ -57,6 +57,9 @@ test('404 页仍然保留 noindex 语义，不跳转也不输出 JSON-LD', async
   // 热门下载走服务端取数，失败时返回空数组而不是抛错打崩 404。
   assert.match(source, /\/game\/rankings\?limit=/);
   assert.match(source, /catch\s*\{\s*return \[\];/);
+  // 404 默认被静态预渲染（构建机可能连不上 API），必须按请求渲染再取榜单。
+  assert.match(source, /import \{ connection \} from 'next\/server'/);
+  assert.match(source, /await connection\(\)/);
 });
 
 test('404 正文始终有站内搜索，热门榜有数据才渲染', async () => {

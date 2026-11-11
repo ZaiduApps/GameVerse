@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import { connection } from 'next/server';
+
 import NotFoundView from '@/components/not-found-view';
 import { trackedApiFetch } from '@/lib/api';
 import { normalizeRecoveryGames, type RecoveryGame } from '@/lib/not-found-recovery';
@@ -27,8 +29,8 @@ export const metadata: Metadata = {
   },
 };
 
-/** 热门下载榜按 ISR 缓存，避免每次 404 都打一次后端。 */
-export const revalidate = 900;
+/** 热门下载榜的 fetch 缓存窗口；页面本身按请求渲染，见 NotFound()。 */
+const HOT_GAMES_REVALIDATE_SECONDS = 900;
 
 const HOT_GAMES_LIMIT = 5;
 
@@ -40,7 +42,7 @@ async function getHotDownloads(): Promise<RecoveryGame[]> {
   try {
     const res = await trackedApiFetch(`/game/rankings?limit=${HOT_GAMES_LIMIT}`, {
       cache: 'force-cache',
-      next: { revalidate: 900 },
+      next: { revalidate: HOT_GAMES_REVALIDATE_SECONDS },
       timeoutMs: 2000,
       logKey: 'not-found-hot-games',
     });
@@ -52,6 +54,10 @@ async function getHotDownloads(): Promise<RecoveryGame[]> {
 }
 
 export default async function NotFound() {
+  // 404 默认会被静态预渲染成一页固定的 /_not-found；构建机连不上 API 时
+  // （生产构建用 .env.production 的 API_BASE_URL=127.0.0.1:9527）热门榜会被
+  // 固化成空。这里显式要求按请求渲染：fetch 仍按 900s 走数据缓存，后端压力不变。
+  await connection();
   const hotGames = await getHotDownloads();
   return <NotFoundView hotGames={hotGames} />;
 }
