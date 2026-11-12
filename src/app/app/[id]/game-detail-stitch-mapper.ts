@@ -18,7 +18,14 @@ import {
   type MockResourceLink,
 } from './game-detail-mock-copy';
 
-import { cleanText, formatBytes, formatCompactCount, formatDateText, normalizeScore } from './game-detail-presenter';
+import {
+  cleanText,
+  formatAndroidPlatformLabel,
+  formatBytes,
+  formatCompactCount,
+  formatDateText,
+  normalizeScore,
+} from './game-detail-presenter';
 
 export interface TrustBadge {
   label: string;
@@ -114,9 +121,11 @@ export function buildHeroMetrics(args: {
         ? `${downloadShow}+`
         : downloadShow
       : `${formatCompactCount(RATING_FALLBACK_COUNT)}+`;
-  // 接口没有适龄与系统版本的独立字段，4 号位优先展示真实区服，取不到时再回落到平台兜底文案。
+  // 4 号位优先展示真实区服；没有区服时改用接口真实的最低 Android 版本（#210），
+  // 两者都没有时只保留平台事实 `Android`，不再写死 `Android 8.0+` 这种编造的兼容性承诺。
   const regionValue = cleanText(game.metadata?.region);
-  const platformValue = regionValue || (isWebGame ? 'AC 盒子' : 'Android 8.0+');
+  const platformValue =
+    regionValue || (isWebGame ? 'AC 盒子' : formatAndroidPlatformLabel(game.limit_android_version) || 'Android');
 
   return [
     {

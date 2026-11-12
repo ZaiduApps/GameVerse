@@ -342,6 +342,21 @@ function resolveAndroidRequirement(raw?: string | null): string {
   return ANDROID_REQUIREMENT_PLACEHOLDER.test(text) ? '' : text;
 }
 
+// 各抓取源对同一个系统要求写法不一：`6.0 及更高版本` / `8.0 或以上` /
+// `Android 8.0+` / `7.1`（APKPure 已归一成 `Android X+`）。系统要求卡原样展示
+// 抓取值，Hero 平台格需要的是可比较的短标签，所以这里只取开头的版本号、
+// 统一成 `Android X+`；清洗与占位符判定仍走 resolveAndroidRequirement，
+// 避免 Hero 与卡片各写一套。
+const ANDROID_VERSION_PREFIX = /^(?:android\s*)?(\d+(?:\.\d+)*)/i;
+
+export function formatAndroidPlatformLabel(raw?: string | null): string {
+  const requirement = resolveAndroidRequirement(raw);
+  const match = requirement ? ANDROID_VERSION_PREFIX.exec(requirement) : null;
+  // 取不到版本号（空值、「Android」单独出现、无法识别的文案）按缺失处理，
+  // 交给调用方回落到不带版本号的平台事实，不在这里编造版本。
+  return match ? `Android ${match[1]}+` : '';
+}
+
 export function buildGameFactItems(
   game: GameDetailData['app'],
   options: { category: string; resourceCount: number; isWebGame: boolean },
