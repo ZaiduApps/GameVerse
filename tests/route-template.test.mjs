@@ -45,6 +45,15 @@ test('单段动态路由收敛成模板', () => {
   assert.equal(resolveRouteTemplate('/u/alice'), '/u/[idOrUsername]');
 });
 
+test('下载落地页两段动态收敛成一个模板（#220）', () => {
+  assert.equal(resolveRouteTemplate('/download/com.a.b/cid123'), '/download/[pkg]/[channelId]');
+  assert.equal(resolveRouteTemplate('/download/com.a.b/cid123/'), '/download/[pkg]/[channelId]');
+  assert.equal(resolveRouteTemplate('/download/com.a.b/cid123?from=push'), '/download/[pkg]/[channelId]');
+  // 静态下载页不能被吞进落地页模板。
+  assert.equal(resolveRouteTemplate('/download'), '/download');
+  assert.equal(resolveRouteTemplate('/download/app'), '/download/app');
+});
+
 test('尾斜杠与查询串先归一化', () => {
   assert.equal(resolveRouteTemplate('/'), '/');
   assert.equal(resolveRouteTemplate('/app/'), '/app');

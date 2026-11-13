@@ -29,9 +29,12 @@ const STATIC_ROUTES = new Set<string>([
   '/privacy-policy',
 ]);
 
-// 只匹配单段动态路由，与 src/app 下的目录一一对应；多出的段数落进「原样返回」。
+// 与 src/app 下的目录一一对应（多数是单段，落地页是两段）；多出的段数落进「原样返回」。
+// 下载落地页 `/download/[pkg]/[channelId]`（#179）是两段动态，单独一条；
+// `/download`、`/download/app` 是静态路由，先命中 STATIC_ROUTES，不受这条规则影响。
 const DYNAMIC_ROUTE_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
   [/^\/app\/[^/]+$/, '/app/[id]'],
+  [/^\/download\/[^/]+\/[^/]+$/, '/download/[pkg]/[channelId]'],
   [/^\/albums\/[^/]+$/, '/albums/[id]'],
   [/^\/community\/post\/[^/]+$/, '/community/post/[id]'],
   [/^\/community\/topic\/[^/]+$/, '/community/topic/[idOrSlug]'],

@@ -62,6 +62,22 @@ test('最新更新标题回落到既有「版本信息待补充」文案', () =>
   assert.equal(real.versionLabel, '版本 v1.2.3');
 });
 
+test('没有真实更新日志时不再输出示例游戏的伪更新（#219）', () => {
+  const empty = buildLatestUpdate({ version: '1.2.3', latest_at: null }, '');
+  assert.equal(empty.bullets.length, 0);
+  assert.equal(empty.headline, '');
+  assert.doesNotMatch(empty.headline, /天使/);
+
+  const whitespace = buildLatestUpdate({ version: '1.2.3', latest_at: null }, '  \n \n ');
+  assert.equal(whitespace.headline, '');
+  assert.equal(whitespace.bullets.length, 0);
+
+  // 真实更新日志仍是 headline + bullets，不受影响。
+  const real = buildLatestUpdate({ version: '1.2.3', latest_at: null }, '版本更新\n修复若干问题');
+  assert.equal(real.headline, '版本更新');
+  assert.deepEqual(real.bullets, ['修复若干问题']);
+});
+
 test('卡片与渠道变体表把占位符当空值，不展示 VARY', () => {
   assert.equal(buildGameCardMeta({ version: 'VARY' }).version, '');
 

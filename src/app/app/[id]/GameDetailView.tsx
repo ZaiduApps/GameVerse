@@ -514,6 +514,9 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   const heroMetrics = buildHeroMetrics({ game, primaryCategory, isWebGame, reviewSummary: gameData.reviewSummary });
   const specTiles = buildSpecTiles(facts);
   const latestUpdate = buildLatestUpdate(game, latestContent);
+  // #219：没有真实 latest_content 时 buildLatestUpdate 返回空 headline + 空 bullets，区块整块不渲染——
+  // 只留一行版本号/日期是空壳，且这两项在「版本与技术参数规格」里已经展示过。
+  const hasLatestUpdateContent = Boolean(latestUpdate.headline || latestUpdate.bullets.length > 0);
   const resourceLinks = buildResourceLinks(supportItems);
   const similarGames = buildSimilarGames(recommendationList);
   const relatedPosts = buildRelatedPosts(relatedNews);
@@ -766,40 +769,42 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
               <GameResourceChecksums items={checksumItems} />
             </DetailSection>
 
-            <DetailSection
-              title="最新更新 (What's New)"
-              action={
-                <div className="flex items-center gap-3">
-                  {latestUpdate.versionLabel ? (
-                    <span className="text-[11px] text-muted-foreground lg:text-xs">{latestUpdate.versionLabel}</span>
+            {hasLatestUpdateContent ? (
+              <DetailSection
+                title="最新更新 (What's New)"
+                action={
+                  <div className="flex items-center gap-3">
+                    {latestUpdate.versionLabel ? (
+                      <span className="text-[11px] text-muted-foreground lg:text-xs">{latestUpdate.versionLabel}</span>
+                    ) : null}
+                    <Link
+                      href="/updates"
+                      prefetch={false}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline lg:text-xs"
+                    >
+                      查看近 7 天更新榜
+                      <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                    </Link>
+                  </div>
+                }
+              >
+                <div className="rounded-xl border border-primary/20 bg-primary/[0.06] p-3 lg:p-4">
+                  <div className="flex items-center gap-2 text-xs font-bold text-primary lg:text-sm">
+                    <Sparkles className="h-4 w-4 shrink-0 lg:h-5 lg:w-5" aria-hidden="true" />
+                    <span>{latestUpdate.headline}</span>
+                  </div>
+                  {latestUpdate.bullets.length > 0 ? (
+                    <ul className="mt-2 list-disc space-y-1.5 pl-5 text-xs leading-relaxed text-muted-foreground lg:mt-3 lg:text-sm">
+                      {latestUpdate.bullets.map((bullet, index) => (
+                        <li key={index}>
+                          <LatestBullet text={bullet} />
+                        </li>
+                      ))}
+                    </ul>
                   ) : null}
-                  <Link
-                    href="/updates"
-                    prefetch={false}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline lg:text-xs"
-                  >
-                    查看近 7 天更新榜
-                    <ArrowRight className="h-3 w-3" aria-hidden="true" />
-                  </Link>
                 </div>
-              }
-            >
-              <div className="rounded-xl border border-primary/20 bg-primary/[0.06] p-3 lg:p-4">
-                <div className="flex items-center gap-2 text-xs font-bold text-primary lg:text-sm">
-                  <Sparkles className="h-4 w-4 shrink-0 lg:h-5 lg:w-5" aria-hidden="true" />
-                  <span>{latestUpdate.headline}</span>
-                </div>
-                {latestUpdate.bullets.length > 0 ? (
-                  <ul className="mt-2 list-disc space-y-1.5 pl-5 text-xs leading-relaxed text-muted-foreground lg:mt-3 lg:text-sm">
-                    {latestUpdate.bullets.map((bullet, index) => (
-                      <li key={index}>
-                        <LatestBullet text={bullet} />
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-            </DetailSection>
+              </DetailSection>
+            ) : null}
 
             <DetailSection title="游戏深度介绍 (About this Game)">
               {tags.length > 0 ? (

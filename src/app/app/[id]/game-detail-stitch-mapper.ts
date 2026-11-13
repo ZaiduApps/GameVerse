@@ -14,7 +14,6 @@ import {
   OFFICIAL_RESOURCE_LINKS_FALLBACK,
   RATING_FALLBACK_COUNT,
   RATING_FALLBACK_SCORE,
-  WHATS_NEW_FALLBACK,
   type MockResourceLink,
 } from './game-detail-mock-copy';
 
@@ -160,12 +159,13 @@ export function buildSpecTiles(facts: { label: string; value: string }[]): SpecT
   return tiles.slice(0, MAX_SPEC_TILES);
 }
 
-// 最新更新：有 latest_content 就用真实内容，否则用稿件更新日志。
+// 最新更新：有 latest_content 就用真实内容；没有真实内容时返回空 headline + 空 bullets，
+// 由渲染层整块不渲染（#219：过去全站回落到示例游戏的更新日志，属于伪内容）。
 export function buildLatestUpdate(
   game: GameDetailData['app'],
   latestContent: string,
 ): LatestUpdateView {
-  // 占位符（VARY / VARY@<epoch>）不是可读版本号，按缺失处理并复用既有兜底文案。
+  // 占位符（VARY / VARY@<epoch>）不是可读版本号，按缺失处理。
   const version = resolveDisplayVersion(game.version);
   const versionLabel = version ? `版本 v${version}` : '版本信息待补充';
   const updatedAt = formatDateText(game.latest_at);
@@ -176,7 +176,7 @@ export function buildLatestUpdate(
     .filter(Boolean);
 
   if (bullets.length === 0) {
-    return { versionLabel: meta, headline: WHATS_NEW_FALLBACK.headline, bullets: [...WHATS_NEW_FALLBACK.bullets] };
+    return { versionLabel: meta, headline: '', bullets: [] };
   }
   return { versionLabel: meta, headline: bullets[0], bullets: bullets.slice(1) };
 }
