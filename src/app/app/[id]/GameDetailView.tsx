@@ -5,10 +5,8 @@ import { ArrowRight, BadgeCheck, CalendarClock, ChevronRight, CreditCard, Downlo
 
 import GameAnnouncements from '@/components/game-announcements';
 import GameFaqSection from '@/components/game-detail/GameFaqSection';
-import GameTrustStrip from '@/components/game-detail/GameTrustStrip';
 import InstallTroubleshootingDialog from '@/components/install-troubleshooting-dialog';
 import { buildResourceChecksumItems } from '@/lib/game-resource-signature';
-import { buildGameTrustItems } from '@/lib/game-trust-strip';
 import { buildGameVariantRows, type GameVariantRow } from '@/lib/game-detail-variants';
 import { buildGameTopicHref, topicSlugFromPkg } from '@/lib/community-entry';
 import { normalizeGameFaqItems } from '@/lib/game-faq';
@@ -114,7 +112,7 @@ function PreregisterPanel({ pkg }: { pkg?: string | null }) {
   return (
     <section
       aria-label="预约信息"
-      className="mb-4 rounded-2xl border border-tone-amber/30 bg-tone-amber/[0.07] p-4 lg:mb-5 lg:p-5"
+      className="mb-4 rounded-xl border border-tone-amber/30 bg-tone-amber/[0.07] p-4 lg:mb-5 lg:p-5"
     >
       <div className="flex items-start gap-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-tone-amber/30 bg-tone-amber/10 text-tone-amber">
@@ -137,7 +135,7 @@ function PreregisterPanel({ pkg }: { pkg?: string | null }) {
                 前往 Google Play 预约
               </a>
             ) : null}
-            <p className="text-[11px] text-muted-foreground lg:text-xs">点「更新提醒」订阅上线通知</p>
+            <p className="text-xs text-muted-foreground">点「更新提醒」订阅上线通知</p>
           </div>
         </div>
       </div>
@@ -165,7 +163,7 @@ function InstallationGuide({ installSteps, riskNotes }: { installSteps: string[]
         <ol className="mt-2 space-y-1.5 text-xs leading-relaxed text-muted-foreground lg:text-sm">
           {installSteps.map((item, index) => (
             <li key={item} className="flex gap-2">
-              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-white">
+              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
                 {index + 1}
               </span>
               <span>{item}</span>
@@ -195,7 +193,7 @@ function HeroBadges({ badges }: { badges: { label: string; className: string }[]
         <span
           key={badge.label}
           className={cn(
-            'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium lg:text-xs',
+            'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium',
             badge.className,
           )}
         >
@@ -230,7 +228,7 @@ function RelatedNewsSection({ items }: { items: RelatedPostView[] }) {
             className="flex items-start justify-between gap-3 rounded-xl border border-border/60 p-3 transition-colors [@media(hover:hover)]:hover:border-primary/40 [@media(hover:hover)]:hover:bg-primary/[0.04] lg:p-4"
           >
             <span className="line-clamp-2 text-xs font-semibold leading-snug text-foreground lg:text-sm">{item.title}</span>
-            <span className="shrink-0 text-[10px] text-muted-foreground lg:text-xs">{item.date}</span>
+            <span className="shrink-0 text-xs text-muted-foreground">{item.date}</span>
           </Link>
         ))}
       </div>
@@ -252,7 +250,7 @@ function ResourceLinksCard({ items }: { items: ReturnType<typeof buildResourceLi
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-xs font-bold text-foreground">{item.title}</span>
-                <span className="block truncate text-[11px] text-muted-foreground">{item.description}</span>
+                <span className="block truncate text-xs text-muted-foreground">{item.description}</span>
               </span>
             </>
           );
@@ -285,12 +283,14 @@ function ResourceLinksCard({ items }: { items: ReturnType<typeof buildResourceLi
 
 // 版本 / 渠道变体表：只渲染接口真实返回的渠道（行由 buildGameVariantRows 过滤），
 // 版本 / 包大小缺失时留空单元格，不写「未知」。整块服务端渲染，行内链接可被抓取。
+// 「资源滞后」标记只认接口下发的 version_relation：旧接口没有该字段时整列不加标记，
+// 前端不自行比较版本——商店版本的可靠基线只在后端。
 function GameVariantTable({ rows }: { rows: GameVariantRow[] }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border/60">
       <table className="w-full min-w-[420px] text-left text-xs lg:text-sm">
         <thead>
-          <tr className="border-b border-border/60 bg-muted/60 text-[11px] text-muted-foreground lg:text-xs">
+          <tr className="border-b border-border/60 bg-muted/60 text-xs text-muted-foreground">
             <th scope="col" className="px-3 py-2 font-medium lg:px-4">渠道</th>
             <th scope="col" className="px-3 py-2 font-medium lg:px-4">版本</th>
             <th scope="col" className="px-3 py-2 font-medium lg:px-4">包大小</th>
@@ -308,7 +308,19 @@ function GameVariantTable({ rows }: { rows: GameVariantRow[] }) {
                   {row.channelName}
                 </Link>
               </td>
-              <td className="px-3 py-2.5 text-muted-foreground lg:px-4">{row.version || '—'}</td>
+              <td className="px-3 py-2.5 text-muted-foreground lg:px-4">
+                <span className="inline-flex flex-wrap items-center gap-1.5">
+                  <span>{row.version || '—'}</span>
+                  {row.versionRelation === 'stale' ? (
+                    <span
+                      className="shrink-0 rounded-full bg-tone-amber/10 px-2 py-0.5 text-xs font-medium text-tone-amber"
+                      title="该渠道资源版本落后于商店版本，下载到的仍是旧包"
+                    >
+                      资源滞后
+                    </span>
+                  ) : null}
+                </span>
+              </td>
               <td className="px-3 py-2.5 text-muted-foreground lg:px-4">{row.sizeLabel || '—'}</td>
               <td className="px-3 py-2.5 lg:px-4">
                 <Link
@@ -329,27 +341,21 @@ function GameVariantTable({ rows }: { rows: GameVariantRow[] }) {
 
 // 侧栏资源校验信息：只展示接口真实存在的字段，缺项不渲染。
 // 这里不再做「官方纯净认证」之类的结论性表述——仓库里没有对应的扫描或校验集成。
+// 侧栏只保留「渠道覆盖」这一条：包名与当前版本在「版本与技术参数规格」里已有，重复展示是噪音。
 function CertificationCard({
   checksumCount,
   resourceCount,
-  pkg,
-  version,
 }: {
   checksumCount: number;
   resourceCount: number;
-  pkg?: string | null;
-  version: string;
 }) {
   const chips: { key: string; label: string; value: string }[] = [];
   if (checksumCount > 0 && resourceCount > 0) {
     chips.push({ key: 'checksum', label: 'SHA-256', value: `${checksumCount}/${resourceCount}` });
   }
-  const pkgText = String(pkg || '').trim();
-  if (pkgText) chips.push({ key: 'pkg', label: '包名', value: pkgText });
-  if (version) chips.push({ key: 'version', label: '当前版本', value: version });
 
   return (
-    <section className="rounded-2xl border border-tone-green/25 bg-gradient-to-br from-tone-green/[0.07] to-card p-4 shadow-sm lg:p-5">
+    <section className="rounded-xl border border-tone-green/25 bg-card p-4 lg:p-5">
       <div className="flex items-start gap-3.5">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-tone-green text-white">
           <ShieldCheck className="h-6 w-6" />
@@ -367,7 +373,7 @@ function CertificationCard({
             <span
               key={chip.key}
               title={chip.value}
-              className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-lg bg-tone-green/10 px-2 py-1 text-[11px] font-medium text-tone-green"
+              className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-lg bg-tone-green/10 px-2 py-1 text-xs font-medium text-tone-green"
             >
               <span className="shrink-0">{chip.label}</span>
               <span className="truncate font-semibold">{chip.value}</span>
@@ -381,14 +387,14 @@ function CertificationCard({
 
 function BoxDownloadCard() {
   return (
-    <section className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm lg:p-6">
+    <section className="rounded-xl border border-border/60 bg-card p-4 lg:p-6">
       <div className="mb-3 flex items-center justify-between gap-3 text-sm font-bold text-foreground">
         <span>{BOX_DOWNLOAD_CARD.title}</span>
         <span className="text-xs font-normal text-muted-foreground">{BOX_DOWNLOAD_CARD.status}</span>
       </div>
       <Link
         href="/download/app"
-        className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-sm transition-colors [@media(hover:hover)]:hover:bg-primary/90"
+        className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white transition-colors [@media(hover:hover)]:hover:bg-primary/90"
       >
         <Download className="h-5 w-5" aria-hidden="true" />
         立即下载 AC 盒子 App
@@ -424,7 +430,7 @@ function SimilarGamesCard({ items }: { items: ReturnType<typeof buildSimilarGame
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-xs font-bold text-foreground">{item.name}</span>
-                <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{item.meta}</span>
+                <span className="mt-0.5 block truncate text-xs text-muted-foreground">{item.meta}</span>
               </span>
             </span>
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors [@media(hover:hover)]:group-hover:bg-primary [@media(hover:hover)]:group-hover:text-white">
@@ -463,17 +469,12 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   const isWebGame = isWebGameType(game.type);
   // 资源校验值只取接口真实返回的 signature；没有就整块显示「暂无校验值」。
   const checksumItems = buildResourceChecksumItems(resources);
-  // 首屏可信信息条：只汇总真实字段，缺项由纯函数直接跳过。
-  const trustItems = buildGameTrustItems({
-    version: game.version,
-    fileSize: game.file_size,
-    updatedAt: game.latest_at,
-    sourceType: game.source_type,
-    resources,
-    isWebGame,
-  });
+  // 首屏不再渲染信任条（2026-11-17 去重）：版本 / 包大小 / 更新时间 / 来源 / SHA-256
+  // 五项在「版本与技术参数规格」「资源校验值」里都已展示，首屏重复一遍只增加噪音。
   // 渠道变体表：无有效渠道数据时整块不渲染。
   const variantRows = buildGameVariantRows(resources, game.pkg || game._id);
+  // 商店版本：VARY 占位符与空值按缺失处理，避免副标题出现「商店版本 VARY」。
+  const shopVersion = resolveDisplayVersion(game.version);
   const tags = getGameTags(game);
   const primaryCategory = getPrimaryCategory(game, tags);
   const cardConfig = (gameData.cardConfig || {}) as Record<string, CardConfigItem[] | undefined>;
@@ -525,6 +526,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   const heroDescription = prependAliasToDescription(
     cleanText(game.description || game.summary),
     chineseAlias,
+    displayName,
   );
   const actionGame = {
     _id: game._id,
@@ -575,7 +577,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
         <div className="lg:mx-auto lg:max-w-7xl lg:px-16 2xl:px-20">
           <div
             data-stitch="banner"
-            className="relative h-72 w-full overflow-hidden bg-muted sm:h-80 lg:h-96 lg:rounded-3xl lg:border lg:border-border/60 lg:shadow-sm"
+            className="relative h-72 w-full overflow-hidden bg-muted sm:h-80 lg:h-96 lg:rounded-2xl lg:border lg:border-border/60"
           >
             <GameHeroArtwork gameName={resolveGameName(game)} heroImage={heroImage} icon={game.icon} />
             {heroVideo ? (
@@ -590,18 +592,17 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
 
           {/* 信息卡：移动端上浮压住封面 48px，PC 端退回常规栅格并与封面留出间距 */}
           <div data-stitch="info-card" className="relative -mt-12 px-4 lg:mt-6 lg:px-0">
-            <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm lg:rounded-3xl lg:p-8">
+            <div className="rounded-2xl border border-border/60 bg-card p-4 lg:p-8">
               {/* 移动端面包屑：放在信息卡内首行；桌面那份已输出 JSON-LD，这里只画可见导航。 */}
               <div className="mb-2 lg:hidden">
                 <Breadcrumbs items={breadcrumbItems} withJsonLd={false} />
               </div>
               {/* 预约态信息放在主信息卡最上方，保证首屏可见；已上架（status=1）不渲染。 */}
               {game.status === 0 ? <PreregisterPanel pkg={game.pkg} /> : null}
-              <GameTrustStrip items={trustItems} className="mb-4 lg:mb-5" />
-              <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
+              <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center lg:gap-8">
                 <div className="flex items-center gap-3.5 lg:gap-6">
                   <div className="relative shrink-0">
-                    <div className="relative h-20 w-20 overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-sm lg:h-24 lg:w-24">
+                    <div className="relative h-16 w-16 overflow-hidden rounded-xl border border-border/60 bg-muted lg:h-24 lg:w-24 lg:rounded-2xl">
                       {game.icon ? (
                         // 信息卡图标移动端 -mt-12 紧贴封面、桌面端也在首屏，是第 2 个 LCP 候选，放行 eager。
                         <Image
@@ -610,7 +611,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                           fill
                           priority
                           fetchPriority="high"
-                          sizes="(min-width: 1024px) 96px, 80px"
+                          sizes="(min-width: 1024px) 96px, 64px"
                           className="object-cover"
                         />
                       ) : null}
@@ -624,12 +625,9 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                       </span>
                     ) : null}
                   </div>
-                  <div className="min-w-0 space-y-2">
+                  <div className="min-w-0 space-y-1.5 lg:space-y-2">
                     {trustBadges.length > 0 ? <HeroBadges badges={trustBadges} /> : null}
-                    <h1 className="text-lg font-bold leading-snug tracking-tight text-foreground sm:text-xl lg:text-2xl">{resolveGameName(game)}</h1>
-                    {chineseAlias ? (
-                      <p className="mt-1 text-sm text-muted-foreground">中文名：{chineseAlias}</p>
-                    ) : null}
+                    <h1 className="text-xl font-bold leading-snug tracking-tight text-foreground lg:text-2xl">{resolveGameName(game)}</h1>
                     <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                       <span className="inline-flex items-center gap-1 text-foreground">
                         {game.developer || '开发者未提供'}
@@ -687,7 +685,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                       index === 1 && 'hidden lg:flex',
                     )}
                   >
-                    <span className="hidden text-[10px] font-medium tracking-wider text-muted-foreground lg:block">{metric.label}</span>
+                    <span className="hidden text-xs font-medium tracking-wider text-muted-foreground lg:block">{metric.label}</span>
                     <span
                       className={cn(
                         'text-sm font-bold text-foreground lg:mt-0.5 lg:font-semibold',
@@ -696,7 +694,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                     >
                       {metric.value}
                     </span>
-                    <span className="mt-0.5 text-[11px] text-muted-foreground lg:text-[10px]">{metric.hint}</span>
+                    <span className="mt-0.5 text-xs text-muted-foreground">{metric.hint}</span>
                   </div>
                 ))}
               </div>
@@ -721,18 +719,22 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
               title="游戏精选截图与实机展示"
               subtitle="点击截图可放大查看高清原始画质"
             >
-              <GameScreenshotGallery gameName={resolveGameName(game)} screenshots={displayScreenshots} />
+              <GameScreenshotGallery
+                gameName={resolveGameName(game)}
+                screenshots={displayScreenshots}
+                icon={game.icon}
+              />
             </DetailSection>
 
             <DetailSection id="game-detail-specs" title="版本与技术参数规格">
               <div className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-4">
                 {specTiles.map((tile) => (
                   <div key={tile.label} className="min-w-0 rounded-xl border border-border/60 bg-muted/70 p-2.5 lg:p-3.5">
-                    <div className="text-[11px] text-muted-foreground lg:text-xs">{tile.label}</div>
+                    <div className="text-xs text-muted-foreground">{tile.label}</div>
                     <div
                       className={cn(
                         'mt-0.5 flex items-center gap-1.5 text-xs text-foreground lg:text-sm',
-                        tile.mono ? 'font-mono text-[11px] font-bold lg:text-xs' : 'font-semibold',
+                        tile.mono ? 'font-mono text-xs font-bold lg:text-xs' : 'font-semibold',
                       )}
                     >
                       <span
@@ -742,7 +744,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                         {tile.value}
                       </span>
                       {tile.badge ? (
-                        <span className="shrink-0 rounded bg-tone-green/10 px-1.5 py-0.5 text-[10px] font-semibold text-tone-green">{tile.badge}</span>
+                        <span className="shrink-0 rounded bg-tone-green/10 px-1.5 py-0.5 text-xs font-semibold text-tone-green">{tile.badge}</span>
                       ) : null}
                       {tile.verified ? <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" /> : null}
                     </div>
@@ -755,7 +757,11 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
               <DetailSection
                 id="game-detail-variants"
                 title="版本与渠道变体"
-                subtitle="同一游戏在各渠道的真实版本与包大小"
+                subtitle={
+                  shopVersion
+                    ? `同一游戏在各渠道的真实版本与包大小（商店版本 ${shopVersion}）`
+                    : '同一游戏在各渠道的真实版本与包大小'
+                }
               >
                 <GameVariantTable rows={variantRows} />
               </DetailSection>
@@ -775,12 +781,12 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                 action={
                   <div className="flex items-center gap-3">
                     {latestUpdate.versionLabel ? (
-                      <span className="text-[11px] text-muted-foreground lg:text-xs">{latestUpdate.versionLabel}</span>
+                      <span className="text-xs text-muted-foreground">{latestUpdate.versionLabel}</span>
                     ) : null}
                     <Link
                       href="/updates"
                       prefetch={false}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline lg:text-xs"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline lg:text-xs"
                     >
                       查看近 7 天更新榜
                       <ArrowRight className="h-3 w-3" aria-hidden="true" />
@@ -814,7 +820,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                       key={tag}
                       href={buildTagFilterHref(tag)}
                       className={cn(
-                        'inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors [@media(hover:hover)]:hover:bg-muted/60 lg:px-3 lg:text-xs',
+                        'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium transition-colors [@media(hover:hover)]:hover:bg-muted/60 lg:px-3 lg:text-xs',
                         TAG_STYLE_PALETTES[index % TAG_STYLE_PALETTES.length],
                       )}
                     >
@@ -901,13 +907,11 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
             <CertificationCard
               checksumCount={checksumItems.length}
               resourceCount={resources.length}
-              pkg={game.pkg}
-              version={resolveDisplayVersion(game.version)}
             />
             <BoxDownloadCard />
             <SimilarGamesCard items={similarGames} />
             <div id="game-detail-section-reviews">
-              <Suspense fallback={<div className="min-h-[31rem] animate-pulse rounded-2xl bg-card/70" />}>
+              <Suspense fallback={<div className="min-h-[31rem] animate-pulse rounded-xl bg-card/70" />}>
                 <DeferredGameReviewPanel
                   game={{ _id: game._id, pkg: game.pkg, name: resolveGameName(game), star: game.star }}
                   summary={gameData.reviewSummary}

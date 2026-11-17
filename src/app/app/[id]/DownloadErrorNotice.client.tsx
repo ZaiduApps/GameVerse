@@ -21,7 +21,7 @@ const ACTION_ICONS: Record<DownloadErrorActionKey, ReactNode> = {
 };
 
 const ACTION_CLASS =
-  'inline-flex items-center gap-1.5 rounded-lg border border-tone-amber/40 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#7a4a00] transition-colors [@media(hover:hover)]:hover:bg-tone-amber/10 lg:text-xs dark:bg-card dark:text-tone-amber';
+  'inline-flex items-center gap-1.5 rounded-lg border border-tone-amber/40 bg-white px-2.5 py-1.5 text-xs font-semibold text-[#7a4a00] transition-colors [@media(hover:hover)]:hover:bg-tone-amber/10 lg:text-xs dark:bg-card dark:text-tone-amber';
 
 interface DownloadErrorNoticeViewProps {
   reason: DownloadFailureReason;

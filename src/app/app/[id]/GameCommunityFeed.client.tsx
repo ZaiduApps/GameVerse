@@ -57,7 +57,7 @@ function SortToggle({
           data-acbox-action={'game_detail_posts_sort_' + option.value}
           data-acbox-label={gameName}
           className={cn(
-            'rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors lg:px-3 lg:text-xs',
+            'rounded-full px-2.5 py-1 text-xs font-bold transition-colors lg:px-3 lg:text-xs',
             sort === option.value ? 'bg-primary text-white' : 'text-[#595c5d] dark:text-muted-foreground',
           )}
           onClick={() => onSortChange(option.value)}
@@ -168,9 +168,9 @@ function CommunityPostRow({
   return (
     <article className="group flex items-start gap-3 rounded-xl border border-[#abadae]/15 bg-[#f7f8f9]/70 p-3 transition-colors lg:gap-4 lg:p-4 dark:border-border/40 dark:bg-card/50 [@media(hover:hover)]:hover:bg-[#eff1f2]/80 dark:[@media(hover:hover)]:hover:bg-muted/60">
       <div className="min-w-0 flex-1 lg:space-y-2">
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground lg:gap-2.5 lg:text-xs">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground lg:gap-2.5 lg:text-xs">
           {post.tag ? (
-            <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary lg:order-last">
+            <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary lg:order-last">
               {post.tag}
             </span>
           ) : null}
@@ -181,7 +181,7 @@ function CommunityPostRow({
               loading="lazy"
               decoding="async"
             />
-            <AvatarFallback className="text-[10px]">{post.userName.slice(0, 1)}</AvatarFallback>
+            <AvatarFallback className="text-xs">{post.userName.slice(0, 1)}</AvatarFallback>
           </Avatar>
           <span className="hidden truncate font-semibold text-[#2c2f30] lg:inline dark:text-foreground">{post.userName}</span>
           <span className="hidden text-[#abadae] lg:inline" aria-hidden="true">
@@ -208,7 +208,7 @@ function CommunityPostRow({
           <p className="line-clamp-2 text-xs leading-relaxed text-[#595c5d] dark:text-muted-foreground">{post.excerpt}</p>
         </div>
 
-        <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-muted-foreground lg:mt-0 lg:gap-4 lg:pt-1 lg:text-xs">
+        <div className="mt-2 flex items-center justify-between gap-3 text-xs text-muted-foreground lg:mt-0 lg:gap-4 lg:pt-1 lg:text-xs">
           <div className="flex items-center gap-3 lg:gap-4">
             <span className="inline-flex items-center gap-1">
               <Eye className="h-3.5 w-3.5" aria-hidden="true" />

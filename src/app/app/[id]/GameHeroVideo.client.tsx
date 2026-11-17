@@ -82,7 +82,7 @@ export default function GameHeroVideo({ source, poster, gameName, className }: G
                 <X className="h-4 w-4" />
               </button>
               <div className="relative w-full max-w-5xl" onClick={(event) => event.stopPropagation()}>
-                <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black">
+                <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
                   <video
                     src={source.url}
                     controls

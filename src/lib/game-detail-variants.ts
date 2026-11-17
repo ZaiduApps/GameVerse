@@ -17,6 +17,11 @@ export interface GameVariantRow {
   version: string;
   /** 人类可读的包大小；接口未返回或非正数时为空串。 */
   sizeLabel: string;
+  /**
+   * 接口下发的版本关系；旧接口没有该字段时为 `undefined`（整列不渲染标记）。
+   * 前端一律透传，不自行比较版本——基线（商店版本）只有后端有可靠口径。
+   */
+  versionRelation?: 'current' | 'stale' | 'unknown';
   /** 可抓取的下载 302 入口（不依赖 JS）。 */
   href: string;
 }
@@ -46,6 +51,7 @@ export function buildGameVariantRows(
       channelName,
       version: resolveDisplayVersion(version),
       sizeLabel: formatFileSize(resource?.size) || '',
+      versionRelation: resource?.version_relation,
       href: `/app/${encodeURIComponent(canonicalPkg)}/download/${encodeURIComponent(channelId)}`,
     });
   }

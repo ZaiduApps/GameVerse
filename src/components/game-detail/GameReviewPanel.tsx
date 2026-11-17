@@ -612,7 +612,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
         </CardTitle>
       </CardHeader>
       <CardContent className={cn('space-y-6', compact && 'space-y-4')}>
-        <section className="rounded-2xl border border-[#abadae]/15 bg-[#f7f8f9] p-4">
+        <section className="rounded-xl border border-[#abadae]/15 bg-[#f7f8f9] p-4">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-sm text-[#595c5d]">综合评分</p>
@@ -681,7 +681,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
           ) : null}
         </section>
 
-        <section className="rounded-2xl border border-[#abadae]/15 bg-white p-4">
+        <section className="rounded-xl border border-[#abadae]/15 bg-white p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Switch
@@ -695,7 +695,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
               <p className="text-sm text-[#2c2f30]">有人回复我时发送邮件提醒</p>
             </div>
             {!adminEmailSwitchEnabled ? (
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-xs">
                 总开关已关闭
               </Badge>
             ) : null}
@@ -819,7 +819,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
                     <div className="min-w-0 flex-1 rounded-xl bg-[#f7f8f9] p-3">
                       <div className="mb-1 flex items-center justify-between gap-3">
                         <span className="truncate text-sm font-semibold text-[#2c2f30]">{comment.user.name}</span>
-                        <span className="shrink-0 text-[11px] text-muted-foreground">{comment.timestamp}</span>
+                        <span className="shrink-0 text-xs text-muted-foreground">{comment.timestamp}</span>
                       </div>
                       <p className="whitespace-pre-line text-sm leading-6 text-[#2c2f30]">{comment.text}</p>
                       <div className="mt-2 flex items-center gap-2">
@@ -868,7 +868,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
                           <div className="min-w-0 flex-1 rounded-lg bg-[#f4f6f7] p-2.5">
                             <div className="mb-1 flex items-center justify-between gap-2">
                               <span className="truncate text-xs font-semibold text-[#2c2f30]">{reply.user.name}</span>
-                              <span className="shrink-0 text-[11px] text-muted-foreground">{reply.timestamp}</span>
+                              <span className="shrink-0 text-xs text-muted-foreground">{reply.timestamp}</span>
                             </div>
                             <p className="whitespace-pre-line text-xs leading-5 text-[#2c2f30]">{reply.text}</p>
                             <div className="mt-1.5 flex items-center gap-1">
@@ -876,7 +876,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                className="h-6 px-1.5 text-[11px] text-[#595c5d]"
+                                className="h-6 px-1.5 text-xs text-[#595c5d]"
                                 disabled={pendingCommentLikeIds[reply.id]}
                                 onClick={() => void handleCommentLike(reply.id)}
                               >
@@ -892,7 +892,7 @@ export default function GameReviewPanel({ game, className, compact = false }: Ga
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                className="h-6 px-1.5 text-[11px] text-[#595c5d]"
+                                className="h-6 px-1.5 text-xs text-[#595c5d]"
                                 onClick={() => setReplyTarget({ id: comment.id, name: reply.user.name })}
                               >
                                 回复

@@ -110,10 +110,11 @@ export default function GameHeroArtwork({ gameName, heroImage, icon }: GameHeroA
         ) : null,
       )}
       {isIconFallback ? (
+        // 只有图标可作封面时，图标本身分辨率低、色块重，铺一层半透明底再模糊，避免首屏脏。
         <div className="absolute inset-0 bg-white/14 backdrop-blur-md dark:bg-black/20" />
       ) : null}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#f5f6f7] via-transparent to-black/20 dark:hidden lg:from-black/55 lg:via-black/15 lg:to-black/15" />
-      <div className="absolute inset-0 hidden bg-gradient-to-t from-[#080d14]/90 via-[#080d14]/38 to-black/15 dark:block" />
+      {/* 这里不再叠渐变遮罩（视觉规范 §6 禁止「用渐变遮罩遮住半张图」，且大面积渐变属明令不做）。
+          首屏需要对比度的两个元素都自带底色：PV 按钮是 bg-black/60，信息卡是 bg-card 实底。 */}
     </div>
   );
 }

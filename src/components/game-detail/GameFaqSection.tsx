@@ -32,14 +32,14 @@ export default function GameFaqSection({ id, title, hint, items, intro, action }
   return (
     <section
       id={id}
-      className="scroll-mt-28 rounded-2xl border border-[#abadae]/20 bg-white p-4 shadow-sm lg:scroll-mt-24 lg:p-6 dark:border-border/45 dark:bg-card/80"
+      className="scroll-mt-28 rounded-xl border border-[#abadae]/20 bg-white p-4 lg:scroll-mt-24 lg:p-6 dark:border-border/45 dark:bg-card/80"
     >
       <div className="mb-3 flex items-center justify-between gap-3 lg:mb-5">
         <div className="flex min-w-0 items-center gap-1.5 lg:gap-2">
           <span className="h-3.5 w-1 shrink-0 rounded-full bg-primary lg:h-5 lg:w-1.5" aria-hidden="true" />
           <h2 className="truncate text-sm font-bold text-[#2c2f30] lg:text-lg dark:text-foreground">{title}</h2>
           {hint ? (
-            <span className="hidden shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary lg:inline-block lg:text-xs">
+            <span className="hidden shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary lg:inline-block lg:text-xs">
               {hint}
             </span>
           ) : null}
@@ -63,7 +63,7 @@ export default function GameFaqSection({ id, title, hint, items, intro, action }
                   <span
                     aria-hidden="true"
                     className={cn(
-                      'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-[10px] font-bold text-white lg:hidden',
+                      'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-xs font-bold text-white lg:hidden',
                       tone.markTone,
                     )}
                   >

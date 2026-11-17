@@ -157,6 +157,21 @@ test('变体表：缺版本 / 大小留空，不写「未知」', () => {
   assert.ok(!JSON.stringify(rows).includes('未知'));
 });
 
+test('变体表：透传接口下发的 version_relation，旧接口缺失时为 undefined', () => {
+  const rows = buildGameVariantRows(
+    [
+      makeResource({ _id: 'res-current', version: '2.0.0', version_relation: 'current' }),
+      makeResource({ _id: 'res-stale', version: '1.0.2', version_relation: 'stale' }),
+      makeResource({ _id: 'res-legacy', version: '1.0.1' }),
+    ],
+    'com.example.game',
+  );
+  assert.deepEqual(
+    rows.map((row) => row.versionRelation),
+    ['current', 'stale', undefined],
+  );
+});
+
 test('变体表：同渠道同版本去重，不同版本各自成行', () => {
   const rows = buildGameVariantRows(
     [

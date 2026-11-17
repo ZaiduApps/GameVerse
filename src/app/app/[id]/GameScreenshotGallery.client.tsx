@@ -16,6 +16,8 @@ type ScreenshotAspectKind = 'portrait' | 'landscape' | 'square' | 'unknown';
 interface GameScreenshotGalleryProps {
   gameName: string;
   screenshots: string[];
+  /** 游戏图标：与图标同源的「截图」是抓取串味，不进胶片条。 */
+  icon?: string;
 }
 
 function normalizePreviewUrl(input: string): string {
@@ -75,11 +77,23 @@ function previewImageWidth(kind: ScreenshotAspectKind): number {
 export default function GameScreenshotGallery({
   gameName,
   screenshots,
+  icon,
 }: GameScreenshotGalleryProps) {
-  const normalizedScreenshots = useMemo(
-    () => screenshots.map(normalizePreviewUrl).filter(Boolean),
-    [screenshots],
-  );
+  // 上游 `detail_images` 会给同一张图重复好几次（线上实测 10 张里 3 张重复），
+  // 重复项会渲染成重复卡片 + 空 src 占位，所以这里按规范化后的 URL 保序去重，
+  // 再丢掉与游戏图标同源的项（图标已有独立位置，不必在胶片条里再出现一次）。
+  const normalizedScreenshots = useMemo(() => {
+    const seen = new Set<string>();
+    const iconUrl = normalizePreviewUrl(icon || '');
+    const list: string[] = [];
+    for (const raw of screenshots) {
+      const url = normalizePreviewUrl(raw);
+      if (!url || url === iconUrl || seen.has(url)) continue;
+      seen.add(url);
+      list.push(url);
+    }
+    return list;
+  }, [screenshots, icon]);
   const inferredAspects = useMemo(
     () => Object.fromEntries(normalizedScreenshots.map((url) => [url, inferAspectFromUrl(url)])),
     [normalizedScreenshots],
@@ -103,7 +117,7 @@ export default function GameScreenshotGallery({
 
   if (normalizedScreenshots.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-[#abadae]/30 bg-white/60 p-6 text-sm text-[#595c5d] dark:bg-card/60 dark:text-muted-foreground">
+      <div className="rounded-xl border border-dashed border-[#abadae]/30 bg-white/60 p-6 text-sm text-[#595c5d] dark:bg-card/60 dark:text-muted-foreground">
         暂无可展示的游戏截图。
       </div>
     );
@@ -121,12 +135,12 @@ export default function GameScreenshotGallery({
                 triggerRefs.current[index] = element;
               }}
               type="button"
-              key={`${url}-${index}`}
+              key={url}
               aria-label={`查看${gameName}截图 ${index + 1}`}
               data-acbox-action="game_detail_screenshot_open"
               data-acbox-label={`${gameName} 截图 ${index + 1}`}
               className={cn(
-                'group relative shrink-0 snap-center overflow-hidden rounded-2xl bg-muted shadow-sm transition-colors duration-300 lg:rounded-2xl lg:bg-white/60 dark:bg-card/60',
+                'group relative shrink-0 snap-center overflow-hidden rounded-xl bg-muted transition-colors duration-300 lg:bg-white/60 dark:bg-card/60',
                 cardClassName(aspect),
               )}
               onClick={() => setPreviewIndex(index)}

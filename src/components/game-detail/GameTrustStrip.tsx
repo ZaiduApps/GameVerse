@@ -30,7 +30,7 @@ export default function GameTrustStrip({
           key={item.key}
           className={cn('min-w-0', item.key === 'checksum' && 'col-span-2 lg:col-span-1')}
         >
-          <dt className="text-[10px] font-medium text-muted-foreground lg:text-[11px]">{item.label}</dt>
+          <dt className="text-xs font-medium text-muted-foreground">{item.label}</dt>
           <dd
             className="truncate text-xs font-semibold text-foreground lg:text-sm"
             title={item.value}

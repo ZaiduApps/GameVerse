@@ -229,7 +229,7 @@ export default function GameDetailActions({
           data-acbox-action={isWebGame ? 'web_game_app_guide_open' : 'game_download_open'}
           data-acbox-label={resolveGameName(game)}
           onClick={openPrimaryAction}
-          className="group flex h-14 w-full items-center justify-between rounded-xl bg-primary px-5 text-white shadow-sm transition-colors [@media(hover:hover)]:hover:bg-primary/90"
+          className="group flex h-14 w-full items-center justify-between rounded-xl bg-primary px-5 text-white transition-colors [@media(hover:hover)]:hover:bg-primary/90"
         >
           <span className="flex items-center gap-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/20">
@@ -237,7 +237,7 @@ export default function GameDetailActions({
             </span>
             <span className="text-left">
               <span className="block text-sm font-bold leading-tight">{primaryActionLabel}</span>
-              <span className="block text-[11px] font-normal text-white/85">{primaryActionMeta}</span>
+              <span className="block text-xs font-normal text-white/85">{primaryActionMeta}</span>
             </span>
           </span>
           <ArrowRight className="h-[18px] w-[18px] text-white/85 transition-transform group-hover:translate-x-1" />
@@ -341,7 +341,7 @@ export default function GameDetailActions({
             className="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
           >
             <Heart className={cn('h-5 w-5', isFavorite && 'fill-current text-tone-red')} />
-            <span className="text-[10px]">想玩</span>
+            <span className="text-xs">想玩</span>
           </button>
           <Link
             href="/community"
@@ -352,7 +352,7 @@ export default function GameDetailActions({
             className="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
           >
             <MessageSquare className="h-5 w-5" />
-            <span className="text-[10px]">论坛</span>
+            <span className="text-xs">论坛</span>
           </Link>
           {isWebGame ? null : (
             <button
@@ -363,7 +363,7 @@ export default function GameDetailActions({
               className="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
             >
               <RefreshCw className="h-5 w-5" />
-              <span className="text-[10px]">{isSubmittingUrge ? '提交中' : '催更'}</span>
+              <span className="text-xs">{isSubmittingUrge ? '提交中' : '催更'}</span>
             </button>
           )}
           {showUpdateReminder ? (
@@ -376,7 +376,7 @@ export default function GameDetailActions({
               className={cn('flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground', isReminderEnabled && 'text-primary')}
             >
               <BellPlus className={cn('h-5 w-5', isReminderEnabled && 'fill-current')} />
-              <span className="text-[10px]">{reminderLabel}</span>
+              <span className="text-xs">{reminderLabel}</span>
             </button>
           ) : null}
           <button
@@ -385,7 +385,7 @@ export default function GameDetailActions({
             data-acbox-action={isWebGame ? 'web_game_app_guide_open' : 'game_download_open'}
             data-acbox-label={resolveGameName(game)}
             onClick={openPrimaryAction}
-            className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 px-4 text-sm font-bold text-white shadow-md shadow-teal-500/25 transition-[filter] active:from-teal-600 active:to-emerald-600 [@media(hover:hover)]:hover:brightness-105"
+            className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white transition-colors active:bg-primary/90 [@media(hover:hover)]:hover:bg-primary/90"
           >
             {isWebGame ? <Smartphone className="h-5 w-5" /> : <Download className="h-5 w-5" />}
             <span className="truncate">

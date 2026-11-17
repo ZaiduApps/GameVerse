@@ -5,7 +5,9 @@ import {
   SEO_TITLE_MAX,
   buildGameDetailSeo,
   normalizeSeoTemplateVersion,
+  prependAliasToDescription,
   renderSeoTemplate,
+  resolveChineseAlias,
   stripSeoVersionMentions,
 } from '../src/lib/seo.ts';
 
@@ -183,3 +185,50 @@ test('模板不含站点名时自动补后缀，且总长受控', () => {
 function longName() {
   return 'エグリプト 世界に一体だけのモンスターを育成して戦うRPG超長い名前';
 }
+
+// 线上实测（2026-11-17，apks.cc/app/com.colyinc.sparklinkstars）的真实别名顺序：
+// 真正的中文名「迪士尼 星链 星星」排在最后，前面全是主名的复述（含只差一个尾部 APK 的）。
+const SPARKLINK_ALIASES = [
+  'ディズニー スパークリンク・スターズ',
+  '迪士尼 Sparklink Stars',
+  'Disney Sparklink Stars',
+  'Disney Sparklink Stars APK',
+  '迪士尼 Sparklink Stars APK',
+  '迪士尼 星链 星星',
+];
+const SPARKLINK_NAME = '迪士尼 Sparklink Stars';
+
+test('尾部只差裸 APK 的别名视为主名复述，命中后面的真正中文名', () => {
+  assert.equal(
+    resolveChineseAlias(SPARKLINK_ALIASES, SPARKLINK_NAME),
+    '迪士尼 星链 星星',
+  );
+  // 全角括号里的英文名同样剥掉后再比较。
+  assert.equal(
+    resolveChineseAlias(['皇室战争（Clash Royale）'], '皇室战争'),
+    '',
+  );
+  // APKS / XAPK / MOD 同属格式词，一并剥掉。
+  assert.equal(resolveChineseAlias(['Foo Bar APKS'], 'Foo Bar'), '');
+  assert.equal(resolveChineseAlias(['Foo Bar XAPK'], 'Foo Bar'), '');
+  assert.equal(resolveChineseAlias(['Foo Bar MOD'], 'Foo Bar'), '');
+  // 真正不同的中文别名不受影响。
+  assert.equal(resolveChineseAlias(['星链星星'], 'Foo Bar'), '星链星星');
+});
+
+test('别名等于主名时正文首段不加「中文名」前缀', () => {
+  const description = '提供迪士尼 Sparklink Stars 安卓版APK下载。';
+  assert.equal(
+    prependAliasToDescription(description, '迪士尼 Sparklink Stars APK', SPARKLINK_NAME),
+    description,
+  );
+  // 真正的别名仍会前置一次，且原文已包含时不重复。
+  assert.equal(
+    prependAliasToDescription(description, '迪士尼 星链 星星', SPARKLINK_NAME),
+    `中文名「迪士尼 星链 星星」。${description}`,
+  );
+  assert.equal(
+    prependAliasToDescription('迪士尼 星链 星星 下载', '迪士尼 星链 星星', SPARKLINK_NAME),
+    '迪士尼 星链 星星 下载',
+  );
+});

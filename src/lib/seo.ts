@@ -204,6 +204,23 @@ const CJK_PATTERN = /[㐀-鿿]/;
 /** 别名尾部的英文括注（如 `部落冲突:皇室战争(Clash Royale)` 的括号部分）对中文用户没有信息量，展示前剥掉。 */
 const TRAILING_LATIN_ALIAS_SUFFIX = /\s*[(（][A-Za-z0-9 .,:'"&!\-]+[)）]\s*$/;
 
+/**
+ * 别名尾部裸的格式词（`迪士尼 Sparklink Stars APK` 的 `APK`）。
+ *
+ * 这类别名是采集时把「包类型」拼进名字得到的，语义上就是主名本身：不剥掉会让它
+ * 以「更靠前」的位置盖过真正的中文别名（线上 `迪士尼 Sparklink Stars APK` 排在
+ * `迪士尼 星链 星星` 之前，页面因此丢了真正的中文名）。
+ */
+const TRAILING_LATIN_FORMAT_TOKEN = /(?:[\s:：\-–—_]+(?:APKS?|XAPK|MOD))+$/i;
+
+/** 别名归一：剥英文括注与尾部裸格式词，用于「是否等于主名」的比较。 */
+function normalizeAliasForCompare(input: unknown): string {
+  return sanitizeSeoText(input == null ? '' : String(input))
+    .replace(TRAILING_LATIN_ALIAS_SUFFIX, '')
+    .replace(TRAILING_LATIN_FORMAT_TOKEN, '')
+    .trim();
+}
+
 function normalizeSeoAliases(input?: string[] | null): string[] {
   return Array.from(
     new Set(
@@ -221,26 +238,34 @@ function normalizeSeoAliases(input?: string[] | null): string[] {
  */
 export function resolveChineseAlias(aliases: unknown, name?: string | null): string {
   const list = Array.isArray(aliases) ? aliases : [];
-  const normalizedName = sanitizeSeoText(name).toLowerCase();
+  const normalizedName = normalizeAliasForCompare(name).toLowerCase();
   for (const item of list) {
-    const alias = sanitizeSeoText(item)
-      .replace(TRAILING_LATIN_ALIAS_SUFFIX, '')
-      .trim();
+    const alias = normalizeAliasForCompare(item);
     if (!alias || !CJK_PATTERN.test(alias)) continue;
+    // 与主名相同时跳过：只差一个尾部 ` APK` 的别名没有信息量，留着还会挡住后面的真中文名。
     if (normalizedName && alias.toLowerCase() === normalizedName) continue;
     return alias;
   }
   return '';
 }
 
-/** 正文首段只在开头引入一次别名，原文已经提到别名时不再重复。 */
+/**
+ * 正文首段只在开头引入一次别名，原文已经提到别名时不再重复。
+ *
+ * 传入 `name` 时，别名归一后与主名相同的也不加前缀——否则 hero 首句会变成
+ * 「中文名「迪士尼 Sparklink Stars APK」。」这种等于复述标题的赘句。
+ */
 export function prependAliasToDescription(
   description?: string | null,
   alias?: string | null,
+  name?: string | null,
 ): string {
   const text = String(description || '').trim();
-  const aliasText = sanitizeSeoText(alias);
-  if (!text || !aliasText || text.includes(aliasText)) return text;
+  const aliasText = normalizeAliasForCompare(alias);
+  if (!text || !aliasText) return text;
+  const normalizedName = normalizeAliasForCompare(name).toLowerCase();
+  if (normalizedName && aliasText.toLowerCase() === normalizedName) return text;
+  if (text.includes(aliasText)) return text;
   return `中文名「${aliasText}」。${text}`;
 }
 
@@ -335,7 +360,7 @@ export function buildGameDetailSeo(input: GameDetailSeoInput, siteName = 'APKScc
   const baseDescription =
     manualDescription || stripSeoVersionMentions(autoDescription);
   // 中文别名必须出现在 meta description 里（别名是用户实际搜索词）；已包含则不重复前置，最后统一截到 155。
-  const description = prependAliasToDescription(baseDescription, chineseAlias);
+  const description = prependAliasToDescription(baseDescription, chineseAlias, name);
   const keywordCandidates = [
     name,
     pkg,

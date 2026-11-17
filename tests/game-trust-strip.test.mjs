@@ -130,8 +130,11 @@ test('全部缺失时返回空数组，任何条目都不出现占位文案', ()
   }
 });
 
-test('详情页接入信任条，mock 文案里的无证据安全承诺已清除', () => {
-  assert.match(viewSource, /<GameTrustStrip items=\{trustItems\}/);
+test('详情页不再渲染信任条（5 项与「版本与技术参数规格」重复），下载落地页仍保留', () => {
+  // 2026-11-17 去重：详情页首屏信任条与「版本与技术参数规格」完全重复，删除引用；
+  // buildGameTrustItems 本身保留（/download/[pkg]/[channelId] 与 /updates 仍在用）。
+  assert.doesNotMatch(viewSource, /<GameTrustStrip/);
+  assert.doesNotMatch(viewSource, /buildGameTrustItems/);
   assert.doesNotMatch(mockCopySource, /VirusTotal|360 核心安全卫士|100% 提取自 Google Play/);
   assert.doesNotMatch(mockCopySource, /官方原包|未篡改|已通过官方安全校验/);
   assert.doesNotMatch(mockCopySource, /CERTIFICATION_CARD|SIGNATURE_VERIFY_TILE|HERO_TRUST_BADGES/);

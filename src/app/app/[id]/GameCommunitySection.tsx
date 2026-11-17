@@ -104,7 +104,7 @@ export function GameCommunitySkeleton() {
     <section
       aria-busy="true"
       aria-label="正在加载社区动态"
-      className="rounded-2xl border border-[#abadae]/20 bg-white p-4 shadow-sm lg:p-6 dark:border-border/45 dark:bg-card/80"
+      className="rounded-xl border border-[#abadae]/20 bg-white p-4 lg:p-6 dark:border-border/45 dark:bg-card/80"
     >
       <div className="mb-4 h-6 w-40 animate-pulse rounded bg-[#dadddf]/70 lg:mb-5 lg:h-7" />
       <div className="space-y-2.5 lg:space-y-3">

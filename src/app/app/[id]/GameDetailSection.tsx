@@ -17,7 +17,7 @@ export default function GameDetailSection({ id, title, subtitle, action, classNa
     <section
       id={id}
       className={cn(
-        'rounded-2xl border border-border/60 bg-card p-4 shadow-sm lg:p-6',
+        'rounded-xl border border-border/60 bg-card p-4 lg:p-6',
         className,
       )}
     >
@@ -28,7 +28,7 @@ export default function GameDetailSection({ id, title, subtitle, action, classNa
             {title}
           </h2>
           {subtitle ? (
-            <p className="mt-0.5 text-[11px] text-muted-foreground lg:text-xs">{subtitle}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
           ) : null}
         </div>
         {action ? <div className="flex shrink-0 items-center gap-1.5 lg:gap-3">{action}</div> : null}

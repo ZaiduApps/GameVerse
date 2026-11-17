@@ -247,3 +247,52 @@ test('「无快照 + 上游故障」不再抛错：兜底壳 + 失败标记，�
     /if \(process\.env\.NEXT_PHASE === 'phase-production-build'\) return \{ kind: 'missing' \}/,
   );
 });
+
+test('移动端 hero 收紧：图标 64px、h1 20px、间距 gap-5，桌面尺寸不变', () => {
+  // 派发单 2026-11-17 #4：390×844 实测 icon 80px / h1 18px 过大，桌面本来就合适。
+  assert.match(viewSource, /h-16 w-16 overflow-hidden rounded-xl[^"]*lg:h-24 lg:w-24 lg:rounded-2xl/);
+  assert.match(viewSource, /sizes="\(min-width: 1024px\) 96px, 64px"/);
+  assert.match(viewSource, /<h1 className="text-xl font-bold[^"]*lg:text-2xl">/);
+  assert.doesNotMatch(viewSource, /<h1 className="text-lg/);
+  assert.match(viewSource, /gap-5 lg:flex-row lg:items-center lg:gap-8/);
+  assert.match(viewSource, /min-w-0 space-y-1\.5 lg:space-y-2/);
+});
+
+test('首屏重复渲染已去掉：无信任条、无「中文名：」行、认证卡只留校验覆盖', () => {
+  assert.doesNotMatch(viewSource, /GameTrustStrip|buildGameTrustItems/);
+  assert.doesNotMatch(viewSource, /中文名：/);
+  // CertificationCard 不再接收 pkg / version，只留 SHA-256 覆盖一枚 chip。
+  assert.doesNotMatch(viewSource, /chips\.push\(\{ key: 'pkg'/);
+  assert.doesNotMatch(viewSource, /chips\.push\(\{ key: 'version'/);
+});
+
+test('截图按 URL 保序去重，并丢掉与图标同源的项，key 用 url', () => {
+  assert.match(gallerySource, /const seen = new Set<string>\(\)/);
+  assert.match(gallerySource, /url === iconUrl/);
+  assert.match(gallerySource, /seen\.has\(url\)/);
+  assert.match(gallerySource, /key=\{url\}/);
+  assert.doesNotMatch(gallerySource, /key=\{`\$\{url\}-\$\{index\}`\}/);
+});
+
+test('视觉规范：详情页目录内无大色块渐变 / 阴影 / 小字号 / 离群圆角', async () => {
+  // 视觉规范 §4/§5/§11：最小字号 12px、默认无阴影用边框分层、圆角收敛。
+  // 首图遮罩（GameHeroArtwork）是渐变遮罩，属图片处理，不在本断言范围。
+  const dirs = ['../src/app/app/[id]', '../src/components/game-detail'];
+  const files = [];
+  for (const dir of dirs) {
+    const { readdir } = await import('node:fs/promises');
+    const entries = await readdir(new URL(dir, import.meta.url));
+    for (const name of entries) {
+      if (name.endsWith('.tsx') && !name.startsWith('GameHeroArtwork')) {
+        files.push(`../src/${dir.replace('../src/', '')}/${name}`);
+      }
+    }
+  }
+  for (const file of files) {
+    const source = await readSource(file);
+    assert.doesNotMatch(source, /text-\[10px\]|text-\[11px\]/, `${file} 仍有 <12px 字号`);
+    assert.doesNotMatch(source, /shadow-sm|shadow-md|shadow-lg|shadow-xl/, `${file} 仍有阴影`);
+    assert.doesNotMatch(source, /rounded-3xl/, `${file} 仍有 rounded-3xl`);
+    assert.doesNotMatch(source, /from-teal-500|from-tone-green\/\[0\.07\]/, `${file} 仍有大色块渐变`);
+  }
+});

@@ -39,7 +39,7 @@ export default function GameResourceChecksums({ items }: GameResourceChecksumsPr
     return (
       <div className="rounded-xl border border-dashed border-[#abadae]/30 p-3 text-xs leading-6 text-muted-foreground lg:p-4 lg:text-sm dark:border-border/45">
         暂无校验值
-        <span className="mt-1 block text-[11px] lg:text-xs">
+        <span className="mt-1 block text-xs">
           资源提供方尚未给出 SHA-256 校验值，下载完成后可在本地自行计算核对。
         </span>
       </div>
@@ -65,7 +65,7 @@ export default function GameResourceChecksums({ items }: GameResourceChecksumsPr
                   ) : null}
                 </p>
                 <p
-                  className="mt-1 break-all font-mono text-[11px] leading-5 text-[#595c5d] lg:text-xs dark:text-muted-foreground"
+                  className="mt-1 break-all font-mono text-xs leading-5 text-[#595c5d] lg:text-xs dark:text-muted-foreground"
                   title={item.signature}
                 >
                   SHA-256：{item.signatureShort}
@@ -75,7 +75,7 @@ export default function GameResourceChecksums({ items }: GameResourceChecksumsPr
                 type="button"
                 onClick={() => void handleCopy(item)}
                 aria-label={`复制 ${item.channelName} 的 SHA-256 校验值`}
-                className="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-[#abadae]/25 bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#2c2f30] transition-colors [@media(hover:hover)]:hover:bg-[#e6e8ea] lg:text-xs dark:border-border/45 dark:bg-card dark:text-foreground"
+                className="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg border border-[#abadae]/25 bg-white px-2.5 py-1.5 text-xs font-medium text-[#2c2f30] transition-colors [@media(hover:hover)]:hover:bg-[#e6e8ea] lg:text-xs dark:border-border/45 dark:bg-card dark:text-foreground"
               >
                 {copied ? (
                   <>
@@ -90,7 +90,7 @@ export default function GameResourceChecksums({ items }: GameResourceChecksumsPr
                 )}
               </button>
               {failedId === item.resourceId ? (
-                <span role="status" className="text-[11px] text-tone-red">
+                <span role="status" className="text-xs text-tone-red">
                   复制失败，请手动选择上面的校验值
                 </span>
               ) : null}
@@ -98,7 +98,7 @@ export default function GameResourceChecksums({ items }: GameResourceChecksumsPr
           );
         })}
       </ul>
-      <p className="text-[11px] leading-5 text-muted-foreground lg:text-xs">
+      <p className="text-xs leading-5 text-muted-foreground lg:text-xs">
         校验值来自资源提供方。下载完成后可在本地执行 sha256sum（Windows 用 certutil -hashfile）并与上方完整值比对。
       </p>
     </div>

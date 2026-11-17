@@ -26,7 +26,7 @@ function GameReviewFallback({ summary }: Pick<DeferredGameReviewPanelProps, 'sum
   const count = Math.max(0, Number(summary?.ratingCount || 0));
   return (
     <div
-      className="min-h-[31rem] rounded-2xl border border-[#abadae]/10 bg-white p-5 dark:border-border/45 dark:bg-card/75"
+      className="min-h-[31rem] rounded-xl border border-[#abadae]/10 bg-white p-5 dark:border-border/45 dark:bg-card/75"
       aria-busy="true"
       aria-label="正在加载玩家评价"
     >
@@ -35,7 +35,7 @@ function GameReviewFallback({ summary }: Pick<DeferredGameReviewPanelProps, 'sum
         {score > 0 ? `${score.toFixed(1)} / 5.0 · ${formatCount(count)} 人评分` : '正在加载评价与评论…'}
       </p>
       <div className="mt-5 space-y-4" aria-hidden="true">
-        <div className="rounded-2xl border border-[#abadae]/15 bg-[#f7f8f9] p-4">
+        <div className="rounded-xl border border-[#abadae]/15 bg-[#f7f8f9] p-4">
           <div className="h-4 w-20 rounded bg-[#dadddf]/80" />
           <div className="mt-3 h-8 w-32 rounded bg-[#dadddf]/80" />
           <div className="mt-5 space-y-2">
@@ -47,7 +47,7 @@ function GameReviewFallback({ summary }: Pick<DeferredGameReviewPanelProps, 'sum
             ))}
           </div>
         </div>
-        <div className="h-16 rounded-2xl border border-[#abadae]/15 bg-white dark:bg-card/75" />
+        <div className="h-16 rounded-xl border border-[#abadae]/15 bg-white dark:bg-card/75" />
         <div className="space-y-3">
           <div className="h-5 w-24 rounded bg-[#dadddf]/70" />
           <div className="h-24 rounded-xl border border-[#abadae]/15 bg-[#f7f8f9]" />
