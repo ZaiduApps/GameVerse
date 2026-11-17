@@ -364,6 +364,11 @@ export interface ApiDownloadResource {
   type?: string;
   status?: number;
   is_latest_version?: boolean;
+  /**
+   * 资源版本与商店版本（`apps.version`）的关系，由 interface 只读下发。
+   * 旧接口未下发该字段时整列不渲染标记——前端不得自行猜新旧。
+   */
+  version_relation?: 'current' | 'stale' | 'unknown';
   platform_range?: string[] | string;
   platform_ranges?: string[] | string;
   channel: {
