@@ -101,13 +101,9 @@ function DegradedDataNotice({ savedAt }: { savedAt: string }) {
 /**
  * 预约中（status=0）游戏的预约说明块，只在首屏主信息卡内渲染。
  * 这是纯展示组件：订阅动作复用页面既有的「更新提醒」按钮，不新增提醒逻辑。
- * pkg 缺失时只保留文字，不拼接无效的 Play 商店地址。
+ * 预约入口暂未开放，本站不引导用户跳转 Google Play，只保留不可点击的站内状态标签。
  */
-function PreregisterPanel({ pkg }: { pkg?: string | null }) {
-  const pkgText = String(pkg || '').trim();
-  const playUrl = pkgText
-    ? `https://play.google.com/store/apps/details?id=${encodeURIComponent(pkgText)}`
-    : '';
+function PreregisterPanel() {
   return (
     <section
       aria-label="预约信息"
@@ -123,17 +119,14 @@ function PreregisterPanel({ pkg }: { pkg?: string | null }) {
             该游戏已在 Google Play 开放预注册，上线后本站会第一时间提供安装包。
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-            {playUrl ? (
-              <a
-                href={playUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-tone-amber/40 bg-tone-amber/15 px-3.5 text-xs font-semibold text-tone-amber transition-colors [@media(hover:hover)]:hover:bg-tone-amber/25 lg:text-sm"
-              >
-                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                前往 Google Play 预约
-              </a>
-            ) : null}
+            {/* 站内状态标签：不可点击，不能恢复成外链或按钮；aria-label 提供稳定的可访问名称。 */}
+            <span
+              role="note"
+              aria-label="预约入口暂未开放"
+              className="inline-flex h-9 items-center rounded-xl border border-border/60 bg-muted/60 px-3.5 text-xs font-semibold text-muted-foreground lg:text-sm"
+            >
+              预约入口暂未开放
+            </span>
             <p className="text-xs text-muted-foreground">点「更新提醒」订阅上线通知</p>
           </div>
         </div>
@@ -600,7 +593,7 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                 <Breadcrumbs items={breadcrumbItems} withJsonLd={false} />
               </div>
               {/* 预约态信息放在主信息卡最上方，保证首屏可见；已上架（status=1）不渲染。 */}
-              {game.status === 0 ? <PreregisterPanel pkg={game.pkg} /> : null}
+              {game.status === 0 ? <PreregisterPanel /> : null}
               <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center lg:gap-8">
                 <div className="flex items-center gap-3.5 lg:gap-6">
                   <div className="relative shrink-0">
