@@ -119,8 +119,13 @@ function PreregisterPanel() {
             该游戏已在 Google Play 开放预注册，上线后本站会第一时间提供安装包。
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-            {/* 站内状态标签：不可点击，不能恢复成外链或按钮；可访问名称取自可见文案。 */}
-            <span className="inline-flex h-9 items-center rounded-xl border border-border/60 bg-muted/60 px-3.5 text-xs font-semibold text-muted-foreground lg:text-sm">
+            {/* 站内状态标签：不可点击，不能恢复成外链或按钮。role="note" 的 nameFrom 是 author，
+                所以可访问名称必须由 aria-label 提供；裸 <span> 是 generic 角色，ARIA 1.2 下不可命名。 */}
+            <span
+              role="note"
+              aria-label="预约入口暂未开放"
+              className="inline-flex h-9 items-center rounded-xl border border-border/60 bg-muted/60 px-3.5 text-xs font-semibold text-muted-foreground lg:text-sm"
+            >
               预约入口暂未开放
             </span>
             <p className="text-xs text-muted-foreground">点「更新提醒」订阅上线通知</p>
