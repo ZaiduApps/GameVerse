@@ -210,6 +210,13 @@ test('预约中（status=0）展示预约区块，已上架游戏不渲染', () 
   // 预约入口暂未开放：不得再拼 Play 商店外链，站内状态标签不可点击、可访问名称取自可见文案。
   assert.doesNotMatch(viewSource, /play\.google\.com|前往 Google Play 预约/);
   assert.match(viewSource, /<span[^>]*>\s*预约入口暂未开放\s*<\/span>/);
+  // 整块预约说明里不允许出现可点击元素，防止有人把标签改回 <a>/<button>。
+  const preregisterPanel = viewSource.slice(
+    viewSource.indexOf('function PreregisterPanel'),
+    viewSource.indexOf('// 更新日志的单条内容'),
+  );
+  assert.notEqual(preregisterPanel, '');
+  assert.doesNotMatch(preregisterPanel, /<a\b|<button\b|onClick|href=/);
   // 不新造提醒逻辑，订阅入口复用页面既有「更新提醒」按钮。
   assert.match(viewSource, /点「更新提醒」订阅上线通知/);
   assert.doesNotMatch(viewSource, /followReservationByAppId|localStorage/);
