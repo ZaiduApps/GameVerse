@@ -335,7 +335,7 @@ export default function GameDetailActions({
         className="fixed inset-x-0 bottom-0 z-50 border-t border-[#abadae]/20 bg-white/95 px-4 pt-2.5 backdrop-blur-lg dark:border-border/45 dark:bg-[#111824]/95 lg:hidden"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.625rem)' }}
       >
-        <div className="mx-auto flex max-w-md items-center gap-1.5">
+        <div className="mx-auto flex max-w-md items-center gap-1">
           <button
             type="button"
             aria-label={isFavorite ? '取消当前游戏的收藏' : '收藏当前游戏'}
@@ -388,7 +388,7 @@ export default function GameDetailActions({
             data-acbox-action={isWebGame ? 'web_game_app_guide_open' : 'game_download_open'}
             data-acbox-label={resolveGameName(game)}
             onClick={openPrimaryAction}
-            className="ml-1 flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-bold text-white transition-colors active:bg-primary/90 [@media(hover:hover)]:hover:bg-primary/90"
+            className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1 rounded-xl bg-primary px-2 text-sm font-bold text-white transition-colors active:bg-primary/90 [@media(hover:hover)]:hover:bg-primary/90"
           >
             {isWebGame ? <Smartphone className="h-5 w-5 shrink-0" /> : <Download className="h-5 w-5 shrink-0" />}
             {/* 主 CTA 文案完整展示：只允许极端窄屏（<320px）截断作为最后防线。 */}
