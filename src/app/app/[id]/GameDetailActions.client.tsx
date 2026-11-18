@@ -390,10 +390,22 @@ export default function GameDetailActions({
             onClick={openPrimaryAction}
             className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1 rounded-xl bg-primary px-1.5 text-sm font-bold text-white transition-colors active:bg-primary/90 [@media(hover:hover)]:hover:bg-primary/90"
           >
-            {isWebGame ? <Smartphone className="h-4 w-4 shrink-0" /> : <Download className="h-4 w-4 shrink-0" />}
-            {/* 主 CTA 文案完整展示：只允许极端窄屏（<320px）截断作为最后防线。 */}
+            {/* 图标在 <360px 收起：320px 视口下「立即下载」本身也要 56px，16px 图标 + 4px 间距
+                正好把它挤出可显示宽度；文案已表达动作，图标不是必要信息。 */}
+            {isWebGame ? (
+              <Smartphone className="hidden h-4 w-4 shrink-0 [@media(min-width:360px)]:block" />
+            ) : (
+              <Download className="hidden h-4 w-4 shrink-0 [@media(min-width:360px)]:block" />
+            )}
+            {/* 主 CTA 文案：390 及以上显示「立即下载 693 MB」完整文案；窄于 380px 时
+                只显示「立即下载」，不出现省略号——360px 物理上放不下「4×44px 次级按钮 +
+                完整包体后缀」，再压只能牺牲触控面积。包体大小没有信息损失：规格区
+                「安装包大小」格与下载弹窗都还显示着它。truncate 仅作 <300px 的最后防线。 */}
             <span className="truncate">
-              {isWebGame ? '在 AC 盒子中游玩' : '立即下载' + (game.file_size ? ' ' + formatSizeLabel(game.file_size) : '')}
+              {isWebGame ? '在 AC 盒子中游玩' : '立即下载'}
+              {!isWebGame && game.file_size ? (
+                <span className="hidden [@media(min-width:380px)]:inline"> {formatSizeLabel(game.file_size)}</span>
+              ) : null}
             </span>
           </button>
         </div>
