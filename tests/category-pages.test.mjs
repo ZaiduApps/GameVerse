@@ -17,6 +17,7 @@ import {
   categoryDisplayName,
   isCategoryQualified,
   resolveCategoryByName,
+  resolveCategoryNameByAlias,
   resolveCategoryBySlug,
 } from '../src/lib/category-pages.ts';
 
@@ -85,5 +86,34 @@ test('categoryDisplayName: 自身已带「游戏」的分类名不再重复拼�
   // 全表都不该出现「游戏游戏」
   for (const item of CATEGORY_PAGES) {
     assert.doesNotMatch(categoryDisplayName(item.name), /游戏游戏/);
+  }
+});
+
+test('resolveCategoryNameByAlias: 英文分类别名归一成中文名，大小写与分隔符不敏感', () => {
+  assert.equal(resolveCategoryNameByAlias('Adventure'), '冒险');
+  assert.equal(resolveCategoryNameByAlias('adventure'), '冒险');
+  assert.equal(resolveCategoryNameByAlias('  ACTION-RPG  '), '动作角色扮演');
+  assert.equal(resolveCategoryNameByAlias('turn based rpg'), '回合制角色扮演');
+  assert.equal(resolveCategoryNameByAlias('Tower Defense'), '塔防游戏');
+  // 中文名不走这条路，由 resolveCategoryByName 负责
+  assert.equal(resolveCategoryNameByAlias('冒险'), '');
+  // 不在映射表里的真标签原样由调用方保留，这里只返回空串
+  assert.equal(resolveCategoryNameByAlias('Puzzle-Platformer'), '');
+  assert.equal(resolveCategoryNameByAlias(''), '');
+});
+
+test('别名表：每个分类至少一个英文别名，且别名在归一后不冲突', () => {
+  const normalize = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const seen = new Map();
+  for (const item of CATEGORY_PAGES) {
+    assert.ok(Array.isArray(item.aliases) && item.aliases.length > 0, `${item.slug} 缺少英文别名`);
+    for (const alias of item.aliases) {
+      assert.ok(normalize(alias), `${item.slug} 别名归一后不能为空`);
+      const owner = seen.get(normalize(alias));
+      assert.equal(owner === undefined || owner === item.slug, true, `别名 ${alias} 同时属于 ${owner} 与 ${item.slug}`);
+      seen.set(normalize(alias), item.slug);
+    }
+    // 中文名本身不能被当成英文别名命中到别的分类
+    assert.equal(resolveCategoryNameByAlias(item.name), '');
   }
 });

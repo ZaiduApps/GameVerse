@@ -327,21 +327,24 @@ export default function GameDetailActions({
         </div>
       </header>
 
-      {/* 移动端：底部悬浮操作栏。 */}
+      {/* 移动端：底部悬浮操作栏。
+          窄屏宽度只够「4 个图标 + 主 CTA」：次级按钮按 44px 触控面积定宽并 shrink-0，
+          文字交给 sr-only，主 CTA 拿剩余宽度（flex-1 min-w-0）。
+          过去次级按钮带可见文字，390px 视口下把主 CTA 挤到 130px，包体大小被 truncate 吃掉。 */}
       <div
         className="fixed inset-x-0 bottom-0 z-50 border-t border-[#abadae]/20 bg-white/95 px-4 pt-2.5 backdrop-blur-lg dark:border-border/45 dark:bg-[#111824]/95 lg:hidden"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.625rem)' }}
       >
-        <div className="mx-auto flex max-w-md items-center gap-2.5">
+        <div className="mx-auto flex max-w-md items-center gap-1.5">
           <button
             type="button"
-            aria-label={isFavorite ? '取消收藏当前游戏' : '收藏当前游戏'}
+            aria-label={isFavorite ? '取消当前游戏的收藏' : '收藏当前游戏'}
             aria-pressed={isFavorite}
             onClick={handleFavoriteToggle}
-            className="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[#595c5d] transition-colors active:bg-muted/60 dark:text-muted-foreground"
           >
             <Heart className={cn('h-5 w-5', isFavorite && 'fill-current text-tone-red')} />
-            <span className="text-xs">想玩</span>
+            <span className="sr-only">想玩</span>
           </button>
           <Link
             href="/community"
@@ -349,10 +352,10 @@ export default function GameDetailActions({
             aria-label="前往游戏社区"
             onMouseEnter={() => router.prefetch('/community')}
             onFocus={() => router.prefetch('/community')}
-            className="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[#595c5d] transition-colors active:bg-muted/60 dark:text-muted-foreground"
           >
             <MessageSquare className="h-5 w-5" />
-            <span className="text-xs">论坛</span>
+            <span className="sr-only">论坛</span>
           </Link>
           {isWebGame ? null : (
             <button
@@ -360,23 +363,23 @@ export default function GameDetailActions({
               aria-label="提交催更请求"
               disabled={isSubmittingUrge}
               onClick={() => void handleUrge()}
-              className="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[#595c5d] transition-colors active:bg-muted/60 disabled:opacity-60 dark:text-muted-foreground"
             >
               <RefreshCw className="h-5 w-5" />
-              <span className="text-xs">{isSubmittingUrge ? '提交中' : '催更'}</span>
+              <span className="sr-only">{isSubmittingUrge ? '提交中' : '催更'}</span>
             </button>
           )}
           {showUpdateReminder ? (
             <button
               type="button"
-              aria-label="切换更新提醒"
+              aria-label={isReminderEnabled ? '已订阅更新提醒，点击取消' : '订阅更新提醒'}
               aria-pressed={isReminderEnabled}
               disabled={isReminderSubmitting}
               onClick={() => void handleReminderToggle()}
-              className={cn('flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 px-1 text-[#595c5d] dark:text-muted-foreground', isReminderEnabled && 'text-primary')}
+              className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[#595c5d] transition-colors active:bg-muted/60 disabled:opacity-60 dark:text-muted-foreground', isReminderEnabled && 'text-primary')}
             >
               <BellPlus className={cn('h-5 w-5', isReminderEnabled && 'fill-current')} />
-              <span className="text-xs">{reminderLabel}</span>
+              <span className="sr-only">{reminderLabel}</span>
             </button>
           ) : null}
           <button
@@ -385,9 +388,10 @@ export default function GameDetailActions({
             data-acbox-action={isWebGame ? 'web_game_app_guide_open' : 'game_download_open'}
             data-acbox-label={resolveGameName(game)}
             onClick={openPrimaryAction}
-            className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-white transition-colors active:bg-primary/90 [@media(hover:hover)]:hover:bg-primary/90"
+            className="ml-1 flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-bold text-white transition-colors active:bg-primary/90 [@media(hover:hover)]:hover:bg-primary/90"
           >
-            {isWebGame ? <Smartphone className="h-5 w-5" /> : <Download className="h-5 w-5" />}
+            {isWebGame ? <Smartphone className="h-5 w-5 shrink-0" /> : <Download className="h-5 w-5 shrink-0" />}
+            {/* 主 CTA 文案完整展示：只允许极端窄屏（<320px）截断作为最后防线。 */}
             <span className="truncate">
               {isWebGame ? '在 AC 盒子中游玩' : '立即下载' + (game.file_size ? ' ' + formatSizeLabel(game.file_size) : '')}
             </span>

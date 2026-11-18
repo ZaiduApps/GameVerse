@@ -1,6 +1,6 @@
 import DOMPurify, { type Config as SanitizeConfig } from 'isomorphic-dompurify';
 
-import { buildCategoryPath, resolveCategoryByName } from '@/lib/category-pages';
+import { buildCategoryPath, resolveCategoryByName, resolveCategoryNameByAlias } from '@/lib/category-pages';
 import { resolveGameName } from '@/lib/game-display-name';
 import { resolveDisplayVersion } from '@/lib/game-version';
 import { buildRenderedMarkdownDocument } from '@/lib/utils';
@@ -252,12 +252,15 @@ export function formatDateText(value?: string | null): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+// 计数的中文口径：站点面向中文用户，`12.5w` / `1.5k` 是英文缩写，读数成本高；
+// 万 / 亿与中文数字习惯一致，万以下保留千分位，避免 `1500` 与 `1,500` 两种写法混用。
 export function formatCompactCount(input?: number | string | null): string {
   const value = Number(input || 0);
   if (!Number.isFinite(value) || value <= 0) return '0';
-  if (value >= 10000) return `${(value / 10000).toFixed(1)}w`;
-  if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
-  return String(Math.round(value));
+  const trim = (text: string) => text.replace(/\.0$/, '');
+  if (value >= 100000000) return `${trim((value / 100000000).toFixed(1))}亿`;
+  if (value >= 10000) return `${trim((value / 10000).toFixed(1))}万`;
+  return String(Math.round(value)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
 export function normalizeScore(raw?: number | string | null, fallback = 9.2): string {
@@ -273,9 +276,18 @@ export function isPreregGameLike(game: GameDetailData['app']): boolean {
   return /pre[-_ ]?reg|预约|事前|预注册|即将上线|coming soon/.test(tagText);
 }
 
+// 分类名展示口径：已知分类（中文名或抓取源英文别名）一律输出映射表里的中文名，
+// 真标签（不在映射表里）原样保留。面包屑、徽章、指标格、标签 chip 共用这一处，
+// 避免同一页面出现 `Adventure` 与「冒险」两种写法。
+export function normalizeCategoryTagName(tag: string): string {
+  const value = String(tag || '').trim();
+  if (!value) return '';
+  return resolveCategoryByName(value)?.name || resolveCategoryNameByAlias(value) || value;
+}
+
 export function getGameTags(game: GameDetailData['app']): string[] {
   const tags = (Array.isArray(game.tags) ? game.tags : [])
-    .map((item) => String(item || '').trim())
+    .map((item) => normalizeCategoryTagName(String(item || '')))
     .filter(Boolean);
   if (tags.length > 0) return Array.from(new Set(tags)).slice(0, 8);
   const fallback = [String(game.type || '').trim(), String(game.metadata?.region || '').trim()].filter(Boolean);
@@ -289,8 +301,11 @@ export function getPrimaryCategory(game: GameDetailData['app'], tags: string[]):
   };
   // 有真实分类落地页的标签优先：面包屑与主分类都指向能打开的 /category/<slug>，
   // 而不是一个只有筛选结果的 /app?category=。没有的话再按原逻辑取第一个可用标签。
+  // 标签经 getGameTags 归一后基本已是中文；仍兜一层英文别名匹配，防止调用方传原始 tags。
   const landingTag = tags.find((tag) => usableTag(tag) && resolveCategoryByName(tag));
   if (landingTag) return String(landingTag).trim();
+  const aliasTag = tags.find((tag) => usableTag(tag) && resolveCategoryNameByAlias(tag));
+  if (aliasTag) return normalizeCategoryTagName(aliasTag);
   const preferredTag = tags.find(usableTag);
   return preferredTag || String(game.type || '').trim() || '安卓游戏';
 }

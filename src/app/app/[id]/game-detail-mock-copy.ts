@@ -13,12 +13,12 @@ export interface MockResourceLink {
 }
 
 // Hero 副信息与封面角标。
-export const HERO_IN_APP_PURCHASE_NOTE = '包含应用内购买';
-export const HERO_PLATFORM_NOTE = '国际服 / 需加速';
+// 原来的两条写死文案（内购提示、区服加速提示）已删除：接口没有对应字段，
+// 对所有游戏写死就是事实性断言，会误导用户（开源 GPL 软件也被标内购、源标记为开源的
+// 也被宣称需要加速）。要展示必须由真实字段驱动，见 buildHeroMetrics。
 
-// 指标条兜底值：接口没有评分 / 评价数时用于撑住 Hero 指标条。
-export const RATING_FALLBACK_SCORE = 4.4;
-export const RATING_FALLBACK_COUNT = 124592;
+// 指标条约定的取值来源只有接口字段：`star` / `reviewSummary.ratingCount` /
+// `download_count_show` / `metadata.region`；缺失的格不渲染，不设兜底数值。
 
 // 稿件中的“系统要求 / 支持语言 / 安全签名校验”条目已移除：
 // 系统要求改由接口真实字段 limit_android_version 提供（缺失时不展示），
@@ -29,12 +29,9 @@ export const RATING_FALLBACK_COUNT = 124592;
 // 都渲染同一段示例游戏的更新日志，属于把示例内容冒充成真实更新。
 // 现在没有真实 latest_content 就整块不渲染；versionLabel 只随真实内容一起出现。
 
-// 侧栏“官方资源与外链服务”兜底条目：后台没有配置支持入口时使用。
-export const OFFICIAL_RESOURCE_LINKS_FALLBACK: MockResourceLink[] = [
-  { title: '国际服玩家交流 QQ 频道', description: '在线攻略 / 掉宝交流 / 组队连线', tone: 'bg-tone-blue/10 text-tone-blue border-tone-blue/25', icon: 'message' },
-  { title: '谷歌礼品卡 / 官方充值支持', description: '官方正品代充 / 极速秒发点券', tone: 'bg-tone-amber/10 text-tone-amber border-tone-amber/25', icon: 'card' },
-  { title: '国际服游戏专属加速工具', description: '降低延迟 Ping 值 / 告别掉线', tone: 'bg-tone-green/10 text-tone-green border-tone-green/25', icon: 'rocket' },
-];
+// 「官方资源与外链服务」的原稿件三条兜底（QQ 频道 / 礼品卡代充 / 加速工具）已删除：
+// 后台没有配置支持入口时它们是纯广告文案，且无真实链接。现在没有真实 cardConfig 条目
+// 就整块不渲染，配色与图标按条目的真实序号轮换，不再借兜底数组取色。
 
 // 侧栏“官方纯净认证”卡已删除：原稿的安全扫描与“100% 官方分发”结论没有对应数据源与集成，
 // 属于无证据承诺；现由 GameDetailView 内的数据驱动「资源校验信息」卡替代。

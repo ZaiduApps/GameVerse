@@ -35,7 +35,6 @@ import { applyLiveVersionHighlights } from './game-detail-highlights';
 import { resolveHeroVideo } from './game-detail-video';
 import {
   buildHeroMetrics,
-  buildHeroPurchaseNote,
   buildLatestUpdate,
   buildRelatedPosts,
   buildResourceLinks,
@@ -237,6 +236,8 @@ function RelatedNewsSection({ items }: { items: RelatedPostView[] }) {
 }
 
 function ResourceLinksCard({ items }: { items: ReturnType<typeof buildResourceLinks> }) {
+  // 没有真实 cardConfig 条目时整块不渲染：过去会退回三条广告文案撑版式。
+  if (items.length === 0) return null;
   return (
     <DetailSection title="官方资源与外链服务">
       <div className="space-y-2.5 lg:space-y-3">
@@ -509,9 +510,8 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
   // GitHub Release 分发的开源版单独标注来源与仓库；其它渠道不渲染这一行。
   const gameSource = resolveGameSourceInfo(game);
 
-  // 视觉稿视图模型：真实数据优先，缺失字段由 game-detail-stitch-mapper 统一回落。
+  // 视觉稿视图模型：只由接口真实数据生成，缺失项整项不渲染。
   const trustBadges = buildTrustBadges(tags);
-  const purchaseNote = buildHeroPurchaseNote();
   const heroMetrics = buildHeroMetrics({ game, primaryCategory, isWebGame, reviewSummary: gameData.reviewSummary });
   const specTiles = buildSpecTiles(facts);
   const latestUpdate = buildLatestUpdate(game, latestContent);
@@ -538,8 +538,10 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
     source_type: game.source_type,
     metadata: game.metadata,
   };
-  // 移动端三宫格只取综合评分 / 下载热度 / 适龄与平台，与稿件一致。
-  const mobileMetrics = [heroMetrics[0], heroMetrics[2], heroMetrics[3]].filter(Boolean);
+  // 移动端三宫格展示评分 / 下载热度 / 平台，与稿件一致；分类格只在 PC 展示。
+  // 按 key 取格而不是固定下标：过滤后数组长度可变，下标会取到相邻的格。
+  // 第一格在移动端不画左侧分隔线（它左边没有可见格）。
+  const firstMobileMetricKey = heroMetrics.find((metric) => metric.key !== 'category')?.key;
   // 桌面与移动端共用同一份面包屑；JSON-LD 只由桌面那份输出一次。
   const breadcrumbItems = [
     { name: '首页', href: '/' },
@@ -633,8 +635,6 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                         {game.developer || '开发者未提供'}
                         <BadgeCheck className="h-3.5 w-3.5 text-tone-blue" aria-hidden="true" />
                       </span>
-                      <span className="text-muted-foreground/60">•</span>
-                      <span className="text-muted-foreground">{purchaseNote}</span>
                     </div>
                     {gameSource ? (
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
@@ -674,30 +674,43 @@ export default function GameDetailView({ gameData, recommendedGames, relatedNews
                 />
               </div>
 
-              {/* 指标条：移动端 3 格（隐藏「游戏分类」），PC 端 4 格 */}
-              <div className="mt-4 grid grid-cols-3 gap-2 border-t border-border/40 pt-3.5 lg:mt-8 lg:grid-cols-4 lg:gap-4 lg:pt-5">
-                {heroMetrics.map((metric, index) => (
-                  <div
-                    key={metric.label}
-                    className={cn(
-                      'flex flex-col items-center justify-center px-1 lg:px-3',
-                      index > 0 && 'border-l border-border/40',
-                      index === 1 && 'hidden lg:flex',
-                    )}
-                  >
-                    <span className="hidden text-xs font-medium tracking-wider text-muted-foreground lg:block">{metric.label}</span>
-                    <span
+              {/* 指标条：每格都由真实字段支撑，缺失的格不渲染；「游戏分类」只在 PC 展示。
+                  用 flex 而非固定列栅格——格数随数据在 2~4 之间变化，固定列会留下空槽。 */}
+              {heroMetrics.length > 0 ? (
+                <div className="mt-4 flex items-stretch border-t border-border/40 pt-3.5 lg:mt-8 lg:gap-4 lg:pt-5">
+                  {heroMetrics.map((metric, index) => (
+                    <div
+                      key={metric.key}
                       className={cn(
-                        'text-sm font-bold text-foreground lg:mt-0.5 lg:font-semibold',
-                        index === 0 && 'text-tone-amber lg:text-foreground',
+                        'flex min-w-0 flex-1 flex-col items-center justify-center px-1 lg:px-3',
+                        // 分隔线只在「左边还有可见格」时画：移动端跳过隐藏的分类格与它后面的首格。
+                        index > 0 &&
+                          (metric.key === firstMobileMetricKey ? 'lg:border-l lg:border-border/40' : 'border-l border-border/40'),
+                        metric.key === 'category' && 'hidden lg:flex',
                       )}
                     >
-                      {metric.value}
-                    </span>
-                    <span className="mt-0.5 text-xs text-muted-foreground">{metric.hint}</span>
-                  </div>
-                ))}
-              </div>
+                      {/* 移动端没有空间放标签，只有当 hint 也缺失时才把标签顶上来，避免只显示一个孤零零的值。 */}
+                      <span
+                        className={cn(
+                          'text-xs font-medium tracking-wider text-muted-foreground',
+                          metric.hint ? 'hidden lg:block' : 'block',
+                        )}
+                      >
+                        {metric.label}
+                      </span>
+                      <span
+                        className={cn(
+                          'text-sm font-bold text-foreground lg:mt-0.5 lg:font-semibold',
+                          metric.key === 'rating' && 'text-tone-amber lg:text-foreground',
+                        )}
+                      >
+                        {metric.value}
+                      </span>
+                      {metric.hint ? <span className="mt-0.5 text-xs text-muted-foreground">{metric.hint}</span> : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

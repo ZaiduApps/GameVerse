@@ -18,6 +18,7 @@ export {
   categoryDisplayName,
   isCategoryQualified,
   resolveCategoryByName,
+  resolveCategoryNameByAlias,
   resolveCategoryBySlug,
 } from './category-pages.mjs';
 

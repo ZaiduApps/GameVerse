@@ -103,13 +103,15 @@ const heroArgs = (game) => ({
   isWebGame: false,
   reviewSummary: { ratingCount: 100 },
 });
-const platformMetric = (game) => buildHeroMetrics(heroArgs(game))[3];
+// 平台格按 key 取：指标条会按真实数据过滤，数组下标在缺字段时会漂移。
+const platformMetric = (game) =>
+  buildHeroMetrics(heroArgs(game)).find((metric) => metric.key === 'platform');
 
 test('Hero：有真实区服时展示区服，不被系统要求覆盖', () => {
   const metrics = buildHeroMetrics(heroArgs({ ...baseGame, limit_android_version: '6.0 及更高版本' }));
-  assert.equal(metrics.length, 4);
-  assert.equal(metrics[3].label, '区服与平台');
-  assert.equal(metrics[3].value, '国际服');
+  const platform = metrics.find((metric) => metric.key === 'platform');
+  assert.equal(platform.label, '区服与平台');
+  assert.equal(platform.value, '国际服');
 });
 
 test('Hero：无区服但有真实系统要求时归一成 Android X+', () => {
@@ -131,9 +133,10 @@ test('Hero：无区服但有真实系统要求时归一成 Android X+', () => {
 test('Hero：区服与系统要求都缺失时只展示平台事实，不编造版本号', () => {
   for (const raw of [undefined, null, '', '   ', 'VARY', 'Varies with device']) {
     const metrics = buildHeroMetrics(heroArgs({ ...baseGame, metadata: {}, limit_android_version: raw }));
-    assert.equal(metrics.length, 4, `条数应固定 4：${JSON.stringify(raw)}`);
-    assert.equal(metrics[3].label, '适龄与平台');
-    assert.equal(metrics[3].value, 'Android');
-    assert.doesNotMatch(metrics[3].value, /\d/);
+    const platform = metrics.find((metric) => metric.key === 'platform');
+    assert.ok(platform, `平台格必须存在：${JSON.stringify(raw)}`);
+    assert.equal(platform.label, '适龄与平台');
+    assert.equal(platform.value, 'Android');
+    assert.doesNotMatch(platform.value, /\d/);
   }
 });

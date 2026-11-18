@@ -18,6 +18,7 @@
  * @typedef {object} CategoryPageDef
  * @property {string} name 库内 `apps.tags` 里的中文分类名（精确匹配）
  * @property {string} slug URL 段：`/category/<slug>`
+ * @property {readonly string[]} [aliases] 抓取源下发的英文分类别名（大小写 / 空格 / 连字符不敏感）
  */
 
 /**
@@ -27,29 +28,29 @@
  * @type {readonly CategoryPageDef[]}
  */
 export const CATEGORY_PAGES = [
-  { name: '角色扮演', slug: 'rpg' },
-  { name: '休闲', slug: 'casual' },
-  { name: '多人竞技', slug: 'multiplayer-arena' },
-  { name: '动漫', slug: 'anime' },
-  { name: '模拟', slug: 'simulation' },
-  { name: '动作', slug: 'action' },
-  { name: '策略', slug: 'strategy' },
-  { name: '对战', slug: 'versus' },
-  { name: '射击游戏', slug: 'shooter' },
-  { name: '冒险', slug: 'adventure' },
-  { name: '体育', slug: 'sports' },
-  { name: '益智', slug: 'puzzle' },
-  { name: '回合制角色扮演', slug: 'turn-based-rpg' },
-  { name: '动作角色扮演', slug: 'action-rpg' },
-  { name: '动作冒险', slug: 'action-adventure' },
-  { name: '动作策略', slug: 'action-strategy' },
-  { name: '街机', slug: 'arcade' },
-  { name: '战术射击游戏', slug: 'tactical-shooter' },
-  { name: '赛车', slug: 'racing' },
-  { name: '纸牌', slug: 'card' },
-  { name: '音乐', slug: 'music' },
-  { name: '塔防游戏', slug: 'tower-defense' },
-  { name: 'MOBA', slug: 'moba' },
+  { name: '角色扮演', slug: 'rpg', aliases: ['Role Playing', 'Role-Playing', 'RPG'] },
+  { name: '休闲', slug: 'casual', aliases: ['Casual'] },
+  { name: '多人竞技', slug: 'multiplayer-arena', aliases: ['Multiplayer'] },
+  { name: '动漫', slug: 'anime', aliases: ['Anime'] },
+  { name: '模拟', slug: 'simulation', aliases: ['Simulation'] },
+  { name: '动作', slug: 'action', aliases: ['Action'] },
+  { name: '策略', slug: 'strategy', aliases: ['Strategy'] },
+  { name: '对战', slug: 'versus', aliases: ['Versus'] },
+  { name: '射击游戏', slug: 'shooter', aliases: ['Shooter', 'Shooting'] },
+  { name: '冒险', slug: 'adventure', aliases: ['Adventure'] },
+  { name: '体育', slug: 'sports', aliases: ['Sports'] },
+  { name: '益智', slug: 'puzzle', aliases: ['Puzzle'] },
+  { name: '回合制角色扮演', slug: 'turn-based-rpg', aliases: ['Turn-based RPG', 'Turn Based RPG'] },
+  { name: '动作角色扮演', slug: 'action-rpg', aliases: ['Action RPG'] },
+  { name: '动作冒险', slug: 'action-adventure', aliases: ['Action Adventure'] },
+  { name: '动作策略', slug: 'action-strategy', aliases: ['Action Strategy'] },
+  { name: '街机', slug: 'arcade', aliases: ['Arcade'] },
+  { name: '战术射击游戏', slug: 'tactical-shooter', aliases: ['Tactical Shooter'] },
+  { name: '赛车', slug: 'racing', aliases: ['Racing'] },
+  { name: '纸牌', slug: 'card', aliases: ['Card', 'Cards'] },
+  { name: '音乐', slug: 'music', aliases: ['Music'] },
+  { name: '塔防游戏', slug: 'tower-defense', aliases: ['Tower Defense'] },
+  { name: 'MOBA', slug: 'moba', aliases: ['Multiplayer Online Battle Arena'] },
 ];
 
 /** 收录阈值：已发布条数与「有下载资源」条数必须同时达标，否则页面 404、sitemap 不收。 */
@@ -90,6 +91,25 @@ export function resolveCategoryByName(name) {
   const value = String(name || '').trim();
   if (!value) return null;
   return CATEGORY_PAGES.find((item) => item.name === value) ?? null;
+}
+
+/**
+ * 抓取源（GP / APKPure）的英文分类名归一：`Adventure`、`role playing`、`Action-RPG`
+ * 都应按 `adventure` / `roleplaying` 这类键比对，命中后返回**中文分类名**。
+ * 只做归一比对，不改写调用方传入的原值；未命中返回空串（真标签照旧展示原值）。
+ *
+ * @param {string} name
+ * @returns {string}
+ */
+export function resolveCategoryNameByAlias(name) {
+  const key = String(name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+  if (!key) return '';
+  const hit = CATEGORY_PAGES.find((item) =>
+    (item.aliases ?? []).some((alias) => alias.toLowerCase().replace(/[^a-z0-9]+/g, '') === key),
+  );
+  return hit ? hit.name : '';
 }
 
 /**
