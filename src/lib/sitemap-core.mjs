@@ -46,11 +46,127 @@ export const COMMUNITY_STATIC_PATHS = ['/community', '/community/topics'];
 /** 静态 sitemap 与线上游戏总数的允许偏差；超过即判定静态文件过期。 */
 export const STATIC_COUNT_DEVIATION_LIMIT = 0.05;
 
+/**
+ * 分片参数（#269）。主 sitemap 从「一份平铺 5280 条」改成
+ * 「sitemapindex + 一个 priority 片 + 若干长尾片」：
+ *   - priority 片：静态入口 + 分类页 + 需求/最近更新的前 PRIORITY_COUNT 个详情页，
+ *     每次构建都整体提交，是「先被抓」的那一段；
+ *   - 长尾片：余下详情页按 pkg 稳定哈希切到约 SHARD_SIZE 条一片，
+ *     URL 形态 `/sitemap-tail/<N>`（Next 只支持整段动态路由，不带扩展名）。
+ */
+export const SITEMAP_PRIORITY_COUNT = 300;
+export const SITEMAP_SHARD_SIZE = 2000;
+/** 长尾分片索引上限：越界直接 404，不去拼一个不存在的文件名。 */
+export const SITEMAP_MAX_SHARDS = 64;
+
 /** 注释头：buildTime 与 urlCount 都必需，顺序固定。 */
 export const STATIC_SITEMAP_HEADER_PATTERN = /<!--\s*buildTime:\s*(\S+)\s+urlCount:\s*(\d+)\s*-->/;
 
 const DEFAULT_SITE_URL = 'https://apks.cc';
 const SITEMAP_NS = 'http://www.sitemaps.org/schemas/sitemap/0.9';
+const SITEMAP_INDEX_NS = SITEMAP_NS;
+
+/** 详情页条目识别：与 applyGameLastmodPatch / 路由侧同一口径。 */
+function isGameEntry(entry) {
+  return typeof entry?.url === 'string' && /\/app\/[^/?#]+$/.test(entry.url);
+}
+
+function gamePkgFromUrl(url) {
+  const match = /\/app\/([^/?#]+)$/.exec(String(url || ''));
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
+/**
+ * pkg → 分片桶的稳定哈希（FNV-1a 32 位）。
+ * 用哈希而不是数组下标：只要分片数不变，同一个 pkg 永远落同一片，
+ * 不会因为目录里多了一条别的游戏就整片搬家（整片搬家会让爬虫重抓所有长尾 URL）。
+ */
+export function hashPkgToShard(pkg, shardCount) {
+  const count = Math.max(1, Number(shardCount) || 1);
+  let hash = 0x811c9dc5;
+  for (const char of String(pkg || '')) {
+    hash ^= char.codePointAt(0);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash % count;
+}
+
+/**
+ * 把主 sitemap 条目切成「priority 片 + 长尾分片」（纯函数，#269）。
+ *
+ * - priority：非详情页条目（静态入口 + 分类页，保持输入顺序）+ 最近更新的前 `priorityCount` 个详情页
+ *   （按 lastModified 倒序挑选；files 里不带时间戳的排最后，保证确定性）。
+ *   本轮 priority 走 updated_at 倒序是临时口径，后续要换成 growth-daily 的 top_games —— 见
+ *   scripts/generate-sitemap.mjs 的 `shortcut:` 注释。
+ * - tails：余下详情页按 pkg 稳定哈希分桶，每桶容量约 `shardSize`（桶数 = ceil(条数/容量)），
+ *   空桶剔掉后连续编号 1..N（空桶落盘会被 validateStaticSitemap 判为非法）。
+ *
+ * @param {Array<{url: string, lastModified?: Date|string}>} entries 主 sitemap 全量条目
+ * @returns {{priority: Array, tails: Map<number, Array>, shardCount: number}}
+ */
+export function buildShards(entries, options = {}) {
+  const priorityCount = Math.max(0, Number(options.priorityCount ?? SITEMAP_PRIORITY_COUNT));
+  const shardSize = Math.max(1, Number(options.shardSize ?? SITEMAP_SHARD_SIZE));
+  const list = Array.isArray(entries) ? entries : [];
+
+  const nonGame = list.filter((entry) => !isGameEntry(entry));
+  const games = list.filter((entry) => isGameEntry(entry));
+
+  // 稳定排序：时间倒序，同时间按 url 升序，保证同一份输入永远得到同一份 priority 片。
+  const ranked = games
+    .map((entry, index) => ({ entry, index, ts: parseDate(entry?.lastModified)?.getTime() ?? 0 }))
+    .sort((a, b) => (b.ts - a.ts) || a.entry.url.localeCompare(b.entry.url) || (a.index - b.index))
+    .map((item) => item.entry);
+
+  const priority = [...nonGame, ...ranked.slice(0, priorityCount)];
+  const tail = ranked.slice(priorityCount);
+
+  const buckets = Math.max(1, Math.ceil(tail.length / shardSize));
+  const byBucket = new Map();
+  for (const entry of tail) {
+    const pkg = gamePkgFromUrl(entry.url);
+    const bucket = hashPkgToShard(pkg, buckets);
+    if (!byBucket.has(bucket)) byBucket.set(bucket, []);
+    byBucket.get(bucket).push(entry);
+  }
+
+  // 空桶不落盘，编号压缩成 1..N 连续；分片数量由数据量决定，URL 不保证跨重建不变。
+  const tails = new Map();
+  for (const bucket of [...byBucket.keys()].sort((a, b) => a - b)) {
+    const shardEntries = byBucket.get(bucket);
+    if (!shardEntries || shardEntries.length === 0) continue;
+    tails.set(tails.size + 1, shardEntries);
+  }
+
+  return { priority, tails, shardCount: tails.size };
+}
+
+/** 分片文件名 ↔ 线上 URL 的唯一映射（构建脚本与路由共用，避免两处漂移）。 */
+export function sitemapShardFileName(shard) {
+  return `sitemap-tail-${shard}.xml`;
+}
+
+export function sitemapShardPath(shard) {
+  return `/sitemap-tail/${shard}`;
+}
+
+export function parseSitemapShardParam(raw) {
+  // `/sitemap-tail/<N>`：只接受正整数，越界与脏值一律 404（不拼文件名）。
+  const text = Array.isArray(raw) ? raw.join('/') : String(raw ?? '');
+  if (!/^\d{1,3}$/.test(text)) return null;
+  const shard = Number(text);
+  if (!Number.isInteger(shard) || shard < 1 || shard > SITEMAP_MAX_SHARDS) return null;
+  return shard;
+}
+
+export const SITEMAP_INDEX_FILE_NAME = 'sitemap.xml';
+export const SITEMAP_PRIORITY_FILE_NAME = 'sitemap-priority.xml';
+export const SITEMAP_COMMUNITY_FILE_NAME = 'sitemap-community.xml';
 
 /** 与 src/app/sitemap.ts 历史实现完全一致的服务端 API 基址解析。 */
 export function getServerApiBaseUrl(env = process.env) {
@@ -575,6 +691,30 @@ export function serializeSitemapXml(entries, { buildTime } = {}) {
 }
 
 /**
+ * 序列化为 sitemapindex（#269）。索引文件同样带 `<!-- buildTime … urlCount -->`
+ * 注释头，urlCount 等于 `<sitemap>` 条数；`lastmod` 由调用方显式给（轮换方案见演进记录）。
+ *
+ * @param {Array<{url: string, lastModified?: Date|string}>} sitemaps
+ */
+export function serializeSitemapIndexXml(sitemaps, { buildTime } = {}) {
+  const list = Array.isArray(sitemaps) ? sitemaps : [];
+  const lines = ['<?xml version="1.0" encoding="UTF-8"?>'];
+  if (buildTime) {
+    lines.push(`<!-- buildTime: ${buildTime} urlCount: ${list.length} -->`);
+  }
+  lines.push(`<sitemapindex xmlns="${SITEMAP_INDEX_NS}">`);
+  for (const item of list) {
+    lines.push('<sitemap>');
+    lines.push(`<loc>${escapeXml(item.url)}</loc>`);
+    const lastmod = formatLastModified(item.lastModified);
+    if (lastmod) lines.push(`<lastmod>${lastmod}</lastmod>`);
+    lines.push('</sitemap>');
+  }
+  lines.push('</sitemapindex>');
+  return `${lines.join('\n')}\n`;
+}
+
+/**
  * 把静态产物里「构建之后又被更新过」的游戏条目的 <lastmod> 换成线上最新值。
  *
  * 静态文件是构建那一刻的快照：后台改了 SEO/文案/版本后，文件里的 lastmod 会一直停在
@@ -647,26 +787,43 @@ export function inspectStaticSitemap(xml) {
   const header = STATIC_SITEMAP_HEADER_PATTERN.exec(text);
   const locs = text.match(/<loc>/g);
   const gameLocs = text.match(/<loc>[^<]*\/app\//g);
+  const isIndex = /<sitemapindex[\s>]/.test(text);
+  const sitemapLocs = text.match(/<sitemap>\s*<loc>/g);
   return {
-    wellFormed: text.startsWith('<?xml') && text.includes('<urlset') && text.trimEnd().endsWith('</urlset>'),
+    kind: isIndex ? 'index' : 'urlset',
+    wellFormed: isIndex
+      ? text.startsWith('<?xml') && text.includes('<sitemapindex') && text.trimEnd().endsWith('</sitemapindex>')
+      : text.startsWith('<?xml') && text.includes('<urlset') && text.trimEnd().endsWith('</urlset>'),
     buildTime: header ? header[1] : null,
     declaredCount: header ? Number(header[2]) : null,
     locCount: locs ? locs.length : 0,
+    sitemapLocCount: sitemapLocs ? sitemapLocs.length : 0,
     gameLocCount: gameLocs ? gameLocs.length : 0,
   };
 }
 
-/** 校验静态文件自身自洽：结构完整 + 注释头 urlCount 与 <loc> 条目数一致。 */
+/**
+ * 校验静态文件自身自洽：结构完整 + 注释头 urlCount 与条目数一致。
+ * 索引文件（sitemapindex）的条目数是 `<sitemap><loc>` 的条数，不是 `<loc>` 总数。
+ */
 export function validateStaticSitemap(meta) {
-  if (!meta?.wellFormed) return { ok: false, reason: 'XML 结构不完整（缺 <?xml / <urlset> / </urlset>）' };
+  if (!meta?.wellFormed) {
+    return {
+      ok: false,
+      reason: meta?.kind === 'index'
+        ? 'XML 结构不完整（缺 <?xml / <sitemapindex> / </sitemapindex>）'
+        : 'XML 结构不完整（缺 <?xml / <urlset> / </urlset>）',
+    };
+  }
   if (!meta.buildTime || !Number.isFinite(meta.declaredCount)) {
     return { ok: false, reason: '缺少 buildTime/urlCount 注释头' };
   }
   if (meta.declaredCount <= 0) return { ok: false, reason: `注释 urlCount=${meta.declaredCount} 非法` };
-  if (meta.declaredCount !== meta.locCount) {
-    return { ok: false, reason: `注释 urlCount=${meta.declaredCount} 与文件条目数 ${meta.locCount} 不一致` };
+  const actual = meta.kind === 'index' ? meta.sitemapLocCount : meta.locCount;
+  if (meta.declaredCount !== actual) {
+    return { ok: false, reason: `注释 urlCount=${meta.declaredCount} 与文件条目数 ${actual} 不一致` };
   }
-  return { ok: true, reason: `urlCount=${meta.locCount}（${meta.buildTime}）` };
+  return { ok: true, reason: `urlCount=${actual}（${meta.buildTime}）` };
 }
 
 /**

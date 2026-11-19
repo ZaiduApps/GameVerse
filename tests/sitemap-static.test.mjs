@@ -1,24 +1,34 @@
 /**
  * 静态 sitemap 的产物约定与校验逻辑（src/lib/sitemap-core.mjs）。
  *
- * 覆盖三类风险：
+ * 覆盖四类风险：
  *   1. 序列化格式与注释头（写入端）
  *   2. 静态文件自洽校验（运行时拒绝损坏产物并降级）
  *   3. 新鲜度阈值（静态文件过期判定）
  *   4. 构建/运行时共用同一套抓取与过滤规则（防两套实现漂移）
+ *   5. 分片（#269）：priority + 长尾片的划分是纯函数、覆盖全集、可复算
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  SITEMAP_MAX_SHARDS,
+  SITEMAP_PRIORITY_FILE_NAME,
+  SITEMAP_SHARD_SIZE,
   STATIC_COUNT_DEVIATION_LIMIT,
   applyGameLastmodPatch,
+  buildShards,
   checkStaticFreshness,
   createSitemapBuilder,
   getServerApiBaseUrl,
   getSiteUrlFromEnv,
+  hashPkgToShard,
   inspectStaticSitemap,
+  parseSitemapShardParam,
+  serializeSitemapIndexXml,
   serializeSitemapXml,
+  sitemapShardFileName,
+  sitemapShardPath,
   validateStaticSitemap,
 } from '../src/lib/sitemap-core.mjs';
 
@@ -537,4 +547,135 @@ test('createSitemapBuilder: 社区节抓取失败只判 community 残缺，main 
   assert.ok(sections.main.some((entry) => entry.url === 'https://apks.cc/app/com.a'));
   // community 残缺时只剩两条静态入口，调用方（构建脚本/运行时）据此放弃落盘该份。
   assert.equal(sections.community.length, 2);
+});
+
+// ---- 分片（#269）：priority + 长尾片 ----
+
+const shardGames = (count) => Array.from({ length: count }, (_, index) => ({
+  url: `https://apks.cc/app/com.example.game${index}`,
+  // 时间递增：index 越大越新
+  lastModified: new Date(Date.UTC(2026, 0, 1) + index * 60_000),
+  changeFrequency: 'daily',
+  priority: 0.8,
+}));
+
+const STATIC_TAIL = [
+  { url: 'https://apks.cc/', changeFrequency: 'hourly', priority: 1 },
+  { url: 'https://apks.cc/app', changeFrequency: 'daily', priority: 0.7 },
+  { url: 'https://apks.cc/rankings', changeFrequency: 'daily', priority: 0.7 },
+  { url: 'https://apks.cc/updates', changeFrequency: 'daily', priority: 0.7 },
+  { url: 'https://apks.cc/category/rpg', changeFrequency: 'weekly', priority: 0.7 },
+];
+
+test('buildShards: priority 保留非详情页原顺序，详情页按 lastModified 倒序取前 N', () => {
+  const entries = [...STATIC_TAIL, ...shardGames(10)];
+  const { priority, tails } = buildShards(entries, { priorityCount: 3 });
+
+  // 非详情页一条都不能落进长尾片：静态入口/分类页每次都必须整体提交。
+  assert.deepEqual(priority.slice(0, STATIC_TAIL.length).map((entry) => entry.url), STATIC_TAIL.map((entry) => entry.url));
+  const pickedGames = priority.slice(STATIC_TAIL.length).map((entry) => entry.url);
+  assert.deepEqual(pickedGames, [
+    'https://apks.cc/app/com.example.game9',
+    'https://apks.cc/app/com.example.game8',
+    'https://apks.cc/app/com.example.game7',
+  ]);
+  const tailUrls = [...tails.values()].flat().map((entry) => entry.url);
+  assert.equal(tailUrls.length, 7);
+  assert.equal(tailUrls.includes('https://apks.cc/app/com.example.game9'), false);
+});
+
+test('buildShards: 覆盖全集（priority + 所有长尾片 == 输入），无重复无丢失', () => {
+  const entries = [...STATIC_TAIL, ...shardGames(4321)];
+  const { priority, tails } = buildShards(entries, { priorityCount: 300, shardSize: 2000 });
+  const all = [...priority, ...[...tails.values()].flat()].map((entry) => entry.url);
+
+  assert.equal(all.length, entries.length);
+  assert.equal(new Set(all).size, entries.length); // 无重复
+  assert.deepEqual(new Set(all), new Set(entries.map((entry) => entry.url))); // 无丢失
+  // 4321 - 300 = 4021 → ceil(4021/2000) = 3 片
+  assert.equal(tails.size, 3);
+  for (const shard of tails.values()) assert.ok(shard.length > 0, '空片会被 validateStaticSitemap 拒绝');
+});
+
+test('buildShards: 同一 pkg 的落片稳定（换数据量/换顺序不变，只随片数变化）', () => {
+  const pkg = 'com.stable.game';
+  const shardOf = (entries, options) => {
+    const { tails } = buildShards(entries, options);
+    for (const [index, list] of tails) {
+      if (list.some((entry) => entry.url.endsWith(`/app/${pkg}`))) return index;
+    }
+    return null;
+  };
+  const base = [...STATIC_TAIL, ...shardGames(4000)];
+  const withExtra = [...base, ...shardGames(200)]; // 数据量变化但片数不变
+  const target = { url: `https://apks.cc/app/${pkg}`, lastModified: new Date('2026-01-01T00:00:00.000Z') };
+  // 先确认片数一致（同片数下必须落同一片）
+  const shardCountOf = (entries) => buildShards(entries, { priorityCount: 300, shardSize: 2000 }).tails.size;
+  assert.equal(shardCountOf([...base, target]), shardCountOf([...withExtra, target]));
+  assert.equal(shardOf([...base, target], { priorityCount: 300, shardSize: 2000 }), shardOf([...withExtra, target], { priorityCount: 300, shardSize: 2000 }));
+  // 哈希本身就是纯函数：同输入同输出，且落片在合法区间内。
+  assert.equal(hashPkgToShard(pkg, 3), hashPkgToShard(pkg, 3));
+  assert.ok(hashPkgToShard(pkg, 3) >= 0 && hashPkgToShard(pkg, 3) < 3);
+});
+
+test('buildShards: 游戏数不足 priorityCount 时没有长尾片，不产生空文件', () => {
+  const { priority, tails } = buildShards([...STATIC_TAIL, ...shardGames(5)], { priorityCount: 300 });
+  assert.equal(priority.length, STATIC_TAIL.length + 5);
+  assert.equal(tails.size, 0);
+});
+
+test('分片文件名 ↔ 线上 URL 映射唯一，参数非法/越界返回 null', () => {
+  assert.equal(sitemapShardFileName(3), 'sitemap-tail-3.xml');
+  assert.equal(sitemapShardPath(3), '/sitemap-tail/3');
+  for (const shard of [1, 2, 17]) {
+    const url = sitemapShardPath(shard);
+    const parsed = parseSitemapShardParam(url.split('/').pop());
+    assert.equal(parsed, shard);
+    assert.equal(sitemapShardFileName(parsed), `sitemap-tail-${shard}.xml`);
+  }
+  // catch-all 路由拿到的永远是数组
+  assert.equal(parseSitemapShardParam(['3']), 3);
+  for (const bad of ['', '0', '-1', '01x', 'abc', '3.xml', '1/2', null, undefined, SITEMAP_MAX_SHARDS + 1, '9999']) {
+    assert.equal(parseSitemapShardParam(bad), null, `应拒绝 ${JSON.stringify(bad)}`);
+  }
+});
+
+test('serializeSitemapIndexXml + validateStaticSitemap：索引按 <sitemap> 条数校验', () => {
+  const xml = serializeSitemapIndexXml([
+    { url: 'https://apks.cc/sitemap-priority.xml' },
+    { url: 'https://apks.cc/sitemap-tail/1' },
+    { url: 'https://apks.cc/sitemap-community.xml' },
+  ], { buildTime: '2026-11-19T00:00:00.000Z' });
+
+  assert.match(xml, /^<\?xml version="1.0" encoding="UTF-8"\?>\n/);
+  assert.match(xml, /<!-- buildTime: 2026-11-19T00:00:00\.000Z urlCount: 3 -->/);
+  assert.equal((xml.match(/<sitemap>/g) || []).length, 3);
+  assert.ok(xml.trimEnd().endsWith('</sitemapindex>'));
+  assert.ok(xml.includes('<loc>https://apks.cc/sitemap-tail/1</loc>'));
+
+  const meta = inspectStaticSitemap(xml);
+  assert.equal(meta.kind, 'index');
+  assert.deepEqual(validateStaticSitemap(meta), { ok: true, reason: 'urlCount=3（2026-11-19T00:00:00.000Z）' });
+
+  // 注释头写错 uRlCount 时必须拒绝（索引的条目数是 <sitemap> 条数，不是 <loc> 总数）
+  const corrupted = xml.replace('urlCount: 3', 'urlCount: 4');
+  const result = validateStaticSitemap(inspectStaticSitemap(corrupted));
+  assert.equal(result.ok, false);
+  assert.match(result.reason, /urlCount=4 与文件条目数 3 不一致/);
+});
+
+test('buildShards 自检：每片序列化后注释 urlCount 等于 <loc> 条数（自检失败整批不落盘的前提）', () => {
+  const entries = [...STATIC_TAIL, ...shardGames(4321)];
+  const buildTime = '2026-11-19T00:00:00.000Z';
+  const { priority, tails } = buildShards(entries, { priorityCount: 300, shardSize: 2000 });
+
+  for (const [label, list] of [['priority', priority], ...[...tails.entries()].map(([index, list]) => [`tail-${index}`, list])]) {
+    const xml = serializeSitemapXml(list, { buildTime });
+    const meta = inspectStaticSitemap(xml);
+    assert.equal(meta.kind, 'urlset');
+    assert.equal((xml.match(/<loc>/g) || []).length, list.length, `${label} 的 <loc> 条数`);
+    assert.deepEqual(validateStaticSitemap(meta), { ok: true, reason: `urlCount=${list.length}（${buildTime}）` });
+  }
+  assert.equal(SITEMAP_PRIORITY_FILE_NAME, 'sitemap-priority.xml');
+  assert.equal(SITEMAP_SHARD_SIZE, 2000);
 });
