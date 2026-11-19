@@ -16,8 +16,10 @@ import {
   SITEMAP_PRIORITY_FILE_NAME,
   SITEMAP_SHARD_SIZE,
   STATIC_COUNT_DEVIATION_LIMIT,
+  STATIC_MAX_AGE_HOURS,
   applyGameLastmodPatch,
   buildShards,
+  checkStaticAge,
   checkStaticFreshness,
   createSitemapBuilder,
   getServerApiBaseUrl,
@@ -93,6 +95,42 @@ test('checkStaticFreshness: 偏差超过 5% 判过期，5% 以内放行', () => 
   // 取不到线上总数时放行（静态文件是接口不可用时的最后兜底）
   assert.deepEqual(checkStaticFreshness(meta, null).ok, true);
   assert.equal(checkStaticFreshness(meta, null).skipped, true);
+});
+
+test('checkStaticAge: 23h 新鲜 / 25h 过期 / 无 buildTime 过期（与审计脚本 MAX_AGE_HOURS 同口径）', () => {
+  assert.equal(STATIC_MAX_AGE_HOURS, 24);
+
+  const now = Date.parse('2026-11-19T20:00:00.000Z');
+  const hoursAgo = (hours) => new Date(now - hours * 3_600_000).toISOString();
+
+  // 23 小时前构建：放行，ageHours 可用于日志
+  const fresh = checkStaticAge({ buildTime: hoursAgo(23) }, now);
+  assert.equal(fresh.ok, true);
+  assert.ok(Math.abs(fresh.ageHours - 23) < 1e-6, `ageHours=${fresh.ageHours}`);
+
+  // 25 小时前构建：过期，reason 里带上限与年龄
+  const stale = checkStaticAge({ buildTime: hoursAgo(25) }, now);
+  assert.equal(stale.ok, false);
+  assert.ok(Math.abs(stale.ageHours - 25) < 1e-6, `ageHours=${stale.ageHours}`);
+  assert.match(stale.reason, /上限 24h/);
+
+  // buildTime 缺失 / 不可解析：一律判过期，不猜
+  for (const meta of [{ buildTime: null }, {}, { buildTime: '' }, { buildTime: 'not-a-date' }]) {
+    const result = checkStaticAge(meta, now);
+    assert.equal(result.ok, false, `应判过期：${JSON.stringify(meta)}`);
+    assert.equal(result.ageHours, Number.POSITIVE_INFINITY);
+    assert.match(result.reason, /buildTime/);
+  }
+
+  // 恰好 24h 边界不算过期（审计脚本用的是 ageHours <= MAX_AGE_HOURS）
+  assert.equal(checkStaticAge({ buildTime: hoursAgo(24) }, now).ok, true);
+  // 时钟偏差导致的「未来」buildTime 不算过期
+  assert.equal(checkStaticAge({ buildTime: new Date(now + 3_600_000).toISOString() }, now).ok, true);
+
+  // 真实链路口径：inspectStaticSitemap 解析出的 buildTime 能直接喂给年龄闸
+  const xml = serializeSitemapXml(ENTRIES, { buildTime: hoursAgo(25) });
+  assert.equal(checkStaticAge(inspectStaticSitemap(xml), now).ok, false);
+  assert.equal(checkStaticAge(inspectStaticSitemap(serializeSitemapXml(ENTRIES, { buildTime: hoursAgo(1) })), now).ok, true);
 });
 
 test('createSitemapBuilder: 构建期与运行时产出同形条目（分页 + 过滤规则一致）', async () => {

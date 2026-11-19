@@ -47,6 +47,13 @@ export const COMMUNITY_STATIC_PATHS = ['/community', '/community/topics'];
 export const STATIC_COUNT_DEVIATION_LIMIT = 0.05;
 
 /**
+ * 静态产物允许的最大年龄（小时）。
+ * 与 `系统/索引/growth/sitemap-audit.mjs` 的 `MAX_AGE_HOURS` 同口径：外部审计按 24h 判过期，
+ * 路由侧如果照旧无条件直出，就会拿「审计已判过期」的快照继续喂爬虫。
+ */
+export const STATIC_MAX_AGE_HOURS = 24;
+
+/**
  * 分片参数（#269）。主 sitemap 从「一份平铺 5280 条」改成
  * 「sitemapindex + 一个 priority 片 + 若干长尾片」：
  *   - priority 片：静态入口 + 分类页 + 需求/最近更新的前 PRIORITY_COUNT 个详情页，
@@ -843,4 +850,45 @@ export function checkStaticFreshness(meta, liveGameTotal, limit = STATIC_COUNT_D
     reason: `静态游戏条目 ${meta.gameLocCount} 条 vs 线上 ${liveGameTotal} 条，偏差 ${(deviation * 100).toFixed(1)}%`,
   };
   return deviation > limit ? { ok: false, ...detail } : { ok: true, ...detail };
+}
+
+/**
+ * 静态产物的年龄闸：buildTime 距今超过 `maxAgeHours` 即判定过期。
+ *
+ * 为什么必须卡这一道：静态快照是构建那一刻的全量目录，一旦构建流水线停摆，
+ * 「条数偏差 5%」在日增几十条的量级上要几十天才会触发，而爬虫每天都在读这份旧快照。
+ * 口径与 `系统/索引/growth/sitemap-audit.mjs` 的 `MAX_AGE_HOURS` 保持一致（24h），
+ * 不在这里另算一套。
+ *
+ * buildTime 缺失或不可解析一律判过期：宁可多花一次运行时重建，也不拿来历不明的快照当真。
+ * 未来时间（时钟偏差）不算过期。
+ *
+ * @param {{buildTime?: string|null}} meta `inspectStaticSitemap` 的返回
+ * @param {number} [now] 当前时间戳（毫秒），测试可注入
+ * @param {number} [maxAgeHours]
+ * @returns {{ok: boolean, reason: string, ageHours: number}} 取不到 buildTime 时 ageHours 为 Infinity
+ */
+export function checkStaticAge(meta, now = Date.now(), maxAgeHours = STATIC_MAX_AGE_HOURS) {
+  const limit = Number.isFinite(maxAgeHours) && maxAgeHours > 0 ? maxAgeHours : STATIC_MAX_AGE_HOURS;
+  const buildTime = meta?.buildTime;
+  const parsed = Date.parse(buildTime);
+  if (typeof buildTime !== 'string' || !buildTime || Number.isNaN(parsed)) {
+    return {
+      ok: false,
+      reason: `buildTime 缺失或不可解析（${buildTime === null || buildTime === undefined ? '无' : buildTime}），无法确认产物年龄`,
+      ageHours: Number.POSITIVE_INFINITY,
+    };
+  }
+  const ageHours = (Number(now) - parsed) / 3_600_000;
+  if (!Number.isFinite(ageHours)) {
+    return { ok: false, reason: `buildTime ${buildTime} 的年龄无法计算`, ageHours: Number.POSITIVE_INFINITY };
+  }
+  if (ageHours > limit) {
+    return {
+      ok: false,
+      reason: `buildTime ${buildTime} 已 ${Math.round(ageHours)} 小时（上限 ${limit}h）`,
+      ageHours,
+    };
+  }
+  return { ok: true, reason: `buildTime ${buildTime}（${Math.round(ageHours)}h 前，上限 ${limit}h）`, ageHours };
 }

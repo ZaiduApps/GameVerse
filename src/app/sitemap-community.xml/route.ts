@@ -1,6 +1,7 @@
 import { getSiteUrl } from '@/lib/seo';
 import {
   SITEMAP_REVALIDATE_SECONDS,
+  checkStaticAge,
   createSitemapBuilder,
   getServerApiBaseUrl,
   inspectStaticSitemap,
@@ -32,16 +33,19 @@ export async function GET(): Promise<Response> {
   });
 
   try {
-    // 1) 静态优先：文件自洽才直出。
+    // 1) 静态优先：文件自洽且未过期才直出。
     const staticFile = await readStaticSitemapFile(STATIC_FILE_NAME);
     if (staticFile) {
       const meta = inspectStaticSitemap(staticFile.xml);
       const validation = validateStaticSitemap(meta);
-      if (validation.ok) {
-        console.log(`${LOG_TAG} 直出静态文件 ${staticFile.source}：${validation.reason}`);
+      const age = checkStaticAge(meta);
+      if (validation.ok && age.ok) {
+        console.log(`${LOG_TAG} 直出静态文件 ${staticFile.source}：${validation.reason}；age ${Math.round(age.ageHours)}h`);
         return xmlResponse(staticFile.xml, `static:${staticFile.source}`);
       }
-      console.warn(`${LOG_TAG} 静态文件校验失败（${validation.reason}），改用运行时生成`);
+      console.warn(
+        `${LOG_TAG} 静态文件不可直出（${validation.ok ? age.reason : validation.reason}），改用运行时生成`,
+      );
     }
 
     // 2) 运行时兜底：任何异常都必须返回 200 的可用 sitemap，不允许 500。

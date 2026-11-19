@@ -4,6 +4,7 @@ import {
   SITEMAP_PRIORITY_FILE_NAME,
   SITEMAP_REVALIDATE_SECONDS,
   buildShards,
+  checkStaticAge,
   createSitemapBuilder,
   getServerApiBaseUrl,
   inspectStaticSitemap,
@@ -43,24 +44,28 @@ export async function GET(): Promise<Response> {
   });
 
   try {
-    // 1) 静态优先：索引自洽 + 它列出的每一片都真的存在且自洽，才直出。
+    // 1) 静态优先：索引自洽 + 未过期 + 它列出的每一片都真的存在且自洽，才直出。
     const staticFile = await readStaticSitemapFile('sitemap.xml');
     if (staticFile) {
       const meta = inspectStaticSitemap(staticFile.xml);
       const validation = validateStaticSitemap(meta);
-      if (validation.ok && meta.kind === 'index') {
+      const age = checkStaticAge(meta);
+      if (!validation.ok) {
+        console.warn(`${LOG_TAG} 静态索引校验失败（${validation.reason}），改用运行时生成`);
+      } else if (!age.ok) {
+        // 条数偏差闸抓不到「目录整体停更」：日增几十条时 5% 要好几十天才触发。
+        console.warn(`${LOG_TAG} 静态索引已过期（${age.reason}），改用运行时生成`);
+      } else if (meta.kind === 'index') {
         const problem = await findMissingShard(staticFile.xml);
         if (!problem) {
           console.log(`${LOG_TAG} 直出静态索引 ${staticFile.source}：${validation.reason}`);
           return xmlResponse(staticFile.xml, `static:${staticFile.source}`);
         }
         console.warn(`${LOG_TAG} 静态索引不自洽（${problem}），改用运行时生成`);
-      } else if (validation.ok) {
+      } else {
         // 旧版平铺产物（升级前构建的 /sitemap.xml）：直接透传仍是合法 sitemap，不必打死。
         console.log(`${LOG_TAG} 直出旧版平铺产物 ${staticFile.source}：${validation.reason}`);
         return xmlResponse(staticFile.xml, `static:${staticFile.source}`);
-      } else {
-        console.warn(`${LOG_TAG} 静态索引校验失败（${validation.reason}），改用运行时生成`);
       }
     }
 

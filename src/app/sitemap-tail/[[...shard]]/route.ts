@@ -3,6 +3,7 @@ import {
   SITEMAP_REVALIDATE_SECONDS,
   applyGameLastmodPatch,
   buildShards,
+  checkStaticAge,
   createSitemapBuilder,
   getServerApiBaseUrl,
   inspectStaticSitemap,
@@ -48,12 +49,13 @@ export async function GET(
     logger: console,
   });
 
-  // 1) 静态优先：文件自洽才直出。
+  // 1) 静态优先：文件自洽且未过期才直出。
   const staticFile = await readStaticSitemapFile(sitemapShardFileName(shard));
   if (staticFile) {
     const meta = inspectStaticSitemap(staticFile.xml);
     const validation = validateStaticSitemap(meta);
-    if (validation.ok) {
+    const age = checkStaticAge(meta);
+    if (validation.ok && age.ok) {
       const updates = await builder.getRecentGameUpdates(meta.buildTime);
       const patched = applyGameLastmodPatch(staticFile.xml, updates.games);
       console.log(
@@ -66,7 +68,9 @@ export async function GET(
           : `static:${staticFile.source}`,
       );
     }
-    console.warn(`${LOG_TAG} 分片静态文件校验失败（${validation.reason}），改用运行时生成`);
+    console.warn(
+      `${LOG_TAG} 分片静态文件不可直出（${validation.ok ? age.reason : validation.reason}），改用运行时生成`,
+    );
   }
 
   // 2) 运行时兜底：分片划分是纯函数，重算结果与构建期一致。
